@@ -12,15 +12,15 @@ interface PlayerSearchProps {
     onPlayerSelect: (player: Player) => void
 }
 
-async function GET_IP() {
+// Separate async function to get IP
+async function getIP() {
     try {
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
-        return NextResponse.json({ ip: data.ip });
-    } catch (err) {
-        // Type assertion to handle the unknown error type
-        const error = err as Error;
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return data.ip;
+    } catch (error) {
+        console.error('Error fetching IP:', error);
+        return null;
     }
 }
 
@@ -38,11 +38,13 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
         const timer = setTimeout(async () => {
             setIsLoading(true)
             try {
+                // Fetch players
                 const response = await fetch(`/api/players/search?q=${search}`)
                 const data = await response.json()
                 setPlayers(data)
-                console.log("GET_IP");
-                console.log(await GET_IP());
+                // Get and log IP
+                const ip = await getIP();
+                console.log("Current IP Address:", ip);
             } catch (error) {
                 console.error('Failed to fetch players:', error)
             } finally {
