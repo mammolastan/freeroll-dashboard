@@ -1,0 +1,33 @@
+
+generator client {
+    provider = "prisma-client-js"
+}
+  
+  datasource db {
+    provider = "mysql"
+    url = env("DATABASE_URL")
+}
+  
+  model PokerTournament {
+    id              Int @id @default (autoincrement())
+    name            String @map("Name")
+    uid             String @map("UID")
+    bustTime        BigInt ? @map("Bust_Time")
+    bustRound       Int ? @map("Bust_Round")
+    hitman          String ? @map("Hitman")
+    placement       Int ? @map("Placement")
+    knockouts       Int ? @map("Knockouts")
+    startPoints     Int ? @map("Start_Points")
+    hitPoints       Int ? @map("Hit_Points")
+    placementPoints Int ? @map("Placement_Points")
+    cash           Int ? @map("Cash")
+    place          String ? @map("Place")
+    season         String ? @map("Season")
+    venue          String ? @map("Venue")
+    totalPoints    Int ? @map("Total_Points")
+    playerScore    Float ? @map("Player_Score")
+    fileName       String ? @map("File_name")
+    createdAt      DateTime @default (now()) @map("created_at")
+
+    @@map("poker_tournaments")
+}
