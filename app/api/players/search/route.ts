@@ -15,7 +15,18 @@ function serializeResults(results: any[]) {
     return serialized;
   });
 }
-
+export async function GET() {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json");
+    const data = await response.json();
+    return NextResponse.json({ ip: data.ip });
+  } catch (err) {
+    // Type assertion to handle the unknown error type
+    const error = err as Error;
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+/* 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -53,3 +64,4 @@ export async function GET(request: Request) {
     await prisma.$disconnect();
   }
 }
+*/
