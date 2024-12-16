@@ -42,7 +42,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                 const data = await response.json()
                 setPlayers(data)
                 console.log("GET_IP");
-                console.log(GET_IP());
+                console.log(await GET_IP());
             } catch (error) {
                 console.error('Failed to fetch players:', error)
             } finally {
