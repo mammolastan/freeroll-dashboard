@@ -27,7 +27,6 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                 const response = await fetch(`/api/players/search?q=${search}`)
                 const data = await response.json()
                 setPlayers(data)
-                console.log('Fetched players:', data)
             } catch (error) {
                 console.error('Failed to fetch players:', error)
             } finally {
