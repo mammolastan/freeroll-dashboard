@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { getServerIP } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,8 @@ export async function GET(request: Request) {
     if (!query) {
       return NextResponse.json([]);
     }
+    const serverIP = await getServerIP();
+    console.log("Server IP:", serverIP);
 
     const players = await prisma.$queryRaw`
       SELECT 
