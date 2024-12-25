@@ -63,7 +63,26 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                     placeholder="Search for a player..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                    className="bg-red-900
+                    hover:bg-blue-900
+                    focus:bg-blue-900
+                    active:bg-blue-900
+                    caret-purple-500
+                    transition-colors
+                    duration-1000
+                    w-full
+                    px-4
+                    py-2
+                    rounded-lg
+                    border
+                    border-transparent
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-pink-500
+                    text-white
+                    placeholder-white-100
+                    focus:animate-pulse-ring
+                    font-medium"
                 />
 
                 {isLoading && (
@@ -71,7 +90,15 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                 )}
 
                 {players.length > 0 && (
-                    <div className="absolute w-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg text-black">
+                    <div className="absolute
+                    w-full
+                    mt-1
+                    bg-white
+                    rounded-b-lg
+                    border
+                    border-gray-200
+                    shadow-lg
+                    text-black">
                         <ul className="max-h-[300px] overflow-auto">
                             {players.map((player) => (
                                 <li

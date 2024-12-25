@@ -84,9 +84,9 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
 
     return (
         <div className="mb-6">
-            <label className="text-sm font-medium text-gray-700">Date Range:</label>
+            <label className="text-sm font-medium text-white-700">Date Range:</label>
             <select
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="text-black mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={selectedRange}
                 onChange={(e) => {
                     const range = ranges.find(r => r.value === e.target.value);

@@ -249,7 +249,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
 
             </div>
             <div className="flex flex-col">
-                <div className="text-xl font-medium text-gray-600">
+                <div className="text-xl font-medium text-white-600">
                     {formatDateRangeText(startDate ?? null, endDate ?? null, selectedRange, earliestGameDate)}
                 </div>
                 <div className="text-sm text-gray-500">
