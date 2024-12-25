@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getServerIP } from "@/lib/utils";
 
+// Move prisma client outside route handler
 const prisma = new PrismaClient();
+
+// Add export config to mark as dynamic
+export const dynamic = "force-dynamic";
 
 // Helper function to safely serialize BigInt
 function serializeResults(results: any[]) {
@@ -17,9 +21,9 @@ function serializeResults(results: any[]) {
   });
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("q");
 
     if (!query) {
