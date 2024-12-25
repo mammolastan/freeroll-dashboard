@@ -48,8 +48,6 @@ function getDateCondition(
   endDate: Date | null,
   tableAlias?: string
 ) {
-  console.log("in getDateCondition");
-  console.log("startDate", startDate);
   if (!startDate) {
     return Prisma.empty; // This is a special Prisma SQL template that resolves to an empty string
   }
@@ -58,30 +56,11 @@ function getDateCondition(
     ? `${tableAlias}.Season`
     : "poker_tournaments.Season";
 
-  // Always log these details
-  console.log("Date Condition Input:", {
-    startDate: startDate?.toISOString(),
-    endDate: endDate?.toISOString(),
-    startMonth: startDate?.getMonth(),
-    startYear: startDate?.getFullYear(),
-    endMonth: endDate?.getMonth(),
-    endYear: endDate?.getFullYear(),
-  });
   // Adjust month to account for 0-based indexing
   const adjustedStartMonth = startDate.getMonth() + 1;
   const adjustedEndMonth = endDate ? endDate.getMonth() + 1 : null;
 
-  console.log("Adjusted Date Condition Input:", {
-    startDate: startDate?.toISOString(),
-    endDate: endDate?.toISOString(),
-    adjustedStartMonth,
-    adjustedEndMonth,
-    startYear: startDate?.getFullYear(),
-    endYear: endDate?.getFullYear(),
-  });
-
   // Special handling for current month
-
   if (
     endDate &&
     startDate.getMonth() === endDate.getMonth() &&
@@ -142,16 +121,13 @@ export async function GET(
     console.log("GET /api/players/[uid]/stats");
 
     const { searchParams } = new URL(request.url);
-    console.log("searchParams", searchParams);
+
     const playerUID = params.uid;
-    console.log("playerUID", playerUID);
-    console.log("after playerUID");
-    console.log(searchParams.get("startDate"));
 
     const startDateParam = searchParams.get("startDate");
-    console.log("startDateParam", startDateParam);
+
     const endDateParam = searchParams.get("endDate");
-    console.log("endDateParam", endDateParam);
+
     const startDate =
       startDateParam === "null"
         ? null
@@ -165,8 +141,6 @@ export async function GET(
         ? new Date(endDateParam)
         : null;
 
-    console.log("startDate", startDate);
-    console.log("endDate", endDate);
     // If it's an all-time query, find the earliest game date
     let earliestGameDate = null;
 
@@ -197,14 +171,6 @@ export async function GET(
       }
     }
 
-    console.log("Player UID:", playerUID);
-    console.log("Start Date:", startDate?.toISOString());
-    console.log("End Date:", endDate?.toISOString());
-    console.log(
-      "Date Condition Generated:",
-      getDateCondition(startDate, endDate).toString()
-    );
-
     // Add this query to check raw data
     const rawDataCheck = await prisma.$queryRaw`
   SELECT * 
@@ -215,7 +181,6 @@ export async function GET(
     TRIM(Season) = 'December 2024'
   )
 `;
-    console.log("Raw Data Check:", rawDataCheck);
 
     const seasonMatchCheck = await prisma.$queryRaw`
     SELECT * 
@@ -226,7 +191,6 @@ export async function GET(
       Season LIKE '%December%2024%'
     )
   `;
-    console.log("Season Match Check:", seasonMatchCheck);
 
     // Quarterly Stats
     const quarterlyStats = await prisma.$queryRaw<QuarterlyStats[]>`
