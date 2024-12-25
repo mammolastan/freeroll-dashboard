@@ -213,7 +213,8 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
             fetchPlayerStats();
         }
     }, [playerUID, startDate, endDate]);
-
+    console.log("selectedRange");
+    console.log(selectedRange);
     if (loading) {
         return (
             <div className="text-center py-12 text-gray-600">
@@ -257,10 +258,10 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Quarterly Stats */}
+                {/* This time period Stats */}
                 <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div className="bg-blue-50 p-4 rounded-t-xl border-b border-blue-100">
-                        <h3 className="font-bold text-lg text-blue-900">This Quarter</h3>
+                        <h3 className="font-bold text-lg text-blue-900">Current time period</h3>
                     </div>
                     <div className="p-4 space-y-3">
                         <StatRow label="Games Played" value={stats.quarterlyStats.gamesPlayed} />
@@ -277,45 +278,48 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                 </div>
 
                 {/* Head to Head Stats */}
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
-                        <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
-                    </div>
-                    <div className="p-4 space-y-4">
-                        <div>
-                            <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
-                            <div className="space-y-2">
-                                {stats.mostKnockedOutBy.map((player, index) => (
-                                    <div key={player.name} className="flex items-baseline justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-purple-700">{index + 1}.</span>
-                                            <span className="font-medium text-gray-900">{player.name}</span>
+                {
+                    selectedRange === 'all-time' && (<div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
+                            <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
+                                <div className="space-y-2">
+                                    {stats.mostKnockedOutBy.map((player, index) => (
+                                        <div key={player.name} className="flex items-baseline justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                <span className="font-medium text-gray-900">{player.name}</span>
+                                            </div>
+                                            <span className="text-sm font-medium text-purple-700">
+                                                {player.count} times
+                                            </span>
                                         </div>
-                                        <span className="text-sm font-medium text-purple-700">
-                                            {player.count} times
-                                        </span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
+                                <div className="space-y-2">
+                                    {stats.mostKnockedOut.map((player, index) => (
+                                        <div key={player.name} className="flex items-baseline justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                <span className="font-medium text-gray-900">{player.name}</span>
+                                            </div>
+                                            <span className="text-sm font-medium text-purple-700">
+                                                {player.count} times
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
-                            <div className="space-y-2">
-                                {stats.mostKnockedOut.map((player, index) => (
-                                    <div key={player.name} className="flex items-baseline justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-purple-700">{index + 1}.</span>
-                                            <span className="font-medium text-gray-900">{player.name}</span>
-                                        </div>
-                                        <span className="text-sm font-medium text-purple-700">
-                                            {player.count} times
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </div>)
+                }
+
 
                 {/* Venue Points */}
                 <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
