@@ -330,8 +330,18 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                         <div className="space-y-3">
                             {stats.venueStats.map(venue => (
                                 <div key={venue.venue} className="flex justify-between items-center">
-                                    <span className="text-gray-700">{venue.venue}</span>
+                                    <a
+                                        href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                                        className="text-gray-700 hover:text-blue-600 transition-colors"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            window.location.href = `/venues?venue=${encodeURIComponent(venue.venue)}`;
+                                        }}
+                                    >
+                                        {venue.venue}
+                                    </a>
                                     <span className="font-medium text-green-600">{venue.points}</span>
+
                                 </div>
                             ))}
                         </div>
