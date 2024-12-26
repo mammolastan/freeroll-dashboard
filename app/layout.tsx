@@ -1,12 +1,13 @@
 import "./globals.css"
 import { Inter } from "next/font/google"
 import { cn } from "@/lib/utils"
+import Navbar from "@/components/Navigation/Navbar"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Poker Tournament Dashboard",
-  description: "Analytics dashboard for poker tournament statistics",
+  title: "Freeroll Atlanta Player Dashboard",
+  description: "Dashboard for Freeroll Atlanta poker tournament player statistics",
 }
 
 export default function RootLayout({
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.className, "min-h-screen bg-background")}>
+        <Navbar />
         {children}
       </body>
     </html>

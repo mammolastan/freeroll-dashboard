@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default function Home() {
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Poker Tournament Dashboard</h1>
+      <h1 className="text-4xl font-bold mb-8">Freeroll Atlanta Poker Player Dashboard</h1>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Link href="/players">
