@@ -8,6 +8,8 @@ interface PlayerStats {
         knockouts: number
         finalTables: number
         avgScore: number
+        leagueRanking?: number | null
+        totalPlayers?: number | null
     }
     mostKnockedOutBy: Array<{
         name: string
@@ -156,18 +158,32 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
             setLoading(true);
             try {
                 const params = new URLSearchParams();
-                if (startDate) params.append('startDate', startDate.toISOString());
-                if (endDate) params.append('endDate', endDate.toISOString());
+
+                if (startDate) {
+                    params.append('startDate', startDate.toISOString());
+
+                    // Calculate end date for current quarter if not provided
+                    if (!endDate && selectedRange.includes('Q')) {
+                        const currentDate = new Date();
+                        const currentQuarter = Math.floor(currentDate.getMonth() / 3);
+                        const quarterEndDate = new Date(currentDate.getFullYear(), (currentQuarter + 1) * 3, 0);
+                        params.append('endDate', quarterEndDate.toISOString());
+                    } else if (endDate) {
+                        params.append('endDate', endDate.toISOString());
+                    }
+                }
 
                 const response = await fetch(
                     `/api/players/${playerUID}/stats?${params.toString()}`
                 );
+                console.log("Full URL being fetched:", `/api/players/${playerUID}/stats?${params.toString()}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
+                console.log("Received data:", data);
 
                 // Ensure we have default values if data is missing
                 const processedData = {
@@ -177,6 +193,8 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                         knockouts: data.quarterlyStats?.knockouts ?? 0,
                         finalTables: data.quarterlyStats?.finalTables ?? 0,
                         avgScore: Number(data.quarterlyStats?.avgScore ?? 0),
+                        leagueRanking: data.quarterlyStats?.leagueRanking,
+                        totalPlayers: data.quarterlyStats?.totalPlayers,
                     },
                     mostKnockedOutBy: data.mostKnockedOutBy ?? [],
                     mostKnockedOut: data.mostKnockedOut ?? [],
@@ -198,6 +216,8 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                         knockouts: 0,
                         finalTables: 0,
                         avgScore: 0,
+                        leagueRanking: 0,
+                        totalPlayers: 0,
                     },
                     mostKnockedOutBy: [],
                     mostKnockedOut: [],
@@ -257,11 +277,27 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* This time period Stats */}
+                {(() => {
+                    console.log("stats.quarterlyStats");
+                    console.log(stats.quarterlyStats);
+                    return null;
+                })()}
+
                 <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div className="bg-blue-50 p-4 rounded-t-xl border-b border-blue-100">
                         <h3 className="font-bold text-lg text-blue-900">Current time period</h3>
                     </div>
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 space-y-3 text-black">
+                        {
+                            selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
+                                <p>Rank: {`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
+                                    ? ` of ${stats.quarterlyStats.totalPlayers}`
+                                    : ''
+                                    }`}
+                                </p>
+                            )
+                        }
+
                         <StatRow label="Games Played" value={stats.quarterlyStats.gamesPlayed} />
                         <StatRow label="Total Points" value={stats.quarterlyStats.totalPoints} />
                         <StatRow label="Knockouts" value={stats.quarterlyStats.knockouts} />
@@ -272,6 +308,15 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                                 ? stats.quarterlyStats.avgScore.toFixed(2)
                                 : '0.00'}
                         />
+                        {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
+                            <StatRow
+                                label="League Ranking"
+                                value={`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
+                                    ? ` of ${stats.quarterlyStats.totalPlayers}`
+                                    : ''
+                                    }`}
+                            />
+                        )}
                     </div>
                 </div>
 

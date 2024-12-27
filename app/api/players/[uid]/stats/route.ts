@@ -1,3 +1,5 @@
+// app/api/players/[uid]/stats/route.ts
+
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { getDateCondition } from "@/lib/utils";
@@ -11,6 +13,8 @@ interface QuarterlyStats {
   knockouts: bigint;
   finalTables: bigint;
   avgScore: number;
+  leagueRanking?: number;
+  totalPlayers?: number;
 }
 
 interface KnockedOutStats {
@@ -63,11 +67,8 @@ export async function GET(
     console.log("GET /api/players/[uid]/stats");
 
     const { searchParams } = new URL(request.url);
-
     const playerUID = params.uid;
-
     const startDateParam = searchParams.get("startDate");
-
     const endDateParam = searchParams.get("endDate");
 
     const startDate =
@@ -113,16 +114,65 @@ export async function GET(
       }
     }
 
-    // Add this query to check raw data
+    // League ranking query - only execute if a date range is specified
+    let leagueRanking = null;
+    let totalPlayers = null;
+
+    // Rankings query
+    console.log("startDate:", startDate);
+    console.log("endDate:", endDate);
+    if (startDate && endDate) {
+      console.log("Attempting to get rankings for dates:", {
+        startDate,
+        endDate,
+      });
+      const rankings = await prisma.$queryRaw<
+        { ranking: number; total_players: number }[]
+      >`
+        SELECT 
+          CAST(player_rank.ranking AS SIGNED) as ranking,
+          CAST((
+            SELECT COUNT(DISTINCT UID) 
+            FROM poker_tournaments 
+            WHERE ${getDateCondition(startDate, endDate)}
+          ) AS SIGNED) as total_players
+        FROM (
+          SELECT 
+            p1.UID,
+            1 + COUNT(DISTINCT p2.UID) as ranking
+          FROM 
+            (SELECT UID, CAST(SUM(Total_Points) AS SIGNED) as points 
+             FROM poker_tournaments 
+             WHERE ${getDateCondition(startDate, endDate)}
+             GROUP BY UID) p1
+          LEFT JOIN 
+            (SELECT UID, CAST(SUM(Total_Points) AS SIGNED) as points 
+             FROM poker_tournaments 
+             WHERE ${getDateCondition(startDate, endDate)}
+             GROUP BY UID) p2 
+          ON p1.points < p2.points
+          WHERE p1.UID = ${playerUID}
+          GROUP BY p1.UID
+        ) as player_rank
+      `;
+      console.log("Rankings result:", rankings);
+      if (rankings && rankings.length > 0) {
+        leagueRanking = Number(rankings[0].ranking);
+        totalPlayers = Number(rankings[0].total_players);
+        console.log("Processed rankings:", { leagueRanking, totalPlayers });
+      }
+    }
+
+    // Check raw data
     const rawDataCheck = await prisma.$queryRaw`
-  SELECT * 
-  FROM poker_tournaments 
-  WHERE UID = ${playerUID}
-  AND (
-    TRIM(Season) = 'December  2024' OR 
-    TRIM(Season) = 'December 2024'
-  )
-`;
+      SELECT * 
+      FROM poker_tournaments 
+      WHERE UID = ${playerUID}
+      AND (
+        TRIM(Season) = 'December  2024' OR 
+        TRIM(Season) = 'December 2024'
+      )
+    `;
 
     const seasonMatchCheck = await prisma.$queryRaw`
     SELECT * 
@@ -205,24 +255,24 @@ export async function GET(
 
     // Recent Games
     const recentGames = await prisma.$queryRaw<RecentGame[]>`
-SELECT 
-  Season as date,
-  Venue as venue,
-  Placement as placement,
-  Total_Points as points,
-  Knockouts as knockouts,
-  File_name as fileName
-FROM poker_tournaments
-WHERE UID = ${playerUID}
-${
-  startDate
-    ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-    : Prisma.sql`AND 1=1`
-}
-ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(Season, ' ', 1), ' ', SUBSTRING_INDEX(Season, ' ', -1)), '%M %Y') DESC,
-         File_name DESC
-LIMIT 5
-`;
+      SELECT 
+        Season as date,
+        Venue as venue,
+        Placement as placement,
+        Total_Points as points,
+        Knockouts as knockouts,
+        File_name as fileName
+      FROM poker_tournaments
+      WHERE UID = ${playerUID}
+      ${
+        startDate
+          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
+          : Prisma.sql`AND 1=1`
+      }
+      ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(Season, ' ', 1), ' ', SUBSTRING_INDEX(Season, ' ', -1)), '%M %Y') DESC,
+              File_name DESC
+      LIMIT 5
+      `;
 
     const response = {
       quarterlyStats: {
@@ -237,6 +287,8 @@ LIMIT 5
           ? Number(quarterlyStats[0].finalTables)
           : 0,
         avgScore: quarterlyStats[0] ? Number(quarterlyStats[0].avgScore) : 0,
+        leagueRanking: leagueRanking,
+        totalPlayers: totalPlayers,
       },
       mostKnockedOutBy: knockedOutBy.map((ko) => ({
         name: ko.name,
@@ -255,7 +307,22 @@ LIMIT 5
         ? earliestGameDate.toISOString()
         : null,
     };
-
+    // Right before sending the response, add this:
+    console.log("Final quarterlyStats:", {
+      gamesPlayed: quarterlyStats[0]
+        ? Number(quarterlyStats[0].gamesPlayed)
+        : 0,
+      totalPoints: quarterlyStats[0]
+        ? Number(quarterlyStats[0].totalPoints)
+        : 0,
+      knockouts: quarterlyStats[0] ? Number(quarterlyStats[0].knockouts) : 0,
+      finalTables: quarterlyStats[0]
+        ? Number(quarterlyStats[0].finalTables)
+        : 0,
+      avgScore: quarterlyStats[0] ? Number(quarterlyStats[0].avgScore) : 0,
+      leagueRanking,
+      totalPlayers,
+    });
     return NextResponse.json(response);
   } catch (error) {
     console.error("Player stats error:", error);
