@@ -134,7 +134,7 @@ function DateToggler({ isCurrentMonth, setIsCurrentMonth }: {
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300
                     ${!isCurrentMonth
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 opacity-50 hover:opacity-100'
                     }`}
             >
                 <ChevronLeft size={16} className={!isCurrentMonth ? 'opacity-0' : 'opacity-100'} />
@@ -146,7 +146,7 @@ function DateToggler({ isCurrentMonth, setIsCurrentMonth }: {
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300
                                 ${isCurrentMonth
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 opacity-50 hover:opacity-100'
                     }`}
             >
                 <span>Current Month</span>
