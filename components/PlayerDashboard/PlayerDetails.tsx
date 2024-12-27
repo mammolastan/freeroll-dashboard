@@ -233,7 +233,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h2 className="text-2xl font-bold text-white-800">
                     Stats for {playerName}
                 </h2>
@@ -245,8 +245,6 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                         setSelectedRange(newRange);
                     }}
                 />
-
-
             </div>
             <div className="flex flex-col">
                 <div className="text-xl font-medium text-white-600">

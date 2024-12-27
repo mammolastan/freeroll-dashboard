@@ -16,7 +16,7 @@ export default function PlayersPage() {
             <h1 className="text-3xl font-bold mb-8">Player Statistics</h1>
 
             <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">Search Player</h2>
+                <h2 className="text-xl font-semibold mb-4 mx-auto text-center">Search Player</h2>
                 <PlayerSearch
                     onPlayerSelect={(player) => setSelectedPlayer(player)}
                 />

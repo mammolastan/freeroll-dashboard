@@ -56,7 +56,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
     }, [search])
 
     return (
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm mx-auto">
             <div className="relative">
                 <input
                     type="search"
