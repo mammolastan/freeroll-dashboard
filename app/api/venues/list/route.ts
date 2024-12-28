@@ -34,7 +34,11 @@ export async function GET(request: Request) {
       ? currentDate
       : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
 
-    const { month, year } = getMonthYearString(targetDate);
+    const month = targetDate.toLocaleString("default", {
+      month: "long",
+      timeZone: "UTC",
+    });
+    const year = targetDate.getUTCFullYear();
 
     const venues = await prisma.$queryRaw`
       SELECT DISTINCT 

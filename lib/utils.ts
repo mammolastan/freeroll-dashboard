@@ -1,3 +1,5 @@
+// lib/utils.ts
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -38,60 +40,71 @@ export async function getServerIP() {
     return null;
   }
 }
-// Helper function to create the date filtering condition
+
+// In utils.ts
 export function getDateCondition(
   startDate: Date | null,
   endDate: Date | null,
   tableAlias?: string
 ) {
   if (!startDate) {
-    return Prisma.empty; // This is a special Prisma SQL template that resolves to an empty string
+    return Prisma.empty;
   }
 
   const seasonColumn = tableAlias
     ? `${tableAlias}.Season`
     : "poker_tournaments.Season";
 
-  // Adjust month to account for 0-based indexing
-  const adjustedStartMonth = startDate.getMonth() + 1;
-  const adjustedEndMonth = endDate ? endDate.getMonth() + 1 : null;
+  // Generate array of valid month-year combinations
+  const validMonths: string[] = [];
+  let currentDate = new Date(startDate); // Create a new Date object to avoid modifying the original
+  const endDateTime = endDate ? endDate.getTime() : startDate.getTime();
 
-  // Special handling for current month
-  if (
-    endDate &&
-    startDate.getMonth() === endDate.getMonth() &&
-    startDate.getFullYear() === endDate.getFullYear()
-  ) {
-    const month = startDate.toLocaleString("default", {
+  while (currentDate.getTime() <= endDateTime) {
+    const month = currentDate.toLocaleString("default", {
       month: "long",
       timeZone: "UTC",
     });
-    const year = startDate.getUTCFullYear();
+    const year = currentDate.getUTCFullYear();
 
-    return Prisma.sql`
-  TRIM(${Prisma.raw(
-    seasonColumn
-  )}) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
-`;
+    // Add both single and double space versions
+    validMonths.push(`${month} ${year}`);
+    validMonths.push(`${month}  ${year}`);
+
+    // Move to next month
+    currentDate = new Date(
+      currentDate.setUTCMonth(currentDate.getUTCMonth() + 1)
+    );
   }
 
-  // Create a standardized version of the date string for comparison
-  const dateExpr = Prisma.sql`STR_TO_DATE(
-    CONCAT(
-      SUBSTRING_INDEX(REPLACE(REPLACE(${Prisma.raw(
-        seasonColumn
-      )}, '  ', ' '), '   ', ' '), ' ', 1),
-      ' ',
-      SUBSTRING_INDEX(REPLACE(REPLACE(${Prisma.raw(
-        seasonColumn
-      )}, '  ', ' '), '   ', ' '), ' ', -1)
-    ),
-    '%M %Y'
-  )`;
-
-  if (endDate) {
-    return Prisma.sql`${dateExpr} >= ${startDate} AND ${dateExpr} <= ${endDate}`;
+  // Safety check - if somehow we still got no months, fall back to a simpler date range
+  if (validMonths.length === 0) {
+    console.warn("No valid months generated for date range:", {
+      startDate,
+      endDate,
+    });
+    const startMonth = startDate.toLocaleString("default", {
+      month: "long",
+      timeZone: "UTC",
+    });
+    const startYear = startDate.getUTCFullYear();
+    validMonths.push(
+      `${startMonth} ${startYear}`,
+      `${startMonth}  ${startYear}`
+    );
   }
 
-  return Prisma.sql`${dateExpr} >= ${startDate}`;
+  // Create the IN clause with all valid month-year combinations
+  const query = Prisma.sql`TRIM(${Prisma.raw(seasonColumn)}) IN (${Prisma.join(
+    validMonths
+  )})`;
+
+  // Debug log
+  console.log("Generated date condition:", {
+    validMonths,
+    sqlQuery: query.sql,
+    values: query.values,
+  });
+
+  return query;
 }

@@ -1,3 +1,5 @@
+// components/PlayerDashboard/PlayerDetails.tsx
+
 import { useState, useEffect } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
 
@@ -137,6 +139,10 @@ function parseGameDate(fileName: string, season: string): Date {
 
 export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
 
+    const [showDebug, setShowDebug] = useState(false);
+    const [typedKeys, setTypedKeys] = useState('');
+    const [tapCount, setTapCount] = useState(0);
+    const [lastTapTime, setLastTapTime] = useState(0);
     const [stats, setStats] = useState<PlayerStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedRange, setSelectedRange] = useState(() => {
@@ -153,6 +159,60 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
     });
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [earliestGameDate, setEarliestGameDate] = useState<string | null>(null);
+
+
+
+    // Keyboard event handler and touch event handlers
+    useEffect(() => {
+        const handleKeyPress = (event: KeyboardEvent) => {
+            const newTypedKeys = (typedKeys + event.key).toLowerCase();
+            setTypedKeys(newTypedKeys);
+
+            // Check if the last 5 characters spell "debug"
+            if (newTypedKeys.includes('debug')) {
+                setShowDebug(true);
+                setTypedKeys('');
+            }
+
+            // Reset if typed string gets too long
+            if (newTypedKeys.length > 10) {
+                setTypedKeys('');
+            }
+        };
+
+        const handleTouch = (event: TouchEvent) => {
+            const currentTime = new Date().getTime();
+            const tapTimeDiff = currentTime - lastTapTime;
+
+            // Reset tap count if too much time has passed (800ms threshold)
+            if (tapTimeDiff > 800) {
+                setTapCount(1);
+            } else {
+                setTapCount(prev => {
+                    // If this is the third tap, show debug
+                    if (prev === 2) {
+                        setShowDebug(true);
+                        return 0;
+                    }
+                    return prev + 1;
+                });
+            }
+
+            setLastTapTime(currentTime);
+        };
+
+        // Add both event listeners
+        window.addEventListener('keydown', handleKeyPress);
+        document.addEventListener('touchstart', handleTouch);
+
+        // Clean up both listeners
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+            document.removeEventListener('touchstart', handleTouch);
+        };
+    }, [typedKeys, lastTapTime]);
+
+    // Fetch stats when player is selected or date changes
     useEffect(() => {
         async function fetchPlayerStats() {
             setLoading(true);
@@ -233,8 +293,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
             fetchPlayerStats();
         }
     }, [playerUID, startDate, endDate]);
-    console.log("selectedRange");
-    console.log(selectedRange);
+
     if (loading) {
         return (
             <div className="text-center py-12 text-gray-600">
@@ -276,12 +335,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* This time period Stats */}
-                {(() => {
-                    console.log("stats.quarterlyStats");
-                    console.log(stats.quarterlyStats);
-                    return null;
-                })()}
+
 
                 <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div className="bg-blue-50 p-4 rounded-t-xl border-b border-blue-100">
@@ -421,6 +475,44 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                     </div>
                 </div>
             </div>
+            {/* Secret Debug Section */}
+            <div className="hidden">debug</div>
+            {
+                showDebug && (
+                    <>
+                        <h3>Secret level</h3>
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placement</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KOs</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Name</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {stats.recentGames.map((game, index) => (
+
+
+                                    <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} key={index}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.date}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.venue}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.placement}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.points}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.knockouts}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.fileName}</td>
+                                    </tr>
+
+
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
+                )
+            }
+
         </div>
     );
 }

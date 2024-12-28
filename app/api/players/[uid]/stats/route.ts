@@ -114,18 +114,21 @@ export async function GET(
       }
     }
 
+    // after parsing startDate and endDate
+    console.log("Parsed date parameters:", {
+      startDateParam,
+      endDateParam,
+      parsedStartDate: startDate,
+      parsedEndDate: endDate,
+    });
+
     // League ranking query - only execute if a date range is specified
     let leagueRanking = null;
     let totalPlayers = null;
 
     // Rankings query
-    console.log("startDate:", startDate);
-    console.log("endDate:", endDate);
+
     if (startDate && endDate) {
-      console.log("Attempting to get rankings for dates:", {
-        startDate,
-        endDate,
-      });
       const rankings = await prisma.$queryRaw<
         { ranking: number; total_players: number }[]
       >`
@@ -155,11 +158,10 @@ export async function GET(
           GROUP BY p1.UID
         ) as player_rank
       `;
-      console.log("Rankings result:", rankings);
+
       if (rankings && rankings.length > 0) {
         leagueRanking = Number(rankings[0].ranking);
         totalPlayers = Number(rankings[0].total_players);
-        console.log("Processed rankings:", { leagueRanking, totalPlayers });
       }
     }
 
@@ -253,6 +255,13 @@ export async function GET(
       ORDER BY points DESC
       `;
 
+    console.log("Query parameters for recent games:", {
+      playerUID,
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString(),
+      dateCondition: getDateCondition(startDate, endDate).sql,
+    });
+
     // Recent Games
     const recentGames = await prisma.$queryRaw<RecentGame[]>`
       SELECT 
@@ -271,7 +280,7 @@ export async function GET(
       }
       ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(Season, ' ', 1), ' ', SUBSTRING_INDEX(Season, ' ', -1)), '%M %Y') DESC,
               File_name DESC
-      LIMIT 5
+      LIMIT 50
       `;
 
     const response = {
@@ -307,22 +316,7 @@ export async function GET(
         ? earliestGameDate.toISOString()
         : null,
     };
-    // Right before sending the response, add this:
-    console.log("Final quarterlyStats:", {
-      gamesPlayed: quarterlyStats[0]
-        ? Number(quarterlyStats[0].gamesPlayed)
-        : 0,
-      totalPoints: quarterlyStats[0]
-        ? Number(quarterlyStats[0].totalPoints)
-        : 0,
-      knockouts: quarterlyStats[0] ? Number(quarterlyStats[0].knockouts) : 0,
-      finalTables: quarterlyStats[0]
-        ? Number(quarterlyStats[0].finalTables)
-        : 0,
-      avgScore: quarterlyStats[0] ? Number(quarterlyStats[0].avgScore) : 0,
-      leagueRanking,
-      totalPlayers,
-    });
+
     return NextResponse.json(response);
   } catch (error) {
     console.error("Player stats error:", error);
