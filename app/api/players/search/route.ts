@@ -1,3 +1,5 @@
+// app/api/players/search/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getServerIP } from "@/lib/utils";

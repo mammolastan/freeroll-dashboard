@@ -19,3 +19,18 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+a.freeroll-link {
+  background: linear-gradient(0deg, darkred, darkred) no-repeat right bottom / 0
+    var(--bg-h);
+  transition: background-size 350ms, color 350ms;
+  --bg-h: 100%;
+  color: black;
+  text-decoration: underline;
+}
+a.freeroll-link:where(:hover, :focus-visible) {
+  background-size: 100% var(--bg-h);
+  background-position-x: left;
+  color: white;
+  text-decoration: none;
+}

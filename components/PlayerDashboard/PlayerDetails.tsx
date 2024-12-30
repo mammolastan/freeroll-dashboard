@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
+import Link from 'next/link';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -38,6 +39,7 @@ interface PlayerStats {
 interface PlayerDetailsProps {
     playerUID: string
     playerName: string
+    initialRange?: string | null
 }
 function formatDateRangeText(
     startDate: Date | null,
@@ -137,8 +139,7 @@ function parseGameDate(fileName: string, season: string): Date {
 }
 
 
-export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
-
+export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDetailsProps) {
     const [showDebug, setShowDebug] = useState(false);
     const [typedKeys, setTypedKeys] = useState('');
     const [tapCount, setTapCount] = useState(0);
@@ -146,21 +147,51 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
     const [stats, setStats] = useState<PlayerStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedRange, setSelectedRange] = useState(() => {
+
+        if (initialRange) {
+            return initialRange;
+        }
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
         const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
         return `Q${currentQuarter}-${currentYear}`;
     });
     const [startDate, setStartDate] = useState<Date | null>(() => {
+        if (initialRange === 'all-time') {
+            return null;
+        } else if (initialRange === 'current-month') {
+            const currentDate = new Date();
+            return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        } else if (initialRange?.includes('Q')) {
+            const [quarter, year] = initialRange.split('-');
+            const quarterNum = parseInt(quarter.slice(1));
+            const yearNum = parseInt(year);
+            return new Date(yearNum, (quarterNum - 1) * 3, 1);
+        }
+        // Default to current quarter if no initialRange
         const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
         const currentQuarter = Math.floor(currentDate.getMonth() / 3);
-        return new Date(Date.UTC(currentYear, currentQuarter * 3, 1));
+        return new Date(currentDate.getFullYear(), currentQuarter * 3, 1);
     });
-    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(() => {
+        if (initialRange === 'all-time') {
+            return null;
+        } else if (initialRange === 'current-month') {
+            const currentDate = new Date();
+            return new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        } else if (initialRange?.includes('Q')) {
+            const [quarter, year] = initialRange.split('-');
+            const quarterNum = parseInt(quarter.slice(1));
+            const yearNum = parseInt(year);
+            return new Date(yearNum, quarterNum * 3, 0);
+        }
+        // Default to current quarter if no initialRange
+        const currentDate = new Date();
+        const currentQuarter = Math.floor(currentDate.getMonth() / 3);
+        return new Date(currentDate.getFullYear(), (currentQuarter + 1) * 3, 0);
+    });
+
     const [earliestGameDate, setEarliestGameDate] = useState<string | null>(null);
-
-
 
     // Keyboard event handler and touch event handlers
     useEffect(() => {
@@ -381,6 +412,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                             <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
                         </div>
                         <div className="p-4 space-y-4">
+
                             <div>
                                 <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
                                 <div className="space-y-2">
@@ -388,7 +420,16 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                                         <div key={player.name} className="flex items-baseline justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                <span className="font-medium text-gray-900">{player.name}</span>
+                                                <Link
+                                                    href={`/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`}
+                                                    className="freeroll-link"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        window.location.href = `/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`;
+                                                    }}
+                                                >
+                                                    {player.name}
+                                                </Link>
                                             </div>
                                             <span className="text-sm font-medium text-purple-700">
                                                 {player.count} times
@@ -404,7 +445,16 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                                         <div key={player.name} className="flex items-baseline justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                <span className="font-medium text-gray-900">{player.name}</span>
+                                                <a
+                                                    href={`/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`}
+                                                    className="freeroll-link"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        window.location.href = `/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`;
+                                                    }}
+                                                >
+                                                    {player.name}
+                                                </a>
                                             </div>
                                             <span className="text-sm font-medium text-purple-700">
                                                 {player.count} times
@@ -413,6 +463,7 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                                     ))}
                                 </div>
                             </div>
+
                         </div>
                     </div>)
                 }
@@ -427,16 +478,12 @@ export function PlayerDetails({ playerUID, playerName }: PlayerDetailsProps) {
                         <div className="space-y-3">
                             {stats.venueStats.map(venue => (
                                 <div key={venue.venue} className="flex justify-between items-center">
-                                    <a
+                                    <Link
                                         href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
-                                        className="text-gray-700 hover:text-blue-600 transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            window.location.href = `/venues?venue=${encodeURIComponent(venue.venue)}`;
-                                        }}
+                                        className="freeroll-link"
                                     >
                                         {venue.venue}
-                                    </a>
+                                    </Link>
                                     <span className="font-medium text-green-600">{venue.points}</span>
 
                                 </div>
