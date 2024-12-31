@@ -500,7 +500,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     <div className="p-4">
                         <div className="space-y-4">
                             {stats.recentGames.slice(0, 5).map((game, index) => (
-                                <div key={index} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
+                                <Link
+                                    key={index}
+                                    href={`/games/${encodeURIComponent(game.fileName)}`}
+                                    className="block border-b border-gray-100 last:border-0 pb-3 last:pb-0 hover:bg-gray-50 transition-colors rounded-lg"
+                                >
                                     <div className="font-medium text-gray-800">{game.venue}</div>
                                     <div className="text-sm text-gray-500">
                                         {parseGameDate(game.fileName, game.date).toLocaleDateString('en-US', {
@@ -516,7 +520,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                         <span className="mx-2">•</span>
                                         <span className="text-blue-600">KOs: {game.knockouts}</span>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
