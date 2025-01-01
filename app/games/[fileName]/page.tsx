@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, Award, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
+import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 
 interface Player {
     name: string
@@ -51,7 +52,10 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-xl text-gray-600 animate-pulse">Loading game details...</div>
+                <RotatingImageLoader
+                    src="/images/Poker-Chip-Isloated-Blue.png"
+                    size="large"
+                />
             </div>
         )
     }
@@ -67,7 +71,7 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
     return (
         <div className="container mx-auto px-4 py-8">
             <Link
-                href="/players"
+                href={`/players`}
                 className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -133,7 +137,7 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                                         {player.name}
                                     </Link>
                                 </div>
-                                <div className="flex flex-wrap gap-4 text-sm">
+                                <div className="flex flex-wrap gap-4 text-sm text-black">
                                     <div className="flex items-center">
                                         <Trophy className="w-4 h-4 mr-1 text-blue-500" />
                                         <span>{player.totalPoints} pts</span>

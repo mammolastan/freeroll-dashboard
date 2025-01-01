@@ -11,7 +11,19 @@ interface Player {
 }
 
 export default function PlayersPage() {
-    const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+    const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('selectedPlayer');
+            return saved ? JSON.parse(saved) : null;
+        }
+        return null;
+    });
+    const [selectedRange, setSelectedRange] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('selectedRange') || 'current-month';
+        }
+        return 'current-month';
+    });
     const [isClient, setIsClient] = useState(false);
     const [initialRange, setInitialRange] = useState<string | null>(() => {
         // Initialize from URL parameter immediately
@@ -21,19 +33,24 @@ export default function PlayersPage() {
         }
         return null;
     });
-    // Handle client-side initialization
+
+
     useEffect(() => {
         setIsClient(true);
         const urlParams = new URLSearchParams(window.location.search);
         const range = urlParams.get('range');
         const playerName = urlParams.get('name');
 
-
-
+        // URL params take precedence over localStorage
         if (range) {
-            setInitialRange(range);
+            setSelectedRange(range);
+            localStorage.setItem('selectedRange', range);
+        } else {
+            const savedRange = localStorage.getItem('selectedRange');
+            if (savedRange) setInitialRange(savedRange);
         }
 
+        // Fetch player if name provided
         if (playerName) {
             fetch(`/api/players/search?q=${encodeURIComponent(playerName)}`)
                 .then(response => response.json())
@@ -41,11 +58,24 @@ export default function PlayersPage() {
                     if (data.length > 0) {
                         const player = data.find((p: Player) => p.Name === playerName) || data[0];
                         setSelectedPlayer(player);
+                        localStorage.setItem('selectedPlayer', JSON.stringify(player));
                     }
-                })
-                .catch(error => console.error('Error fetching player:', error));
+                });
         }
     }, []);
+
+    // Update localStorage when player changes
+    useEffect(() => {
+        if (selectedPlayer) {
+            localStorage.setItem('selectedPlayer', JSON.stringify(selectedPlayer));
+        }
+    }, [selectedPlayer]);
+
+
+    // Update localStorage when range changes
+    useEffect(() => {
+        localStorage.setItem('selectedRange', selectedRange);
+    }, [selectedRange]);
 
     // Don't render URL-dependent content until client-side
     if (!isClient) {

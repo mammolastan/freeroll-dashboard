@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Award, Crown } from 'lucide-react';
 import Link from 'next/link';
+import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface VenueStats {
     topPlayers: Array<{
@@ -57,7 +58,10 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
     if (loading && !isTransitioning) {
         return (
             <div className="min-h-[400px] flex items-center justify-center">
-                <div className="text-xl text-gray-600 animate-pulse">Loading stats...</div>
+                <RotatingImageLoader
+                    src="/images/Poker-Chip-Isloated-Blue.png"
+                    size="large"
+                />
             </div>
         );
     }
@@ -129,7 +133,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                             </div>
                             <div className="flex items-center gap-2">
                                 <Trophy size={16} className="text-blue-500" />
-                                <span className="font-bold text-blue-600">
+                                <span className="font-bold text-black">
                                     {player.totalPoints} pts
                                 </span>
                             </div>

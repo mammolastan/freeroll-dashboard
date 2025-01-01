@@ -67,15 +67,6 @@ export async function GET(
       : new Date().getFullYear();
     const gameDate = new Date(seasonYear, month, day);
 
-    // Debug log to see raw data
-    console.log(
-      "Raw player data:",
-      players.map((p) => ({
-        name: p.Name,
-        placement: p.Placement,
-      }))
-    );
-
     const gameDetails = {
       players: players.map((player) => ({
         name: player.Name,

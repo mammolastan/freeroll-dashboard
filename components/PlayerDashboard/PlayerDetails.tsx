@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
 import Link from 'next/link';
+import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -40,6 +41,7 @@ interface PlayerDetailsProps {
     playerUID: string
     playerName: string
     initialRange?: string | null
+    onRangeChange?: (range: string) => void
 }
 function formatDateRangeText(
     startDate: Date | null,
@@ -328,7 +330,10 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     if (loading) {
         return (
             <div className="text-center py-12 text-gray-600">
-                <div className="animate-pulse">Loading stats for {playerName}...</div>
+                <RotatingImageLoader
+                    src="/images/Poker-Chip-Isloated-Blue.png"
+                    size="large"
+                />
             </div>
         );
     }
@@ -353,6 +358,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         setStartDate(newStartDate);
                         setEndDate(newEndDate);
                         setSelectedRange(newRange);
+                        // Update localStorage when range changes
+                        localStorage.setItem('selectedRange', newRange);
                     }}
                 />
             </div>
