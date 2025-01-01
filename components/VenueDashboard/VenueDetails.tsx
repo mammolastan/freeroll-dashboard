@@ -28,7 +28,8 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
 
     useEffect(() => {
         async function fetchVenueStats() {
-            setIsTransitioning(true);
+
+            setLoading(true);
             try {
                 const response = await fetch(
                     `/api/venues/${encodeURIComponent(venueName)}/stats?currentMonth=${isCurrentMonth}`
