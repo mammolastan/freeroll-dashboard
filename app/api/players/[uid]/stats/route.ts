@@ -114,14 +114,6 @@ export async function GET(
       }
     }
 
-    // after parsing startDate and endDate
-    console.log("Parsed date parameters:", {
-      startDateParam,
-      endDateParam,
-      parsedStartDate: startDate,
-      parsedEndDate: endDate,
-    });
-
     // League ranking query - only execute if a date range is specified
     let leagueRanking = null;
     let totalPlayers = null;
@@ -254,13 +246,6 @@ export async function GET(
       GROUP BY Venue
       ORDER BY points DESC
       `;
-
-    console.log("Query parameters for recent games:", {
-      playerUID,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-      dateCondition: getDateCondition(startDate, endDate).sql,
-    });
 
     // Recent Games
     const recentGames = await prisma.$queryRaw<RecentGame[]>`

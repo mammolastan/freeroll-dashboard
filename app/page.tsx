@@ -13,7 +13,7 @@ export default function Home() {
               <CardTitle>Player Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>View detailed player statistics, rankings, and history</p>
+
             </CardContent>
           </Card>
         </Link>
@@ -21,10 +21,21 @@ export default function Home() {
         <Link href="/venues">
           <Card className="hover:bg-accent transition-colors">
             <CardHeader>
-              <CardTitle>Venue Analytics</CardTitle>
+              <CardTitle>Venues</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>Explore venue statistics, trends, and player performance</p>
+
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/games">
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Games</CardTitle>
+            </CardHeader>
+            <CardContent>
+
             </CardContent>
           </Card>
         </Link>

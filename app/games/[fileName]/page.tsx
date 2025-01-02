@@ -123,7 +123,7 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                             >
                                 <div className="flex items-center gap-4 mb-2 md:mb-0">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center
-                                        ${index === 0 ? 'bg-amber-500 text-white' :
+                                            ${index === 0 ? 'bg-amber-500 text-white' :
                                             index === 1 ? 'bg-gray-500 text-white' :
                                                 index === 2 ? 'bg-orange-500 text-white' :
                                                     'bg-gray-100 text-gray-600'}`}

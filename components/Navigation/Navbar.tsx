@@ -1,9 +1,11 @@
+// components/Navigation/Navbar.tsx
+
 'use client';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NavLink from './NavLink';
 import Link from 'next/link';
-import { Home, Store, User, CircleUserRound, Menu, X } from 'lucide-react';
+import { Home, Store, User, CircleUserRound, Menu, X, Trophy } from 'lucide-react';
 
 const Navbar = () => {
     const pathname = usePathname();
@@ -15,6 +17,7 @@ const Navbar = () => {
         { href: '/', icon: <Home size={20} />, text: 'Home' },
         { href: '/players', icon: <CircleUserRound size={20} />, text: 'Players' },
         { href: '/venues', icon: <Store size={20} />, text: 'Venues' },
+        { href: '/games', icon: <Trophy size={20} />, text: 'Games' },
     ];
 
     return (
