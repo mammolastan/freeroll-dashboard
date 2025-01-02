@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
+import { FaPersonFallingBurst } from "react-icons/fa6";
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 
 interface TopPlayer {
@@ -104,7 +105,7 @@ export default function GamesPage() {
                                                         {player.points}
                                                     </span>
                                                     <span className="flex items-center gap-1 text-black">
-                                                        <UtensilsCrossed size={14} className="text-red-500" />
+                                                        <FaPersonFallingBurst size={14} className="text-red-500" />
                                                         {player.knockouts}
                                                     </span>
                                                 </div>
