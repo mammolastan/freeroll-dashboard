@@ -34,12 +34,9 @@ export async function GET(request: Request) {
       ? currentDate
       : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
 
-    const month = targetDate.toLocaleString("default", {
-      month: "long",
-      timeZone: "UTC",
-    });
-    const year = targetDate.getUTCFullYear();
+    const { month, year } = getMonthYearString(targetDate);
 
+    // First get all venues
     const venues = await prisma.$queryRaw`
       SELECT DISTINCT 
         Venue as name,
@@ -50,8 +47,33 @@ export async function GET(request: Request) {
       ORDER BY totalGames DESC
     `;
 
+    // Then for each venue, get top 5 players
+    const venuesWithPlayers = await Promise.all(
+      (venues as any[]).map(async (venue) => {
+        const topPlayers = await prisma.$queryRaw`
+          SELECT 
+            Name as name,
+            UID as uid,
+            SUM(Total_Points) as totalPoints,
+            SUM(Knockouts) as knockouts,
+            COUNT(*) as gamesPlayed
+          FROM poker_tournaments
+          WHERE Venue = ${venue.name}
+          AND TRIM(Season) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
+          GROUP BY Name, UID
+          ORDER BY totalPoints DESC
+          LIMIT 5
+        `;
+
+        return {
+          ...venue,
+          topPlayers: serializeResults(topPlayers as any[]),
+        };
+      })
+    );
+
     return NextResponse.json({
-      venues: serializeResults(venues as any[]),
+      venues: serializeResults(venuesWithPlayers),
       month,
       year,
     });
