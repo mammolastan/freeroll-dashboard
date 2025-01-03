@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { VenueDetails } from '@/components/VenueDashboard/VenueDetails'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 
 interface Venue {
     name: string;
@@ -69,7 +70,10 @@ export default function VenuesPage() {
     if (loading && !isTransitioning) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-xl text-gray-600 animate-pulse">Loading venues...</div>
+                <RotatingImageLoader
+                    src="/images/Poker-Chip-Isloated-Blue.png"
+                    size="large"
+                />
             </div>
         )
     }
