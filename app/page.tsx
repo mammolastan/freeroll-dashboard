@@ -1,5 +1,9 @@
+// app/page.tsx
+'use client';
+
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import MonthlyRankings from "@/components/Rankings/MonthlyRankings";
 
 export default function Home() {
   return (
@@ -39,7 +43,11 @@ export default function Home() {
             </CardContent>
           </Card>
         </Link>
+        {/* Monthly Rankings */}
       </div>
+      <section className="mb-12">
+        <MonthlyRankings />
+      </section>
     </main>
   )
 }
