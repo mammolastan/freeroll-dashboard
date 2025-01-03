@@ -7,13 +7,12 @@ const prisma = new PrismaClient();
 interface VenueRanking {
   venue: string;
   rank: number;
+  points: number; // Added points to interface
 }
 
 interface PlayerRanking {
-  rank: number;
   name: string;
   uid: string;
-  totalPoints: number;
   qualifyingVenues: VenueRanking[];
   bubbleVenues: VenueRanking[];
   isQualified: boolean;
@@ -126,21 +125,21 @@ export async function GET(request: Request) {
             qualifyingVenues.push({
               venue: venue.venue,
               rank: playerAtVenue.rank,
+              points: Number(playerAtVenue.totalPoints), // Add points to qualifier
             });
           } else if (playerAtVenue.rank <= 7) {
             bubbleVenues.push({
               venue: venue.venue,
               rank: playerAtVenue.rank,
+              points: Number(playerAtVenue.totalPoints), // Add points to bubble
             });
           }
         }
       });
 
       return {
-        rank: Number(player.rank),
         name: player.name,
         uid: player.uid,
-        totalPoints: Number(player.totalPoints),
         qualifyingVenues,
         bubbleVenues,
         isQualified: qualifyingVenues.length > 0,

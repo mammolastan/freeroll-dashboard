@@ -43,11 +43,20 @@ export default function Home() {
             </CardContent>
           </Card>
         </Link>
-        {/* Monthly Rankings */}
+
+        <Link href="/rankings/monthly">
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Monthly rankings</CardTitle>
+            </CardHeader>
+            <CardContent>
+
+            </CardContent>
+          </Card>
+        </Link>
+
       </div>
-      <section className="mb-12">
-        <MonthlyRankings />
-      </section>
+
     </main>
   )
 }
