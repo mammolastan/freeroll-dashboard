@@ -107,3 +107,13 @@ export function getDateCondition(
 
   return query;
 }
+
+// Helper function to create consistent dates
+export function createGameDate(
+  month: number,
+  day: number,
+  year: number
+): string {
+  // Create date at 5AM UTC to ensure correct date in ET
+  return new Date(Date.UTC(year, month, day, 5, 0, 0)).toISOString();
+}

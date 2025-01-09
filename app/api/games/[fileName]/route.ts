@@ -1,6 +1,7 @@
 // app/api/games/[fileName]/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { createGameDate } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -65,7 +66,8 @@ export async function GET(
             new Date().getFullYear().toString()
         )
       : new Date().getFullYear();
-    const gameDate = new Date(seasonYear, month, day);
+
+    const gameDate = createGameDate(month, day, seasonYear);
 
     const gameDetails = {
       players: players.map((player) => ({
@@ -80,7 +82,7 @@ export async function GET(
         placementPoints: player.Placement_Points,
       })),
       venue: players[0].Venue,
-      date: gameDate.toISOString(),
+      date: gameDate, // Now using the string directly
       totalPlayers,
       totalKnockouts,
       averagePoints,
