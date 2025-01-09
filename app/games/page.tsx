@@ -21,26 +21,40 @@ interface Game {
     totalKnockouts: number
 }
 
-// Simpler date formatting function that preserves UTC
-function formatGameDate(isoDateString: string): string {
+function formatGameDateET(isoDateString: string): string {
     const date = new Date(isoDateString);
-    return date.toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
-    });
+        day: 'numeric',
+        timeZone: 'America/New_York'
+    }).format(date);
+}
+
+// Debug function to show various date representations
+function debugDate(isoDateString: string): string {
+    const date = new Date(isoDateString);
+    return `
+Original ISO: ${isoDateString}
+ET Format: ${formatGameDateET(isoDateString)}
+Browser TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
+Local: ${date.toLocaleDateString()}
+UTC: ${date.toUTCString()}
+`;
 }
 
 export default function GamesPage() {
     const [games, setGames] = useState<Game[]>([])
     const [loading, setLoading] = useState(true)
+    const [showDebug, setShowDebug] = useState(false)
 
     useEffect(() => {
         async function fetchRecentGames() {
             try {
                 const response = await fetch('/api/games/recent')
                 const data = await response.json()
+                console.log('Received game data:', data);
                 setGames(data)
             } catch (error) {
                 console.error('Failed to fetch recent games:', error)
@@ -52,6 +66,17 @@ export default function GamesPage() {
         fetchRecentGames()
     }, [])
 
+    useEffect(() => {
+        // Add 'd' key listener for debug toggle
+        const handleKeyPress = (e: KeyboardEvent) => {
+            if (e.key === 'd') {
+                setShowDebug(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, []);
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -62,10 +87,19 @@ export default function GamesPage() {
             </div>
         )
     }
-    console.log(games)
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Recent Games</h1>
+
+            {showDebug && (
+                <div className="mb-8 p-4 rounded-lg">
+                    <h2 className="text-lg font-bold mb-4">Debug Information</h2>
+                    <pre className="whitespace-pre-wrap text-sm">
+                        {games.map(game => debugDate(game.date)).join('\n\n')}
+                    </pre>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {games.map((game) => (
@@ -78,7 +112,7 @@ export default function GamesPage() {
                                 {game.venue}
                             </CardTitle>
                             <p className="text-sm text-gray-600">
-                                {formatGameDate(game.date)}
+                                {formatGameDateET(game.date)}
                             </p>
                         </CardHeader>
                         <CardContent className="pt-4">
