@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
-import { FaPersonFallingBurst } from "react-icons/fa6";
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 
 interface TopPlayer {
@@ -20,6 +19,17 @@ interface Game {
     totalPlayers: number
     topThree: TopPlayer[]
     totalKnockouts: number
+}
+
+// Simpler date formatting function that preserves UTC
+function formatGameDate(isoDateString: string): string {
+    const date = new Date(isoDateString);
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 }
 
 export default function GamesPage() {
@@ -52,7 +62,6 @@ export default function GamesPage() {
             </div>
         )
     }
-    console.log("games")
     console.log(games)
     return (
         <div className="container mx-auto px-4 py-8">
@@ -69,17 +78,11 @@ export default function GamesPage() {
                                 {game.venue}
                             </CardTitle>
                             <p className="text-sm text-gray-600">
-                                {new Date(game.date).toLocaleDateString('en-US', {
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
+                                {formatGameDate(game.date)}
                             </p>
                         </CardHeader>
                         <CardContent className="pt-4">
                             <div className="space-y-4">
-                                {/* Top 3 Players */}
                                 <div className="space-y-2">
                                     {game.topThree.map((player, index) => (
                                         <div key={index} className="flex items-center justify-between text-sm">
@@ -112,7 +115,6 @@ export default function GamesPage() {
                                     ))}
                                 </div>
 
-                                {/* Game Stats */}
                                 <div className="pt-2 border-t border-gray-100 flex justify-between text-sm">
                                     <div className="flex items-center gap-2">
                                         <Users size={16} className="text-blue-500" />

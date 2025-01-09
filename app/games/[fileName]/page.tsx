@@ -27,6 +27,17 @@ interface GameDetails {
     averagePoints: number
 }
 
+// Simpler date formatting function that preserves UTC
+function formatGameDate(isoDateString: string): string {
+    const date = new Date(isoDateString);
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
 export default function GamePage({ params }: { params: { fileName: string } }) {
     const [gameDetails, setGameDetails] = useState<GameDetails | null>(null)
     const [loading, setLoading] = useState(true)
@@ -71,22 +82,17 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
     return (
         <div className="container mx-auto px-4 py-8">
             <Link
-                href={`/players`}
+                href={`/games`}
                 className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Players
+                Back to Games
             </Link>
 
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">{gameDetails.venue}</h1>
                 <p className="text-gray-600">
-                    {new Date(gameDetails.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })}
+                    {formatGameDate(gameDetails.date)}
                 </p>
             </div>
 
@@ -104,10 +110,6 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                         </div>
                     </CardContent>
                 </Card>
-
-
-
-
             </div>
 
             <Card>
@@ -123,7 +125,7 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                             >
                                 <div className="flex items-center gap-4 mb-2 md:mb-0">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center
-                                            ${index === 0 ? 'bg-amber-500 text-white' :
+                                        ${index === 0 ? 'bg-amber-500 text-white' :
                                             index === 1 ? 'bg-gray-500 text-white' :
                                                 index === 2 ? 'bg-orange-500 text-white' :
                                                     'bg-gray-100 text-gray-600'}`}
