@@ -42,7 +42,6 @@ export default function GamesPage() {
             try {
                 const response = await fetch('/api/games/recent')
                 const data = await response.json()
-                console.log('Received game data:', data);
                 setGames(data)
             } catch (error) {
                 console.error('Failed to fetch recent games:', error)
