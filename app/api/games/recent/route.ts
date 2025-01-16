@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { createGameDate } from "@/lib/utils";
 
+// Force dynamic to prevent caching
+export const dynamic = "force-dynamic";
+
 const prisma = new PrismaClient();
 
 // Helper function to parse game date from fileName and season
