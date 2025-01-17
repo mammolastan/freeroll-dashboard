@@ -170,17 +170,23 @@ export default function MonthlyRankings() {
                                                 {
                                                     (player.isQualified || player.isBubble) && (
                                                         <div className="space-y-1">
-                                                            {player.qualifyingVenues.map((venue) => (
-                                                                <div key={venue.venue} className="flex items-center space-x-2">
-                                                                    <Link
-                                                                        href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
-                                                                        className="text-blue-600 freeroll-link"
-                                                                    >
-                                                                        {venue.venue}
-                                                                    </Link>
-                                                                    <span className="text-gray-500">#{venue.rank} ({venue.points} pts)</span>
-                                                                </div>
-                                                            ))}
+                                                            {player.qualifyingVenues
+                                                                .sort((a, b) => {
+                                                                    if (a.venue === selectedVenue) return -1;
+                                                                    if (b.venue === selectedVenue) return 1;
+                                                                    return 0;
+                                                                })
+                                                                .map((venue) => (
+                                                                    <div key={venue.venue} className="flex items-center space-x-2">
+                                                                        <Link
+                                                                            href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                                                                            className="text-blue-600 freeroll-link"
+                                                                        >
+                                                                            {venue.venue}
+                                                                        </Link>
+                                                                        <span className="text-gray-500">#{venue.rank} ({venue.points} pts)</span>
+                                                                    </div>
+                                                                ))}
                                                         </div>
                                                     )
                                                 }
