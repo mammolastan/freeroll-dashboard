@@ -71,14 +71,17 @@ export default function MonthlyRankings() {
 
     const getFilteredRankings = (): PlayerRanking[] => {
         if (!rankingsData?.rankings) return [];
-
         if (selectedVenue === 'all') return rankingsData.rankings;
 
-        return rankingsData.rankings.filter((player: PlayerRanking): boolean => {
-            const hasQualifyingVenue = player.qualifyingVenues.some(v => v.venue === selectedVenue);
-            const hasBubbleVenue = player.bubbleVenues.some(v => v.venue === selectedVenue);
-            return hasQualifyingVenue || hasBubbleVenue;
-        });
+        const filteredRankings = rankingsData.rankings
+            .filter(player => player.qualifyingVenues.some(venue => venue.venue === selectedVenue))
+            .sort((a, b) => {
+                const aVenue = a.qualifyingVenues.find(venue => venue.venue === selectedVenue);
+                const bVenue = b.qualifyingVenues.find(venue => venue.venue === selectedVenue);
+                return (aVenue?.rank ?? Infinity) - (bVenue?.rank ?? Infinity);
+            });
+
+        return filteredRankings;
     };
 
     if (loading && !isTransitioning) {
@@ -105,8 +108,9 @@ export default function MonthlyRankings() {
                     Monthly Tournament Qualifiers - {rankingsData.month} {rankingsData.year}
                 </h2>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 items-center gap-4 my-5">
-                <DateToggler isCurrentMonth={isCurrentMonth} setIsCurrentMonth={setIsCurrentMonth} /><select
+            <div className="flex flex-col sm:flex-row items-center gap-4 my-5">
+                <DateToggler isCurrentMonth={isCurrentMonth} setIsCurrentMonth={setIsCurrentMonth} />
+                <select
                     value={selectedVenue}
                     onChange={(e) => setSelectedVenue(e.target.value)}
                     className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -163,35 +167,23 @@ export default function MonthlyRankings() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm text-gray-900">
-                                                {player.isQualified ? (
-                                                    <div className="space-y-1">
-                                                        {player.qualifyingVenues.map((venue) => (
-                                                            <div key={venue.venue} className="flex items-center space-x-2">
-                                                                <Link
-                                                                    href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
-                                                                    className="text-blue-600 freeroll-link"
-                                                                >
-                                                                    {venue.venue}
-                                                                </Link>
-                                                                <span className="text-gray-500">#{venue.rank} ({venue.points} pts)</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : player.isBubble ? (
-                                                    <div className="space-y-1">
-                                                        {player.bubbleVenues.map((venue) => (
-                                                            <div key={venue.venue} className="flex items-center space-x-2 text-gray-500">
-                                                                <Link
-                                                                    href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
-                                                                    className="text-blue-600 freeroll-link"
-                                                                >
-                                                                    {venue.venue}
-                                                                </Link>
-                                                                <span>#{venue.rank} ({venue.points} pts)</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : null}
+                                                {
+                                                    (player.isQualified || player.isBubble) && (
+                                                        <div className="space-y-1">
+                                                            {player.qualifyingVenues.map((venue) => (
+                                                                <div key={venue.venue} className="flex items-center space-x-2">
+                                                                    <Link
+                                                                        href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                                                                        className="text-blue-600 freeroll-link"
+                                                                    >
+                                                                        {venue.venue}
+                                                                    </Link>
+                                                                    <span className="text-gray-500">#{venue.rank} ({venue.points} pts)</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )
+                                                }
                                             </div>
                                         </td>
                                     </tr>

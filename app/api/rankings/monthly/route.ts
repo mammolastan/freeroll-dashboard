@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 interface VenueRanking {
   venue: string;
   rank: number;
-  points: number; // Added points to interface
+  points: number;
 }
 
 interface PlayerRanking {
@@ -17,6 +17,24 @@ interface PlayerRanking {
   bubbleVenues: VenueRanking[];
   isQualified: boolean;
   isBubble: boolean;
+}
+
+function checkIfQualified(qualifyingVenues: VenueRanking[]): boolean {
+  for (const venue of qualifyingVenues) {
+    if (venue.rank < 6) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function checkIfBubble(qualifyingVenues: VenueRanking[]): boolean {
+  for (const venue of qualifyingVenues) {
+    if (venue.rank > 5) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export async function GET(request: Request) {
@@ -121,17 +139,11 @@ export async function GET(request: Request) {
       venueRankings.forEach((venue) => {
         const playerAtVenue = venue.rankings.find((r) => r.uid === player.uid);
         if (playerAtVenue) {
-          if (playerAtVenue.rank <= 5) {
+          if (playerAtVenue.rank <= 7) {
             qualifyingVenues.push({
               venue: venue.venue,
               rank: playerAtVenue.rank,
               points: Number(playerAtVenue.totalPoints), // Add points to qualifier
-            });
-          } else if (playerAtVenue.rank <= 7) {
-            bubbleVenues.push({
-              venue: venue.venue,
-              rank: playerAtVenue.rank,
-              points: Number(playerAtVenue.totalPoints), // Add points to bubble
             });
           }
         }
@@ -142,8 +154,8 @@ export async function GET(request: Request) {
         uid: player.uid,
         qualifyingVenues,
         bubbleVenues,
-        isQualified: qualifyingVenues.length > 0,
-        isBubble: qualifyingVenues.length === 0 && bubbleVenues.length > 0,
+        isQualified: checkIfQualified(qualifyingVenues),
+        isBubble: checkIfBubble(qualifyingVenues),
       };
     });
 
