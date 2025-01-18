@@ -55,6 +55,17 @@ export default function Home() {
           </Card>
         </Link>
 
+        <Link href="/rankings/quarterly">
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Quarterly rankings</CardTitle>
+            </CardHeader>
+            <CardContent>
+
+            </CardContent>
+          </Card>
+        </Link>
+
       </div>
 
     </main>

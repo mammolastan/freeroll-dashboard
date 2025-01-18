@@ -1,3 +1,5 @@
+// components/Rankings/MonthlyRankings.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ChevronRight, ChevronLeft, Award, AlertCircle } from 'lucide-react';
