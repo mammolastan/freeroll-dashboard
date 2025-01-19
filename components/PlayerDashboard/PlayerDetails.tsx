@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
 import Link from 'next/link';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
+import { PlacementFrequencyChart } from './PlacementFrequencyChart';
+
+interface PlacementFrequencyData {
+    placement: number;
+    frequency: number;
+}
 
 interface PlayerStats {
     quarterlyStats: {
@@ -15,6 +21,7 @@ interface PlayerStats {
         leagueRanking?: number | null
         totalPlayers?: number | null
     }
+    placementFrequency: PlacementFrequencyData[];
     mostKnockedOutBy: Array<{
         name: string
         count: number
@@ -293,6 +300,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     mostKnockedOut: data.mostKnockedOut ?? [],
                     venueStats: data.venueStats ?? [],
                     recentGames: data.recentGames ?? [],
+                    placementFrequency: data.placementFrequency ?? []
                 };
 
                 setStats(processedData);
@@ -316,6 +324,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     mostKnockedOut: [],
                     venueStats: [],
                     recentGames: [],
+                    placementFrequency: []
                 });
             } finally {
                 setLoading(false);
@@ -498,6 +507,9 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         </div>
                     </div>
                 </div>
+                {selectedRange === 'all-time' && stats?.placementFrequency && (
+                    <PlacementFrequencyChart data={stats.placementFrequency} />
+                )}
 
                 {/* Recent Games */}
                 <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">

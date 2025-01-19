@@ -26,7 +26,10 @@ interface VenueStats {
   venue: string;
   points: bigint;
 }
-
+interface PlacementFrequency {
+  Placement: number;
+  frequency: bigint;
+}
 interface RecentGame {
   date: string;
   venue: string;
@@ -247,6 +250,18 @@ export async function GET(
       ORDER BY points DESC
       `;
 
+    // Placement Frequency
+    const placementFrequency = await prisma.$queryRaw<PlacementFrequency[]>`
+      SELECT 
+        Placement,
+        COUNT(*) as frequency
+      FROM poker_tournaments
+      WHERE UID = ${playerUID}
+      AND Placement <= 8
+      GROUP BY Placement
+      ORDER BY Placement ASC
+      `;
+
     // Recent Games
     const recentGames = await prisma.$queryRaw<RecentGame[]>`
       SELECT 
@@ -300,6 +315,10 @@ export async function GET(
       earliestGameDate: earliestGameDate
         ? earliestGameDate.toISOString()
         : null,
+      placementFrequency: placementFrequency.map((pf) => ({
+        placement: Number(pf.Placement),
+        frequency: Number(pf.frequency),
+      })),
     };
 
     return NextResponse.json(response);
