@@ -49,19 +49,6 @@ function formatStats(stats: QuarterlyStats) {
   };
 }
 
-// Helper function to parse the game date from the file name
-function parseGameDate(fileName: string, seasonYear: string): Date {
-  // Extract the date portion (e.g., "0104" from "0104_urbT_bb.tdt")
-  const datePart = fileName.split("_")[0];
-
-  // Parse month and day
-  const month = parseInt(datePart.substring(0, 2)) - 1; // Subtract 1 as months are 0-based
-  const day = parseInt(datePart.substring(2, 4));
-  const year = parseInt(seasonYear);
-
-  return new Date(year, month, day);
-}
-
 export async function GET(
   request: Request,
   { params }: { params: { uid: string } }
@@ -258,6 +245,11 @@ export async function GET(
       FROM poker_tournaments
       WHERE UID = ${playerUID}
       AND Placement <= 8
+      ${
+        startDate
+          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
+          : Prisma.sql`AND 1=1`
+      }
       GROUP BY Placement
       ORDER BY Placement ASC
       `;

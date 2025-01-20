@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
 import Link from 'next/link';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
-import { PlacementFrequencyChart } from './PlacementFrequencyChart';
+import { PlacementFrequencyChart } from './PlacementFrequencyChart'
+import { DateRangePicker } from './DateRangePicker';
 
 interface PlacementFrequencyData {
     placement: number;
@@ -50,21 +51,21 @@ interface PlayerDetailsProps {
     initialRange?: string | null
     onRangeChange?: (range: string) => void
 }
+
 function formatDateRangeText(
     startDate: Date | null,
     endDate: Date | null,
     selectedRange: string,
-    earliestGameDate: string | null
+    earliestGameDate: string | null,
+    isCustomRange: boolean = false
 ): string {
-    // Type guard to ensure startDate is not null
+    // Handle null start date
     if (startDate === null) {
         if (!earliestGameDate) {
             return "No stats available";
         }
-
         // All-time case
         const earliest = new Date(earliestGameDate);
-
         return `Stats from ${earliest.toLocaleString('default', {
             month: 'long',
             year: 'numeric',
@@ -72,6 +73,20 @@ function formatDateRangeText(
         })} - Current`;
     }
 
+    // Custom date range should show specific dates
+    if (isCustomRange && endDate) {
+        return `${startDate.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        })} - ${endDate.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        })}`;
+    }
+
+    // Preset ranges
     if (selectedRange === 'current-month') {
         return `Stats for ${startDate.toLocaleString('default', {
             month: 'long',
@@ -104,6 +119,7 @@ function formatDateRangeText(
         timeZone: 'UTC'
     })}`;
 }
+
 function getMonthRangeText(selectedRange: string): string {
     if (selectedRange === 'current-month') {
         return "December";
@@ -199,8 +215,50 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         const currentQuarter = Math.floor(currentDate.getMonth() / 3);
         return new Date(currentDate.getFullYear(), (currentQuarter + 1) * 3, 0);
     });
-
     const [earliestGameDate, setEarliestGameDate] = useState<string | null>(null);
+    // New state for custom date range mode
+    const [isCustomRange, setIsCustomRange] = useState(false);
+    const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+    const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+    const fetchPlayerStats = async (customStart?: Date, customEnd?: Date) => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+
+            if (isCustomRange && customStart && customEnd) {
+                params.append('startDate', customStart.toISOString());
+                params.append('endDate', customEnd.toISOString());
+            } else if (startDate) {
+                params.append('startDate', startDate.toISOString());
+                if (endDate) {
+                    params.append('endDate', endDate.toISOString());
+                }
+            }
+
+            const response = await fetch(
+                `/api/players/${playerUID}/stats?${params.toString()}`
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setStats(data);
+        } catch (error) {
+            console.error('Failed to fetch player stats:', error);
+            setStats(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+    // Handle custom date range changes
+    const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
+        setCustomStartDate(startDate);
+        setCustomEndDate(endDate);
+        setIsCustomRange(true);
+        fetchPlayerStats(startDate, endDate);
+    };
 
     // Keyboard event handler and touch event handlers
     useEffect(() => {
@@ -240,6 +298,13 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
             setLastTapTime(currentTime);
         };
+        // Handle custom date range changes
+        const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
+            setCustomStartDate(startDate);
+            setCustomEndDate(endDate);
+            setIsCustomRange(true);
+            fetchPlayerStats(startDate, endDate);
+        };
 
         // Add both event listeners
         window.addEventListener('keydown', handleKeyPress);
@@ -254,87 +319,15 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
     // Fetch stats when player is selected or date changes
     useEffect(() => {
-        async function fetchPlayerStats() {
-            setLoading(true);
-            try {
-                const params = new URLSearchParams();
-
-                if (startDate) {
-                    params.append('startDate', startDate.toISOString());
-
-                    // Calculate end date for current quarter if not provided
-                    if (!endDate && selectedRange.includes('Q')) {
-                        const currentDate = new Date();
-                        const currentQuarter = Math.floor(currentDate.getMonth() / 3);
-                        const quarterEndDate = new Date(currentDate.getFullYear(), (currentQuarter + 1) * 3, 0);
-                        params.append('endDate', quarterEndDate.toISOString());
-                    } else if (endDate) {
-                        params.append('endDate', endDate.toISOString());
-                    }
-                }
-
-                const response = await fetch(
-                    `/api/players/${playerUID}/stats?${params.toString()}`
-                );
-                console.log("Full URL being fetched:", `/api/players/${playerUID}/stats?${params.toString()}`);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("Received data:", data);
-
-                // Ensure we have default values if data is missing
-                const processedData = {
-                    quarterlyStats: {
-                        gamesPlayed: data.quarterlyStats?.gamesPlayed ?? 0,
-                        totalPoints: data.quarterlyStats?.totalPoints ?? 0,
-                        knockouts: data.quarterlyStats?.knockouts ?? 0,
-                        finalTables: data.quarterlyStats?.finalTables ?? 0,
-                        avgScore: Number(data.quarterlyStats?.avgScore ?? 0),
-                        leagueRanking: data.quarterlyStats?.leagueRanking,
-                        totalPlayers: data.quarterlyStats?.totalPlayers,
-                    },
-                    mostKnockedOutBy: data.mostKnockedOutBy ?? [],
-                    mostKnockedOut: data.mostKnockedOut ?? [],
-                    venueStats: data.venueStats ?? [],
-                    recentGames: data.recentGames ?? [],
-                    placementFrequency: data.placementFrequency ?? []
-                };
-
-                setStats(processedData);
-                if (data.earliestGameDate) {
-                    setEarliestGameDate(data.earliestGameDate);
-                }
-            } catch (error) {
-                console.error('Failed to fetch player stats:', error);
-                // Set default empty state
-                setStats({
-                    quarterlyStats: {
-                        gamesPlayed: 0,
-                        totalPoints: 0,
-                        knockouts: 0,
-                        finalTables: 0,
-                        avgScore: 0,
-                        leagueRanking: 0,
-                        totalPlayers: 0,
-                    },
-                    mostKnockedOutBy: [],
-                    mostKnockedOut: [],
-                    venueStats: [],
-                    recentGames: [],
-                    placementFrequency: []
-                });
-            } finally {
-                setLoading(false);
+        if (playerUID) {
+            if (!isCustomRange) {
+                fetchPlayerStats();
+            } else if (customStartDate && customEndDate) {
+                fetchPlayerStats(customStartDate, customEndDate);
             }
         }
+    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate]);
 
-        if (playerUID) {
-            fetchPlayerStats();
-        }
-    }, [playerUID, startDate, endDate]);
 
     if (loading) {
         return (
@@ -361,20 +354,51 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 <h2 className="text-2xl font-bold text-white-800">
                     Stats for {playerName}
                 </h2>
-                <DateRangeSelector
-                    selectedRange={selectedRange}
-                    onRangeChange={(newStartDate, newEndDate, newRange) => {
-                        setStartDate(newStartDate);
-                        setEndDate(newEndDate);
-                        setSelectedRange(newRange);
-                        // Update localStorage when range changes
-                        localStorage.setItem('selectedRange', newRange);
-                    }}
-                />
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsCustomRange(false)}
+                            className={`px-4 py-2 rounded-lg transition-colors ${!isCustomRange
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                                }`}
+                        >
+                            Preset Ranges
+                        </button>
+                        <button
+                            onClick={() => setIsCustomRange(true)}
+                            className={`px-4 py-2 rounded-lg transition-colors ${isCustomRange
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                                }`}
+                        >
+                            Custom Range
+                        </button>
+                    </div>
+                    {isCustomRange ? (
+                        <DateRangePicker onRangeChange={handleCustomDateRangeChange} />
+                    ) : (
+                        <DateRangeSelector
+                            selectedRange={selectedRange}
+                            onRangeChange={(newStartDate, newEndDate, newRange) => {
+                                setStartDate(newStartDate);
+                                setEndDate(newEndDate);
+                                setSelectedRange(newRange);
+                                localStorage.setItem('selectedRange', newRange);
+                            }}
+                        />
+                    )}
+                </div>
             </div>
             <div className="flex flex-col">
                 <div className="text-xl font-medium text-white-600">
-                    {formatDateRangeText(startDate ?? null, endDate ?? null, selectedRange, earliestGameDate)}
+                    {formatDateRangeText(
+                        isCustomRange ? customStartDate : startDate ?? null,
+                        isCustomRange ? customEndDate : endDate ?? null,
+                        selectedRange,
+                        earliestGameDate,
+                        isCustomRange
+                    )}
                 </div>
                 <div className="text-sm text-gray-500">
                     {getMonthRangeText(selectedRange)}
@@ -507,7 +531,9 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         </div>
                     </div>
                 </div>
-                {selectedRange === 'all-time' && stats?.placementFrequency && (
+
+                {/* Placement Frequency */}
+                {stats?.placementFrequency && (
                     <PlacementFrequencyChart data={stats.placementFrequency} />
                 )}
 
@@ -545,6 +571,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     </div>
                 </div>
             </div>
+
+
             {/* Secret Debug Section */}
             <div className="hidden">debug</div>
             {
