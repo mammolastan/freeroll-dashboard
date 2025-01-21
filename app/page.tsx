@@ -11,6 +11,29 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-8">Freeroll Atlanta Poker Player Dashboard</h1>
 
       <div className="grid md:grid-cols-2 gap-6">
+
+        <Link href="/rankings/monthly">
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Monthly rankings</CardTitle>
+            </CardHeader>
+            <CardContent>
+
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/rankings/quarterly">
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Quarterly rankings</CardTitle>
+            </CardHeader>
+            <CardContent>
+
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/players">
           <Card className="hover:bg-accent transition-colors">
             <CardHeader>
@@ -44,27 +67,7 @@ export default function Home() {
           </Card>
         </Link>
 
-        <Link href="/rankings/monthly">
-          <Card className="hover:bg-accent transition-colors">
-            <CardHeader>
-              <CardTitle>Monthly rankings</CardTitle>
-            </CardHeader>
-            <CardContent>
 
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/rankings/quarterly">
-          <Card className="hover:bg-accent transition-colors">
-            <CardHeader>
-              <CardTitle>Quarterly rankings</CardTitle>
-            </CardHeader>
-            <CardContent>
-
-            </CardContent>
-          </Card>
-        </Link>
 
       </div>
 

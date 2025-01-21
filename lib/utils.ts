@@ -98,13 +98,6 @@ export function getDateCondition(
     validMonths
   )})`;
 
-  // Debug log
-  console.log("Generated date condition:", {
-    validMonths,
-    sqlQuery: query.sql,
-    values: query.values,
-  });
-
   return query;
 }
 
