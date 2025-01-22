@@ -89,7 +89,7 @@ export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
                             <div className="space-y-2">
                                 {player.qualifyingVenues.map((venue) => (
                                     <div
-                                        key={venue.venue}
+                                        key={`${venue.venue}-${player.uid}-${player.name}`}
                                         className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
                                     >
                                         <Link

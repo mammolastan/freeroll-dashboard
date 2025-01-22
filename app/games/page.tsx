@@ -15,7 +15,7 @@ interface TopPlayer {
 interface Game {
     fileName: string
     venue: string
-    date: string
+    date: string   // This is now an ISO date string from game_date
     totalPlayers: number
     topThree: TopPlayer[]
     totalKnockouts: number
@@ -36,7 +36,6 @@ export default function GamesPage() {
     const [games, setGames] = useState<Game[]>([])
     const [loading, setLoading] = useState(true)
 
-
     useEffect(() => {
         async function fetchRecentGames() {
             try {
@@ -52,7 +51,6 @@ export default function GamesPage() {
 
         fetchRecentGames()
     }, [])
-
 
     if (loading) {
         return (
@@ -90,7 +88,7 @@ export default function GamesPage() {
                                         <div key={index} className="flex items-center justify-between text-sm">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center
-                                                 ${index === 0 ? 'bg-amber-500 text-white' :
+                                                    ${index === 0 ? 'bg-amber-500 text-white' :
                                                         index === 1 ? 'bg-gray-400 text-white' :
                                                             'bg-orange-600 text-white'}`}
                                                 >

@@ -1,8 +1,6 @@
 // components/VenueDashboard/VenueDetails.tsx
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Award, Crown } from 'lucide-react';
-import Link from 'next/link';
-import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface VenueStats {
     topPlayers: Array<{
@@ -12,8 +10,18 @@ interface VenueStats {
         totalPoints: number;
         knockouts: number;
     }>;
+    stats: {
+        totalGames: number;
+        uniquePlayers: number;
+        avgPoints: number;
+        totalKnockouts: number;
+    };
     month: string;
     year: number;
+    dateRange: {
+        start: string;
+        end: string;
+    };
 }
 
 interface VenueDetailsProps {
@@ -26,10 +34,18 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
+    // Format date in ET timezone
+    function formatDateET(dateString: string): string {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            timeZone: 'America/New_York',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+
     useEffect(() => {
         async function fetchVenueStats() {
-
-            setLoading(true);
+            setIsTransitioning(true);
             try {
                 const response = await fetch(
                     `/api/venues/${encodeURIComponent(venueName)}/stats?currentMonth=${isCurrentMonth}`
@@ -59,10 +75,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
     if (loading && !isTransitioning) {
         return (
             <div className="min-h-[400px] flex items-center justify-center">
-                <RotatingImageLoader
-                    src="/images/Poker-Chip-Isloated-Blue.png"
-                    size="large"
-                />
+                <div className="text-xl text-gray-600 animate-pulse">Loading stats...</div>
             </div>
         );
     }
@@ -72,7 +85,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
             <div className="min-h-[400px] flex flex-col items-center justify-center space-y-4">
                 <Trophy size={48} className="text-gray-400" />
                 <div className="text-xl text-gray-600">
-                    No stats available for {stats?.month} {stats?.year}
+                    No stats available for {stats?.dateRange ? formatDateET(stats.dateRange.start) : 'this period'}
                 </div>
             </div>
         );
@@ -83,7 +96,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-white-800 flex items-center gap-3">
                     <Trophy size={28} className="text-blue-500" />
-                    {stats.month} {stats.year} Stats for {venueName}
+                    {stats.dateRange && formatDateET(stats.dateRange.start)} Stats for {venueName}
                 </h2>
             </div>
 
@@ -112,14 +125,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                     {index + 1}
                                 </div>
                                 <div>
-                                    <div className="font-semibold text-gray-900">
-                                        <Link
-                                            href={`/players?name=${encodeURIComponent(player.Name)}`}
-                                            className="freeroll-link"
-                                        >
-                                            {player.Name}
-                                        </Link>
-                                    </div>
+                                    <div className="font-semibold text-gray-900">{player.Name}</div>
                                     <div className="text-sm text-gray-500 flex items-center gap-4 mt-1">
                                         <span className="flex items-center gap-1">
                                             <Users size={16} />
@@ -134,7 +140,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                             </div>
                             <div className="flex items-center gap-2">
                                 <Trophy size={16} className="text-blue-500" />
-                                <span className="font-bold text-black">
+                                <span className="font-bold text-blue-600">
                                     {player.totalPoints} pts
                                 </span>
                             </div>

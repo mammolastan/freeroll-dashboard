@@ -68,7 +68,8 @@ export default function MonthlyRankings() {
                     player.bubbleVenues.forEach((v: VenueRanking) => venues.add(v.venue));
                 });
                 setAvailableVenues(Array.from(venues).sort());
-
+                console.log("filteredRankings")
+                console.log(filteredRankings)
                 setRankingsData(filteredRankings);
             } catch (error) {
                 console.error('Error fetching rankings:', error);
@@ -154,13 +155,17 @@ export default function MonthlyRankings() {
             </div>
 
             {/* Rankings Grid */}
+
             <div className="">
-                {getFilteredRankings().map((player) => (
-                    <PlayerRankingCard
-                        key={player.uid}
-                        player={{ ...player, type: 'monthly' }}
-                    />
-                ))}
+                {getFilteredRankings().map((player) => {
+
+                    return (
+                        <PlayerRankingCard
+                            key={player.uid}
+                            player={{ ...player, type: 'monthly' }}
+                        />
+                    );
+                })}
             </div>
         </div >
     );

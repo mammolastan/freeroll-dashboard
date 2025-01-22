@@ -1,57 +1,42 @@
 // app/api/games/recent/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { createGameDate } from "@/lib/utils";
-
-// Force dynamic to prevent caching
-export const dynamic = "force-dynamic";
+import { PrismaClient } from "@prisma/client";
+import { getCurrentETDate } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
-// Helper function to parse game date from fileName and season
-function parseGameDate(fileName: string, season: string): string {
-  try {
-    const dateParts = fileName.split("_")[0];
-    const month = parseInt(dateParts.substring(0, 2)) - 1; // Months are 0-based
-    const day = parseInt(dateParts.substring(2, 4));
-    const year = parseInt(
-      season.split(" ").pop() || new Date().getFullYear().toString()
-    );
-
-    return createGameDate(month, day, year);
-  } catch (error) {
-    console.error("Error parsing date:", { fileName, season, error });
-    return new Date(0).toISOString(); // Return epoch date for invalid dates
-  }
+// Helper function to normalize bigint and date values
+function serializeResults(results: any[]) {
+  return results.map((record) => {
+    const serialized = { ...record };
+    for (let key in serialized) {
+      if (typeof serialized[key] === "bigint") {
+        serialized[key] = Number(serialized[key]);
+      }
+    }
+    return serialized;
+  });
 }
 
 export async function GET() {
   try {
-    // First get all unique games with non-null required fields
+    // First get all unique recent games
     const games = await prisma.$queryRaw<
       Array<{
         File_name: string;
-        Season: string;
         game_date: Date;
+        Venue: string;
       }>
     >`
-            SELECT DISTINCT
-                File_name,
-                Season,
-                STR_TO_DATE(
-                    CONCAT(
-                        SUBSTRING(File_name, 1, 2), -- Month
-                        SUBSTRING(File_name, 3, 2), -- Day
-                        SUBSTRING_INDEX(Season, ' ', -1) -- Year
-                    ),
-                    '%m%d%Y'
-                ) as game_date
-            FROM poker_tournaments
-            WHERE File_name IS NOT NULL
-                AND Season IS NOT NULL
-            ORDER BY game_date DESC
-            LIMIT 15
-        `;
+      SELECT DISTINCT
+        File_name,
+        game_date,
+        Venue
+      FROM poker_tournaments
+      WHERE game_date IS NOT NULL
+      ORDER BY game_date DESC
+      LIMIT 15
+    `;
 
     // Get detailed information for each game
     const gameDetails = await Promise.all(
@@ -72,8 +57,6 @@ export async function GET() {
           },
         });
 
-        const gameDate = parseGameDate(game.File_name, game.Season);
-
         // Get top 3 players
         const topThree = players.slice(0, 3).map((player) => ({
           name: player.Name,
@@ -83,8 +66,8 @@ export async function GET() {
 
         return {
           fileName: game.File_name,
-          venue: players[0]?.Venue || "Unknown Venue",
-          date: gameDate, // Now using the string directly
+          venue: game.Venue || "Unknown Venue",
+          date: game.game_date.toISOString(), // Use actual game_date
           totalPlayers: players.length,
           topThree,
           totalKnockouts: players.reduce(

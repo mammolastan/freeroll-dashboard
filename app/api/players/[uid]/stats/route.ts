@@ -38,77 +38,43 @@ interface RecentGame {
   knockouts: number;
 }
 
-// Helper function to convert BigInt to number
-function formatStats(stats: QuarterlyStats) {
-  return {
-    gamesPlayed: Number(stats.gamesPlayed),
-    totalPoints: Number(stats.totalPoints),
-    knockouts: Number(stats.knockouts),
-    finalTables: Number(stats.finalTables),
-    avgScore: stats.avgScore,
-  };
-}
-
 export async function GET(
   request: Request,
   { params }: { params: { uid: string } }
 ) {
   try {
-    console.log("GET /api/players/[uid]/stats");
-
     const { searchParams } = new URL(request.url);
     const playerUID = params.uid;
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
 
     const startDate =
-      startDateParam === "null"
-        ? null
-        : startDateParam
+      startDateParam && startDateParam !== "null"
         ? new Date(startDateParam)
         : null;
     const endDate =
-      endDateParam === "null"
-        ? null
-        : endDateParam
-        ? new Date(endDateParam)
-        : null;
+      endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
+
+    // Get the date condition based on provided dates
+    const dateCondition = getDateCondition(startDate, endDate);
 
     // If it's an all-time query, find the earliest game date
     let earliestGameDate = null;
-
     if (!startDate) {
-      const earliestGame = await prisma.$queryRaw<{ Season: string }[]>`
-        SELECT Season
+      const earliestGame = await prisma.$queryRaw<{ game_date: Date }[]>`
+        SELECT MIN(game_date) as game_date
         FROM poker_tournaments
         WHERE UID = ${playerUID}
-        ORDER BY STR_TO_DATE(
-          TRIM(REPLACE(Season, '  ', ' ')),
-          '%M %Y'
-        ) ASC
-        LIMIT 1
       `;
 
-      if (earliestGame.length > 0) {
-        // Parse the season string to create a valid date (first day of the month)
-        const seasonParts = earliestGame[0].Season.trim().split(/\s+/);
-        const month = seasonParts[0]; // e.g., "April"
-        const year = seasonParts[1]; // e.g., "2022"
-        earliestGameDate = new Date(
-          Date.UTC(
-            parseInt(year),
-            new Date(`${month} 1, ${year}`).getMonth(),
-            1
-          )
-        );
+      if (earliestGame.length > 0 && earliestGame[0].game_date) {
+        earliestGameDate = earliestGame[0].game_date;
       }
     }
 
     // League ranking query - only execute if a date range is specified
     let leagueRanking = null;
     let totalPlayers = null;
-
-    // Rankings query
 
     if (startDate && endDate) {
       const rankings = await prisma.$queryRaw<
@@ -119,7 +85,7 @@ export async function GET(
           CAST((
             SELECT COUNT(DISTINCT UID) 
             FROM poker_tournaments 
-            WHERE ${getDateCondition(startDate, endDate)}
+            WHERE ${dateCondition}
           ) AS SIGNED) as total_players
         FROM (
           SELECT 
@@ -128,12 +94,12 @@ export async function GET(
           FROM 
             (SELECT UID, CAST(SUM(Total_Points) AS SIGNED) as points 
              FROM poker_tournaments 
-             WHERE ${getDateCondition(startDate, endDate)}
+             WHERE ${dateCondition}
              GROUP BY UID) p1
           LEFT JOIN 
             (SELECT UID, CAST(SUM(Total_Points) AS SIGNED) as points 
              FROM poker_tournaments 
-             WHERE ${getDateCondition(startDate, endDate)}
+             WHERE ${dateCondition}
              GROUP BY UID) p2 
           ON p1.points < p2.points
           WHERE p1.UID = ${playerUID}
@@ -147,64 +113,35 @@ export async function GET(
       }
     }
 
-    // Check raw data
-    const rawDataCheck = await prisma.$queryRaw`
-      SELECT * 
-      FROM poker_tournaments 
-      WHERE UID = ${playerUID}
-      AND (
-        TRIM(Season) = 'December  2024' OR 
-        TRIM(Season) = 'December 2024'
-      )
-    `;
-
-    const seasonMatchCheck = await prisma.$queryRaw`
-    SELECT * 
-    FROM poker_tournaments 
-    WHERE UID = ${playerUID}
-    AND (
-      Season = 'December  2024' OR
-      Season LIKE '%December%2024%'
-    )
-  `;
-
-    // Quarterly Stats
+    // Get quarterly stats
     const quarterlyStats = await prisma.$queryRaw<QuarterlyStats[]>`
-    SELECT 
-      COUNT(*) as gamesPlayed,
-      COALESCE(SUM(Total_Points), 0) as totalPoints,
-      COALESCE(SUM(Knockouts), 0) as knockouts,
-      COALESCE(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
-      COALESCE(CAST(AVG(Player_Score) AS DECIMAL(10,2)), 0) as avgScore
-    FROM poker_tournaments
-    WHERE UID = ${playerUID}
-    ${
-      startDate
-        ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-        : Prisma.sql`AND 1=1`
-    }
+      SELECT 
+        COUNT(*) as gamesPlayed,
+        COALESCE(SUM(Total_Points), 0) as totalPoints,
+        COALESCE(SUM(Knockouts), 0) as knockouts,
+        COALESCE(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+        COALESCE(CAST(AVG(Player_Score) AS DECIMAL(10,2)), 0) as avgScore
+      FROM poker_tournaments
+      WHERE UID = ${playerUID}
+      ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
     `;
 
-    // Most Knocked Out By
-    const knockedOutBy = await prisma.$queryRaw<KnockedOutStats[]>`
+    // Get players who knocked out this player most often
+    const knockedOutBy = await prisma.$queryRaw`
       SELECT 
         Hitman as name,
         COUNT(*) as count
       FROM poker_tournaments
       WHERE UID = ${playerUID}
       AND Hitman IS NOT NULL
-      ${
-        startDate
-          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-          : Prisma.sql`AND 1=1`
-      }
+      ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
       GROUP BY Hitman
       ORDER BY count DESC
       LIMIT 3
-      `;
+    `;
 
-    // Most Knocked Out
-    const knockedOut = await prisma.$queryRaw<KnockedOutStats[]>`
+    // Get players this player knocked out most often
+    const knockedOut = await prisma.$queryRaw`
       SELECT 
         t2.Name as name,
         COUNT(*) as count
@@ -219,45 +156,24 @@ export async function GET(
       GROUP BY t2.Name
       ORDER BY count DESC
       LIMIT 3
-      `;
+    `;
 
-    // Venue Stats
-    const venueStats = await prisma.$queryRaw<VenueStats[]>`
+    // Get venue statistics
+    const venueStats = await prisma.$queryRaw`
       SELECT 
         Venue as venue,
         SUM(Total_Points) as points
       FROM poker_tournaments
       WHERE UID = ${playerUID}
-      ${
-        startDate
-          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-          : Prisma.sql`AND 1=1`
-      }
+      ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
       GROUP BY Venue
       ORDER BY points DESC
-      `;
+    `;
 
-    // Placement Frequency
-    const placementFrequency = await prisma.$queryRaw<PlacementFrequency[]>`
+    // Get recent games
+    const recentGames = await prisma.$queryRaw`
       SELECT 
-        Placement,
-        COUNT(*) as frequency
-      FROM poker_tournaments
-      WHERE UID = ${playerUID}
-      AND Placement <= 8
-      ${
-        startDate
-          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-          : Prisma.sql`AND 1=1`
-      }
-      GROUP BY Placement
-      ORDER BY Placement ASC
-      `;
-
-    // Recent Games
-    const recentGames = await prisma.$queryRaw<RecentGame[]>`
-      SELECT 
-        Season as date,
+        game_date as date,
         Venue as venue,
         Placement as placement,
         Total_Points as points,
@@ -265,52 +181,36 @@ export async function GET(
         File_name as fileName
       FROM poker_tournaments
       WHERE UID = ${playerUID}
-      ${
-        startDate
-          ? Prisma.sql`AND ${getDateCondition(startDate, endDate)}`
-          : Prisma.sql`AND 1=1`
-      }
-      ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(Season, ' ', 1), ' ', SUBSTRING_INDEX(Season, ' ', -1)), '%M %Y') DESC,
-              File_name DESC
+      ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
+      ORDER BY game_date DESC
       LIMIT 50
-      `;
+    `;
 
+    // Format and return the response
     const response = {
       quarterlyStats: {
-        gamesPlayed: quarterlyStats[0]
-          ? Number(quarterlyStats[0].gamesPlayed)
-          : 0,
-        totalPoints: quarterlyStats[0]
-          ? Number(quarterlyStats[0].totalPoints)
-          : 0,
-        knockouts: quarterlyStats[0] ? Number(quarterlyStats[0].knockouts) : 0,
-        finalTables: quarterlyStats[0]
-          ? Number(quarterlyStats[0].finalTables)
-          : 0,
-        avgScore: quarterlyStats[0] ? Number(quarterlyStats[0].avgScore) : 0,
-        leagueRanking: leagueRanking,
-        totalPlayers: totalPlayers,
+        gamesPlayed: Number(quarterlyStats[0]?.gamesPlayed || 0),
+        totalPoints: Number(quarterlyStats[0]?.totalPoints || 0),
+        knockouts: Number(quarterlyStats[0]?.knockouts || 0),
+        finalTables: Number(quarterlyStats[0]?.finalTables || 0),
+        avgScore: Number(quarterlyStats[0]?.avgScore || 0),
+        leagueRanking,
+        totalPlayers,
       },
-      mostKnockedOutBy: knockedOutBy.map((ko) => ({
+      mostKnockedOutBy: (knockedOutBy as any[]).map((ko) => ({
         name: ko.name,
         count: Number(ko.count),
       })),
-      mostKnockedOut: knockedOut.map((ko) => ({
+      mostKnockedOut: (knockedOut as any[]).map((ko) => ({
         name: ko.name,
         count: Number(ko.count),
       })),
-      venueStats: venueStats.map((stat) => ({
+      venueStats: (venueStats as any[]).map((stat) => ({
         venue: stat.venue,
         points: Number(stat.points),
       })),
-      recentGames: recentGames,
-      earliestGameDate: earliestGameDate
-        ? earliestGameDate.toISOString()
-        : null,
-      placementFrequency: placementFrequency.map((pf) => ({
-        placement: Number(pf.Placement),
-        frequency: Number(pf.frequency),
-      })),
+      recentGames,
+      earliestGameDate: earliestGameDate?.toISOString() || null,
     };
 
     return NextResponse.json(response);

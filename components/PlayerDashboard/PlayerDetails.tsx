@@ -14,85 +14,62 @@ interface PlacementFrequencyData {
 
 interface PlayerStats {
     quarterlyStats: {
-        gamesPlayed: number
-        totalPoints: number
-        knockouts: number
-        finalTables: number
-        avgScore: number
-        leagueRanking?: number | null
-        totalPlayers?: number | null
-    }
+        gamesPlayed: number;
+        totalPoints: number;
+        knockouts: number;
+        finalTables: number;
+        avgScore: number;
+        leagueRanking?: number | null;
+        totalPlayers?: number | null;
+    };
     placementFrequency: PlacementFrequencyData[];
     mostKnockedOutBy: Array<{
-        name: string
-        count: number
-    }>
+        name: string;
+        count: number;
+    }>;
     mostKnockedOut: Array<{
-        name: string
-        count: number
-    }>
+        name: string;
+        count: number;
+    }>;
     venueStats: Array<{
-        venue: string
-        points: number
-    }>
+        venue: string;
+        points: number;
+    }>;
     recentGames: Array<{
-        date: string
-        venue: string
-        placement: number
-        points: number
-        knockouts: number
-        fileName: string
-    }>
+        date: string;
+        venue: string;
+        placement: number;
+        points: number;
+        knockouts: number;
+        fileName: string;
+    }>;
+    earliestGameDate: string | null;
 }
-
 interface PlayerDetailsProps {
-    playerUID: string
-    playerName: string
-    initialRange?: string | null
-    onRangeChange?: (range: string) => void
+    playerUID: string;
+    playerName: string;
+    initialRange?: string | null;
+    onRangeChange?: (range: string) => void;
 }
 
 function formatDateRangeText(
     startDate: Date | null,
     endDate: Date | null,
     selectedRange: string,
-    earliestGameDate: string | null,
-    isCustomRange: boolean = false
+    earliestGameDate: string | null
 ): string {
-    // Handle null start date
+    // Type guard to ensure startDate is not null
     if (startDate === null) {
         if (!earliestGameDate) {
             return "No stats available";
         }
         // All-time case
         const earliest = new Date(earliestGameDate);
-        return `Stats from ${earliest.toLocaleString('default', {
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC'
-        })} - Current`;
+        return `Stats from ${formatDate(earliest)} - Current`;
     }
 
-    // Custom date range should show specific dates
-    if (isCustomRange && endDate) {
-        return `${startDate.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        })} - ${endDate.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        })}`;
-    }
-
-    // Preset ranges
     if (selectedRange === 'current-month') {
-        return `Stats for ${startDate.toLocaleString('default', {
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC'
-        })}`;
+        return `Stats for ${formatDate(startDate, 'monthYear')}`;
     }
 
     if (selectedRange.includes('Q')) {
@@ -102,77 +79,36 @@ function formatDateRangeText(
     }
 
     if (endDate) {
-        return `Stats from ${startDate.toLocaleString('default', {
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC'
-        })} to ${endDate.toLocaleString('default', {
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC'
-        })}`;
+        return `Stats from ${formatDate(startDate)} to ${formatDate(endDate)}`;
     }
 
-    return `Stats from ${startDate.toLocaleString('default', {
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC'
-    })}`;
+    return `Stats from ${formatDate(startDate)}`;
 }
 
-function getMonthRangeText(selectedRange: string): string {
-    if (selectedRange === 'current-month') {
-        return "December";
-    }
-
-    if (selectedRange.includes('Q')) {
-        const quarterNum = parseInt(selectedRange.charAt(1));
-        switch (quarterNum) {
-            case 1: return "January - March";
-            case 2: return "April - June";
-            case 3: return "July - September";
-            case 4: return "October - December";
-            default: return "";
-        }
-    }
-
-    return "";
+function formatDate(date: Date, format: 'full' | 'monthYear' = 'full'): string {
+    const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'America/New_York',
+        ...(format === 'full'
+            ? {
+                month: 'long',
+                year: 'numeric',
+                day: 'numeric'
+            }
+            : {
+                month: 'long',
+                year: 'numeric'
+            })
+    };
+    return date.toLocaleDateString('en-US', options);
 }
 
-function parseGameDate(fileName: string, season: string): Date {
-    try {
-        // Extract the date portion (e.g., "1230" from "1230_indy_bb.tdt")
-        const datePart = fileName.split('_')[0];
 
-        // Get year from season (e.g., "2024" from "December 2024")
-        const year = parseInt(season.split(' ').pop() || '2024');
-
-        // Parse month and day
-        const month = parseInt(datePart.substring(0, 2)) - 1; // Subtract 1 as months are 0-based
-        const day = parseInt(datePart.substring(2, 4));
-
-        // Validate the components
-        if (month < 0 || month > 11 || day < 1 || day > 31 || isNaN(year)) {
-            throw new Error('Invalid date components');
-        }
-
-        return new Date(year, month, day);
-    } catch (error) {
-        console.error('Error parsing date:', { error, fileName, season });
-        return new Date(); // Fallback to current date if parsing fails
-    }
-}
 
 
 export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDetailsProps) {
-    const [showDebug, setShowDebug] = useState(false);
-    const [typedKeys, setTypedKeys] = useState('');
-    const [tapCount, setTapCount] = useState(0);
-    const [lastTapTime, setLastTapTime] = useState(0);
     const [stats, setStats] = useState<PlayerStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedRange, setSelectedRange] = useState(() => {
-
         if (initialRange) {
             return initialRange;
         }
@@ -181,45 +117,53 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
         return `Q${currentQuarter}-${currentYear}`;
     });
+
+    // State for dates
     const [startDate, setStartDate] = useState<Date | null>(() => {
-        if (initialRange === 'all-time') {
-            return null;
-        } else if (initialRange === 'current-month') {
-            const currentDate = new Date();
+        if (initialRange === 'all-time') return null;
+
+        const currentDate = new Date();
+        if (initialRange === 'current-month') {
             return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        } else if (initialRange?.includes('Q')) {
+        }
+
+        if (initialRange?.includes('Q')) {
             const [quarter, year] = initialRange.split('-');
             const quarterNum = parseInt(quarter.slice(1));
             const yearNum = parseInt(year);
             return new Date(yearNum, (quarterNum - 1) * 3, 1);
         }
-        // Default to current quarter if no initialRange
-        const currentDate = new Date();
+
+        // Default to current quarter
         const currentQuarter = Math.floor(currentDate.getMonth() / 3);
         return new Date(currentDate.getFullYear(), currentQuarter * 3, 1);
     });
+
     const [endDate, setEndDate] = useState<Date | null>(() => {
-        if (initialRange === 'all-time') {
-            return null;
-        } else if (initialRange === 'current-month') {
-            const currentDate = new Date();
+        if (initialRange === 'all-time') return null;
+
+        const currentDate = new Date();
+        if (initialRange === 'current-month') {
             return new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-        } else if (initialRange?.includes('Q')) {
+        }
+
+        if (initialRange?.includes('Q')) {
             const [quarter, year] = initialRange.split('-');
             const quarterNum = parseInt(quarter.slice(1));
             const yearNum = parseInt(year);
             return new Date(yearNum, quarterNum * 3, 0);
         }
-        // Default to current quarter if no initialRange
-        const currentDate = new Date();
+
+        // Default to current quarter
         const currentQuarter = Math.floor(currentDate.getMonth() / 3);
         return new Date(currentDate.getFullYear(), (currentQuarter + 1) * 3, 0);
     });
-    const [earliestGameDate, setEarliestGameDate] = useState<string | null>(null);
-    // New state for custom date range mode
+
+    // Custom date range state
     const [isCustomRange, setIsCustomRange] = useState(false);
     const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
     const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+
     const fetchPlayerStats = async (customStart?: Date, customEnd?: Date) => {
         setLoading(true);
         try {
@@ -235,13 +179,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 }
             }
 
-            const response = await fetch(
-                `/api/players/${playerUID}/stats?${params.toString()}`
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            const response = await fetch(`/api/players/${playerUID}/stats?${params.toString()}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
             setStats(data);
@@ -252,6 +191,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
             setLoading(false);
         }
     };
+
     // Handle custom date range changes
     const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
         setCustomStartDate(startDate);
@@ -259,63 +199,6 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         setIsCustomRange(true);
         fetchPlayerStats(startDate, endDate);
     };
-
-    // Keyboard event handler and touch event handlers
-    useEffect(() => {
-        const handleKeyPress = (event: KeyboardEvent) => {
-            const newTypedKeys = (typedKeys + event.key).toLowerCase();
-            setTypedKeys(newTypedKeys);
-
-            // Check if the last 5 characters spell "debug"
-            if (newTypedKeys.includes('debug')) {
-                setShowDebug(true);
-                setTypedKeys('');
-            }
-
-            // Reset if typed string gets too long
-            if (newTypedKeys.length > 10) {
-                setTypedKeys('');
-            }
-        };
-
-        const handleTouch = (event: TouchEvent) => {
-            const currentTime = new Date().getTime();
-            const tapTimeDiff = currentTime - lastTapTime;
-
-            // Reset tap count if too much time has passed (800ms threshold)
-            if (tapTimeDiff > 800) {
-                setTapCount(1);
-            } else {
-                setTapCount(prev => {
-                    // If this is the third tap, show debug
-                    if (prev === 2) {
-                        setShowDebug(true);
-                        return 0;
-                    }
-                    return prev + 1;
-                });
-            }
-
-            setLastTapTime(currentTime);
-        };
-        // Handle custom date range changes
-        const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
-            setCustomStartDate(startDate);
-            setCustomEndDate(endDate);
-            setIsCustomRange(true);
-            fetchPlayerStats(startDate, endDate);
-        };
-
-        // Add both event listeners
-        window.addEventListener('keydown', handleKeyPress);
-        document.addEventListener('touchstart', handleTouch);
-
-        // Clean up both listeners
-        return () => {
-            window.removeEventListener('keydown', handleKeyPress);
-            document.removeEventListener('touchstart', handleTouch);
-        };
-    }, [typedKeys, lastTapTime]);
 
     // Fetch stats when player is selected or date changes
     useEffect(() => {
@@ -327,7 +210,6 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
             }
         }
     }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate]);
-
 
     if (loading) {
         return (
@@ -396,12 +278,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         isCustomRange ? customStartDate : startDate ?? null,
                         isCustomRange ? customEndDate : endDate ?? null,
                         selectedRange,
-                        earliestGameDate,
-                        isCustomRange
+                        stats?.earliestGameDate ?? null
                     )}
                 </div>
                 <div className="text-sm text-gray-500">
-                    {getMonthRangeText(selectedRange)}
+                    {startDate && formatDate(startDate, 'monthYear')}
                 </div>
             </div>
 
@@ -552,11 +433,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                 >
                                     <div className="font-medium text-gray-800">{game.venue}</div>
                                     <div className="text-sm text-gray-500">
-                                        {parseGameDate(game.fileName, game.date).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
+                                        {formatDate(new Date(game.date))}
                                     </div>
                                     <div className="mt-1 text-sm">
                                         <span className="text-amber-600">Place: {game.placement}</span>
@@ -571,45 +448,6 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     </div>
                 </div>
             </div>
-
-
-            {/* Secret Debug Section */}
-            <div className="hidden">debug</div>
-            {
-                showDebug && (
-                    <>
-                        <h3>Secret level</h3>
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placement</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KOs</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Name</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {stats.recentGames.map((game, index) => (
-
-
-                                    <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} key={index}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.date}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.venue}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.placement}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.points}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.knockouts}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.fileName}</td>
-                                    </tr>
-
-
-                                ))}
-                            </tbody>
-                        </table>
-                    </>
-                )
-            }
 
         </div>
     );

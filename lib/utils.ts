@@ -2,20 +2,11 @@
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-export const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString();
-};
-
-export const calculateQuarter = (dateString: string) => {
-  const date = new Date(dateString);
-  return Math.floor((date.getMonth() + 3) / 3);
-};
 
 // For client-side components
 export async function getClientIP() {
@@ -41,66 +32,6 @@ export async function getServerIP() {
   }
 }
 
-export function getDateCondition(
-  startDate: Date | null,
-  endDate: Date | null,
-  tableAlias?: string
-) {
-  if (!startDate) {
-    return Prisma.empty;
-  }
-
-  const seasonColumn = tableAlias
-    ? `${tableAlias}.Season`
-    : "poker_tournaments.Season";
-
-  // Generate array of valid month-year combinations
-  const validMonths: string[] = [];
-  let currentDate = new Date(startDate); // Create a new Date object to avoid modifying the original
-  const endDateTime = endDate ? endDate.getTime() : startDate.getTime();
-
-  while (currentDate.getTime() <= endDateTime) {
-    const month = currentDate.toLocaleString("default", {
-      month: "long",
-      timeZone: "UTC",
-    });
-    const year = currentDate.getUTCFullYear();
-
-    // Add both single and double space versions
-    validMonths.push(`${month} ${year}`);
-    validMonths.push(`${month}  ${year}`);
-
-    // Move to next month
-    currentDate = new Date(
-      currentDate.setUTCMonth(currentDate.getUTCMonth() + 1)
-    );
-  }
-
-  // Safety check - if somehow we still got no months, fall back to a simpler date range
-  if (validMonths.length === 0) {
-    console.warn("No valid months generated for date range:", {
-      startDate,
-      endDate,
-    });
-    const startMonth = startDate.toLocaleString("default", {
-      month: "long",
-      timeZone: "UTC",
-    });
-    const startYear = startDate.getUTCFullYear();
-    validMonths.push(
-      `${startMonth} ${startYear}`,
-      `${startMonth}  ${startYear}`
-    );
-  }
-
-  // Create the IN clause with all valid month-year combinations
-  const query = Prisma.sql`TRIM(${Prisma.raw(seasonColumn)}) IN (${Prisma.join(
-    validMonths
-  )})`;
-
-  return query;
-}
-
 // Helper function to create consistent dates
 export function createGameDate(
   month: number,
@@ -109,4 +40,73 @@ export function createGameDate(
 ): string {
   // Create date at 5AM UTC to ensure correct date in ET
   return new Date(Date.UTC(year, month, day, 5, 0, 0)).toISOString();
+}
+
+// Helper function to ensure dates are in ET timezone
+function getETDate(date: Date): Date {
+  return new Date(
+    date.toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+}
+
+// Function to get start and end of month in ET
+export function getMonthDateRange(date: Date) {
+  const etDate = getETDate(date);
+  const startOfMonth = new Date(etDate.getFullYear(), etDate.getMonth(), 1);
+  const endOfMonth = new Date(
+    etDate.getFullYear(),
+    etDate.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
+  return { startOfMonth, endOfMonth };
+}
+
+// Function to get start and end of quarter in ET
+export function getQuarterDateRange(quarter: number, year: number) {
+  const startMonth = (quarter - 1) * 3;
+  const startOfQuarter = new Date(year, startMonth, 1);
+  const endOfQuarter = new Date(year, startMonth + 3, 0, 23, 59, 59, 999);
+  return { startOfQuarter, endOfQuarter };
+}
+
+// Main date condition function
+export function getDateCondition(
+  startDate: Date | null,
+  endDate: Date | null,
+  tableAlias?: string
+): Prisma.Sql {
+  // If no start date provided, return empty condition
+  if (!startDate) {
+    return Prisma.empty;
+  }
+
+  const gameDate = tableAlias ? `${tableAlias}.game_date` : "game_date";
+
+  // Create date range condition
+  if (endDate) {
+    return Prisma.sql`${Prisma.raw(gameDate)} >= ${startDate} 
+      AND ${Prisma.raw(gameDate)} <= ${endDate}`;
+  }
+
+  // If only start date provided, use it for single day filter
+  return Prisma.sql`${Prisma.raw(gameDate)} >= ${startDate}`;
+}
+
+// Helper for getting current ET date
+export function getCurrentETDate(): Date {
+  return getETDate(new Date());
+}
+
+// Helper for formatting dates consistently
+export function formatETDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }

@@ -1,19 +1,16 @@
 // app/api/rankings/quarterly/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { getDateCondition } from "@/lib/utils";
+import { PrismaClient } from "@prisma/client";
+import {
+  getCurrentETDate,
+  getQuarterDateRange,
+  getDateCondition,
+} from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
 function getCurrentQuarter(date: Date = new Date()): number {
   return Math.floor(date.getMonth() / 3) + 1;
-}
-
-function getQuarterDates(quarter: number, year: number) {
-  const startMonth = (quarter - 1) * 3;
-  const startDate = new Date(year, startMonth, 1);
-  const endDate = new Date(year, startMonth + 3, 0);
-  return { startDate, endDate };
 }
 
 // Helper function to convert BigInt values
@@ -34,10 +31,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const isCurrentQuarter = searchParams.get("currentQuarter") !== "false";
 
-    const currentDate = new Date();
+    // Get current date in ET
+    const currentDate = getCurrentETDate();
     const currentYear = currentDate.getFullYear();
     const currentQuarter = getCurrentQuarter(currentDate);
 
+    // Determine target quarter and year
     const targetQuarter = isCurrentQuarter
       ? currentQuarter
       : currentQuarter === 1
@@ -49,8 +48,14 @@ export async function GET(request: Request) {
       ? currentYear - 1
       : currentYear;
 
-    const { startDate, endDate } = getQuarterDates(targetQuarter, targetYear);
+    // Get date range for the quarter
+    const { startOfQuarter, endOfQuarter } = getQuarterDateRange(
+      targetQuarter,
+      targetYear
+    );
+    const dateCondition = getDateCondition(startOfQuarter, endOfQuarter);
 
+    // Get player stats for the quarter
     const players = await prisma.$queryRaw`
       SELECT 
         Name as name,
@@ -61,27 +66,29 @@ export async function GET(request: Request) {
         CAST(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
         CAST(AVG(Player_Score) AS DECIMAL(10,2)) as avgScore
       FROM poker_tournaments
-      WHERE ${getDateCondition(startDate, endDate)}
+      WHERE ${dateCondition}
       GROUP BY Name, UID
-      ORDER BY SUM(Total_Points) DESC
+      HAVING gamesPlayed >= 1
+      ORDER BY totalPoints DESC
     `;
 
-    // Serialize the results to handle BigInt values
+    // Serialize the results and add rankings
     const serializedPlayers = serializeResults(players as any[]);
+    const rankings = serializedPlayers.map((player, index) => ({
+      ...player,
+      ranking: index + 1,
+      isQualified: index < 40, // Top 40 players qualify
+    }));
 
-    // Sort by total points and add rankings
-    const rankings = serializedPlayers
-      .sort((a, b) => b.totalPoints - a.totalPoints)
-      .map((player, index) => ({
-        ...player,
-        ranking: index + 1,
-        isQualified: index < 40,
-      }));
-
+    // Return the results with quarter and year
     return NextResponse.json({
       rankings,
       quarter: targetQuarter,
       year: targetYear,
+      dateRange: {
+        start: startOfQuarter.toISOString(),
+        end: endOfQuarter.toISOString(),
+      },
     });
   } catch (error) {
     console.error("Quarterly rankings error:", error);

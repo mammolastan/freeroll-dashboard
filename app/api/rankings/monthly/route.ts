@@ -1,6 +1,11 @@
 // app/api/rankings/monthly/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import {
+  getCurrentETDate,
+  getMonthDateRange,
+  getDateCondition,
+} from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -20,21 +25,11 @@ interface PlayerRanking {
 }
 
 function checkIfQualified(qualifyingVenues: VenueRanking[]): boolean {
-  for (const venue of qualifyingVenues) {
-    if (venue.rank < 6) {
-      return true;
-    }
-  }
-  return false;
+  return qualifyingVenues.some((venue) => venue.rank < 6);
 }
 
 function checkIfBubble(qualifyingVenues: VenueRanking[]): boolean {
-  for (const venue of qualifyingVenues) {
-    if (venue.rank > 5) {
-      return true;
-    }
-  }
-  return false;
+  return qualifyingVenues.some((venue) => venue.rank > 5);
 }
 
 export async function GET(request: Request) {
@@ -42,23 +37,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    const currentDate = new Date();
+    // Get the target date (current or previous month)
+    const currentDate = getCurrentETDate();
     const targetDate = isCurrentMonth
       ? currentDate
       : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
 
-    const month = targetDate.toLocaleString("default", {
-      month: "long",
-      timeZone: "UTC",
-    });
-    const year = targetDate.getUTCFullYear();
+    // Get the date range for the target month
+    const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
+    const dateCondition = getDateCondition(startOfMonth, endOfMonth);
 
     // Get all venues for the month
     const venues = await prisma.$queryRaw<{ name: string }[]>`
-      SELECT DISTINCT Venue as name
-      FROM poker_tournaments
-      WHERE TRIM(Season) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
-    `;
+     SELECT DISTINCT Venue as name
+     FROM poker_tournaments
+     WHERE ${dateCondition}
+   `;
 
     // Get overall rankings (top 50)
     const overallRankings = await prisma.$queryRaw<
@@ -80,7 +74,7 @@ export async function GET(request: Request) {
           UID as uid,
           SUM(Total_Points) as totalPoints
         FROM poker_tournaments
-        WHERE TRIM(Season) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
+        WHERE ${dateCondition}
         GROUP BY Name, UID
         ORDER BY totalPoints DESC
       ) ranked_players,
@@ -110,7 +104,7 @@ export async function GET(request: Request) {
               UID as uid,
               SUM(Total_Points) as totalPoints
             FROM poker_tournaments
-            WHERE TRIM(Season) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
+            WHERE ${dateCondition}
             AND Venue = ${venue.name}
             GROUP BY Name, UID
             ORDER BY totalPoints DESC
@@ -143,7 +137,7 @@ export async function GET(request: Request) {
             qualifyingVenues.push({
               venue: venue.venue,
               rank: playerAtVenue.rank,
-              points: Number(playerAtVenue.totalPoints), // Add points to qualifier
+              points: Number(playerAtVenue.totalPoints),
             });
           }
         }
@@ -159,10 +153,14 @@ export async function GET(request: Request) {
       };
     });
 
+    // Return the results with the month and year from the target date
     return NextResponse.json({
       rankings,
-      month,
-      year,
+      month: targetDate.toLocaleString("default", {
+        month: "long",
+        timeZone: "America/New_York",
+      }),
+      year: targetDate.getFullYear(),
     });
   } catch (error) {
     console.error("Monthly rankings error:", error);
