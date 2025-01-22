@@ -1,10 +1,8 @@
 // components/Rankings/MonthlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Award, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
-import Link from 'next/link';
 import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
+import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface VenueRanking {
     venue: string;
@@ -105,10 +103,13 @@ export default function MonthlyRankings() {
             });
     };
 
-    if (loading && !isTransitioning) {
+    if (loading && isTransitioning) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-xl text-gray-600 animate-pulse">Loading rankings...</div>
+            <div className="text-center py-12 text-gray-600">
+                <RotatingImageLoader
+                    src="/images/Poker-Chip-Isloated-Blue.png"
+                    size="large"
+                />
             </div>
         );
     }
