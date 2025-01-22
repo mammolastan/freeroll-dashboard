@@ -60,6 +60,7 @@ export default function QuarterlyRankings() {
                 const response = await fetch(`/api/rankings/quarterly?currentQuarter=${isCurrentQuarter}`);
                 if (!response.ok) throw new Error('Failed to fetch rankings');
                 const data = await response.json();
+                console.log('Quarterly rankings from server:', data);
                 setRankingsData(data);
             } catch (error) {
                 console.error('Error fetching rankings:', error);
