@@ -56,28 +56,36 @@ function formatDateRangeText(
     startDate: Date | null,
     endDate: Date | null,
     selectedRange: string,
-    earliestGameDate: string | null
+    earliestGameDate: string | null,
+    isCustomRange: boolean  // Add isCustomRange parameter
 ): string {
-    // Type guard to ensure startDate is not null
-    if (startDate === null) {
+    // Handle custom date range first
+    if (isCustomRange && startDate && endDate) {
+        return `Stats from ${formatDate(startDate)} to ${formatDate(endDate)}`;
+    }
+
+    // For all-time stats
+    if (selectedRange === 'all-time' || startDate === null) {
         if (!earliestGameDate) {
             return "No stats available";
         }
-        // All-time case
         const earliest = new Date(earliestGameDate);
         return `Stats from ${formatDate(earliest)} - Current`;
     }
 
+    // For current month
     if (selectedRange === 'current-month') {
         return `Stats for ${formatDate(startDate, 'monthYear')}`;
     }
 
+    // For quarterly stats
     if (selectedRange.includes('Q')) {
         const quarterNum = parseInt(selectedRange.charAt(1));
         const year = parseInt(selectedRange.split('-')[1]);
         return `Stats for Q${quarterNum} ${year}`;
     }
 
+    // Fallback case
     if (endDate) {
         return `Stats from ${formatDate(startDate)} to ${formatDate(endDate)}`;
     }
@@ -197,6 +205,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         setCustomStartDate(startDate);
         setCustomEndDate(endDate);
         setIsCustomRange(true);
+        // Clear the selectedRange when using custom dates
+        setSelectedRange('custom');
         fetchPlayerStats(startDate, endDate);
     };
 
@@ -258,7 +268,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         </button>
                     </div>
                     {isCustomRange ? (
-                        <DateRangePicker onRangeChange={handleCustomDateRangeChange} />
+                        <DateRangePicker
+                            onRangeChange={handleCustomDateRangeChange}
+                            initialStartDate={customStartDate}
+                            initialEndDate={customEndDate}
+                        />
                     ) : (
                         <DateRangeSelector
                             selectedRange={selectedRange}
@@ -275,15 +289,14 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
             <div className="flex flex-col">
                 <div className="text-xl font-medium text-white-600">
                     {formatDateRangeText(
-                        isCustomRange ? customStartDate : startDate ?? null,
-                        isCustomRange ? customEndDate : endDate ?? null,
+                        isCustomRange ? customStartDate : startDate,
+                        isCustomRange ? customEndDate : endDate,
                         selectedRange,
-                        stats?.earliestGameDate ?? null
+                        stats?.earliestGameDate ?? null,
+                        isCustomRange  // Pass isCustomRange flag
                     )}
                 </div>
-                <div className="text-sm text-gray-500">
-                    {startDate && formatDate(startDate, 'monthYear')}
-                </div>
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

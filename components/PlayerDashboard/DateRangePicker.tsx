@@ -2,9 +2,15 @@ import React, { useState } from 'react';
 
 interface DateRangePickerProps {
     onRangeChange: (startDate: Date, endDate: Date) => void;
+    initialStartDate: Date | null;
+    initialEndDate: Date | null;
 }
 
-export function DateRangePicker({ onRangeChange }: DateRangePickerProps) {
+export function DateRangePicker({
+    onRangeChange,
+    initialStartDate,
+    initialEndDate
+}: DateRangePickerProps) {
     const today = new Date().toISOString().split('T')[0];
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(new Date());
