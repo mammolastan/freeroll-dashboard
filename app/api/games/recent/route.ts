@@ -83,7 +83,12 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(gameDetails);
+    return NextResponse.json(gameDetails, {
+      headers: {
+        "Cache-Control": "public, max-age=86400", // 86400 seconds = 24 hours
+        Expires: new Date(Date.now() + 86400000).toUTCString(), // Current time + 24 hours
+      },
+    });
   } catch (error) {
     console.error("Recent games error:", error);
     return NextResponse.json(
