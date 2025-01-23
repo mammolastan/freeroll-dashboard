@@ -42,7 +42,7 @@ interface PlayerRankingCardProps {
 export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
     return (
 
-        <div className={`m-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${player.type === 'monthly' && 'border-y-2 border-red-100'}`}>
+        <div className={`m-0 bg-white hover:bg-red-800 shadow-sm hover:shadow-md hover:py-1 transition-all duration-200 overflow-hidden ${player.type === 'monthly' && 'border-y-2 border-red-100'}`}>
             < div className={`border-l-4
         ${player.isQualified ? 'border-l-green-500 bg-green-50' :
                     player.type === 'monthly' && player.isBubble ? 'border-l-yellow-500 bg-yellow-50' :
