@@ -107,10 +107,10 @@ export default function QuarterlyRankings() {
         });
     };
 
-    const SortableHeader = ({ field, label }: { field: SortField; label: string }) => (
+    const SortableHeader = ({ field, label, bg }: { field: SortField; label: string; bg: string }) => (
         <button
             onClick={() => handleSort(field)}
-            className={`flex flex-col items-center p-2 w-full transition-colors
+            className={`bg-${bg}-50 flex flex-col items-center p-2 w-full transition-colors
                 ${field === sortConfig.field ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
         >
             <div className="flex items-center gap-1">
@@ -203,10 +203,10 @@ export default function QuarterlyRankings() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="grid grid-cols-2 sm:grid-cols-4 text-sm">
-                                <SortableHeader field="gamesPlayed" label="Games" />
-                                <SortableHeader field="totalPoints" label="Points" />
-                                <SortableHeader field="totalKnockouts" label="KOs" />
-                                <SortableHeader field="finalTables" label="Final Tables" />
+                                <SortableHeader field="gamesPlayed" label="Games" bg="blue" />
+                                <SortableHeader field="totalPoints" label="Points" bg="green" />
+                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
+                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
                             </div>
                         </div>
                     </div>
