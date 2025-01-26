@@ -20,16 +20,18 @@ interface Game {
     topThree: TopPlayer[]
     totalKnockouts: number
 }
-
 function formatGameDateET(isoDateString: string): string {
+    // Parse the ISO string and adjust for ET timezone
     const date = new Date(isoDateString);
+    const etDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+
     return new Intl.DateTimeFormat('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         timeZone: 'America/New_York'
-    }).format(date);
+    }).format(etDate);
 }
 
 export default function GamesPage() {
