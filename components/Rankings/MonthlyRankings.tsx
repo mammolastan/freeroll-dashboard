@@ -52,22 +52,25 @@ export default function MonthlyRankings() {
                 const data = await response.json();
 
                 // Filter to only include qualified and bubble players
+                // Use Set to ensure unique players based on UID
+                const uniquePlayers = Array.from(
+                    new Map(
+                        data.rankings
+                            .filter((player: PlayerRanking) => player.isQualified || player.isBubble)
+                            .map((player: PlayerRanking) => [player.uid, player])
+                    ).values()
+                );
                 const filteredRankings = {
                     ...data,
-                    rankings: data.rankings.filter(
-                        (player: PlayerRanking) => player.isQualified || player.isBubble
-                    ),
+                    rankings: uniquePlayers,
                 };
 
-                // Extract unique venues from all players' qualifying and bubble venues
+                // Extract unique venues from all players' qualifying venues
                 const venues = new Set<string>();
                 filteredRankings.rankings.forEach((player: PlayerRanking) => {
                     player.qualifyingVenues.forEach((v: VenueRanking) => venues.add(v.venue));
-                    player.bubbleVenues.forEach((v: VenueRanking) => venues.add(v.venue));
                 });
                 setAvailableVenues(Array.from(venues).sort());
-                console.log("filteredRankings")
-                console.log(filteredRankings)
                 setRankingsData(filteredRankings);
             } catch (error) {
                 console.error('Error fetching rankings:', error);
@@ -85,22 +88,31 @@ export default function MonthlyRankings() {
         if (!rankingsData?.rankings) return [];
         if (selectedVenue === 'all') return rankingsData.rankings;
 
-        return rankingsData.rankings
-            .map(player => {
-                // Sort qualifyingVenues to put selectedVenue at the top
-                player.qualifyingVenues.sort((a, b) => {
-                    if (a.venue === selectedVenue) return -1;
-                    if (b.venue === selectedVenue) return 1;
-                    return 0;
-                });
-                return player;
-            })
-            .filter(player => player.qualifyingVenues.some(venue => venue.venue === selectedVenue))
-            .sort((a, b) => {
-                const aVenue = a.qualifyingVenues.find(venue => venue.venue === selectedVenue);
-                const bVenue = b.qualifyingVenues.find(venue => venue.venue === selectedVenue);
-                return (aVenue?.rank ?? Infinity) - (bVenue?.rank ?? Infinity);
-            });
+        // Filter and sort once, maintaining unique players
+        return Array.from(
+            new Map(
+                rankingsData.rankings
+                    .filter(player =>
+                        player.qualifyingVenues.some(venue => venue.venue === selectedVenue)
+                    )
+                    .map(player => {
+                        // Sort venues but create a new player object
+                        const sortedVenues = [...player.qualifyingVenues].sort((a, b) => {
+                            if (a.venue === selectedVenue) return -1;
+                            if (b.venue === selectedVenue) return 1;
+                            return 0;
+                        });
+                        return [
+                            player.uid,
+                            { ...player, qualifyingVenues: sortedVenues }
+                        ];
+                    })
+            ).values()
+        ).sort((a, b) => {
+            const aVenue = a.qualifyingVenues.find(venue => venue.venue === selectedVenue);
+            const bVenue = b.qualifyingVenues.find(venue => venue.venue === selectedVenue);
+            return (aVenue?.rank ?? Infinity) - (bVenue?.rank ?? Infinity);
+        });
     };
 
     if (loading && isTransitioning) {
