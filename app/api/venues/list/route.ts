@@ -1,6 +1,11 @@
 // app/api/venues/list/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import {
+  getCurrentETDate,
+  getMonthDateRange,
+  getDateCondition,
+} from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -28,10 +33,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    const currentDate = new Date();
+    // Get current date in ET
+    const currentDate = getCurrentETDate();
+
     const targetDate = isCurrentMonth
       ? currentDate
       : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+
+    // Get date range for the month
+    const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
+    const dateCondition = getDateCondition(startOfMonth, endOfMonth);
 
     const { month, year } = getMonthYearString(targetDate);
 
@@ -41,7 +52,7 @@ export async function GET(request: Request) {
         Venue as name,
         COUNT(DISTINCT File_name) as totalGames
       FROM poker_tournaments
-      WHERE TRIM(Season) IN (${`${month} ${year}`}, ${`${month}  ${year}`})
+      WHERE ${dateCondition}
       GROUP BY Venue
       ORDER BY totalGames DESC
     `;

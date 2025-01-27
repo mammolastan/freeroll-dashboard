@@ -37,7 +37,17 @@ export default function VenuesPage() {
         async function fetchVenues() {
             setIsTransitioning(true)
             try {
-                const response = await fetch(`/api/venues/list?currentMonth=${isCurrentMonth}`)
+
+                // Get current date in ET
+                const now = new Date()
+                const etDate = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
+                // For previous month, check if we're in first few days
+                // This ensures we don't show incorrect previous month during month transitions
+                const dayOfMonth = etDate.getDate()
+                const showPreviousMonth = !isCurrentMonth && dayOfMonth > 3
+
+
+                const response = await fetch(`/api/venues/list?currentMonth=${showPreviousMonth ? 'false' : 'true'}`)
                 const data = await response.json()
                 if (data.venues) {
                     setVenueData(data)
