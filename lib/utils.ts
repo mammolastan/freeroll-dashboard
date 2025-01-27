@@ -110,3 +110,78 @@ export function formatETDate(date: Date): string {
     day: "2-digit",
   });
 }
+export type DateFormatOptions = "full" | "monthYear";
+
+// Helper function to format a date in ET timezone
+export function formatGameDate(
+  isoString: string,
+  format: DateFormatOptions = "full"
+): string {
+  // Parse the ISO string and create a Date object
+  // Add a 'T05:00:00Z' to ensure we're in the correct day in ET
+  // This assumes games are played in ET and we want to show ET dates
+  const dateString = isoString.split("T")[0] + "T05:00:00Z";
+  const date = new Date(dateString);
+
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: "America/New_York",
+    ...(format === "full"
+      ? {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      : {
+          month: "long",
+          year: "numeric",
+        }),
+  };
+
+  return new Intl.DateTimeFormat("en-US", options).format(date);
+}
+
+// Helper function to format a date range
+export function formatDateRangeText(
+  startDate: Date | null,
+  endDate: Date | null,
+  selectedRange: string,
+  earliestGameDate: string | null,
+  isCustomRange: boolean = false
+): string {
+  // Handle custom date range first
+  if (isCustomRange && startDate && endDate) {
+    return `Stats from ${formatGameDate(
+      startDate.toISOString()
+    )} to ${formatGameDate(endDate.toISOString())}`;
+  }
+
+  // For all-time stats
+  if (selectedRange === "all-time" || !startDate) {
+    if (!earliestGameDate) {
+      return "No stats available";
+    }
+    return `Stats from ${formatGameDate(earliestGameDate)} - Current`;
+  }
+
+  // For current month
+  if (selectedRange === "current-month") {
+    return `Stats for ${formatGameDate(startDate.toISOString(), "monthYear")}`;
+  }
+
+  // For quarterly stats
+  if (selectedRange.includes("Q")) {
+    const quarterNum = parseInt(selectedRange.charAt(1));
+    const year = parseInt(selectedRange.split("-")[1]);
+    return `Stats for Q${quarterNum} ${year}`;
+  }
+
+  // Default case for date range
+  if (endDate) {
+    return `Stats from ${formatGameDate(
+      startDate.toISOString()
+    )} to ${formatGameDate(endDate.toISOString())}`;
+  }
+
+  return `Stats from ${formatGameDate(startDate.toISOString())}`;
+}

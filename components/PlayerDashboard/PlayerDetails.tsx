@@ -6,6 +6,7 @@ import Link from 'next/link';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
+import { formatGameDate, formatDateRangeText } from '@/lib/utils';
 
 interface PlacementFrequencyData {
     placement: number;
@@ -51,65 +52,6 @@ interface PlayerDetailsProps {
     initialRange?: string | null;
     onRangeChange?: (range: string) => void;
 }
-
-function formatDateRangeText(
-    startDate: Date | null,
-    endDate: Date | null,
-    selectedRange: string,
-    earliestGameDate: string | null,
-    isCustomRange: boolean  // Add isCustomRange parameter
-): string {
-    // Handle custom date range first
-    if (isCustomRange && startDate && endDate) {
-        return `Stats from ${formatDate(startDate)} to ${formatDate(endDate)}`;
-    }
-
-    // For all-time stats
-    if (selectedRange === 'all-time' || startDate === null) {
-        if (!earliestGameDate) {
-            return "No stats available";
-        }
-        const earliest = new Date(earliestGameDate);
-        return `Stats from ${formatDate(earliest)} - Current`;
-    }
-
-    // For current month
-    if (selectedRange === 'current-month') {
-        return `Stats for ${formatDate(startDate, 'monthYear')}`;
-    }
-
-    // For quarterly stats
-    if (selectedRange.includes('Q')) {
-        const quarterNum = parseInt(selectedRange.charAt(1));
-        const year = parseInt(selectedRange.split('-')[1]);
-        return `Stats for Q${quarterNum} ${year}`;
-    }
-
-    // Fallback case
-    if (endDate) {
-        return `Stats from ${formatDate(startDate)} to ${formatDate(endDate)}`;
-    }
-
-    return `Stats from ${formatDate(startDate)}`;
-}
-
-function formatDate(date: Date, format: 'full' | 'monthYear' = 'full'): string {
-    const options: Intl.DateTimeFormatOptions = {
-        timeZone: 'America/New_York',
-        ...(format === 'full'
-            ? {
-                month: 'long',
-                year: 'numeric',
-                day: 'numeric'
-            }
-            : {
-                month: 'long',
-                year: 'numeric'
-            })
-    };
-    return date.toLocaleDateString('en-US', options);
-}
-
 
 
 
@@ -293,7 +235,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         isCustomRange ? customEndDate : endDate,
                         selectedRange,
                         stats?.earliestGameDate ?? null,
-                        isCustomRange  // Pass isCustomRange flag
+                        isCustomRange
                     )}
                 </div>
 
@@ -446,7 +388,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                 >
                                     <div className="font-medium text-gray-800">{game.venue}</div>
                                     <div className="text-sm text-gray-500">
-                                        {formatDate(new Date(game.date))}
+                                        {formatGameDate(game.date)}
                                     </div>
                                     <div className="mt-1 text-sm">
                                         <span className="text-amber-600">Place: {game.placement}</span>
