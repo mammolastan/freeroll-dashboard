@@ -86,14 +86,24 @@ export function getDateCondition(
 
   const gameDate = tableAlias ? `${tableAlias}.game_date` : "game_date";
 
+  // For the start date, set time to beginning of day (00:00:00)
+  const adjustedStartDate = new Date(startDate);
+  adjustedStartDate.setUTCHours(0, 0, 0, 0);
+
+  // For the end date, set time to end of day (23:59:59.999)
+  const adjustedEndDate = endDate ? new Date(endDate) : null;
+  if (adjustedEndDate) {
+    adjustedEndDate.setUTCHours(23, 59, 59, 999);
+  }
+
   // Create date range condition
-  if (endDate) {
-    return Prisma.sql`${Prisma.raw(gameDate)} >= ${startDate} 
-      AND ${Prisma.raw(gameDate)} <= ${endDate}`;
+  if (adjustedEndDate) {
+    return Prisma.sql`${Prisma.raw(gameDate)} >= ${adjustedStartDate} 
+      AND ${Prisma.raw(gameDate)} <= ${adjustedEndDate}`;
   }
 
   // If only start date provided, use it for single day filter
-  return Prisma.sql`${Prisma.raw(gameDate)} >= ${startDate}`;
+  return Prisma.sql`${Prisma.raw(gameDate)} >= ${adjustedStartDate}`;
 }
 
 // Helper for getting current ET date
