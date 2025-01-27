@@ -7,9 +7,6 @@ import { getServerIP } from "@/lib/utils";
 // Move prisma client outside route handler
 const prisma = new PrismaClient();
 
-// Add export config to mark as dynamic
-export const dynamic = "force-dynamic";
-
 // Helper function to safely serialize BigInt
 function serializeResults(results: any[]) {
   return results.map((record) => {

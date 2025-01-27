@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-export const dynamic = "force-dynamic";
 
 function serializeResults(results: any[]) {
   return results.map((record) => {

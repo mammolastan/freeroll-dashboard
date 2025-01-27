@@ -1,7 +1,6 @@
 // app/api/games/recent/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { headers } from "next/headers";
 
 const prisma = new PrismaClient();
 
@@ -19,11 +18,6 @@ function serializeResults(results: any[]) {
 }
 
 export async function GET() {
-  // Add cache control headers
-  const headers = new Headers();
-  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  headers.set("Pragma", "no-cache");
-  headers.set("Expires", "0");
   try {
     // First get all unique recent games
     const games = await prisma.$queryRaw<
