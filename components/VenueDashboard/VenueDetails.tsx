@@ -29,15 +29,6 @@ interface VenueDetailsProps {
     isCurrentMonth?: boolean;
 }
 
-function formatDateET(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        month: 'long',
-        year: 'numeric'
-    });
-}
-
 
 export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsProps) {
     const [stats, setStats] = useState<VenueStats | null>(null);
@@ -57,6 +48,10 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
         async function fetchVenueStats() {
             setIsTransitioning(true);
             try {
+                console.log("TRACE - Frontend - Fetching stats:", {
+                    venue: venueName,
+                    isCurrentMonth
+                });
                 const response = await fetch(
                     `/api/venues/${encodeURIComponent(venueName)}/stats?currentMonth=${isCurrentMonth}`
                 );
@@ -84,6 +79,16 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
         }
     }, [venueName, isCurrentMonth]);
 
+    // Add debug logging when stats change
+    useEffect(() => {
+        if (stats) {
+            console.log("Debug - Current stats state:", {
+                month: stats.month,
+                year: stats.year,
+                dateRange: stats.dateRange
+            });
+        }
+    }, [stats]);
 
     if (loading && !isTransitioning) {
         return (
@@ -98,18 +103,23 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
             <div className="min-h-[400px] flex flex-col items-center justify-center space-y-4">
                 <Trophy size={48} className="text-gray-400" />
                 <div className="text-xl text-gray-600">
-                    No stats available for {stats?.dateRange ? formatDateET(stats.dateRange.start) : 'this period'}
+                    No stats available for {stats?.month} {stats?.year}
                 </div>
             </div>
         );
     }
-
+    console.log("Debug - Rendering header with:", {
+        month: stats.month,
+        year: stats.year,
+        venueName: venueName
+    });
     return (
         <div className={`space-y-8 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
             <div className="">
                 <h2 className="text-2xl font-bold text-white-800 flex items-center gap-3">
                     <Trophy size={28} className="text-blue-500" />
-                    {stats.dateRange && formatDateET(stats.dateRange.start)} Stats for {venueName}
+                    {/* This is where we use the month and year directly from the API response */}
+                    {stats.month} {stats.year} Stats for {venueName}
                 </h2>
                 <p>
                     <span className="font-semibold">{stats.stats.totalGames}</span> games played

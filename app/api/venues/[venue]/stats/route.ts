@@ -17,48 +17,44 @@ function serializeResults(results: any[]) {
   });
 }
 
-function getMonthDetails(currentDate: Date, isCurrentMonth: boolean) {
-  // First get the current date in ET
+function getDateRangeForMonth(date: Date): {
+  startDate: Date;
+  endDate: Date;
+  monthName: string;
+  year: number;
+} {
+  // Convert input date to ET
   const etDate = new Date(
-    currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+    date.toLocaleString("en-US", { timeZone: "America/New_York" })
   );
-  let year = etDate.getFullYear();
-  let month = etDate.getMonth();
+  console.log(
+    "TRACE - ET Date:",
+    etDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
 
-  // Adjust for previous month
-  if (!isCurrentMonth) {
-    if (month === 0) {
-      month = 11;
-      year--;
-    } else {
-      month--;
-    }
-  }
+  // Get year and month from ET date
+  const year = etDate.getFullYear();
+  const month = etDate.getMonth();
+  console.log("TRACE - Year/Month extracted:", { year, month });
 
-  // Create the start and end dates
-  const startOfMonth = new Date(Date.UTC(year, month, 1));
-  const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+  // Create UTC date range
+  const startDate = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 
-  // Derive month name from the start date
-  const monthName = startOfMonth.toLocaleString("en-US", {
+  // Get month name from start date using ET timezone
+  const monthName = startDate.toLocaleString("en-US", {
     month: "long",
+    timeZone: "America/New_York",
   });
 
-  console.log("Debug - Date calculations:", {
-    currentET: etDate.toLocaleString("en-US", { timeZone: "America/New_York" }),
-    targetMonth: month,
-    targetYear: year,
-    startOfMonth: startOfMonth.toISOString(),
-    endOfMonth: endOfMonth.toISOString(),
-    derivedMonthName: monthName,
-  });
-
-  return {
+  console.log("TRACE - Date Range Calculated:", {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
     monthName,
     year,
-    startOfMonth,
-    endOfMonth,
-  };
+  });
+
+  return { startDate, endDate, monthName, year };
 }
 
 export async function GET(
@@ -70,14 +66,39 @@ export async function GET(
     const venue = decodeURIComponent(params.venue);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    console.log("Debug - Request params:", { venue, isCurrentMonth });
+    console.log("TRACE - Request params:", { venue, isCurrentMonth });
 
-    const currentDate = getCurrentETDate();
-    const { monthName, year, startOfMonth, endOfMonth } = getMonthDetails(
-      currentDate,
-      isCurrentMonth
+    // Get current date and adjust for timezone
+    let currentDate = getCurrentETDate();
+    console.log(
+      "TRACE - Current ET date:",
+      currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
     );
-    const dateCondition = getDateCondition(startOfMonth, endOfMonth);
+
+    // If not current month, move back one month
+    if (!isCurrentMonth) {
+      const etDate = new Date(
+        currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+      );
+      etDate.setMonth(etDate.getMonth() - 1);
+      currentDate = etDate;
+      console.log(
+        "TRACE - Adjusted to previous month:",
+        currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+      );
+    }
+
+    // Get date range and month details
+    const { startDate, endDate, monthName, year } =
+      getDateRangeForMonth(currentDate);
+    console.log("TRACE - Final date details:", {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      monthName,
+      year,
+    });
+
+    const dateCondition = getDateCondition(startDate, endDate);
 
     // Get top players for the venue
     const topPlayers = await prisma.$queryRaw`
@@ -109,23 +130,18 @@ export async function GET(
       AND ${dateCondition}
     `;
 
-    // Double-check our date calculations one final time
-    const monthNameCheck = new Date(startOfMonth).toLocaleString("en-US", {
-      month: "long",
-    });
-
     const response = {
       topPlayers: serializeResults(topPlayers as any[]),
       stats: serializeResults(venueStats as any[])[0],
-      month: monthNameCheck, // Use the double-checked month name
+      month: monthName,
       year,
       dateRange: {
-        start: startOfMonth.toISOString(),
-        end: endOfMonth.toISOString(),
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
       },
     };
 
-    console.log("Debug - Final response:", {
+    console.log("TRACE - Final response:", {
       month: response.month,
       year: response.year,
       dateRange: response.dateRange,
