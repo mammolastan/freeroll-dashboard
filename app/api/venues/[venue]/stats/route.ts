@@ -18,39 +18,39 @@ function serializeResults(results: any[]) {
 }
 
 function getMonthDetails(currentDate: Date, isCurrentMonth: boolean) {
-  // Convert to ET and get components
+  // First get the current date in ET
   const etDate = new Date(
     currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
   );
   let year = etDate.getFullYear();
-  let month = etDate.getMonth(); // 0-11
+  let month = etDate.getMonth();
 
-  // Adjust for previous month if needed
+  // Adjust for previous month
   if (!isCurrentMonth) {
-    month--;
-    if (month < 0) {
+    if (month === 0) {
       month = 11;
       year--;
+    } else {
+      month--;
     }
   }
 
-  // Create start and end dates
+  // Create the start and end dates
   const startOfMonth = new Date(Date.UTC(year, month, 1));
   const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 
-  // Get month name from the start date
+  // Derive month name from the start date
   const monthName = startOfMonth.toLocaleString("en-US", {
-    timeZone: "America/New_York",
     month: "long",
   });
 
-  console.log("Debug - Month calculation:", {
-    input: { currentDate, isCurrentMonth },
-    output: {
-      monthName,
-      year,
-      dateRange: { start: startOfMonth, end: endOfMonth },
-    },
+  console.log("Debug - Date calculations:", {
+    currentET: etDate.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    targetMonth: month,
+    targetYear: year,
+    startOfMonth: startOfMonth.toISOString(),
+    endOfMonth: endOfMonth.toISOString(),
+    derivedMonthName: monthName,
   });
 
   return {
@@ -109,10 +109,15 @@ export async function GET(
       AND ${dateCondition}
     `;
 
+    // Double-check our date calculations one final time
+    const monthNameCheck = new Date(startOfMonth).toLocaleString("en-US", {
+      month: "long",
+    });
+
     const response = {
       topPlayers: serializeResults(topPlayers as any[]),
       stats: serializeResults(venueStats as any[])[0],
-      month: monthName,
+      month: monthNameCheck, // Use the double-checked month name
       year,
       dateRange: {
         start: startOfMonth.toISOString(),
