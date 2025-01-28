@@ -111,7 +111,7 @@ export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
                             </div>
                         ) : (
                             // Quarterly Rankings Details
-                            <div className="grid grid-cols-2 sm:grid-cols-4 text-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
                                 <div className="flex items-center p-2 bg-blue-50">
                                     <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
                                     <span className="font-medium text-blue-700">{player.gamesPlayed}</span>
@@ -127,6 +127,10 @@ export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
                                 <div className="flex items-center p-2 bg-purple-50">
                                     <Hexagon className="w-4 h-4 text-purple-600 mr-2" />
                                     <span className="font-medium text-purple-700">{player.finalTables}</span>
+                                </div>
+                                <div className="flex items-center p-2 bg-orange-50">
+                                    <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
+                                    <span className="font-medium text-blue-700">{player.avgScore}</span>
                                 </div>
                             </div>
                         )}

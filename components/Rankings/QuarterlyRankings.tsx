@@ -1,3 +1,5 @@
+// components / Rankings / QuarterlyRankings.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
@@ -22,7 +24,7 @@ interface RankingsData {
     year: number;
 }
 
-type SortField = 'gamesPlayed' | 'totalPoints' | 'totalKnockouts' | 'finalTables' | 'ranking';
+type SortField = 'gamesPlayed' | 'totalPoints' | 'totalKnockouts' | 'finalTables' | 'ranking' | 'avgScore';
 type SortDirection = 'asc' | 'desc';
 
 export default function QuarterlyRankings() {
@@ -78,7 +80,7 @@ export default function QuarterlyRankings() {
     const handleSort = (field: SortField) => {
         setSortConfig(prevConfig => ({
             field,
-            direction: prevConfig.field === field && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+            direction: prevConfig.field === field && prevConfig.direction === 'desc' ? 'asc' : 'desc'
         }));
     };
 
@@ -96,14 +98,19 @@ export default function QuarterlyRankings() {
 
         // Apply sort
         return [...filteredRankings].sort((a, b) => {
-            const valueA = a[sortConfig.field];
-            const valueB = b[sortConfig.field];
+            let valueA = a[sortConfig.field];
+            let valueB = b[sortConfig.field];
             const multiplier = sortConfig.direction === 'asc' ? 1 : -1;
 
-            if (typeof valueA === 'number' && typeof valueB === 'number') {
-                return (valueA - valueB) * multiplier;
-            }
-            return 0;
+            // Convert to numbers if they're strings
+            if (typeof valueA === 'string') valueA = parseFloat(valueA);
+            if (typeof valueB === 'string') valueB = parseFloat(valueB);
+
+            // Handle NaN, null, or undefined values
+            if (!valueA && valueA !== 0) valueA = -Infinity;
+            if (!valueB && valueB !== 0) valueB = -Infinity;
+
+            return (valueA - valueB) * multiplier;
         });
     };
 
@@ -202,11 +209,12 @@ export default function QuarterlyRankings() {
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 text-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
                                 <SortableHeader field="gamesPlayed" label="Games" bg="blue" />
                                 <SortableHeader field="totalPoints" label="Points" bg="green" />
                                 <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
                                 <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
+                                <SortableHeader field="avgScore" label="Avg. Score" bg="orange" />
                             </div>
                         </div>
                     </div>
