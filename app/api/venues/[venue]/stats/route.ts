@@ -30,19 +30,48 @@ export async function GET(
     const venue = decodeURIComponent(params.venue);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
+    console.log("Debug - isCurrentMonth:", isCurrentMonth);
+
     // Get current date in ET
     const currentDate = getCurrentETDate();
+    console.log("Debug - currentDate:", currentDate);
 
-    // For previous month logic, ensure we're using ET dates
-    let targetDate = new Date(currentDate);
+    // Create targetDate in ET
+    const etOptions = { timeZone: "America/New_York" };
+    const currentETYear = parseInt(
+      currentDate.toLocaleString("en-US", { ...etOptions, year: "numeric" })
+    );
+    const currentETMonth =
+      parseInt(
+        currentDate.toLocaleString("en-US", { ...etOptions, month: "numeric" })
+      ) - 1; // 0-based
+    const currentETDay = parseInt(
+      currentDate.toLocaleString("en-US", { ...etOptions, day: "numeric" })
+    );
+
+    let targetDate = new Date(
+      Date.UTC(currentETYear, currentETMonth, currentETDay)
+    );
 
     if (!isCurrentMonth) {
-      // If not current month, move back one month
-      targetDate.setMonth(targetDate.getMonth() - 1);
+      targetDate = new Date(
+        Date.UTC(
+          targetDate.getUTCMonth() === 0
+            ? targetDate.getUTCFullYear() - 1
+            : targetDate.getUTCFullYear(),
+          targetDate.getUTCMonth() === 0 ? 11 : targetDate.getUTCMonth() - 1,
+          1
+        )
+      );
     }
+
+    console.log("Debug - targetDate before range calc:", targetDate);
 
     // Get date range for the month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
+    console.log("Debug - startOfMonth:", startOfMonth);
+    console.log("Debug - endOfMonth:", endOfMonth);
+
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
 
     // Get top players for the venue in the specified month
@@ -75,12 +104,19 @@ export async function GET(
       AND ${dateCondition}
     `;
 
-    // Get month and year from targetDate in ET
+    // Calculate month and year in ET timezone
     const month = targetDate.toLocaleString("en-US", {
       timeZone: "America/New_York",
       month: "long",
     });
-    const year = targetDate.getFullYear();
+    const year = parseInt(
+      targetDate.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        year: "numeric",
+      })
+    );
+
+    console.log("Debug - Final month/year:", month, year);
 
     // Format the response
     return NextResponse.json({
