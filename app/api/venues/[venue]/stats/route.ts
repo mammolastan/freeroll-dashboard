@@ -1,11 +1,7 @@
 // app/api/venues/[venue]/stats/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import {
-  getCurrentETDate,
-  getMonthDateRange,
-  getDateCondition,
-} from "@/lib/utils";
+import { getCurrentETDate, getDateCondition } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +15,19 @@ function serializeResults(results: any[]) {
     }
     return serialized;
   });
+}
+
+function getMonthDateRangeET(date: Date) {
+  const etDate = new Date(
+    date.toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+  const year = etDate.getFullYear();
+  const month = etDate.getMonth();
+
+  const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+  const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+
+  return { startOfMonth, endOfMonth };
 }
 
 export async function GET(
@@ -36,39 +45,25 @@ export async function GET(
     const currentDate = getCurrentETDate();
     console.log("Debug - currentDate:", currentDate);
 
-    // Create targetDate in ET
-    const etOptions = { timeZone: "America/New_York" };
-    const currentETYear = parseInt(
-      currentDate.toLocaleString("en-US", { ...etOptions, year: "numeric" })
-    );
-    const currentETMonth =
-      parseInt(
-        currentDate.toLocaleString("en-US", { ...etOptions, month: "numeric" })
-      ) - 1; // 0-based
-    const currentETDay = parseInt(
-      currentDate.toLocaleString("en-US", { ...etOptions, day: "numeric" })
-    );
-
-    let targetDate = new Date(
-      Date.UTC(currentETYear, currentETMonth, currentETDay)
-    );
+    // Calculate target date in ET
+    let targetDate = new Date(currentDate);
 
     if (!isCurrentMonth) {
+      // For previous month, directly manipulate the ET date
+      const currentETDate = new Date(
+        currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+      );
       targetDate = new Date(
-        Date.UTC(
-          targetDate.getUTCMonth() === 0
-            ? targetDate.getUTCFullYear() - 1
-            : targetDate.getUTCFullYear(),
-          targetDate.getUTCMonth() === 0 ? 11 : targetDate.getUTCMonth() - 1,
-          1
-        )
+        currentETDate.getFullYear(),
+        currentETDate.getMonth() - 1,
+        1
       );
     }
 
     console.log("Debug - targetDate before range calc:", targetDate);
 
     // Get date range for the month
-    const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
+    const { startOfMonth, endOfMonth } = getMonthDateRangeET(targetDate);
     console.log("Debug - startOfMonth:", startOfMonth);
     console.log("Debug - endOfMonth:", endOfMonth);
 
@@ -104,7 +99,7 @@ export async function GET(
       AND ${dateCondition}
     `;
 
-    // Calculate month and year in ET timezone
+    // Get month and year in ET
     const month = targetDate.toLocaleString("en-US", {
       timeZone: "America/New_York",
       month: "long",
