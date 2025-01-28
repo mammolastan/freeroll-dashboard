@@ -1,12 +1,7 @@
 // app/api/venues/list/route.ts
-
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import {
-  getCurrentETDate,
-  getMonthDateRange,
-  getDateCondition,
-} from "@/lib/utils";
+import { getCurrentETDate, getDateCondition } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -22,22 +17,90 @@ function serializeResults(results: any[]) {
   });
 }
 
+function createDateFromET(
+  year: number,
+  month: number,
+  day = 1,
+  hour = 0
+): Date {
+  return new Date(Date.UTC(year, month, day, hour));
+}
+
+function getMonthDetails(currentDate: Date): {
+  startDate: Date;
+  endDate: Date;
+  monthName: string;
+  year: number;
+} {
+  // Get ET date components
+  const etOptions = { timeZone: "America/New_York" };
+  const etYear = parseInt(
+    currentDate.toLocaleString("en-US", { ...etOptions, year: "numeric" })
+  );
+  const etMonth =
+    parseInt(
+      currentDate.toLocaleString("en-US", { ...etOptions, month: "numeric" })
+    ) - 1;
+
+  console.log("TRACE - Initial ET components:", {
+    etYear,
+    etMonth: etMonth + 1,
+    inputDate: currentDate.toISOString(),
+  });
+
+  // Create date range
+  const startDate = createDateFromET(etYear, etMonth);
+  const endDate = createDateFromET(etYear, etMonth + 1, 0, 23);
+  endDate.setUTCMinutes(59);
+  endDate.setUTCSeconds(59);
+  endDate.setUTCMilliseconds(999);
+
+  // Get month name from start date
+  const monthName = startDate.toLocaleString("en-US", {
+    month: "long",
+  });
+
+  console.log("TRACE - Date calculations:", {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    monthName,
+    year: etYear,
+  });
+
+  return { startDate, endDate, monthName, year: etYear };
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    // Get current date in ET
-    const currentDate = getCurrentETDate();
-    const targetDate = isCurrentMonth
-      ? currentDate
-      : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+    // Get current date and adjust if needed
+    let baseDate = getCurrentETDate();
+    if (!isCurrentMonth) {
+      const etDate = new Date(
+        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+      );
+      etDate.setMonth(etDate.getMonth() - 1);
+      baseDate = etDate;
+      console.log(
+        "TRACE - Adjusted to previous month:",
+        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+      );
+    }
 
-    // Get date range for the month
-    const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
-    const dateCondition = getDateCondition(startOfMonth, endOfMonth);
+    // Get date range and details
+    const { startDate, endDate, monthName, year } = getMonthDetails(baseDate);
+    const dateCondition = getDateCondition(startDate, endDate);
 
-    // First get all venues
+    console.log("TRACE - Using date range:", {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      monthName,
+      year,
+    });
+
+    // Get all venues
     const venues = await prisma.$queryRaw`
       SELECT DISTINCT 
         Venue as name,
@@ -48,7 +111,7 @@ export async function GET(request: Request) {
       ORDER BY totalGames DESC
     `;
 
-    // Then for each venue, get top 5 players
+    // Get top players for each venue
     const venuesWithPlayers = await Promise.all(
       (venues as any[]).map(async (venue) => {
         const topPlayers = await prisma.$queryRaw`
@@ -73,13 +136,16 @@ export async function GET(request: Request) {
       })
     );
 
+    console.log("TRACE - Final response:", {
+      month: monthName,
+      year,
+      venueCount: venuesWithPlayers.length,
+    });
+
     return NextResponse.json({
       venues: serializeResults(venuesWithPlayers),
-      month: targetDate.toLocaleString("default", {
-        month: "long",
-        timeZone: "America/New_York",
-      }),
-      year: targetDate.getFullYear(),
+      month: monthName,
+      year,
     });
   } catch (error) {
     console.error("Venue list error:", error);
