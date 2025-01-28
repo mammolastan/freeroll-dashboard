@@ -25,16 +25,6 @@ interface RankingsData {
     year: number;
 }
 
-interface PlayerRankingCardProps {
-    player: PlayerRanking;
-}
-
-interface DateTogglerProps {
-    isCurrentMonth: boolean;
-    setIsCurrentMonth: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-
 export default function MonthlyRankings() {
     const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
     const [isCurrentMonth, setIsCurrentMonth] = useState(true);
@@ -42,6 +32,7 @@ export default function MonthlyRankings() {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [selectedVenue, setSelectedVenue] = useState<string>('all');
     const [availableVenues, setAvailableVenues] = useState<string[]>([]);
+    const [filterText, setFilterText] = useState('');
 
     useEffect(() => {
         async function fetchRankings() {
@@ -52,7 +43,6 @@ export default function MonthlyRankings() {
                 const data = await response.json();
 
                 // Filter to only include qualified and bubble players
-                // Use Set to ensure unique players based on UID
                 const uniquePlayers = Array.from(
                     new Map(
                         data.rankings
@@ -86,17 +76,26 @@ export default function MonthlyRankings() {
 
     const getFilteredRankings = (): PlayerRanking[] => {
         if (!rankingsData?.rankings) return [];
-        if (selectedVenue === 'all') return rankingsData.rankings;
 
-        // Filter and sort once, maintaining unique players
+        let filteredRankings = rankingsData.rankings;
+
+        // Apply name filter
+        if (filterText) {
+            filteredRankings = filteredRankings.filter(player =>
+                player.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+        }
+
+        if (selectedVenue === 'all') return filteredRankings;
+
+        // Filter and sort by venue
         return Array.from(
             new Map(
-                rankingsData.rankings
+                filteredRankings
                     .filter(player =>
                         player.qualifyingVenues.some(venue => venue.venue === selectedVenue)
                     )
                     .map(player => {
-                        // Sort venues but create a new player object
                         const sortedVenues = [...player.qualifyingVenues].sort((a, b) => {
                             if (a.venue === selectedVenue) return -1;
                             if (b.venue === selectedVenue) return 1;
@@ -146,18 +145,38 @@ export default function MonthlyRankings() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-
                     <DateToggler
                         isCurrentPeriod={isCurrentMonth}
                         setIsCurrentPeriod={setIsCurrentMonth}
                         currentLabel="Current Month"
                         previousLabel="Previous Month"
                     />
+
+                    {/* Name filter */}
+                    <div className="relative w-full md:w-96">
+                        <input
+                            type="text"
+                            placeholder="Filter by player name..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg 
+                                focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {filterText && (
+                            <button
+                                onClick={() => setFilterText('')}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                &times;
+                            </button>
+                        )}
+                    </div>
+
                     <select
                         value={selectedVenue}
                         onChange={(e) => setSelectedVenue(e.target.value)}
                         className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-200 bg-white 
-              text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="all">All Venues</option>
                         {availableVenues.map(venue => (
@@ -168,18 +187,14 @@ export default function MonthlyRankings() {
             </div>
 
             {/* Rankings Grid */}
-
             <div className="">
-                {getFilteredRankings().map((player) => {
-
-                    return (
-                        <PlayerRankingCard
-                            key={player.uid}
-                            player={{ ...player, type: 'monthly' }}
-                        />
-                    );
-                })}
+                {getFilteredRankings().map((player) => (
+                    <PlayerRankingCard
+                        key={player.uid}
+                        player={{ ...player, type: 'monthly' }}
+                    />
+                ))}
             </div>
-        </div >
+        </div>
     );
 }
