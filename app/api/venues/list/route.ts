@@ -1,3 +1,5 @@
+// app/api/venues/list/route.ts
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import {
@@ -27,36 +29,13 @@ export async function GET(request: Request) {
 
     // Get current date in ET
     const currentDate = getCurrentETDate();
-
-    // For previous month logic, ensure we're using ET dates
     const targetDate = isCurrentMonth
       ? currentDate
-      : new Date(
-          currentDate.toLocaleString("en-US", {
-            timeZone: "America/New_York",
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-          })
-        );
-
-    if (!isCurrentMonth) {
-      targetDate.setMonth(targetDate.getMonth() - 1);
-    }
+      : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
 
     // Get date range for the month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
-
-    // Get the month and year in ET
-    const month = targetDate.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      month: "long",
-    });
-    const year = targetDate.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      year: "numeric",
-    });
 
     // First get all venues
     const venues = await prisma.$queryRaw`
@@ -96,8 +75,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       venues: serializeResults(venuesWithPlayers),
-      month,
-      year: parseInt(year),
+      month: targetDate.toLocaleString("default", {
+        month: "long",
+        timeZone: "America/New_York",
+      }),
+      year: targetDate.getFullYear(),
     });
   } catch (error) {
     console.error("Venue list error:", error);

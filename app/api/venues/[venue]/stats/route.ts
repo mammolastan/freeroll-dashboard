@@ -30,38 +30,20 @@ export async function GET(
     const venue = decodeURIComponent(params.venue);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    // Get target date in ET
+    // Get current date in ET
     const currentDate = getCurrentETDate();
-    const targetDate = isCurrentMonth
-      ? currentDate
-      : new Date(
-          currentDate.toLocaleString("en-US", {
-            timeZone: "America/New_York",
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-          })
-        );
+
+    // For previous month logic, ensure we're using ET dates
+    let targetDate = new Date(currentDate);
 
     if (!isCurrentMonth) {
+      // If not current month, move back one month
       targetDate.setMonth(targetDate.getMonth() - 1);
     }
 
-    // Get date range for the month in ET
+    // Get date range for the month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
-
-    // Get the month and year in ET
-    const month = targetDate.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      month: "long",
-    });
-    const year = parseInt(
-      targetDate.toLocaleString("en-US", {
-        timeZone: "America/New_York",
-        year: "numeric",
-      })
-    );
 
     // Get top players for the venue in the specified month
     const topPlayers = await prisma.$queryRaw`
@@ -78,7 +60,7 @@ export async function GET(
       GROUP BY Name, UID
       HAVING gamesPlayed > 0
       ORDER BY totalPoints DESC
-      LIMIT 25
+      LIMIT 10
     `;
 
     // Get venue statistics
@@ -92,6 +74,13 @@ export async function GET(
       WHERE Venue = ${venue}
       AND ${dateCondition}
     `;
+
+    // Get month and year from targetDate in ET
+    const month = targetDate.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      month: "long",
+    });
+    const year = targetDate.getFullYear();
 
     // Format the response
     return NextResponse.json({
