@@ -62,12 +62,14 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                 );
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
-
+                console.log("data")
+                console.log(data)
                 // Add a small delay for smoother transition
                 setTimeout(() => {
                     setStats(data);
                     setLoading(false);
                     setIsTransitioning(false);
+
                 }, 300);
             } catch (error) {
                 console.error('Failed to fetch venue stats:', error);
