@@ -17,39 +17,48 @@ function serializeResults(results: any[]) {
   });
 }
 
-function getMonthDateRangeET(year: number, month: number) {
-  console.log("Debug - getMonthDateRangeET input:", { year, month });
-
-  // Create dates using UTC to avoid timezone shifts
-  const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0));
-  const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
-
-  console.log("Debug - Calculated dates:", {
-    startOfMonth: startOfMonth.toISOString(),
-    endOfMonth: endOfMonth.toISOString(),
-  });
-
-  return { startOfMonth, endOfMonth };
-}
-
-function getTargetMonth(currentDate: Date, isCurrentMonth: boolean) {
-  // Parse the current date in ET
+function getMonthDetails(currentDate: Date, isCurrentMonth: boolean) {
+  // Convert to ET and get components
   const etDate = new Date(
     currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
   );
-  const currentYear = etDate.getFullYear();
-  const currentMonth = etDate.getMonth();
+  let year = etDate.getFullYear();
+  let month = etDate.getMonth(); // 0-11
 
-  if (isCurrentMonth) {
-    return { year: currentYear, month: currentMonth };
+  // Adjust for previous month if needed
+  if (!isCurrentMonth) {
+    month--;
+    if (month < 0) {
+      month = 11;
+      year--;
+    }
   }
 
-  // Calculate previous month
-  if (currentMonth === 0) {
-    // If January
-    return { year: currentYear - 1, month: 11 }; // Go to December of previous year
-  }
-  return { year: currentYear, month: currentMonth - 1 };
+  // Create start and end dates
+  const startOfMonth = new Date(Date.UTC(year, month, 1));
+  const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+
+  // Get month name from the start date
+  const monthName = startOfMonth.toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "long",
+  });
+
+  console.log("Debug - Month calculation:", {
+    input: { currentDate, isCurrentMonth },
+    output: {
+      monthName,
+      year,
+      dateRange: { start: startOfMonth, end: endOfMonth },
+    },
+  });
+
+  return {
+    monthName,
+    year,
+    startOfMonth,
+    endOfMonth,
+  };
 }
 
 export async function GET(
@@ -61,25 +70,16 @@ export async function GET(
     const venue = decodeURIComponent(params.venue);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    console.log("Debug - Request params:", {
-      venue,
-      isCurrentMonth,
-      rawCurrentMonth: searchParams.get("currentMonth"),
-    });
+    console.log("Debug - Request params:", { venue, isCurrentMonth });
 
-    // Get current date in ET
     const currentDate = getCurrentETDate();
-    console.log("Debug - currentDate:", currentDate.toISOString());
-
-    // Calculate target month
-    const { year, month } = getTargetMonth(currentDate, isCurrentMonth);
-    console.log("Debug - Target month calculation:", { year, month });
-
-    // Get date range for the month
-    const { startOfMonth, endOfMonth } = getMonthDateRangeET(year, month);
+    const { monthName, year, startOfMonth, endOfMonth } = getMonthDetails(
+      currentDate,
+      isCurrentMonth
+    );
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
 
-    // Get top players for the venue in the specified month
+    // Get top players for the venue
     const topPlayers = await prisma.$queryRaw`
       SELECT 
         Name,
@@ -109,23 +109,7 @@ export async function GET(
       AND ${dateCondition}
     `;
 
-    // Create a Date object for the first of the target month to get the month name
-    const monthDate = new Date(Date.UTC(year, month, 1));
-    const monthName = monthDate.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      month: "long",
-    });
-
-    console.log("Debug - Final response calculation:", {
-      monthName,
-      year,
-      dateRange: {
-        start: startOfMonth.toISOString(),
-        end: endOfMonth.toISOString(),
-      },
-    });
-
-    return NextResponse.json({
+    const response = {
       topPlayers: serializeResults(topPlayers as any[]),
       stats: serializeResults(venueStats as any[])[0],
       month: monthName,
@@ -134,7 +118,15 @@ export async function GET(
         start: startOfMonth.toISOString(),
         end: endOfMonth.toISOString(),
       },
+    };
+
+    console.log("Debug - Final response:", {
+      month: response.month,
+      year: response.year,
+      dateRange: response.dateRange,
     });
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Venue stats error:", error);
     return NextResponse.json(
