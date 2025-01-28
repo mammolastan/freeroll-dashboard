@@ -29,6 +29,16 @@ interface VenueDetailsProps {
     isCurrentMonth?: boolean;
 }
 
+function formatDateET(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        month: 'long',
+        year: 'numeric'
+    });
+}
+
+
 export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsProps) {
     const [stats, setStats] = useState<VenueStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -71,6 +81,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
             fetchVenueStats();
         }
     }, [venueName, isCurrentMonth]);
+
 
     if (loading && !isTransitioning) {
         return (

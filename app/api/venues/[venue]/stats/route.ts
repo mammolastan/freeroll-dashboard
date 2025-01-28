@@ -34,11 +34,34 @@ export async function GET(
     const currentDate = getCurrentETDate();
     const targetDate = isCurrentMonth
       ? currentDate
-      : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+      : new Date(
+          currentDate.toLocaleString("en-US", {
+            timeZone: "America/New_York",
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+          })
+        );
 
-    // Get date range for the month
+    if (!isCurrentMonth) {
+      targetDate.setMonth(targetDate.getMonth() - 1);
+    }
+
+    // Get date range for the month in ET
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
+
+    // Get the month and year in ET
+    const month = targetDate.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      month: "long",
+    });
+    const year = parseInt(
+      targetDate.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        year: "numeric",
+      })
+    );
 
     // Get top players for the venue in the specified month
     const topPlayers = await prisma.$queryRaw`
@@ -74,11 +97,8 @@ export async function GET(
     return NextResponse.json({
       topPlayers: serializeResults(topPlayers as any[]),
       stats: serializeResults(venueStats as any[])[0],
-      month: targetDate.toLocaleString("default", {
-        month: "long",
-        timeZone: "America/New_York",
-      }),
-      year: targetDate.getFullYear(),
+      month,
+      year,
       dateRange: {
         start: startOfMonth.toISOString(),
         end: endOfMonth.toISOString(),
