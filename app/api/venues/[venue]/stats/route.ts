@@ -55,7 +55,7 @@ export async function GET(
       GROUP BY Name, UID
       HAVING gamesPlayed > 0
       ORDER BY totalPoints DESC
-      LIMIT 10
+      LIMIT 25
     `;
 
     // Get venue statistics

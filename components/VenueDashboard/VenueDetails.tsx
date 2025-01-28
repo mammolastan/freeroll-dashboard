@@ -93,17 +93,20 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
 
     return (
         <div className={`space-y-8 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-            <div className="flex justify-between items-center">
+            <div className="">
                 <h2 className="text-2xl font-bold text-white-800 flex items-center gap-3">
                     <Trophy size={28} className="text-blue-500" />
                     {stats.dateRange && formatDateET(stats.dateRange.start)} Stats for {venueName}
                 </h2>
+                <p>
+                    <span className="font-semibold">{stats.stats.totalGames}</span> games played
+                </p>
             </div>
 
             <div className="bg-white rounded-xl shadow-lg transition-shadow hover:shadow-xl max-w-[800px] mx-auto p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <Crown size={24} className="text-amber-500" />
-                    <h3 className="text-xl font-bold text-gray-800">Top 10 Players</h3>
+                    <h3 className="text-xl font-bold text-gray-800">Top 25 Players</h3>
                 </div>
 
                 <div className="space-y-4">
