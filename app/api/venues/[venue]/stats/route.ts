@@ -17,44 +17,56 @@ function serializeResults(results: any[]) {
   });
 }
 
+function createDateFromET(
+  year: number,
+  month: number,
+  day = 1,
+  hour = 0
+): Date {
+  return new Date(Date.UTC(year, month, day, hour));
+}
+
 function getDateRangeForMonth(date: Date): {
   startDate: Date;
   endDate: Date;
   monthName: string;
   year: number;
 } {
-  // Convert input date to ET
-  const etDate = new Date(
-    date.toLocaleString("en-US", { timeZone: "America/New_York" })
+  // Convert input date to ET components
+  const etOptions = { timeZone: "America/New_York" };
+  const etYear = parseInt(
+    date.toLocaleString("en-US", { ...etOptions, year: "numeric" })
   );
-  console.log(
-    "TRACE - ET Date:",
-    etDate.toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
+  const etMonth =
+    parseInt(date.toLocaleString("en-US", { ...etOptions, month: "numeric" })) -
+    1; // Convert to 0-based month
 
-  // Get year and month from ET date
-  const year = etDate.getFullYear();
-  const month = etDate.getMonth();
-  console.log("TRACE - Year/Month extracted:", { year, month });
-
-  // Create UTC date range
-  const startDate = new Date(Date.UTC(year, month, 1, 0, 0, 0));
-  const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
-
-  // Get month name from start date using ET timezone
-  const monthName = startDate.toLocaleString("en-US", {
-    month: "long",
-    timeZone: "America/New_York",
+  console.log("TRACE - Initial ET components:", {
+    etYear,
+    etMonth: etMonth + 1, // Log 1-based month for clarity
+    inputDate: date.toISOString(),
   });
 
-  console.log("TRACE - Date Range Calculated:", {
+  // Create start and end dates
+  const startDate = createDateFromET(etYear, etMonth);
+  const endDate = createDateFromET(etYear, etMonth + 1, 0, 23);
+  endDate.setUTCMinutes(59);
+  endDate.setUTCSeconds(59);
+  endDate.setUTCMilliseconds(999);
+
+  // Get the month name from the start date
+  const monthName = startDate.toLocaleString("en-US", {
+    month: "long",
+  });
+
+  console.log("TRACE - Date calculations:", {
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
     monthName,
-    year,
+    year: etYear,
   });
 
-  return { startDate, endDate, monthName, year };
+  return { startDate, endDate, monthName, year: etYear };
 }
 
 export async function GET(
@@ -68,29 +80,26 @@ export async function GET(
 
     console.log("TRACE - Request params:", { venue, isCurrentMonth });
 
-    // Get current date and adjust for timezone
-    let currentDate = getCurrentETDate();
-    console.log(
-      "TRACE - Current ET date:",
-      currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
-    );
+    // Get current date
+    let baseDate = getCurrentETDate();
 
-    // If not current month, move back one month
+    // Adjust for previous month if needed
     if (!isCurrentMonth) {
       const etDate = new Date(
-        currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
       );
       etDate.setMonth(etDate.getMonth() - 1);
-      currentDate = etDate;
+      baseDate = etDate;
       console.log(
         "TRACE - Adjusted to previous month:",
-        currentDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
       );
     }
 
-    // Get date range and month details
+    // Get date range and details
     const { startDate, endDate, monthName, year } =
-      getDateRangeForMonth(currentDate);
+      getDateRangeForMonth(baseDate);
+
     console.log("TRACE - Final date details:", {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
