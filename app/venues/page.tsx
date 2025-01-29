@@ -45,6 +45,8 @@ export default function VenuesPage() {
             try {
                 const response = await fetch(`/api/venues/list?currentMonth=${isCurrentMonth}`)
                 const data = await response.json()
+                console.log("data from api/venues")
+                console.log(data)
                 if (data.venues) {
                     setVenueData(data)
 
