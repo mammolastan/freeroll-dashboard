@@ -3,7 +3,6 @@
 
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import MonthlyRankings from "@/components/Rankings/MonthlyRankings";
 
 export default function Home() {
   return (

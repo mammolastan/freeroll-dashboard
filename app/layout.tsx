@@ -9,7 +9,23 @@ export const metadata = {
   title: "Freeroll Atlanta Player Dashboard",
   description: "Dashboard for Freeroll Atlanta poker tournament player statistics",
   icons: {
-    icon: '/images/Poker-Chip-Isloated-Blue.png',
+    icon: [
+      {
+        url: '/images/Poker-Chip-Isloated-Blue.png',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+      {
+        url: '/images/Poker-Chip-Isloated-Blue.png',
+        sizes: '16x16',
+        type: 'image/png',
+      }
+    ],
+    apple: {
+      url: '/images/Poker-Chip-Isloated-Blue.png',
+      sizes: '180x180',
+      type: 'image/png',
+    }
   }
 }
 

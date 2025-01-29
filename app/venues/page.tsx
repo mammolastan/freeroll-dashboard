@@ -30,24 +30,20 @@ export default function VenuesPage() {
     const [venueData, setVenueData] = useState<VenueData | null>(null)
     const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null)
     const [loading, setLoading] = useState(true)
-    const [isCurrentMonth, setIsCurrentMonth] = useState(true)
+    const [isCurrentMonth, setIsCurrentMonth] = useState(() => {
+        const now = new Date()
+        const etDate = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
+        const dayOfMonth = etDate.getDate()
+        // If we're in first 7 days, default to previous month
+        return dayOfMonth > 7
+    })
     const [isTransitioning, setIsTransitioning] = useState(false)
 
     useEffect(() => {
         async function fetchVenues() {
             setIsTransitioning(true)
             try {
-
-                // Get current date in ET
-                const now = new Date()
-                const etDate = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
-                // For previous month, check if we're in first few days
-                // This ensures we don't show incorrect previous month during month transitions
-                const dayOfMonth = etDate.getDate()
-                const showPreviousMonth = !isCurrentMonth && dayOfMonth > 3
-
-
-                const response = await fetch(`/api/venues/list?currentMonth=${showPreviousMonth ? 'false' : 'true'}`)
+                const response = await fetch(`/api/venues/list?currentMonth=${isCurrentMonth}`)
                 const data = await response.json()
                 if (data.venues) {
                     setVenueData(data)
