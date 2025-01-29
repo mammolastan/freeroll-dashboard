@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Freeroll Atlanta Player Dashboard",
   description: "Dashboard for Freeroll Atlanta poker tournament player statistics",
+  icons: {
+    icon: '/images/Poker-Chip-Isloated-Blue.png',
+  }
 }
 
 export default function RootLayout({
