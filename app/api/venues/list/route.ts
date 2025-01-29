@@ -21,7 +21,7 @@ function createDateFromET(
   year: number,
   month: number,
   day = 1,
-  hour = 0
+  hour = 8
 ): Date {
   return new Date(Date.UTC(year, month, day, hour));
 }
