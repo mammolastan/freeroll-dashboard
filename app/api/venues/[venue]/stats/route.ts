@@ -57,7 +57,6 @@ function getDateRangeForMonth(date: Date): {
   // Get the month name from the start date
   const monthName = startDate.toLocaleString("en-US", {
     month: "long",
-    timeZone: "America/New_York",
   });
 
   console.log("TRACE - Date calculations:", {
