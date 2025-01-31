@@ -4,18 +4,8 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Helper function to normalize bigint and date values
-function serializeResults(results: any[]) {
-  return results.map((record) => {
-    const serialized = { ...record };
-    for (let key in serialized) {
-      if (typeof serialized[key] === "bigint") {
-        serialized[key] = Number(serialized[key]);
-      }
-    }
-    return serialized;
-  });
-}
+// Set revalidation period to 6 hours (in seconds)
+export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
 
 export async function GET() {
   try {
@@ -77,12 +67,7 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(gameDetails, {
-      headers: {
-        "Cache-Control": "public, max-age=86400", // 86400 seconds = 24 hours
-        Expires: new Date(Date.now() + 86400000).toUTCString(), // Current time + 24 hours
-      },
-    });
+    return NextResponse.json(gameDetails);
   } catch (error) {
     console.error("Recent games error:", error);
     return NextResponse.json(
