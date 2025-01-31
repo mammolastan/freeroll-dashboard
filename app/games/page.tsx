@@ -20,6 +20,23 @@ interface Game {
     topThree: TopPlayer[]
     totalKnockouts: number
 }
+
+// Add this helper function to format the timestamp
+function formatFetchTimestamp(isoString: string | null): string {
+    if (!isoString) return 'No data';
+
+    return new Date(isoString).toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+}
+
 function formatGameDateET(isoDateString: string): string {
     // Parse the ISO string and adjust for ET timezone
     const date = new Date(isoDateString);
@@ -36,23 +53,26 @@ function formatGameDateET(isoDateString: string): string {
 
 export default function GamesPage() {
     const [games, setGames] = useState<Game[]>([])
+    const [fetchTimestamp, setFetchTimestamp] = useState<string | null>(null);
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         async function fetchRecentGames() {
             try {
-                const response = await fetch('/api/games/recent')
-                const data = await response.json()
-                setGames(data)
+                const response = await fetch('/api/games/recent');
+                const data = await response.json();
+                setGames(data.games);
+                setFetchTimestamp(data.fetchTimestamp);
             } catch (error) {
-                console.error('Failed to fetch recent games:', error)
+                console.error('Failed to fetch recent games:', error);
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
         }
 
-        fetchRecentGames()
-    }, [])
+        fetchRecentGames();
+    }, []);
+
 
     if (loading) {
         return (
@@ -136,6 +156,10 @@ export default function GamesPage() {
                         </CardContent>
                     </Card>
                 ))}
+            </div>
+            {/* Timestamp display */}
+            <div className="text-xs text-gray-400 select-none">
+                Data fetched: {formatFetchTimestamp(fetchTimestamp)}
             </div>
         </div>
     )

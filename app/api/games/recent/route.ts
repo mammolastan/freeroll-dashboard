@@ -67,7 +67,12 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(gameDetails);
+    const response = {
+      games: gameDetails,
+      fetchTimestamp: new Date().toISOString(),
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Recent games error:", error);
     return NextResponse.json(
