@@ -27,7 +27,7 @@ interface RankingsData {
 
 export default function MonthlyRankings() {
     const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
-    const [isCurrentMonth, setIsCurrentMonth] = useState(true);
+    const [isCurrentMonth, setIsCurrentMonth] = useState(() => new Date().getDate() > 7); // first 7 days, false. Otherwise, true
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [selectedVenue, setSelectedVenue] = useState<string>('all');
@@ -127,9 +127,17 @@ export default function MonthlyRankings() {
 
     if (!rankingsData?.rankings.length) {
         return (
-            <div className="flex items-center justify-center min-h-[400px] gap-4">
-                <div className="text-xl text-gray-600">No qualified players found for this month</div>
-            </div>
+            <>
+                <div className="flex items-center flex-wrap justify-center min-h-[400px] gap-4">
+                    <DateToggler
+                        isCurrentPeriod={isCurrentMonth}
+                        setIsCurrentPeriod={setIsCurrentMonth}
+                        currentLabel="Current Month"
+                        previousLabel="Previous Month"
+                    />
+                    <div className="text-xl text-gray-600">No processed games for {rankingsData?.month} yet.</div>
+                </div>
+            </>
         );
     }
 
