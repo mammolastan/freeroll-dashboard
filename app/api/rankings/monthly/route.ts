@@ -9,6 +9,9 @@ import {
 
 const prisma = new PrismaClient();
 
+// Set revalidation period to 6 hours (in seconds)
+export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
+
 interface VenueRanking {
   venue: string;
   rank: number;
