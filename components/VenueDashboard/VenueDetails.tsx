@@ -35,15 +35,6 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
-    // Format date in ET timezone
-    function formatDateET(dateString: string): string {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            timeZone: 'America/New_York',
-            month: 'long',
-            year: 'numeric'
-        });
-    }
-
     useEffect(() => {
         async function fetchVenueStats() {
             setIsTransitioning(true);

@@ -17,13 +17,17 @@ function serializeResults(results: any[]) {
   });
 }
 
+// Helper function to create dates in ET
 function createDateFromET(
   year: number,
   month: number,
   day = 1,
   hour = 0
 ): Date {
-  return new Date(Date.UTC(year, month, day, hour));
+  const date = new Date(Date.UTC(year, month, day, hour));
+  return new Date(
+    date.toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
 }
 
 function getDateRangeForMonth(date: Date): {
@@ -32,19 +36,18 @@ function getDateRangeForMonth(date: Date): {
   monthName: string;
   year: number;
 } {
-  // Convert input date to ET components
-  const etOptions = { timeZone: "America/New_York" };
-  const etYear = parseInt(
-    date.toLocaleString("en-US", { ...etOptions, year: "numeric" })
+  // Get ET date components
+  const etDate = new Date(
+    date.toLocaleString("en-US", { timeZone: "America/New_York" })
   );
-  const etMonth =
-    parseInt(date.toLocaleString("en-US", { ...etOptions, month: "numeric" })) -
-    1; // Convert to 0-based month
+  const etYear = etDate.getFullYear();
+  const etMonth = etDate.getMonth();
 
-  console.log("TRACE - Initial ET components:", {
-    etYear,
-    etMonth: etMonth + 1, // Log 1-based month for clarity
+  console.log("TRACE - Date components:", {
     inputDate: date.toISOString(),
+    etDate: etDate.toISOString(),
+    etYear,
+    etMonth,
   });
 
   // Create start and end dates
@@ -54,16 +57,10 @@ function getDateRangeForMonth(date: Date): {
   endDate.setUTCSeconds(59);
   endDate.setUTCMilliseconds(999);
 
-  // Get the month name from the start date
-  const monthName = startDate.toLocaleString("en-US", {
+  // Get the month name directly from the ET date
+  const monthName = etDate.toLocaleString("en-US", {
     month: "long",
-  });
-
-  console.log("TRACE - Date calculations:", {
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-    monthName,
-    year: etYear,
+    timeZone: "America/New_York",
   });
 
   return { startDate, endDate, monthName, year: etYear };
