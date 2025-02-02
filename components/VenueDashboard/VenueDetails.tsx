@@ -39,17 +39,12 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
         async function fetchVenueStats() {
             setIsTransitioning(true);
             try {
-                console.log("TRACE - Frontend - Fetching stats:", {
-                    venue: venueName,
-                    isCurrentMonth
-                });
                 const response = await fetch(
                     `/api/venues/${encodeURIComponent(venueName)}/stats?currentMonth=${isCurrentMonth}`
                 );
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
-                console.log("data")
-                console.log(data)
+
                 // Add a small delay for smoother transition
                 setTimeout(() => {
                     setStats(data);
@@ -70,17 +65,6 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
         }
     }, [venueName, isCurrentMonth]);
 
-    // Add debug logging when stats change
-    useEffect(() => {
-        if (stats) {
-            console.log("Debug - Current stats state:", {
-                month: stats.month,
-                year: stats.year,
-                dateRange: stats.dateRange
-            });
-        }
-    }, [stats]);
-
     if (loading && !isTransitioning) {
         return (
             <div className="min-h-[400px] flex items-center justify-center">
@@ -99,11 +83,6 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
             </div>
         );
     }
-    console.log("Debug - Rendering header with:", {
-        month: stats.month,
-        year: stats.year,
-        venueName: venueName
-    });
     return (
         <div className={`space-y-8 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
             <div className="">

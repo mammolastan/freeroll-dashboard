@@ -45,12 +45,6 @@ function getMonthDetails(currentDate: Date): {
       currentDate.toLocaleString("en-US", { ...etOptions, month: "numeric" })
     ) - 1;
 
-  console.log("TRACE - Initial ET components:", {
-    etYear,
-    etMonth: etMonth + 1,
-    inputDate: currentDate.toISOString(),
-  });
-
   // Create date range
   const startDate = createDateFromET(etYear, etMonth);
   const endDate = createDateFromET(etYear, etMonth + 1, 0, 23);
@@ -61,13 +55,6 @@ function getMonthDetails(currentDate: Date): {
   // Get month name from start date
   const monthName = startDate.toLocaleString("en-US", {
     month: "long",
-  });
-
-  console.log("TRACE - Date calculations:", {
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-    monthName,
-    year: etYear,
   });
 
   return { startDate, endDate, monthName, year: etYear };
@@ -86,22 +73,11 @@ export async function GET(request: Request) {
       );
       etDate.setMonth(etDate.getMonth() - 1);
       baseDate = etDate;
-      console.log(
-        "TRACE - Adjusted to previous month:",
-        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
-      );
     }
 
     // Get date range and details
     const { startDate, endDate, monthName, year } = getMonthDetails(baseDate);
     const dateCondition = getDateCondition(startDate, endDate);
-
-    console.log("TRACE - Using date range:", {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      monthName,
-      year,
-    });
 
     // Get all venues
     const venues = await prisma.$queryRaw`
@@ -138,12 +114,6 @@ export async function GET(request: Request) {
         };
       })
     );
-
-    console.log("TRACE - Final response:", {
-      month: monthName,
-      year,
-      venueCount: venuesWithPlayers.length,
-    });
 
     return NextResponse.json({
       venues: serializeResults(venuesWithPlayers),
