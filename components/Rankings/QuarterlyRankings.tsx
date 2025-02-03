@@ -214,7 +214,7 @@ export default function QuarterlyRankings() {
                                 <SortableHeader field="totalPoints" label="Points" bg="green" />
                                 <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
                                 <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
-                                <SortableHeader field="avgScore" label="Avg. Score" bg="orange" />
+                                <SortableHeader field="avgScore" label="Power Rating" bg="orange" />
                             </div>
                         </div>
                     </div>

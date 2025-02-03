@@ -264,7 +264,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         <StatRow label="Knockouts" value={stats.quarterlyStats.knockouts} />
                         <StatRow label="Final Tables" value={stats.quarterlyStats.finalTables} />
                         <StatRow
-                            label="Avg Score"
+                            label="Power Rating"
                             value={typeof stats.quarterlyStats.avgScore === 'number'
                                 ? stats.quarterlyStats.avgScore.toFixed(2)
                                 : '0.00'}
