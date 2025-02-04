@@ -1,6 +1,4 @@
 import * as React from 'react'
-import { NextResponse } from "next/server";
-import { GET } from '@/app/api/players/search/route';
 
 interface Player {
     Name: string
@@ -10,18 +8,6 @@ interface Player {
 
 interface PlayerSearchProps {
     onPlayerSelect: (player: Player) => void
-}
-
-// Separate async function to get IP
-async function getIP() {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        return data.ip;
-    } catch (error) {
-        console.error('Error fetching IP:', error);
-        return null;
-    }
 }
 
 export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
@@ -42,9 +28,6 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                 const response = await fetch(`/api/players/search?q=${search}`)
                 const data = await response.json()
                 setPlayers(data)
-                // Get and log IP
-                const ip = await getIP();
-                console.log("Current IP Address:", ip);
             } catch (error) {
                 console.error('Failed to fetch players:', error)
             } finally {

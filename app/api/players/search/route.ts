@@ -36,8 +36,7 @@ export async function GET(request: NextRequest) {
         Name,
         UID,
         COUNT(DISTINCT File_name) as TotalGames,
-        SUM(Total_Points) as TotalPoints,
-        CAST(AVG(Player_Score) AS DECIMAL(10,2)) as AvgScore
+        SUM(Total_Points) as TotalPoints        
       FROM poker_tournaments
       WHERE Name LIKE ${`%${query}%`}
       GROUP BY Name, UID
