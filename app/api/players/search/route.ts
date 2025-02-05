@@ -2,7 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { getServerIP } from "@/lib/utils";
 
 // Move prisma client outside route handler
 const prisma = new PrismaClient();
@@ -28,20 +27,21 @@ export async function GET(request: NextRequest) {
     if (!query) {
       return NextResponse.json([]);
     }
-    const serverIP = await getServerIP();
-    console.log("Server IP:", serverIP);
 
+    // Join with players table to get nickname
     const players = await prisma.$queryRaw`
-      SELECT 
-        Name,
-        UID,
-        COUNT(DISTINCT File_name) as TotalGames,
-        SUM(Total_Points) as TotalPoints        
-      FROM poker_tournaments
-      WHERE Name LIKE ${`%${query}%`}
-      GROUP BY Name, UID
-      ORDER BY Name
-      LIMIT 10
+    SELECT 
+      p.Name,
+      p.UID,
+      pl.nickname,
+      COUNT(DISTINCT p.File_name) as TotalGames,
+      SUM(p.Total_Points) as TotalPoints      
+    FROM poker_tournaments p
+    LEFT JOIN players pl ON p.UID = pl.uid
+    WHERE p.Name LIKE ${`%${query}%`} OR pl.nickname LIKE ${`%${query}%`}
+    GROUP BY p.Name, p.UID, pl.nickname
+    ORDER BY p.Name
+    LIMIT 10
     `;
 
     // Serialize the results before sending

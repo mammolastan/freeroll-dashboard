@@ -8,6 +8,7 @@ interface BasePlayerData {
     name: string;
     uid: string;
     isQualified: boolean;
+    nickname: string | null;
 }
 
 interface VenueRanking {
@@ -60,10 +61,10 @@ export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
                                 </div>
                             )}
                             <Link
-                                href={`/players?name=${encodeURIComponent(player.name)}`}
+                                href={`/players?uid=${encodeURIComponent(player.uid)}`}
                                 className="freeroll-link text-lg font-medium  truncate"
                             >
-                                {player.name}
+                                {player.nickname || player.name}
                             </Link>
                             <div className="flex items-center gap-2">
                                 {player.type === 'monthly' && player.isQualified ? (

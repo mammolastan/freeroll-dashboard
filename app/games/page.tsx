@@ -10,6 +10,8 @@ interface TopPlayer {
     name: string
     points: number
     knockouts: number
+    UID: string
+    nickname: string
 }
 
 interface Game {
@@ -117,10 +119,10 @@ export default function GamesPage() {
                                                     {index + 1}
                                                 </div>
                                                 <Link
-                                                    href={`/players?name=${encodeURIComponent(player.name)}`}
+                                                    href={`/players?uid=${encodeURIComponent(player.UID)}`}
                                                     className="freeroll-link font-medium text-blue-600"
                                                 >
-                                                    {player.name}
+                                                    {player.nickname || player.name}
                                                 </Link>
                                             </div>
                                             <div className="flex items-center gap-3">

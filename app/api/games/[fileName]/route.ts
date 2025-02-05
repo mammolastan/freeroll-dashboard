@@ -11,32 +11,53 @@ export async function GET(
 ) {
   try {
     // Get all players from this game
-    const players = await prisma.pokerTournament.findMany({
-      where: {
-        File_name: params.fileName,
-      },
-      select: {
-        Name: true,
-        UID: true,
-        Placement: true,
-        Knockouts: true,
-        Hitman: true,
-        Total_Points: true,
-        Start_Points: true,
-        Hit_Points: true,
-        Placement_Points: true,
-        Venue: true,
-        Season: true,
-      },
-      orderBy: [
-        {
-          Placement: "asc",
-        },
-        {
-          Name: "asc", // Secondary sort to ensure consistent ordering
-        },
-      ],
-    });
+    const players: {
+      Name: string;
+      UID: string;
+      Placement: number;
+      Knockouts: number;
+      Hitman: number;
+      Total_Points: number;
+      Start_Points: number;
+      Hit_Points: number;
+      Placement_Points: number;
+      Venue: string;
+      Season: string;
+      nickname: string;
+    }[] = await prisma.$queryRaw`
+      SELECT 
+        p.Name,
+        p.UID,
+        p.Placement,
+        p.Knockouts,
+        p.Hitman,
+        p.Total_Points,
+        p.Start_Points,
+        p.Hit_Points,
+        p.Placement_Points,
+        p.Venue,
+        p.Season,
+        pl.nickname
+      FROM poker_tournaments p
+      LEFT JOIN players pl ON p.UID = pl.uid
+      WHERE p.File_name = ${params.fileName}
+      ORDER BY p.Placement ASC, p.Name ASC
+    `;
+
+    const serializedPlayers = players.map((player: any) => ({
+      name: player.Name,
+      uid: player.UID,
+      nickname: player.nickname,
+      placement: player.Placement,
+      knockouts: player.Knockouts,
+      hitman: player.Hitman,
+      totalPoints: player.Total_Points,
+      startPoints: player.Start_Points,
+      hitPoints: player.Hit_Points,
+      placementPoints: player.Placement_Points,
+      venue: player.Venue,
+      season: player.Season,
+    }));
 
     if (!players.length) {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
@@ -73,6 +94,7 @@ export async function GET(
       players: players.map((player) => ({
         name: player.Name,
         uid: player.UID,
+        nickname: player.nickname,
         placement: player.Placement,
         knockouts: player.Knockouts,
         hitman: player.Hitman,
@@ -82,7 +104,7 @@ export async function GET(
         placementPoints: player.Placement_Points,
       })),
       venue: players[0].Venue,
-      date: gameDate, // Now using the string directly
+      date: gameDate,
       totalPlayers,
       totalKnockouts,
       averagePoints,

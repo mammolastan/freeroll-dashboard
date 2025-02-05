@@ -56,23 +56,26 @@ export async function GET(request: Request) {
       targetQuarter,
       targetYear
     );
-    const dateCondition = getDateCondition(startOfQuarter, endOfQuarter);
+
+    const dateConditionP = getDateCondition(startOfQuarter, endOfQuarter, "p");
 
     // Get player stats for the quarter
     const players = await prisma.$queryRaw`
       SELECT 
-        Name as name,
-        UID as uid,
-        COUNT(DISTINCT File_name) as gamesPlayed,
-        CAST(SUM(Total_Points) AS SIGNED) as totalPoints,
-        CAST(SUM(Knockouts) AS SIGNED) as totalKnockouts,
-        CAST(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
-        CAST(AVG(Player_Score) AS DECIMAL(10,2)) as avgScore
-      FROM poker_tournaments
-      WHERE ${dateCondition}
-      GROUP BY Name, UID
-      HAVING gamesPlayed >= 1
-      ORDER BY totalPoints DESC
+        p.Name as name,
+        p.UID as uid,
+        pl.nickname,
+        COUNT(DISTINCT p.File_name) as gamesPlayed,
+        CAST(SUM(p.Total_Points) AS SIGNED) as totalPoints,
+        CAST(SUM(p.Knockouts) AS SIGNED) as totalKnockouts,
+        CAST(SUM(CASE WHEN p.Placement <= 8 THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
+        CAST(AVG(p.Player_Score) AS DECIMAL(10,2)) as avgScore
+        FROM poker_tournaments p
+        LEFT JOIN players pl ON p.UID = pl.uid
+        WHERE ${dateConditionP}
+        GROUP BY p.Name, p.UID, pl.nickname
+        HAVING gamesPlayed >= 1
+        ORDER BY totalPoints DESC
     `;
 
     // Serialize the results and add rankings

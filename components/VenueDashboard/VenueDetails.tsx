@@ -9,6 +9,7 @@ interface VenueStats {
         gamesPlayed: number;
         totalPoints: number;
         knockouts: number;
+        nickname: string | null;
     }>;
     stats: {
         totalGames: number;
@@ -121,7 +122,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                     {index + 1}
                                 </div>
                                 <div>
-                                    <div className="font-semibold text-gray-900">{player.Name}</div>
+                                    <div className="font-semibold text-gray-900">    {player.nickname || player.Name}</div>
                                     <div className="text-sm text-gray-500 flex items-center gap-4 mt-1">
                                         <span className="flex items-center gap-1">
                                             <Users size={16} />

@@ -84,20 +84,23 @@ export async function GET(
     const { startDate, endDate, monthName, year } =
       getDateRangeForMonth(baseDate);
 
-    const dateCondition = getDateCondition(startDate, endDate);
+    const dateCondition = getDateCondition(startDate, endDate); // Use alias for JOIN queries
+    const dateConditionP = getDateCondition(startDate, endDate, "p"); // Use alias for JOIN queries
 
     // Get top players for the venue
     const topPlayers = await prisma.$queryRaw`
       SELECT 
-        Name,
-        UID,
+        p.Name,
+        p.UID,
+        pl.nickname,
         COUNT(*) as gamesPlayed,
         SUM(Total_Points) as totalPoints,
         SUM(Knockouts) as knockouts,
         AVG(Player_Score) as avgScore
-      FROM poker_tournaments
-      WHERE Venue = ${venue}
-      AND ${dateCondition}
+      FROM poker_tournaments p
+      LEFT JOIN players pl ON p.UID = pl.uid
+      WHERE p.Venue = ${venue}
+      AND ${dateConditionP}
       GROUP BY Name, UID
       HAVING gamesPlayed > 0
       ORDER BY totalPoints DESC

@@ -49,6 +49,7 @@ export async function GET(request: Request) {
     // Get the date range for the target month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
+    const dateConditionP = getDateCondition(startOfMonth, endOfMonth, "p"); // Use alias for JOIN queries
 
     // Get all venues for the month
     const venues = await prisma.$queryRaw<{ name: string }[]>`
@@ -64,12 +65,14 @@ export async function GET(request: Request) {
         uid: string;
         totalPoints: bigint;
         rank: bigint;
+        nickname: string | null;
       }[]
     >`
-      SELECT 
-        name,
-        uid,
-        totalPoints,
+          SELECT 
+        p.name,
+        p.uid,
+        pl.nickname,
+        p.totalPoints,
         @rank := @rank + 1 as rank
       FROM (
         SELECT 
@@ -80,7 +83,8 @@ export async function GET(request: Request) {
         WHERE ${dateCondition}
         GROUP BY Name, UID
         ORDER BY totalPoints DESC
-      ) ranked_players,
+      ) p
+      LEFT JOIN players pl ON p.uid = pl.uid,
       (SELECT @rank := 0) r
       LIMIT 50
     `;

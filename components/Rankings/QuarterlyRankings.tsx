@@ -16,6 +16,7 @@ interface PlayerRanking {
     avgScore: number;
     ranking: number;
     isQualified: boolean;
+    nickname: string | null;
 }
 
 interface RankingsData {

@@ -16,6 +16,7 @@ interface Player {
     startPoints: number
     hitPoints: number
     placementPoints: number
+    nickname: string | null
 }
 
 interface GameDetails {
@@ -133,10 +134,10 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                                         {player.placement}
                                     </div>
                                     <Link
-                                        href={`/players?name=${encodeURIComponent(player.name)}`}
+                                        href={`/players?uid=${encodeURIComponent(player.uid)}`}
                                         className="freeroll-link font-medium"
                                     >
-                                        {player.name}
+                                        {player.nickname || player.name}
                                     </Link>
                                 </div>
                                 <div className="flex flex-wrap gap-4 text-sm text-black">

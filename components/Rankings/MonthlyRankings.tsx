@@ -17,6 +17,7 @@ interface PlayerRanking {
     bubbleVenues: VenueRanking[];
     isQualified: boolean;
     isBubble: boolean;
+    nickname: string | null;
 }
 
 interface RankingsData {

@@ -32,25 +32,25 @@ export async function GET() {
       games.map(async (game) => {
         const players = await prisma.pokerTournament.findMany({
           where: {
-            File_name: game.File_name,
+            fileName: game.File_name,
           },
           select: {
-            Name: true,
-            Placement: true,
-            Total_Points: true,
-            Knockouts: true,
-            Venue: true,
+            name: true,
+            placement: true,
+            totalPoints: true,
+            knockouts: true,
+            venue: true,
           },
           orderBy: {
-            Placement: "asc",
+            placement: "asc",
           },
         });
 
         // Get top 3 players
         const topThree = players.slice(0, 3).map((player) => ({
-          name: player.Name,
-          points: player.Total_Points || 0,
-          knockouts: player.Knockouts || 0,
+          name: player.name,
+          points: player.totalPoints || 0,
+          knockouts: player.knockouts || 0,
         }));
 
         return {
@@ -60,7 +60,7 @@ export async function GET() {
           totalPlayers: players.length,
           topThree,
           totalKnockouts: players.reduce(
-            (sum, player) => sum + (player.Knockouts || 0),
+            (sum, player) => sum + (player.knockouts || 0),
             0
           ),
         };

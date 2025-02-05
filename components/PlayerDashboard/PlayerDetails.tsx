@@ -27,10 +27,14 @@ interface PlayerStats {
     mostKnockedOutBy: Array<{
         name: string;
         count: number;
+        UID: string;
+        nickname: string | null;
     }>;
     mostKnockedOut: Array<{
         name: string;
         count: number;
+        UID: string;
+        nickname: string | null;
     }>;
     venueStats: Array<{
         venue: string;
@@ -297,14 +301,14 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm text-purple-700">{index + 1}.</span>
                                                 <Link
-                                                    href={`/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`}
+                                                    href={`/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`}
                                                     className="freeroll-link"
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        window.location.href = `/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`;
+                                                        window.location.href = `/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`;
                                                     }}
                                                 >
-                                                    {player.name}
+                                                    {player.nickname || player.name}
                                                 </Link>
                                             </div>
                                             <span className="text-sm font-medium text-purple-700">
@@ -322,11 +326,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm text-purple-700">{index + 1}.</span>
                                                 <a
-                                                    href={`/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`}
+                                                    href={`/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`}
                                                     className="freeroll-link"
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        window.location.href = `/players?name=${encodeURIComponent(player.name)}&range=${selectedRange}`;
+                                                        window.location.href = `/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`;
                                                     }}
                                                 >
                                                     {player.name}

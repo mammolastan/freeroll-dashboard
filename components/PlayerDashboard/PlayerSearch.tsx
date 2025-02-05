@@ -1,7 +1,10 @@
-import * as React from 'react'
+// components/PlayerDashboard/PlayerSearch.tsx
+
+import { useEffect, useState } from "react"
 
 interface Player {
     Name: string
+    nickname: string | null
     UID: string
     TotalGames?: number
 }
@@ -11,11 +14,11 @@ interface PlayerSearchProps {
 }
 
 export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
-    const [search, setSearch] = React.useState('')
-    const [players, setPlayers] = React.useState<Player[]>([])
-    const [isLoading, setIsLoading] = React.useState(false)
+    const [search, setSearch] = useState('')
+    const [players, setPlayers] = useState<Player[]>([])
+    const [isLoading, setIsLoading] = useState(false)
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!search) {
             setPlayers([])
             return
@@ -73,15 +76,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                 )}
 
                 {players.length > 0 && (
-                    <div className="absolute
-                    w-full
-                    mt-1
-                    bg-white
-                    rounded-b-lg
-                    border
-                    border-gray-200
-                    shadow-lg
-                    text-black">
+                    <div className="absolute w-full mt-1 bg-white rounded-b-lg border border-gray-200 shadow-lg text-black">
                         <ul className="max-h-[300px] overflow-auto">
                             {players.map((player) => (
                                 <li
@@ -89,10 +84,12 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                                     onClick={() => {
                                         onPlayerSelect(player)
-                                        setSearch('') // Clear the search input after selection
+                                        setSearch('')
                                     }}
                                 >
-                                    <div className="font-medium">{player.Name}</div>
+                                    <div className="font-medium">
+                                        {player.nickname || player.Name}
+                                    </div>
                                     {player.TotalGames && (
                                         <div className="text-sm text-gray-500">
                                             {player.TotalGames} games played
