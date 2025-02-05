@@ -30,27 +30,38 @@ export async function GET() {
     // Get detailed information for each game
     const gameDetails = await Promise.all(
       games.map(async (game) => {
-        const players = await prisma.pokerTournament.findMany({
-          where: {
-            fileName: game.File_name,
-          },
-          select: {
-            name: true,
-            placement: true,
-            totalPoints: true,
-            knockouts: true,
-            venue: true,
-          },
-          orderBy: {
-            placement: "asc",
-          },
-        });
+        const players = await prisma.$queryRaw<
+          Array<{
+            name: string;
+            placement: number;
+            totalPoints: number;
+            knockouts: number;
+            venue: string;
+            uid: string;
+            nickname: string;
+          }>
+        >`
+          SELECT 
+            p.Name as name,
+            p.Placement as placement,
+            p.Total_Points as totalPoints,
+            p.Knockouts as knockouts,
+            p.Venue as venue,
+            p.UID as uid,
+            pl.nickname
+          FROM poker_tournaments p
+          LEFT JOIN players pl ON p.UID = pl.uid
+          WHERE p.File_name = ${game.File_name}
+          ORDER BY p.Placement ASC
+        `;
 
         // Get top 3 players
         const topThree = players.slice(0, 3).map((player) => ({
           name: player.name,
           points: player.totalPoints || 0,
           knockouts: player.knockouts || 0,
+          UID: player.uid,
+          nickname: player.nickname,
         }));
 
         return {

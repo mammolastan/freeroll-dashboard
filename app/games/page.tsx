@@ -17,13 +17,13 @@ interface TopPlayer {
 interface Game {
     fileName: string
     venue: string
-    date: string   // This is now an ISO date string from game_date
+    date: string
     totalPlayers: number
     topThree: TopPlayer[]
     totalKnockouts: number
 }
 
-// Add this helper function to format the timestamp
+//Helper function to format the timestamp
 function formatFetchTimestamp(isoString: string | null): string {
     if (!isoString) return 'No data';
 

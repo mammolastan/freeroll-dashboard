@@ -43,7 +43,7 @@ export function createGameDate(
 }
 
 // Helper function to ensure dates are in ET timezone
-function getETDate(date: Date): Date {
+export function getETDate(date: Date): Date {
   return new Date(
     date.toLocaleString("en-US", { timeZone: "America/New_York" })
   );
@@ -52,16 +52,33 @@ function getETDate(date: Date): Date {
 // Function to get start and end of month in ET
 export function getMonthDateRange(date: Date) {
   const etDate = getETDate(date);
-  const startOfMonth = new Date(etDate.getFullYear(), etDate.getMonth(), 1);
-  const endOfMonth = new Date(
-    etDate.getFullYear(),
-    etDate.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999
+
+  // Set to beginning of month at 00:00:00.000 ET
+  const startOfMonth = new Date(
+    Date.UTC(
+      etDate.getFullYear(),
+      etDate.getMonth(),
+      1,
+      4, // 4 AM UTC = previous day 11 PM ET
+      0,
+      0,
+      0
+    )
   );
+
+  // Set to end of month at 23:59:59.999 ET
+  const endOfMonth = new Date(
+    Date.UTC(
+      etDate.getFullYear(),
+      etDate.getMonth() + 1,
+      0, // Last day of month
+      28, // 28 (next day 4 AM UTC = 11 PM ET)
+      59,
+      59,
+      999
+    )
+  );
+
   return { startOfMonth, endOfMonth };
 }
 
@@ -83,16 +100,16 @@ export function getDateCondition(
     return Prisma.empty;
   }
 
-  const columnRef = mainTableAlias
+  const columnref = mainTableAlias
     ? `${mainTableAlias}.game_date`
     : "game_date";
 
   if (endDate) {
-    return Prisma.sql`${Prisma.raw(columnRef)} >= ${startDate} 
-        AND ${Prisma.raw(columnRef)} <= ${endDate}`;
+    return Prisma.sql`${Prisma.raw(`${columnref}`)} >= DATE(${startDate}) 
+      AND ${Prisma.raw(`${columnref}`)} <= DATE(${endDate})`;
   }
 
-  return Prisma.sql`${Prisma.raw(columnRef)} >= ${startDate}`;
+  return Prisma.sql`${Prisma.raw(`${columnref}`)} >= DATE(${startDate})`;
 }
 
 // Helper for getting current ET date

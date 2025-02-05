@@ -78,6 +78,7 @@ export async function GET(request: Request) {
     // Get date range and details
     const { startDate, endDate, monthName, year } = getMonthDetails(baseDate);
     const dateCondition = getDateCondition(startDate, endDate);
+    const dateConditionP = getDateCondition(startDate, endDate, "p");
 
     // Get all venues
     const venues = await prisma.$queryRaw`
@@ -95,15 +96,17 @@ export async function GET(request: Request) {
       (venues as any[]).map(async (venue) => {
         const topPlayers = await prisma.$queryRaw`
           SELECT 
-            Name as name,
-            UID as uid,
-            SUM(Total_Points) as totalPoints,
-            SUM(Knockouts) as knockouts,
-            COUNT(*) as gamesPlayed
-          FROM poker_tournaments
+            p.Name as name,
+            p.UID as uid,
+            SUM(p.Total_Points) as totalPoints,
+            SUM(p.Knockouts) as knockouts,
+            COUNT(*) as gamesPlayed,
+            pl.nickname
+          FROM poker_tournaments p
+          LEFT JOIN players pl ON p.UID = pl.uid
           WHERE Venue = ${venue.name}
-          AND ${dateCondition}
-          GROUP BY Name, UID
+          AND ${dateConditionP}
+          GROUP BY name, uid, pl.nickname
           ORDER BY totalPoints DESC
           LIMIT 5
         `;

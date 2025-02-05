@@ -152,6 +152,7 @@ export async function GET(request: Request) {
 
       return {
         name: player.name,
+        nickname: player.nickname,
         uid: player.uid,
         qualifyingVenues,
         bubbleVenues,

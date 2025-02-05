@@ -90,12 +90,15 @@ export default function QuarterlyRankings() {
 
         let filteredRankings = rankingsData.rankings;
 
-        // Apply filter
+
+        // Apply name filter
         if (filterText) {
             filteredRankings = filteredRankings.filter(player =>
-                player.name.toLowerCase().includes(filterText.toLowerCase())
+                player.name.toLowerCase().includes(filterText.toLowerCase()) ||
+                player.nickname?.toLowerCase().includes(filterText.toLowerCase())
             );
         }
+
 
         // Apply sort
         return [...filteredRankings].sort((a, b) => {

@@ -20,6 +20,7 @@ interface VenueData {
 
 interface Player {
     name: string;
+    nickname: string | null;
     uid: string;
     totalPoints: number;
     knockouts: number;
@@ -154,11 +155,11 @@ export default function VenuesPage() {
                                                                 {index + 1}
                                                             </div>
                                                             <Link
-                                                                href={`/players?name=${encodeURIComponent(player.name)}`}
+                                                                href={`/players?uid=${encodeURIComponent(player.uid)}`}
                                                                 className="freeroll-link text-sm font-medium text-blue-600"
                                                                 onClick={(e) => e.stopPropagation()}
                                                             >
-                                                                {player.name}
+                                                                {player.nickname || player.name}
                                                             </Link>
                                                         </div>
                                                         <div className="text-sm text-gray-600">

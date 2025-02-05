@@ -46,12 +46,15 @@ export default function PlayersPage() {
             fetch(`/api/players/search?q=${encodeURIComponent(urlUid)}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log("Player data fetched:", data);
                     if (data && data.length > 0) {
                         const playerData = {
                             Name: data[0].Name,
                             UID: data[0].UID,
                             nickname: data[0].nickname || null
                         };
+                        console.log("playerData")
+                        console.log(playerData)
                         setSelectedPlayer(playerData);
                         localStorage.setItem('selectedPlayer', JSON.stringify(playerData));
                     }
@@ -59,7 +62,7 @@ export default function PlayersPage() {
                 .catch(error => console.error('Error fetching player:', error));
         } else if (urlName) {
             // Handle name-based search
-            fetch(`/api/players/search?q=${encodeURIComponent(urlName)}`)
+            fetch(`/api/players/search?q=${encodeURIComponent(urlName)}&name=true`)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.length > 0) {

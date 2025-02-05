@@ -34,7 +34,6 @@ export default function MonthlyRankings() {
     const [selectedVenue, setSelectedVenue] = useState<string>('all');
     const [availableVenues, setAvailableVenues] = useState<string[]>([]);
     const [filterText, setFilterText] = useState('');
-
     useEffect(() => {
         async function fetchRankings() {
             setIsTransitioning(true);
@@ -83,7 +82,8 @@ export default function MonthlyRankings() {
         // Apply name filter
         if (filterText) {
             filteredRankings = filteredRankings.filter(player =>
-                player.name.toLowerCase().includes(filterText.toLowerCase())
+                player.name.toLowerCase().includes(filterText.toLowerCase()) ||
+                player.nickname?.toLowerCase().includes(filterText.toLowerCase())
             );
         }
 
