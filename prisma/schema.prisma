@@ -33,3 +33,32 @@ model PokerTournament {
 
   @@map("poker_tournaments")
 }
+
+model ProcessedFile {
+  id                  Int      @id @default(autoincrement())
+  filename            String   @unique
+  processed_at        DateTime @default(now()) @map("processed_at")
+  status              Status
+  error_message       String?  @map("error_message") @db.Text
+  drive_file_id       String   @map("drive_file_id")
+  md5_checksum        String?  @map("md5_checksum")
+  drive_modified_time DateTime @map("drive_modified_time")
+  game_uid            String?  @map("game_uid")
+
+  @@map("processed_files")
+}
+
+enum Status {
+  success
+  error
+}
+
+model Player {
+  uid        String   @id
+  name       String
+  nickname   String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("players")
+}
