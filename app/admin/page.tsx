@@ -12,16 +12,21 @@ export default function AdminDashboard() {
     const [password, setPassword] = useState('')
 
 
-    const handleLogin = async () => {
-        console.log("Logging in with password:", password)
+    interface AuthResponse {
+        authenticated: boolean;
+    }
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Logging in with password:", password);
         const response = await fetch('/api/admin/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
-        })
-        const data = await response.json()
-        setIsAuthenticated(data.authenticated)
-    }
+        });
+        const data: AuthResponse = await response.json();
+        setIsAuthenticated(data.authenticated);
+    };
 
     if (!isAuthenticated) {
         return (
@@ -31,19 +36,21 @@ export default function AdminDashboard() {
                         <CardTitle>Admin Login</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <input
+                        <form onSubmit={(e) => e.preventDefault}><input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full px-3 py-2 border rounded text-black"
                             placeholder="Enter password"
                         />
-                        <button
-                            onClick={handleLogin}
-                            className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded"
-                        >
-                            Login
-                        </button>
+                            <button
+                                onClick={handleLogin}
+                                type="submit"
+                                className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded"
+                            >
+                                Login
+                            </button>
+                        </form>
                     </CardContent>
                 </Card>
             </div>

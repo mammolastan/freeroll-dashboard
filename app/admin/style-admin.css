@@ -14,8 +14,20 @@ button {
 table {
   max-width: 100%;
   border-collapse: collapse;
-  color: #000;
+  color: #fff;
 }
+
+table th {
+  background-color: #000;
+  color: #fff;
+}
+
+table td {
+  background-color: #f00;
+  color: #fff;
+  border: 1px solid #000;
+}
+
 .clickme {
   cursor: pointer;
 }
