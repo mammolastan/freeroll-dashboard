@@ -34,29 +34,7 @@ jobs:
             public \
             prisma
 
-      - name: Test SSH connection
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: deployer
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: echo "SSH connection successful"
-          timeout: 60s
-
-      - name: Install rsync
-        run: sudo apt-get install -y rsync
-
       - name: Deploy to Digital Ocean
-        uses: burnett01/rsync-deployments@5.2.1
-        with:
-          switches: -avzr --delete
-          path: deployment.tar.gz
-          remote_path: /var/www/freeroll-dashboard/
-          remote_host: ${{ secrets.DROPLET_IP }}
-          remote_user: deployer
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Finalize deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
@@ -75,6 +53,12 @@ jobs:
             # Clean the directory while preserving important files
             find . -mindepth 1 -not -name '.env.backup' -delete
 
+            # Create deployment directory structure
+            mkdir -p prisma
+
+            # Copy deployment package
+            echo "Waiting for deployment.tar.gz..."
+
             # Extract new files
             tar xzf deployment.tar.gz
             rm deployment.tar.gz
@@ -85,7 +69,8 @@ jobs:
             # Clean install with increased memory limit
             export NODE_OPTIONS="--max_old_space_size=1024"
             npm cache clean --force
-            npm ci --production --ignore-scripts
+            # Use regular npm install instead of npm ci since we have the package-lock.json now
+            npm install --production
 
             # Handle Prisma separately
             npm install prisma --save-dev
@@ -93,26 +78,6 @@ jobs:
 
             # Update permissions
             chmod -R 775 .
-
-            # Ensure ecosystem.config.js exists and has correct content
-            if [ ! -f ecosystem.config.js ]; then
-              echo "module.exports = {
-                apps: [{
-                  name: 'freeroll-dashboard',
-                  script: 'node_modules/next/dist/bin/next',
-                  args: 'start',
-                  cwd: '/var/www/freeroll-dashboard',
-                  instances: 1,
-                  autorestart: true,
-                  watch: false,
-                  max_memory_restart: '1G',
-                  env: {
-                    NODE_ENV: 'production',
-                    PORT: 3000
-                  }
-                }]
-              }" > ecosystem.config.js
-            fi
 
             # Restart using PM2
             $HOME/.npm-global/bin/pm2 start ecosystem.config.js
@@ -124,3 +89,4 @@ jobs:
               echo "Process failed to start!"
               exit 1
             fi
+          command_timeout: 600s
