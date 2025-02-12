@@ -2,7 +2,6 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,10 +30,10 @@ jobs:
             package.json \
             package-lock.json \
             next.config.js \
+            ecosystem.config.js \
             public \
             prisma
 
-      # Test SSH connection first
       - name: Test SSH connection
         uses: appleboy/ssh-action@master
         with:
@@ -44,7 +43,6 @@ jobs:
           script: echo "SSH connection successful"
           timeout: 60s
 
-      # Deploy using rsync instead of scp
       - name: Install rsync
         run: sudo apt-get install -y rsync
 
@@ -55,37 +53,44 @@ jobs:
           path: deployment.tar.gz
           remote_path: /var/www/freeroll-dashboard/
           remote_host: ${{ secrets.DROPLET_IP }}
-          remote_user: root
+          remote_user: deployer
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Finalize deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deployer
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export PATH="/home/deployer/.npm-global/bin:$PATH"
             cd /var/www/freeroll-dashboard
 
             # Extract new files
             tar -xzf deployment.tar.gz
             rm deployment.tar.gz
 
-            # Install production dependencies
-            npm ci --production
+            # Clean install with increased memory limit
+            export NODE_OPTIONS="--max_old_space_size=1024"
+            rm -rf node_modules
+            npm cache clean --force
+            npm ci --production --ignore-scripts
 
-            # Run any necessary migrations
+            # Handle Prisma separately
+            npm install prisma --save-dev
             npx prisma generate
 
             # Update permissions
             chmod -R 755 .next
 
-            # Restart the application
-            pm2 restart freeroll-dashboard || pm2 start ecosystem.config.js
+            # Restart using PM2
+            $HOME/.npm-global/bin/pm2 delete freeroll-dashboard || true
+            $HOME/.npm-global/bin/pm2 start ecosystem.config.js
+            $HOME/.npm-global/bin/pm2 save
 
             # Verify deployment
             sleep 5
-            if ! pm2 show freeroll-dashboard | grep -q "online"; then
+            if ! $HOME/.npm-global/bin/pm2 show freeroll-dashboard | grep -q "online"; then
               echo "Process failed to start!"
               exit 1
             fi
