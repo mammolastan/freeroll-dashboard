@@ -27,12 +27,18 @@ jobs:
         run: |
           tar -czf deployment.tar.gz \
             .next \
+            app \
+            components \
+            lib \
             package.json \
             package-lock.json \
             next.config.js \
             ecosystem.config.js \
             public \
-            prisma
+            prisma \
+            tsconfig.json \
+            tailwind.config.ts \
+            postcss.config.mjs
 
       # First transfer the file
       - name: Transfer deployment package
