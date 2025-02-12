@@ -1,12 +1,39 @@
-name: Deploy
+name: Build and Deploy
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+
+      - name: Create deployment package
+        run: |
+          tar -czf deployment.tar.gz \
+            .next \
+            package.json \
+            package-lock.json \
+            next.config.js \
+            public \
+            prisma
+
       - name: Deploy to Digital Ocean
         uses: appleboy/ssh-action@master
         with:
@@ -14,8 +41,50 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Prepare backup
             cd /var/www/freeroll-dashboard
-            git pull
-            npm install
-            npm run build
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            mkdir -p /var/www/backups
+            tar -czf "/var/www/backups/freeroll-dashboard_$timestamp.tar.gz" .
+
+          # Using scp to copy the deployment package
+      - name: Copy deployment package
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deployment.tar.gz"
+          target: "/var/www/freeroll-dashboard"
+
+      - name: Finalize deployment
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/freeroll-dashboard
+
+            # Extract new files
+            tar -xzf deployment.tar.gz
+            rm deployment.tar.gz
+
+            # Install production dependencies
+            npm ci --production
+
+            # Run any necessary migrations
+            npx prisma generate
+
+            # Update permissions
+            chmod -R 755 .next
+
+            # Restart the application
             pm2 restart freeroll-dashboard
+
+            # Verify deployment
+            sleep 5
+            if ! pm2 show freeroll-dashboard | grep -q "online"; then
+              echo "Process failed to start!"
+              exit 1
+            fi
