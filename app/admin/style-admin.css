@@ -1,36 +1,35 @@
-h1 {
-  font-size: 2em;
-}
-h2 {
-  font-size: 1.5em;
-}
-input[type="text"] {
-  color: #000;
-}
-button {
-  background-color: #00f;
-  color: #fff;
-}
-table {
-  max-width: 100%;
-  border-collapse: collapse;
-  color: #fff;
-}
-
-table th {
-  background-color: #000;
-  color: #fff;
-}
-
-table td {
-  background-color: #f00;
-  color: #fff;
-  border: 1px solid #000;
-}
-
-.clickme {
-  cursor: pointer;
-}
-.clickme:hover {
-  background-color: #f00;
+.admin {
+  h1 {
+    font-size: 2em;
+  }
+  h2 {
+    font-size: 1.5em;
+  }
+  input[type="text"] {
+    color: #000;
+  }
+  button {
+    background-color: #00f;
+    color: #fff;
+  }
+  table {
+    max-width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+  }
+  table th {
+    background-color: #000;
+    color: #fff;
+  }
+  table td {
+    background-color: #f00;
+    color: #fff;
+    border: 1px solid #000;
+  }
+  .clickme {
+    cursor: pointer;
+  }
+  .clickme:hover {
+    background-color: #f00;
+  }
 }

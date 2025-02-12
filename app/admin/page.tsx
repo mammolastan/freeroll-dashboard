@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import './style-admin.css'
 import UpdateNickname from './UpdateNickname'
 import ReadProcessedFiles from './ReadProcessedFiles'
+import UpdateGameData from './UpdateGameData'
 
 export default function AdminDashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="">
+        <div className="admin">
             <h1 className="">Admin Dashboard</h1>
 
             <hr />
@@ -67,6 +68,10 @@ export default function AdminDashboard() {
             <hr />
             <h2>Processed Files</h2>
             <ReadProcessedFiles />
+            <h2>
+                Update Games Data
+            </h2>
+            <UpdateGameData />
 
         </div>
     )
