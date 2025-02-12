@@ -34,7 +34,19 @@ jobs:
             public \
             prisma
 
-      - name: Deploy to Digital Ocean
+      # First transfer the file
+      - name: Transfer deployment package
+        uses: burnett01/rsync-deployments@5.2.1
+        with:
+          switches: -avzr
+          path: deployment.tar.gz
+          remote_path: /var/www/freeroll-dashboard/
+          remote_host: ${{ secrets.DROPLET_IP }}
+          remote_user: deployer
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Then run deployment commands
+      - name: Execute deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
@@ -44,6 +56,12 @@ jobs:
             export PATH="/home/deployer/.npm-global/bin:$PATH"
             cd /var/www/freeroll-dashboard
 
+            # Verify the file exists
+            if [ ! -f deployment.tar.gz ]; then
+              echo "deployment.tar.gz not found!"
+              exit 1
+            fi
+
             # Stop PM2 process first
             $HOME/.npm-global/bin/pm2 delete freeroll-dashboard || true
 
@@ -51,13 +69,7 @@ jobs:
             mv .env .env.backup || true
 
             # Clean the directory while preserving important files
-            find . -mindepth 1 -not -name '.env.backup' -delete
-
-            # Create deployment directory structure
-            mkdir -p prisma
-
-            # Copy deployment package
-            echo "Waiting for deployment.tar.gz..."
+            find . -mindepth 1 -not -name '.env.backup' -not -name 'deployment.tar.gz' -delete
 
             # Extract new files
             tar xzf deployment.tar.gz
@@ -68,8 +80,6 @@ jobs:
 
             # Clean install with increased memory limit
             export NODE_OPTIONS="--max_old_space_size=1024"
-            npm cache clean --force
-            # Use regular npm install instead of npm ci since we have the package-lock.json now
             npm install --production
 
             # Handle Prisma separately
