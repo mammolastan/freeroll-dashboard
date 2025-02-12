@@ -2,7 +2,6 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,17 +33,15 @@ jobs:
             public \
             prisma
 
-      # Test SSH connection first
       - name: Test SSH connection
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deployer
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: echo "SSH connection successful"
           timeout: 60s
 
-      # Deploy using rsync instead of scp
       - name: Install rsync
         run: sudo apt-get install -y rsync
 
@@ -55,34 +52,28 @@ jobs:
           path: deployment.tar.gz
           remote_path: /var/www/freeroll-dashboard/
           remote_host: ${{ secrets.DROPLET_IP }}
-          remote_user: root
+          remote_user: deployer
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Finalize deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deployer
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/freeroll-dashboard
-
             # Extract new files
             tar -xzf deployment.tar.gz
             rm deployment.tar.gz
-
             # Install production dependencies
             npm ci --production
-
             # Run any necessary migrations
             npx prisma generate
-
             # Update permissions
             chmod -R 755 .next
-
             # Restart the application
             pm2 restart freeroll-dashboard || pm2 start ecosystem.config.js
-
             # Verify deployment
             sleep 5
             if ! pm2 show freeroll-dashboard | grep -q "online"; then
