@@ -34,28 +34,29 @@ jobs:
             public \
             prisma
 
-      - name: Deploy to Digital Ocean
+      # Test SSH connection first
+      - name: Test SSH connection
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Prepare backup
-            cd /var/www/freeroll-dashboard
-            timestamp=$(date +%Y%m%d_%H%M%S)
-            mkdir -p /var/www/backups
-            tar -czf "/var/www/backups/freeroll-dashboard_$timestamp.tar.gz" .
+          script: echo "SSH connection successful"
+          timeout: 60s
 
-          # Using scp to copy the deployment package
-      - name: Copy deployment package
-        uses: appleboy/scp-action@master
+      # Deploy using rsync instead of scp
+      - name: Install rsync
+        run: sudo apt-get install -y rsync
+
+      - name: Deploy to Digital Ocean
+        uses: burnett01/rsync-deployments@5.2.1
         with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deployment.tar.gz"
-          target: "/var/www/freeroll-dashboard"
+          switches: -avzr --delete
+          path: deployment.tar.gz
+          remote_path: /var/www/freeroll-dashboard/
+          remote_host: ${{ secrets.DROPLET_IP }}
+          remote_user: root
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Finalize deployment
         uses: appleboy/ssh-action@master
@@ -80,7 +81,7 @@ jobs:
             chmod -R 755 .next
 
             # Restart the application
-            pm2 restart freeroll-dashboard
+            pm2 restart freeroll-dashboard || pm2 start ecosystem.config.js
 
             # Verify deployment
             sleep 5
