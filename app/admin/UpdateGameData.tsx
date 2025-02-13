@@ -53,22 +53,22 @@ export default function UpdateGameData() {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-2">
-                <label htmlFor="gameDate" className="font-medium">
+        <div className="">
+            <div className="">
+                <label htmlFor="gameDate" className="">
                     Choose date of game to adjust:
                 </label>
-                <div className="flex gap-2">
+                <div className="">
                     <input
                         type="date"
                         id="gameDate"
                         name="gameDate"
-                        className="px-3 py-2 border rounded text-black"
+                        className=""
                     />
                     <button
                         onClick={handleDate}
                         disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-blue-400"
+                        className=""
                     >
                         {loading ? 'Loading...' : 'Submit'}
                     </button>
@@ -82,20 +82,20 @@ export default function UpdateGameData() {
             )}
 
             {!selectedFileName && selectedGames.length > 0 && (
-                <div className="mt-4">
-                    <h3 className="font-medium mb-2">Selected games:</h3>
-                    <div className="space-y-2">
+                <div className="">
+                    <h3 className=""> Games on selected date:</h3>
+                    <div className="">
                         {selectedGames.map((game) => (
                             <div
                                 key={game.fileName}
-                                className="p-4 border rounded bg-white cursor-pointer hover:bg-gray-50"
+                                className="clickme"
                                 onClick={() => setSelectedFileName(game.fileName)}
                             >
-                                <div className="font-medium">{game.venue}</div>
-                                <div className="text-sm text-gray-500">
+                                <div className="">{game.venue}</div>
+                                <div className="">
                                     {game.fileName}
                                 </div>
-                                <div className="text-sm text-gray-500">
+                                <div className="">
                                     Season: {game.season}
                                 </div>
                             </div>

@@ -68,6 +68,7 @@ export default function AdminDashboard() {
             <hr />
             <h2>Processed Files</h2>
             <ReadProcessedFiles />
+            <hr />
             <h2>
                 Update Games Data
             </h2>

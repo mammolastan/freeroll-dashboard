@@ -54,43 +54,43 @@ export function GameEditor({ fileName, onClose }: GameEditorProps) {
     if (error) return <div className="text-red-500">{error}</div>;
 
     return (
-        <div className="mt-4">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Game Details: {fileName}</h3>
+        <div className="">
+            <div className="">
+                <h3 className="">Game Details: {fileName}</h3>
                 <button
                     onClick={onClose}
-                    className="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+                    className=""
                 >
-                    Back to Games
+                    Reset
                 </button>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border rounded-lg">
-                    <thead className="bg-gray-50">
+            <div className="">
+                <table className="">
+                    <thead className="">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placement</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Points</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hitman</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Points</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player Score</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="">Name</th>
+                            <th className="">Placement</th>
+                            <th className="">Start Points</th>
+                            <th className="">Hitman</th>
+                            <th className="">Total Points</th>
+                            <th className="">Player Score</th>
+                            <th className="">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="">
                         {players.map(player => (
-                            <tr key={player.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">{player.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{player.placement}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{player.startPoints}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{player.hitman || '-'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{player.totalPoints}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{player.playerScore}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                            <tr key={player.id} className="">
+                                <td className="">{player.name}</td>
+                                <td className="">{player.placement}</td>
+                                <td className="">{player.startPoints}</td>
+                                <td className="">{player.hitman || '-'}</td>
+                                <td className="">{player.totalPoints}</td>
+                                <td className="">{player.playerScore}</td>
+                                <td className="">
                                     <button
                                         onClick={() => setEditingPlayer(player)}
-                                        className="text-blue-600 hover:text-blue-900"
+                                        className=""
                                     >
                                         Edit
                                     </button>
