@@ -1,108 +1,21 @@
-name: Build and Deploy
+name: Deploy
 on:
   push:
     branches: [main]
+
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build application
-        run: npm run build
-        env:
-          NODE_OPTIONS: "--max_old_space_size=4096"
-
-      - name: Create deployment package
-        run: |
-          tar -czf deployment.tar.gz \
-            .next \
-            app \
-            components \
-            lib \
-            package.json \
-            package-lock.json \
-            next.config.js \
-            ecosystem.config.js \
-            public \
-            prisma \
-            tsconfig.json \
-            tailwind.config.ts \
-            postcss.config.mjs
-
-      # First transfer the file
-      - name: Transfer deployment package
-        uses: burnett01/rsync-deployments@5.2.1
-        with:
-          switches: -avzr
-          path: deployment.tar.gz
-          remote_path: /var/www/freeroll-dashboard/
-          remote_host: ${{ secrets.DROPLET_IP }}
-          remote_user: deployer
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      # Then run deployment commands
-      - name: Execute deployment
+      - name: Deploy to Digital Ocean
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: deployer
+          username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            export PATH="/home/deployer/.npm-global/bin:$PATH"
             cd /var/www/freeroll-dashboard
-
-            # Verify the file exists
-            if [ ! -f deployment.tar.gz ]; then
-              echo "deployment.tar.gz not found!"
-              exit 1
-            fi
-
-            # Stop PM2 process first
-            $HOME/.npm-global/bin/pm2 delete freeroll-dashboard || true
-
-            # Backup important files
-            mv .env .env.backup || true
-
-            # Clean the directory while preserving important files
-            find . -mindepth 1 -not -name '.env.backup' -not -name 'deployment.tar.gz' -delete
-
-            # Extract new files
-            tar xzf deployment.tar.gz
-            rm deployment.tar.gz
-
-            # Restore .env
-            mv .env.backup .env
-
-            # Clean install with increased memory limit
-            export NODE_OPTIONS="--max_old_space_size=1024"
-            npm install --production
-
-            # Handle Prisma separately
-            npm install prisma --save-dev
-            npx prisma generate
-
-            # Update permissions
-            chmod -R 775 .
-
-            # Restart using PM2
-            $HOME/.npm-global/bin/pm2 start ecosystem.config.js
-            $HOME/.npm-global/bin/pm2 save
-
-            # Verify deployment
-            sleep 5
-            if ! $HOME/.npm-global/bin/pm2 show freeroll-dashboard | grep -q "online"; then
-              echo "Process failed to start!"
-              exit 1
-            fi
-          command_timeout: 600s
+            git pull
+            npm install
+            npm run build
+            pm2 restart freeroll-dashboard
