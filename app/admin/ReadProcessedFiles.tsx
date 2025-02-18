@@ -36,6 +36,7 @@ export default function ReadProcessedFiles() {
                         <th className="">Filename</th>
                         <th className="">Status</th>
                         <th className="">Message</th>
+                        <th className="">Processed</th>
                     </tr>
                 </thead>
                 <tbody className="">
@@ -45,6 +46,7 @@ export default function ReadProcessedFiles() {
                             <td className="">{file.filename}</td>
                             <td className="">{file.status}</td>
                             <td className="">{file.error_message}</td>
+                            <td className="">{file.processed_at}</td>
                         </tr>
                     ))}
                 </tbody>
