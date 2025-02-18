@@ -75,6 +75,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
         return `Q${currentQuarter}-${currentYear}`;
     });
+    const [selectedVenue, setSelectedVenue] = useState("all");
+    const [availableVenues, setAvailableVenues] = useState<string[]>([]);
 
     // State for dates
     const [startDate, setStartDate] = useState<Date | null>(() => {
@@ -136,12 +138,15 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     params.append('endDate', endDate.toISOString());
                 }
             }
+            // Add venue parameter
+            params.append('venue', selectedVenue);
 
             const response = await fetch(`/api/players/${playerUID}/stats?${params.toString()}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
             setStats(data);
+            setAvailableVenues(data.availableVenues || []);
         } catch (error) {
             console.error('Failed to fetch player stats:', error);
             setStats(null);
@@ -169,7 +174,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 fetchPlayerStats(customStartDate, customEndDate);
             }
         }
-    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate]);
+    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue]);
 
     if (loading) {
         return (
@@ -198,7 +203,9 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         Stats for {playerName}
                     </h2>
                     <div className="space-y-4">
+
                         <div className="flex items-center gap-2">
+
                             <button
                                 onClick={() => setIsCustomRange(false)}
                                 className={`px-4 py-2 rounded-lg transition-colors ${!isCustomRange
@@ -236,6 +243,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                             />
                         )}
                     </div>
+                    <VenueSelector
+                        venues={availableVenues}
+                        selectedVenue={selectedVenue}
+                        onVenueChange={setSelectedVenue}
+                    />
                 </div>
                 <div className="flex flex-col">
                     <div className="text-xl font-medium text-white-600">
@@ -282,7 +294,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                 value={typeof stats.quarterlyStats.avgScore === 'number'
                                     ? stats.quarterlyStats.avgScore.toFixed(2)
                                     : '0.00'}
-                                tooltip="Average performance score across all games. Math > log(total_players&nbsp;+&nbsp;1&nbsp;/&nbsp;Placement)"
+                                tooltip="Average performance score across all games. Higher is better. Math > log(total_players&nbsp;+&nbsp;1&nbsp;/&nbsp;Placement)"
                             />
                             {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
                                 <StatRow
@@ -428,6 +440,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { HelpCircle } from "lucide-react"
+import VenueSelector from './VenueSelector';
 
 
 function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {

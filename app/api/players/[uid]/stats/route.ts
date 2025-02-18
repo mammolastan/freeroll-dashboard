@@ -14,6 +14,7 @@ export async function GET(
     const playerUID = params.uid;
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
+    const venue = searchParams.get("venue");
 
     const startDate =
       startDateParam && startDateParam !== "null"
@@ -22,9 +23,24 @@ export async function GET(
     const endDate =
       endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
 
+    // Base venue condition
+    const venueCondition =
+      venue && venue !== "all"
+        ? Prisma.sql`AND p1.Venue = ${venue}`
+        : Prisma.sql``;
+
     const dateCondition = getDateCondition(startDate, endDate);
     const dateConditionP = getDateCondition(startDate, endDate, "p");
     const dateConditionP1 = getDateCondition(startDate, endDate, "p1");
+
+    // Get available venues for this player within the date range
+    const availableVenues: { Venue: string }[] = await prisma.$queryRaw`
+    SELECT DISTINCT Venue 
+    FROM poker_tournaments
+    WHERE UID = ${playerUID}
+    ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
+    ORDER BY Venue
+  `;
 
     // Earliest game date query
     const earliestGameQuery = await prisma.$queryRaw<{ earliest_date: Date }[]>`
@@ -57,8 +73,9 @@ export async function GET(
       ), 0) as finalTablePercentage
     FROM poker_tournaments p1
     LEFT JOIN players pl ON p1.UID = pl.uid
-    WHERE p1.UID = ${playerUID}
+    WHERE p1.UID = ${playerUID}    
     ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
+    ${venueCondition}
   `;
 
     // Most Knocked Out By
@@ -79,6 +96,7 @@ export async function GET(
         WHERE p1.UID = ${playerUID}
         AND p1.Hitman IS NOT NULL
         ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+        ${venueCondition}
         GROUP BY p2.Name, p2.UID, pl.nickname
         ORDER BY count DESC
         LIMIT 3
@@ -101,6 +119,7 @@ export async function GET(
   LEFT JOIN players pl ON p2.UID = pl.uid
   WHERE p1.UID = ${playerUID}
   ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+  ${venueCondition}
   GROUP BY p2.Name, p2.UID, pl.nickname
   ORDER BY count DESC
   LIMIT 3
@@ -115,6 +134,7 @@ export async function GET(
   FROM poker_tournaments p1
   WHERE p1.UID = ${playerUID}
   ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+  ${venueCondition}
   GROUP BY p1.Venue
   ORDER BY points DESC
 `;
@@ -131,6 +151,7 @@ export async function GET(
   FROM poker_tournaments p1
   WHERE p1.UID = ${playerUID}
   ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+  ${venueCondition}
   ORDER BY p1.game_date DESC
   LIMIT 50
 `;
@@ -145,6 +166,7 @@ export async function GET(
       FROM poker_tournaments p1
       WHERE UID = ${playerUID}
       ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+      ${venueCondition}
       AND Placement <= 8
       GROUP BY Placement
       ORDER BY Placement ASC
@@ -161,6 +183,7 @@ export async function GET(
           quarterlyStats[0]?.finalTablePercentage || 0
         ),
       },
+      availableVenues: availableVenues.map((v: any) => v.Venue),
       mostKnockedOutBy: knockedOutBy.map((ko: any) => ({
         name: ko.name,
         uid: ko.uid,
