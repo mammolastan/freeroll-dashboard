@@ -7,6 +7,8 @@ import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
 import { formatGameDate, formatDateRangeText } from '@/lib/utils';
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { HelpCircle } from "lucide-react"
 
 interface PlacementFrequencyData {
     placement: number;
@@ -20,6 +22,7 @@ interface PlayerStats {
         knockouts: number;
         finalTables: number;
         avgScore: number;
+        finalTablePercentage: number;
         leagueRanking?: number | null;
         totalPlayers?: number | null;
     };
@@ -27,13 +30,13 @@ interface PlayerStats {
     mostKnockedOutBy: Array<{
         name: string;
         count: number;
-        UID: string;
+        uid: string;
         nickname: string | null;
     }>;
     mostKnockedOut: Array<{
         name: string;
         count: number;
-        UID: string;
+        uid: string;
         nickname: string | null;
     }>;
     venueStats: Array<{
@@ -268,10 +271,16 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         <StatRow label="Knockouts" value={stats.quarterlyStats.knockouts} />
                         <StatRow label="Final Tables" value={stats.quarterlyStats.finalTables} />
                         <StatRow
+                            label="FTP"
+                            value={`${stats.quarterlyStats.finalTablePercentage.toFixed(1)}%`}
+                            tooltip='Final Table Percentage: How often you reach the final table (top 8)'
+                        />
+                        <StatRow
                             label="Power Rating"
                             value={typeof stats.quarterlyStats.avgScore === 'number'
                                 ? stats.quarterlyStats.avgScore.toFixed(2)
                                 : '0.00'}
+                            tooltip="Average performance score across all games"
                         />
                         {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
                             <StatRow
@@ -296,26 +305,28 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                             <div>
                                 <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
                                 <div className="space-y-2">
-                                    {stats.mostKnockedOutBy.map((player, index) => (
-                                        <div key={player.name} className="flex items-baseline justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                <Link
-                                                    href={`/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`}
-                                                    className="freeroll-link"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        window.location.href = `/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`;
-                                                    }}
-                                                >
-                                                    {player.nickname || player.name}
-                                                </Link>
+                                    {stats.mostKnockedOutBy.map((player, index) => {
+                                        return (
+                                            <div key={player.name} className="flex items-baseline justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                    <Link
+                                                        href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                        className="freeroll-link"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                        }}
+                                                    >
+                                                        {player.nickname || player.name}
+                                                    </Link>
+                                                </div>
+                                                <span className="text-sm font-medium text-purple-700">
+                                                    {player.count} times
+                                                </span>
                                             </div>
-                                            <span className="text-sm font-medium text-purple-700">
-                                                {player.count} times
-                                            </span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                             <div>
@@ -326,11 +337,11 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm text-purple-700">{index + 1}.</span>
                                                 <a
-                                                    href={`/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`}
+                                                    href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
                                                     className="freeroll-link"
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        window.location.href = `/players?uid=${encodeURIComponent(player.UID)}&range=${selectedRange}`;
+                                                        window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
                                                     }}
                                                 >
                                                     {player.name}
@@ -413,10 +424,31 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 }
 
 // Helper component for consistent stat display
-function StatRow({ label, value }: { label: string; value: string | number }) {
+function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {
+    if (!tooltip) {
+        return (
+            <div className="flex justify-between items-center">
+                <span className="text-gray-600">{label}</span>
+                <span className="font-medium text-gray-900">{value}</span>
+            </div>
+        );
+    }
+
     return (
         <div className="flex justify-between items-center">
-            <span className="text-gray-600">{label}</span>
+            <TooltipProvider>
+                <TooltipRoot>
+                    <TooltipTrigger asChild>
+                        <span className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400">
+                            {label}
+                            <HelpCircle size={12} className="text-gray-400" />
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                        <p>{tooltip}</p>
+                    </TooltipContent>
+                </TooltipRoot>
+            </TooltipProvider>
             <span className="font-medium text-gray-900">{value}</span>
         </div>
     );

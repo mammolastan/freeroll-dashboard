@@ -43,18 +43,23 @@ export async function GET(
       knockouts: number;
       finalTables: number;
       avgScore: number;
+      finalTablePercentage: number;
     }[] = await prisma.$queryRaw`
-      SELECT 
-        COUNT(*) as gamesPlayed,
-        COALESCE(SUM(p1.Total_Points), 0) as totalPoints,
-        COALESCE(SUM(p1.Knockouts), 0) as knockouts,
-        COALESCE(SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
-        COALESCE(CAST(AVG(p1.Player_Score) AS DECIMAL(10,2)), 0) as avgScore
-      FROM poker_tournaments p1
-      LEFT JOIN players pl ON p1.UID = pl.uid
-      WHERE p1.UID = ${playerUID}
-      ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
-    `;
+    SELECT 
+      COUNT(*) as gamesPlayed,
+      COALESCE(SUM(p1.Total_Points), 0) as totalPoints,
+      COALESCE(SUM(p1.Knockouts), 0) as knockouts,
+      COALESCE(SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+      COALESCE(CAST(AVG(p1.Player_Score) AS DECIMAL(10,2)), 0) as avgScore,
+      COALESCE(CAST(
+        (SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
+        AS DECIMAL(10,2)
+      ), 0) as finalTablePercentage
+    FROM poker_tournaments p1
+    LEFT JOIN players pl ON p1.UID = pl.uid
+    WHERE p1.UID = ${playerUID}
+    ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
+  `;
 
     // Most Knocked Out By
     const knockedOutBy: {
@@ -152,6 +157,9 @@ export async function GET(
         knockouts: Number(quarterlyStats[0]?.knockouts || 0),
         finalTables: Number(quarterlyStats[0]?.finalTables || 0),
         avgScore: Number(quarterlyStats[0]?.avgScore || 0),
+        finalTablePercentage: Number(
+          quarterlyStats[0]?.finalTablePercentage || 0
+        ),
       },
       mostKnockedOutBy: knockedOutBy.map((ko: any) => ({
         name: ko.name,
