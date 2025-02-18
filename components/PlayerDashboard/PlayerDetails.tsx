@@ -7,8 +7,8 @@ import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
 import { formatGameDate, formatDateRangeText } from '@/lib/utils';
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
+import { TooltipProvider } from "@/components/ui/tooltip"
+
 
 
 interface PlacementFrequencyData {
@@ -191,127 +191,154 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 className="text-2xl font-bold text-white-800">
-                    Stats for {playerName}
-                </h2>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsCustomRange(false)}
-                            className={`px-4 py-2 rounded-lg transition-colors ${!isCustomRange
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600'
-                                }`}
-                        >
-                            Preset Ranges
-                        </button>
-                        <button
-                            onClick={() => setIsCustomRange(true)}
-                            className={`px-4 py-2 rounded-lg transition-colors ${isCustomRange
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600'
-                                }`}
-                        >
-                            Custom Range
-                        </button>
-                    </div>
-                    {isCustomRange ? (
-                        <DateRangePicker
-                            onRangeChange={handleCustomDateRangeChange}
-                            initialStartDate={customStartDate}
-                            initialEndDate={customEndDate}
-                        />
-                    ) : (
-                        <DateRangeSelector
-                            selectedRange={selectedRange}
-                            onRangeChange={(newStartDate, newEndDate, newRange) => {
-                                setStartDate(newStartDate);
-                                setEndDate(newEndDate);
-                                setSelectedRange(newRange);
-                                localStorage.setItem('selectedRange', newRange);
-                            }}
-                        />
-                    )}
-                </div>
-            </div>
-            <div className="flex flex-col">
-                <div className="text-xl font-medium text-white-600">
-                    {formatDateRangeText(
-                        isCustomRange ? customStartDate : startDate,
-                        isCustomRange ? customEndDate : endDate,
-                        selectedRange,
-                        stats?.earliestGameDate ?? null,
-                        isCustomRange
-                    )}
-                </div>
-
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <div className="bg-blue-50 p-4 rounded-t-xl border-b border-blue-100">
-                        <h3 className="font-bold text-lg text-blue-900">Current time period</h3>
-                    </div>
-                    <div className="p-4 space-y-3 text-black">
-                        {
-                            selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
-                                <p>Rank: {`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
-                                    ? ` of ${stats.quarterlyStats.totalPlayers}`
-                                    : ''
+        <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+            <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <h2 className="text-2xl font-bold text-white-800">
+                        Stats for {playerName}
+                    </h2>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsCustomRange(false)}
+                                className={`px-4 py-2 rounded-lg transition-colors ${!isCustomRange
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-600'
                                     }`}
-                                </p>
-                            )
-                        }
-
-                        <StatRow label="Games Played" value={stats.quarterlyStats.gamesPlayed} />
-                        <StatRow label="Total Points" value={stats.quarterlyStats.totalPoints} />
-                        <StatRow label="Knockouts" value={stats.quarterlyStats.knockouts} />
-                        <StatRow label="Final Tables" value={stats.quarterlyStats.finalTables} />
-                        <StatRow
-                            label="FTP"
-                            value={`${stats.quarterlyStats.finalTablePercentage.toFixed(1)}%`}
-                            tooltip='Final Table Percentage: How often you reach the final table (top 8)'
-                        />
-                        <StatRow
-                            label="Power Rating"
-                            value={typeof stats.quarterlyStats.avgScore === 'number'
-                                ? stats.quarterlyStats.avgScore.toFixed(2)
-                                : '0.00'}
-                            tooltip="Average performance score across all games"
-                        />
-                        {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
-                            <StatRow
-                                label="League Ranking"
-                                value={`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
-                                    ? ` of ${stats.quarterlyStats.totalPlayers}`
-                                    : ''
+                            >
+                                Preset Ranges
+                            </button>
+                            <button
+                                onClick={() => setIsCustomRange(true)}
+                                className={`px-4 py-2 rounded-lg transition-colors ${isCustomRange
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-600'
                                     }`}
+                            >
+                                Custom Range
+                            </button>
+                        </div>
+                        {isCustomRange ? (
+                            <DateRangePicker
+                                onRangeChange={handleCustomDateRangeChange}
+                                initialStartDate={customStartDate}
+                                initialEndDate={customEndDate}
+                            />
+                        ) : (
+                            <DateRangeSelector
+                                selectedRange={selectedRange}
+                                onRangeChange={(newStartDate, newEndDate, newRange) => {
+                                    setStartDate(newStartDate);
+                                    setEndDate(newEndDate);
+                                    setSelectedRange(newRange);
+                                    localStorage.setItem('selectedRange', newRange);
+                                }}
                             />
                         )}
                     </div>
                 </div>
+                <div className="flex flex-col">
+                    <div className="text-xl font-medium text-white-600">
+                        {formatDateRangeText(
+                            isCustomRange ? customStartDate : startDate,
+                            isCustomRange ? customEndDate : endDate,
+                            selectedRange,
+                            stats?.earliestGameDate ?? null,
+                            isCustomRange
+                        )}
+                    </div>
 
-                {/* Head to Head Stats */}
-                {
-                    selectedRange === 'all-time' && (<div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                        <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
-                            <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+
+                    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <div className="bg-blue-50 p-4 rounded-t-xl border-b border-blue-100">
+                            <h3 className="font-bold text-lg text-blue-900">Current time period</h3>
                         </div>
-                        <div className="p-4 space-y-4">
+                        <div className="p-4 space-y-3 text-black">
+                            {
+                                selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
+                                    <p>Rank: {`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
+                                        ? ` of ${stats.quarterlyStats.totalPlayers}`
+                                        : ''
+                                        }`}
+                                    </p>
+                                )
+                            }
 
-                            <div>
-                                <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
-                                <div className="space-y-2">
-                                    {stats.mostKnockedOutBy.map((player, index) => {
-                                        return (
+                            <StatRow label="Games Played" value={stats.quarterlyStats.gamesPlayed} />
+                            <StatRow label="Total Points" value={stats.quarterlyStats.totalPoints} />
+                            <StatRow label="Knockouts" value={stats.quarterlyStats.knockouts} />
+                            <StatRow label="Final Tables" value={stats.quarterlyStats.finalTables} />
+                            <StatRow
+                                label="FTP"
+                                value={`${stats.quarterlyStats.finalTablePercentage.toFixed(1)}%`}
+                                tooltip='Final Table Percentage: How often you reach the final table (top 8)'
+                            />
+                            <StatRow
+                                label="Power Rating"
+                                value={typeof stats.quarterlyStats.avgScore === 'number'
+                                    ? stats.quarterlyStats.avgScore.toFixed(2)
+                                    : '0.00'}
+                                tooltip="Average performance score across all games. Math > log(total_players&nbsp;+&nbsp;1&nbsp;/&nbsp;Placement)"
+                            />
+                            {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
+                                <StatRow
+                                    label="League Ranking"
+                                    value={`${stats.quarterlyStats.leagueRanking}${stats.quarterlyStats.totalPlayers
+                                        ? ` of ${stats.quarterlyStats.totalPlayers}`
+                                        : ''
+                                        }`}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Head to Head Stats */}
+                    {
+                        selectedRange === 'all-time' && (<div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                            <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
+                                <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+
+                                <div>
+                                    <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
+                                    <div className="space-y-2">
+                                        {stats.mostKnockedOutBy.map((player, index) => {
+                                            return (
+                                                <div key={player.name} className="flex items-baseline justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                        <Link
+                                                            href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                            className="freeroll-link"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                            }}
+                                                        >
+                                                            {player.nickname || player.name}
+                                                        </Link>
+                                                    </div>
+                                                    <span className="text-sm font-medium text-purple-700">
+                                                        {player.count} times
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
+                                    <div className="space-y-2">
+                                        {stats.mostKnockedOut.map((player, index) => (
                                             <div key={player.name} className="flex items-baseline justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                    <Link
+                                                    <a
                                                         href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
                                                         className="freeroll-link"
                                                         onClick={(e) => {
@@ -319,112 +346,90 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                                             window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
                                                         }}
                                                     >
-                                                        {player.nickname || player.name}
-                                                    </Link>
+                                                        {player.name}
+                                                    </a>
                                                 </div>
                                                 <span className="text-sm font-medium text-purple-700">
                                                     {player.count} times
                                                 </span>
                                             </div>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
-                                <div className="space-y-2">
-                                    {stats.mostKnockedOut.map((player, index) => (
-                                        <div key={player.name} className="flex items-baseline justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                <a
-                                                    href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
-                                                    className="freeroll-link"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
-                                                    }}
-                                                >
-                                                    {player.name}
-                                                </a>
-                                            </div>
-                                            <span className="text-sm font-medium text-purple-700">
-                                                {player.count} times
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
 
+                            </div>
+                        </div>)
+                    }
+
+
+                    {/* Venue Points */}
+                    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <div className="bg-green-50 p-4 rounded-t-xl border-b border-green-100">
+                            <h3 className="font-bold text-lg text-green-900">Points by Venue</h3>
                         </div>
-                    </div>)
-                }
+                        <div className="p-4">
+                            <div className="space-y-3">
+                                {stats.venueStats.map(venue => (
+                                    <div key={venue.venue} className="flex justify-between items-center">
+                                        <Link
+                                            href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                                            className="freeroll-link"
+                                        >
+                                            {venue.venue}
+                                        </Link>
+                                        <span className="font-medium text-green-600">{venue.points}</span>
 
-
-                {/* Venue Points */}
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <div className="bg-green-50 p-4 rounded-t-xl border-b border-green-100">
-                        <h3 className="font-bold text-lg text-green-900">Points by Venue</h3>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                    <div className="p-4">
-                        <div className="space-y-3">
-                            {stats.venueStats.map(venue => (
-                                <div key={venue.venue} className="flex justify-between items-center">
+
+                    {/* Placement Frequency */}
+                    {stats?.placementFrequency && (
+                        <PlacementFrequencyChart data={stats.placementFrequency} />
+                    )}
+
+                    {/* Recent Games */}
+                    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <div className="bg-amber-50 p-4 rounded-t-xl border-b border-amber-100">
+                            <h3 className="font-bold text-lg text-amber-900">Recent Games</h3>
+                        </div>
+                        <div className="p-4">
+                            <div className="space-y-4">
+                                {stats.recentGames.slice(0, 5).map((game, index) => (
                                     <Link
-                                        href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
-                                        className="freeroll-link"
+                                        key={index}
+                                        href={`/games/${encodeURIComponent(game.fileName)}`}
+                                        className="block border-b border-gray-100 last:border-0 pb-3 last:pb-0 hover:bg-gray-50 transition-colors rounded-lg"
                                     >
-                                        {venue.venue}
+                                        <div className="font-medium text-gray-800">{game.venue}</div>
+                                        <div className="text-sm text-gray-500">
+                                            {formatGameDate(game.date)}
+                                        </div>
+                                        <div className="mt-1 text-sm">
+                                            <span className="text-amber-600">Place: {game.placement}</span>
+                                            <span className="mx-2">•</span>
+                                            <span className="text-green-600">Points: {game.points}</span>
+                                            <span className="mx-2">•</span>
+                                            <span className="text-blue-600">KOs: {game.knockouts}</span>
+                                        </div>
                                     </Link>
-                                    <span className="font-medium text-green-600">{venue.points}</span>
-
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Placement Frequency */}
-                {stats?.placementFrequency && (
-                    <PlacementFrequencyChart data={stats.placementFrequency} />
-                )}
-
-                {/* Recent Games */}
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <div className="bg-amber-50 p-4 rounded-t-xl border-b border-amber-100">
-                        <h3 className="font-bold text-lg text-amber-900">Recent Games</h3>
-                    </div>
-                    <div className="p-4">
-                        <div className="space-y-4">
-                            {stats.recentGames.slice(0, 5).map((game, index) => (
-                                <Link
-                                    key={index}
-                                    href={`/games/${encodeURIComponent(game.fileName)}`}
-                                    className="block border-b border-gray-100 last:border-0 pb-3 last:pb-0 hover:bg-gray-50 transition-colors rounded-lg"
-                                >
-                                    <div className="font-medium text-gray-800">{game.venue}</div>
-                                    <div className="text-sm text-gray-500">
-                                        {formatGameDate(game.date)}
-                                    </div>
-                                    <div className="mt-1 text-sm">
-                                        <span className="text-amber-600">Place: {game.placement}</span>
-                                        <span className="mx-2">•</span>
-                                        <span className="text-green-600">Points: {game.points}</span>
-                                        <span className="mx-2">•</span>
-                                        <span className="text-blue-600">KOs: {game.knockouts}</span>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                </div>
             </div>
-
-        </div>
+        </TooltipProvider>
     );
 }
 
-// Helper component for consistent stat display
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { HelpCircle } from "lucide-react"
+
+
 function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -439,27 +444,34 @@ function StatRow({ label, value, tooltip }: { label: string; value: string | num
 
     return (
         <div className="flex justify-between items-center">
-            <TooltipProvider delayDuration={0}>
-                <TooltipRoot open={isOpen} onOpenChange={setIsOpen}>
-                    <TooltipTrigger asChild onClick={() => setIsOpen(!isOpen)}>
-                        <span
-                            className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400 touch-manipulation"
-                            role="button"
-                            tabIndex={0}
-                        >
-                            {label}
-                            <HelpCircle size={12} className="text-gray-400" />
-                        </span>
-                    </TooltipTrigger>
-                    <TooltipContent
-                        side="bottom"
-                        align='start'
-                        className="touch-auto select-none"
+            <TooltipRoot open={isOpen} onOpenChange={setIsOpen}>
+                <TooltipTrigger asChild>
+                    <span
+                        className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400 touch-manipulation"
+                        role="button"
+                        tabIndex={0}
+                        onTouchStart={(e) => {
+                            setIsOpen(true);
+                        }}
+                        onTouchEnd={(e) => {
+                            e.preventDefault();
+                        }}
+                        onClick={() => setIsOpen(!isOpen)}
                     >
-                        <p>{tooltip}</p>
-                    </TooltipContent>
-                </TooltipRoot>
-            </TooltipProvider>
+                        {label}
+                        <HelpCircle size={12} className="text-gray-400" />
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent
+                    side="bottom"
+                    align="start"
+                    className="touch-auto select-none"
+                    sideOffset={5}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <p>{tooltip}</p>
+                </TooltipContent>
+            </TooltipRoot>
             <span className="font-medium text-gray-900">{value}</span>
         </div>
     );
