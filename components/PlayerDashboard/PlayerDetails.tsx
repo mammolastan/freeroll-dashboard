@@ -452,7 +452,8 @@ function StatRow({ label, value, tooltip }: { label: string; value: string | num
                         </span>
                     </TooltipTrigger>
                     <TooltipContent
-                        side="right"
+                        side="bottom"
+                        align='start'
                         className="touch-auto select-none"
                     >
                         <p>{tooltip}</p>
