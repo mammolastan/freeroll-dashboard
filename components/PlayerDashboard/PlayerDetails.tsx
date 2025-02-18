@@ -10,6 +10,7 @@ import { formatGameDate, formatDateRangeText } from '@/lib/utils';
 import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { HelpCircle } from "lucide-react"
 
+
 interface PlacementFrequencyData {
     placement: number;
     frequency: number;
@@ -425,6 +426,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
 // Helper component for consistent stat display
 function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {
+    const [isOpen, setIsOpen] = useState(false);
+
     if (!tooltip) {
         return (
             <div className="flex justify-between items-center">
@@ -436,15 +439,22 @@ function StatRow({ label, value, tooltip }: { label: string; value: string | num
 
     return (
         <div className="flex justify-between items-center">
-            <TooltipProvider>
-                <TooltipRoot>
-                    <TooltipTrigger asChild>
-                        <span className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400">
+            <TooltipProvider delayDuration={0}>
+                <TooltipRoot open={isOpen} onOpenChange={setIsOpen}>
+                    <TooltipTrigger asChild onClick={() => setIsOpen(!isOpen)}>
+                        <span
+                            className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400 touch-manipulation"
+                            role="button"
+                            tabIndex={0}
+                        >
                             {label}
                             <HelpCircle size={12} className="text-gray-400" />
                         </span>
                     </TooltipTrigger>
-                    <TooltipContent side="right">
+                    <TooltipContent
+                        side="right"
+                        className="touch-auto select-none"
+                    >
                         <p>{tooltip}</p>
                     </TooltipContent>
                 </TooltipRoot>
