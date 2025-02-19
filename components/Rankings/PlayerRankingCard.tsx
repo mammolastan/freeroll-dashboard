@@ -55,19 +55,21 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                     <div className="flex-1 min-w-0">
 
 
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="flex items-center gap-2">
                             {player.type === 'quarterly' && (
                                 <div className='text-black pt-5 md:p-0'>
                                     <p>{player.ranking}</p>
                                 </div>
                             )}
-                            <Link
-                                href={`/players?uid=${encodeURIComponent(player.uid)}`}
-                                className="freeroll-link text-lg font-medium  truncate"
-                            >
-                                {player.nickname || player.name}
-                            </Link>
-                            {favoriteButton}
+                            <div className="flex items-center gap-2 flex-shrink min-w-0">
+                                <Link
+                                    href={`/players?uid=${encodeURIComponent(player.uid)}`}
+                                    className="freeroll-link text-lg font-medium  truncate"
+                                >
+                                    {player.nickname || player.name}
+                                </Link>
+                                {favoriteButton}
+                            </div>
                             <div className="flex items-center gap-2">
                                 {player.type === 'monthly' && player.isQualified ? (
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
