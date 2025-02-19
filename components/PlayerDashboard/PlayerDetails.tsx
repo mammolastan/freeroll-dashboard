@@ -294,7 +294,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                                 value={typeof stats.quarterlyStats.avgScore === 'number'
                                     ? stats.quarterlyStats.avgScore.toFixed(2)
                                     : '0.00'}
-                                tooltip="Average performance score across all games. Higher is better. Math > log(total_players&nbsp;+&nbsp;1&nbsp;/&nbsp;Placement)"
+                                tooltip={`Average performance score across all games. Higher is better.
+Math: log(total_players + 1 / Placement)`}
                             />
                             {selectedRange.includes('Q') && stats.quarterlyStats.leagueRanking && (
                                 <StatRow

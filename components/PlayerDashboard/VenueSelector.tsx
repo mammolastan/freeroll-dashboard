@@ -1,3 +1,5 @@
+// components/PlayerDashboard/VenueSelector.tsx
+
 import React from 'react';
 
 interface VenueSelectorProps {

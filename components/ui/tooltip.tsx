@@ -1,3 +1,5 @@
+// components/ui/tooltip.tsx
+
 import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
@@ -14,7 +16,7 @@ const TooltipContent = React.forwardRef<
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-            "z-50 overflow-hidden rounded-md bg-gray-900 px-3 py-1.5 text-xs text-gray-50  max-w-[70%] whitespace-normal break-words",
+            "z-50 overflow-hidden rounded-md bg-gray-900 px-3 py-1.5 text-xs text-gray-50 max-w-[70%] whitespace-pre-wrap break-words",
             className
         )}
         {...props}

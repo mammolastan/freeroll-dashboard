@@ -142,16 +142,20 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
                                 </div>
                                 <div className="flex flex-wrap gap-4 text-sm text-black">
                                     <div className="flex items-center">
-                                        <Trophy className="w-4 h-4 mr-1 text-blue-500" />
-                                        <span>{player.totalPoints} pts</span>
+                                        {player.totalPoints > 0 && (
+                                            <>
+                                                <Trophy className="w-4 h-4 mr-1 text-blue-500" />
+                                                <span>{player.totalPoints} pts</span>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="flex items-center">
-                                        <Award className="w-4 h-4 mr-1 text-red-500" />
+                                        <Swords className="w-4 h-4 mr-1" />
                                         <span>{player.knockouts} KOs</span>
                                     </div>
                                     {player.hitman && (
                                         <div className="flex items-center text-gray-600">
-                                            <Swords className="w-4 h-4 mr-1" />
+
                                             <span>Eliminated by {player.hitman}</span>
                                         </div>
                                     )}
