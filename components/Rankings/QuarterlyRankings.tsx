@@ -1,10 +1,10 @@
 // components / Rankings / QuarterlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
 import { ArrowUpDown } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
+import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
 
 interface PlayerRanking {
     name: string;
@@ -33,6 +33,8 @@ export default function QuarterlyRankings() {
     const [isCurrentQuarter, setIsCurrentQuarter] = useState(true);
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+    const { favorites, toggleFavorite, isFavorite } = useFavorites();
     const [filterText, setFilterText] = useState('');
     const [sortConfig, setSortConfig] = useState<{
         field: SortField;
@@ -90,12 +92,17 @@ export default function QuarterlyRankings() {
 
         let filteredRankings = rankingsData.rankings;
 
-
         // Apply name filter
         if (filterText) {
             filteredRankings = filteredRankings.filter(player =>
-                player.name.toLowerCase().includes(filterText.toLowerCase()) ||
-                player.nickname?.toLowerCase().includes(filterText.toLowerCase())
+                player.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+        }
+
+        // Apply favorites filter
+        if (showFavoritesOnly) {
+            filteredRankings = filteredRankings.filter(player =>
+                isFavorite(player.uid)
             );
         }
 
@@ -106,11 +113,9 @@ export default function QuarterlyRankings() {
             let valueB = b[sortConfig.field];
             const multiplier = sortConfig.direction === 'asc' ? 1 : -1;
 
-            // Convert to numbers if they're strings
             if (typeof valueA === 'string') valueA = parseFloat(valueA);
             if (typeof valueB === 'string') valueB = parseFloat(valueB);
 
-            // Handle NaN, null, or undefined values
             if (!valueA && valueA !== 0) valueA = -Infinity;
             if (!valueB && valueB !== 0) valueB = -Infinity;
 
@@ -174,6 +179,12 @@ export default function QuarterlyRankings() {
                         currentLabel={`Q${currentQuarter} ${currentDate.getFullYear()}`}
                         previousLabel={`Q${previousQuarter} ${previousQuarterYear}`}
                     />
+                    <FavoritesFilter
+                        showFavoritesOnly={showFavoritesOnly}
+                        onToggle={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                        favoritesCount={favorites.length}
+                    />
+
                     <div className="text-gray-600">
                         {getQuarterLabel(rankingsData.quarter)}
                     </div>
@@ -235,6 +246,13 @@ export default function QuarterlyRankings() {
                                     ...player,
                                     type: 'quarterly'
                                 }}
+                                favoriteButton={
+                                    <FavoriteButton
+                                        uid={player.uid}
+                                        isFavorite={isFavorite(player.uid)}
+                                        onToggle={toggleFavorite}
+                                    />
+                                }
                             />
                         );
                     })}

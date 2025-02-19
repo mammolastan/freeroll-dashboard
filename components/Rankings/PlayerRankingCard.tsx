@@ -38,9 +38,10 @@ type PlayerData = MonthlyPlayer | QuarterlyPlayer;
 
 interface PlayerRankingCardProps {
     player: PlayerData;
+    favoriteButton?: React.ReactNode;
 }
 
-export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
+export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardProps) {
     return (
 
         <div className={`m-0 bg-white hover:bg-red-800 hover:py-1 transition-all duration-500 overflow-hidden ${player.type === 'monthly' && 'border-y-2 border-red-100'}`}>
@@ -66,6 +67,7 @@ export function PlayerRankingCard({ player }: PlayerRankingCardProps) {
                             >
                                 {player.nickname || player.name}
                             </Link>
+                            {favoriteButton}
                             <div className="flex items-center gap-2">
                                 {player.type === 'monthly' && player.isQualified ? (
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
