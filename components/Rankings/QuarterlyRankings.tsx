@@ -91,10 +91,11 @@ export default function QuarterlyRankings() {
 
         let filteredRankings = rankingsData.rankings;
 
-        // Apply name filter
+        // Apply name or nickname filter
         if (filterText) {
             filteredRankings = filteredRankings.filter(player =>
-                player.name.toLowerCase().includes(filterText.toLowerCase())
+                player.name.toLowerCase().includes(filterText.toLowerCase()) ||
+                (player.nickname && player.nickname.toLowerCase().includes(filterText.toLowerCase()))
             );
         }
 

@@ -1,3 +1,5 @@
+// components/Rankings/FavoritesComponents.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
 
@@ -16,8 +18,8 @@ export function useFavorites() {
     const toggleFavorite = (uid: string) => {
         setFavorites(prev => {
             const newFavorites = prev.includes(uid)
-                ? prev.filter(id => id !== uid)
-                : [...prev, uid];
+                ? prev.filter(id => id !== uid) //remove player from favorites
+                : [...prev, uid]; // add player to favorites
 
             // Save to localStorage
             localStorage.setItem('playerFavorites', JSON.stringify(newFavorites));
