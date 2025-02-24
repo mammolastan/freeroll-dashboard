@@ -10,6 +10,7 @@ interface VenueStats {
         totalPoints: number;
         knockouts: number;
         nickname: string | null;
+        avgScore: number;
     }>;
     stats: {
         totalGames: number;
@@ -130,7 +131,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                         </span>
                                         <span className="flex items-center gap-1">
                                             <Award size={16} />
-                                            {player.knockouts} KOs
+                                            Venue power rating: {player.avgScore.toFixed(1)}
                                         </span>
                                     </div>
                                 </div>
@@ -138,7 +139,9 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                             <div className="flex items-center gap-2">
                                 <Trophy size={16} className="text-blue-500" />
                                 <span className="font-bold text-blue-600">
-                                    {player.totalPoints} pts
+                                    {player.totalPoints > 0 ?
+                                        player.totalPoints : '0'
+                                    }
                                 </span>
                             </div>
                         </div>

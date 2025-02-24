@@ -90,20 +90,20 @@ export async function GET(
     // Get top players for the venue
     const topPlayers = await prisma.$queryRaw`
       SELECT 
-        p.Name,
-        p.UID,
-        pl.nickname,
-        COUNT(*) as gamesPlayed,
-        SUM(Total_Points) as totalPoints,
-        SUM(Knockouts) as knockouts,
-        AVG(Player_Score) as avgScore
+      p.Name,
+      p.UID,
+      pl.nickname,
+      COUNT(*) as gamesPlayed,
+      SUM(Total_Points) as totalPoints,
+      SUM(Knockouts) as knockouts,
+      AVG(Player_Score) as avgScore
       FROM poker_tournaments p
       LEFT JOIN players pl ON p.UID = pl.uid
       WHERE p.Venue = ${venue}
       AND ${dateConditionP}
       GROUP BY Name, UID
       HAVING gamesPlayed > 0
-      ORDER BY totalPoints DESC
+      ORDER BY totalPoints DESC, avgScore DESC
       LIMIT 25
     `;
 
