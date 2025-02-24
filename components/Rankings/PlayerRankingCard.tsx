@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Award, AlertCircle, Trophy, Swords, Users, GalleryHorizontalEnd, Hexagon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Trophy, Swords, GalleryHorizontalEnd, Hexagon, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 
 interface BasePlayerData {
     name: string;
@@ -117,26 +117,29 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                         ) : (
                             // Quarterly Rankings Details
                             <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
-                                <div className="flex items-center p-2 bg-blue-50">
-                                    <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
-                                    <span className="font-medium text-blue-700">{player.gamesPlayed}</span>
-                                </div>
                                 <div className="flex items-center p-2 bg-green-50">
                                     <Trophy className="w-4 h-4 text-green-600 mr-2" />
                                     <span className="font-medium text-green-700">{player.totalPoints}</span>
                                 </div>
-                                <div className="flex items-center p-2 bg-red-50">
-                                    <Swords className="w-4 h-4 text-red-600 mr-2" />
-                                    <span className="font-medium text-red-700">{player.totalKnockouts}</span>
+                                <div className="flex items-center p-2 bg-orange-50">
+                                    <Zap className="w-4 h-4 text-blue-600 mr-2" />
+                                    <span className="font-medium text-blue-700">{player.avgScore}</span>
                                 </div>
                                 <div className="flex items-center p-2 bg-purple-50">
                                     <Hexagon className="w-4 h-4 text-purple-600 mr-2" />
                                     <span className="font-medium text-purple-700">{player.finalTables}</span>
                                 </div>
-                                <div className="flex items-center p-2 bg-orange-50">
+                                <div className="flex items-center p-2 bg-blue-50">
                                     <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
-                                    <span className="font-medium text-blue-700">{player.avgScore}</span>
+                                    <span className="font-medium text-blue-700">{player.gamesPlayed}</span>
                                 </div>
+
+                                <div className="flex items-center p-2 bg-red-50">
+                                    <Swords className="w-4 h-4 text-red-600 mr-2" />
+                                    <span className="font-medium text-red-700">{player.totalKnockouts}</span>
+                                </div>
+
+
                             </div>
                         )}
                     </div>

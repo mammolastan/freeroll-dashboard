@@ -225,11 +225,11 @@ export default function QuarterlyRankings() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
-                                <SortableHeader field="gamesPlayed" label="Games" bg="blue" />
                                 <SortableHeader field="totalPoints" label="Points" bg="green" />
-                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
-                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
                                 <SortableHeader field="avgScore" label="Power Rating" bg="orange" />
+                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
+                                <SortableHeader field="gamesPlayed" label="Games" bg="blue" />
+                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
                             </div>
                         </div>
                     </div>
