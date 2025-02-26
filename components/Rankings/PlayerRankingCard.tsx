@@ -57,7 +57,7 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
 
                         <div className="flex items-center gap-2">
                             {player.type === 'quarterly' && (
-                                <div className='text-black pt-5 md:p-0'>
+                                <div className='text-black pt-1 md:p-0'>
                                     <p>{player.ranking}</p>
                                 </div>
                             )}
@@ -122,8 +122,8 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                                     <span className="font-medium text-green-700">{player.totalPoints}</span>
                                 </div>
                                 <div className="flex items-center p-2 bg-orange-50">
-                                    <Zap className="w-4 h-4 text-blue-600 mr-2" />
-                                    <span className="font-medium text-blue-700">{player.avgScore}</span>
+                                    <Zap className="w-4 h-4 text-orange-600 mr-2" />
+                                    <span className="font-medium text-orange-700">{player.avgScore}</span>
                                 </div>
                                 <div className="flex items-center p-2 bg-purple-50">
                                     <Hexagon className="w-4 h-4 text-purple-600 mr-2" />
