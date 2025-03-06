@@ -110,12 +110,13 @@ export async function GET(request: Request) {
             SELECT 
               Name as name,
               UID as uid,
-              SUM(Total_Points) as totalPoints
+              SUM(Total_Points) as totalPoints,
+              AVG(Player_Score) as avgScore
             FROM poker_tournaments
             WHERE ${dateCondition}
             AND Venue = ${venue.name}
             GROUP BY Name, UID
-            ORDER BY totalPoints DESC
+            ORDER BY totalPoints DESC, avgScore DESC
           ) ranked_venue_players,
           (SELECT @vrank := 0) r
           LIMIT 7
