@@ -1,6 +1,7 @@
 // components/VenueDashboard/VenueDetails.tsx
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Award, Crown } from 'lucide-react';
+import Link from 'next/link';
 
 interface VenueStats {
     topPlayers: Array<{
@@ -123,7 +124,14 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                     {index + 1}
                                 </div>
                                 <div>
-                                    <div className="font-semibold text-gray-900">    {player.nickname || player.Name}</div>
+                                    <div className="font-semibold text-gray-900">
+                                        <Link
+                                            href={`/players?uid=${encodeURIComponent(player.UID)}`}
+                                            className="freeroll-link text-lg font-medium  truncate"
+                                        >
+                                            {player.nickname || player.Name}
+                                        </Link>
+                                    </div>
                                     <div className="text-sm text-gray-500 flex items-center gap-4 mt-1">
                                         <span className="flex items-center gap-1">
                                             <Users size={16} />

@@ -157,8 +157,8 @@ export default function MonthlyRankings() {
                     <DateToggler
                         isCurrentPeriod={isCurrentMonth}
                         setIsCurrentPeriod={setIsCurrentMonth}
-                        currentLabel="Current Month"
-                        previousLabel="Previous Month"
+                        currentLabel={new Date().toLocaleString('default', { month: 'long' })}
+                        previousLabel={new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' })}
                     />
 
                     {/* Name filter */}
