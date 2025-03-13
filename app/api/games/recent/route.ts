@@ -15,12 +15,14 @@ export async function GET() {
         File_name: string;
         game_date: Date;
         Venue: string;
+        game_uid: string;
       }>
     >`
       SELECT DISTINCT
         File_name,
         game_date,
-        Venue
+        Venue,
+        game_uid
       FROM poker_tournaments
       WHERE game_date IS NOT NULL
       ORDER BY game_date DESC
@@ -39,6 +41,7 @@ export async function GET() {
             venue: string;
             uid: string;
             nickname: string;
+            game_uid: string;
           }>
         >`
           SELECT 
@@ -48,10 +51,11 @@ export async function GET() {
             p.Knockouts as knockouts,
             p.Venue as venue,
             p.UID as uid,
+            p.game_uid as game_uid,
             pl.nickname
           FROM poker_tournaments p
           LEFT JOIN players pl ON p.UID = pl.uid
-          WHERE p.File_name = ${game.File_name}
+          WHERE p.game_uid = ${game.game_uid}
           ORDER BY p.Placement ASC
         `;
 
@@ -66,6 +70,7 @@ export async function GET() {
 
         return {
           fileName: game.File_name,
+          game_uid: game.game_uid,
           venue: game.Venue || "Unknown Venue",
           date: game.game_date.toISOString(), // Use actual game_date
           totalPlayers: players.length,

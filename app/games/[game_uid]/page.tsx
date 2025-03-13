@@ -39,14 +39,14 @@ function formatGameDate(isoDateString: string): string {
     });
 }
 
-export default function GamePage({ params }: { params: { fileName: string } }) {
+export default function GamePage({ params }: { params: { game_uid: string } }) {
     const [gameDetails, setGameDetails] = useState<GameDetails | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         async function fetchGameDetails() {
             try {
-                const response = await fetch(`/api/games/${params.fileName}`)
+                const response = await fetch(`/api/games/${params.game_uid}`)
                 const data = await response.json()
                 setGameDetails(data)
             } catch (error) {
@@ -56,10 +56,10 @@ export default function GamePage({ params }: { params: { fileName: string } }) {
             }
         }
 
-        if (params.fileName) {
+        if (params.game_uid) {
             fetchGameDetails()
         }
-    }, [params.fileName])
+    }, [params.game_uid])
 
     if (loading) {
         return (

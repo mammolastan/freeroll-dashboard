@@ -21,6 +21,7 @@ interface Game {
     totalPlayers: number
     topThree: TopPlayer[]
     totalKnockouts: number
+    game_uid: string
 }
 
 //Helper function to format the timestamp
@@ -86,7 +87,8 @@ export default function GamesPage() {
             </div>
         )
     }
-
+    console.log("games")
+    console.log(games)
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Recent Games</h1>
@@ -149,7 +151,7 @@ export default function GamesPage() {
                             </div>
 
                             <Link
-                                href={`/games/${encodeURIComponent(game.fileName)}`}
+                                href={`/games/${encodeURIComponent(game.game_uid)}`}
                                 className="mt-4 text-sm text-blue-600 flex items-center justify-end gap-1"
                             >
                                 Full game details
