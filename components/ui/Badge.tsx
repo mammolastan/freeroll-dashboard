@@ -66,18 +66,9 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
                         className={`${sizeClasses[size]} overflow-hidden transition-transform hover:scale-110`}
                     >
                         <div className="relative w-full h-full">
-                            <Image
-                                src={getIconPath(badge.icon)}
-                                alt={badge.name}
-                                fill
-                                sizes={`(max-width: 768px) ${size === 'small' ? '32px' : size === 'medium' ? '48px' : '64px'}`}
 
-                                onError={(e) => {
-                                    // Fallback for missing images
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = '/images/badges/default.svg';
-                                }}
-                            />
+                            <img alt={badge.name} src={`${getIconPath(badge.icon)}`} width={`${size === 'small' ? '32px' : size === 'medium' ? '48px' : '64px'}`} />
+
                         </div>
                     </div>
                     {showName && (
