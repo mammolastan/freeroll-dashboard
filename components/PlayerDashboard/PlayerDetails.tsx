@@ -7,14 +7,12 @@ import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
 import { formatGameDate, formatDateRangeText } from '@/lib/utils';
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { TooltipProvider, MobileTooltipTrigger } from "@/components/ui/tooltip"
+import VenueSelector from './VenueSelector';
+import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
+import { HelpCircle } from "lucide-react"
 
-
-
-interface PlacementFrequencyData {
-    placement: number;
-    frequency: number;
-}
 
 interface PlayerStats {
     quarterlyStats: {
@@ -27,7 +25,10 @@ interface PlayerStats {
         leagueRanking?: number | null;
         totalPlayers?: number | null;
     };
-    placementFrequency: PlacementFrequencyData[];
+    placementFrequency: Array<{
+        placement: number;
+        frequency: number;
+    }>;
     mostKnockedOutBy: Array<{
         name: string;
         count: number;
@@ -65,7 +66,9 @@ interface PlayerDetailsProps {
 
 export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDetailsProps) {
     const [stats, setStats] = useState<PlayerStats | null>(null);
+    const [badges, setBadges] = useState<BadgeData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [badgesLoading, setBadgesLoading] = useState(true);
     const [selectedRange, setSelectedRange] = useState(() => {
         if (initialRange) {
             return initialRange;
@@ -176,6 +179,25 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         }
     }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue]);
 
+    // Fetch player badges
+    useEffect(() => {
+        if (playerUID) {
+            setBadgesLoading(true);
+            fetch(`/api/players/${playerUID}/badges`)
+                .then(response => response.json())
+                .then(data => {
+                    setBadges(data);
+                })
+                .catch(error => {
+                    console.error('Failed to fetch player badges:', error);
+                    setBadges([]);
+                })
+                .finally(() => {
+                    setBadgesLoading(false);
+                });
+        }
+    }, [playerUID]);
+
     if (loading) {
         return (
             <div className="text-center py-12 text-gray-600">
@@ -198,10 +220,23 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     return (
         <TooltipProvider delayDuration={0} skipDelayDuration={0}>
             <div className="space-y-8">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col justify-between items-center gap-4">
                     <h2 className="text-2xl font-bold text-white-800">
                         Stats for {playerName}
                     </h2>
+                    {/* Player Badges Display */}
+                    {!badgesLoading && badges.length > 0 && (
+                        <div className="items-center text-center m-2">
+                            <h3>Achievements</h3>
+                            <BadgeGroup badges={badges} size="large" limit={5} />
+                            {badges.length > 5 && (
+                                <span className="text-sm text-gray-500 ml-2">
+                                    + {badges.length - 5} more
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {/* date selector */}
                     <div className="space-y-4">
 
                         <div className="flex items-center gap-2">
@@ -439,9 +474,8 @@ Math: log(total_players + 1 / Placement)`}
     );
 }
 
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
-import VenueSelector from './VenueSelector';
+
+
 
 
 function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {
@@ -458,34 +492,18 @@ function StatRow({ label, value, tooltip }: { label: string; value: string | num
 
     return (
         <div className="flex justify-between items-center">
-            <TooltipRoot open={isOpen} onOpenChange={setIsOpen}>
-                <TooltipTrigger asChild>
+            <TooltipProvider>
+                <MobileTooltipTrigger
+                    content={<p>{tooltip}</p>}
+                >
                     <span
-                        className="text-gray-600 cursor-help flex items-center gap-1 border-b border-dotted border-gray-400 touch-manipulation"
-                        role="button"
-                        tabIndex={0}
-                        onTouchStart={(e) => {
-                            setIsOpen(true);
-                        }}
-                        onTouchEnd={(e) => {
-                            e.preventDefault();
-                        }}
-                        onClick={() => setIsOpen(!isOpen)}
+                        className="text-gray-600 flex items-center gap-1 border-b border-dotted border-gray-400"
                     >
                         {label}
                         <HelpCircle size={12} className="text-gray-400" />
                     </span>
-                </TooltipTrigger>
-                <TooltipContent
-                    side="bottom"
-                    align="start"
-                    className="touch-auto select-none"
-                    sideOffset={5}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <p>{tooltip}</p>
-                </TooltipContent>
-            </TooltipRoot>
+                </MobileTooltipTrigger>
+            </TooltipProvider>
             <span className="font-medium text-gray-900">{value}</span>
         </div>
     );

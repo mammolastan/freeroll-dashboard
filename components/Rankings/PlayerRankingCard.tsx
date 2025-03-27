@@ -2,13 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertCircle, Trophy, Swords, GalleryHorizontalEnd, Hexagon, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { AlertCircle, Trophy, Swords, GalleryHorizontalEnd, Hexagon, ChevronLeft, ChevronRight, Award, Users, Zap } from 'lucide-react';
+import { BadgeData, BadgeGroup } from '../ui/Badge';
 
 interface BasePlayerData {
     name: string;
     uid: string;
     isQualified: boolean;
     nickname: string | null;
+    badges?: BadgeData[]; // Add badges to player data
 }
 
 interface VenueRanking {
@@ -82,7 +84,17 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                                         Bubble
                                     </span>
                                 ) : null}
-
+                                {/* Badges display */}
+                                {player.badges && player.badges.length > 0 && (
+                                    <div className="ml-2">
+                                        <BadgeGroup
+                                            badges={player.badges}
+                                            size="small"
+                                            limit={3}
+                                            showName={false}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
