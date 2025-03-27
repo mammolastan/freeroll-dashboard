@@ -1,10 +1,11 @@
-// components / Rankings / QuarterlyRankings.tsx
+// components/Rankings/QuarterlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
 import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
 import { ArrowUpDown } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
+import { BadgeData } from '../ui/Badge';
 
 interface PlayerRanking {
     name: string;
@@ -17,6 +18,7 @@ interface PlayerRanking {
     ranking: number;
     isQualified: boolean;
     nickname: string | null;
+    badges?: BadgeData[];
 }
 
 interface RankingsData {
@@ -32,6 +34,7 @@ export default function QuarterlyRankings() {
     const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
     const [isCurrentQuarter, setIsCurrentQuarter] = useState(true);
     const [loading, setLoading] = useState(true);
+    const [badgesLoading, setBadgesLoading] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     const { favorites, toggleFavorite, isFavorite } = useFavorites();
@@ -78,6 +81,67 @@ export default function QuarterlyRankings() {
         }
         fetchRankings();
     }, [isCurrentQuarter]);
+
+    // Fetch badges for visible players
+    useEffect(() => {
+
+        if (!rankingsData?.rankings || rankingsData.rankings.length === 0) return;
+
+        // Skip fetching if we already have badges data for the players
+        const alreadyHaveBadges = rankingsData.rankings.some(player => player.badges !== undefined);
+        if (alreadyHaveBadges) return;
+
+        const fetchBadges = async () => {
+            console.log("Fetching badges for visible players...");
+            setBadgesLoading(true);
+            try {
+                // Get the UIDs of all visible players
+                const visiblePlayers = getSortedAndFilteredRankings();
+                const playerUids = visiblePlayers.map(player => player.uid);
+
+                if (playerUids.length === 0) return;
+
+                // Fetch badges for all players in a single request
+                const response = await fetch('/api/players/badges/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ uids: playerUids }),
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch player badges');
+
+                const badgesData = await response.json();
+
+                // Update player data with badges
+                setRankingsData(prev => {
+                    if (!prev) return null;
+
+                    const updatedRankings = prev.rankings.map(player => {
+                        const playerBadges = badgesData[player.uid] || [];
+                        return {
+                            ...player,
+                            badges: playerBadges
+                        };
+                    });
+
+                    return {
+                        ...prev,
+                        rankings: updatedRankings
+                    };
+                });
+            } catch (error) {
+                console.error('Error fetching player badges:', error);
+            } finally {
+                console.log("Finished fetching badges for visible players...");
+                setBadgesLoading(false);
+            }
+        };
+
+        fetchBadges();
+
+    }, [rankingsData]); // Only re-run when the rankingsData changes
 
     const handleSort = (field: SortField) => {
         setSortConfig(prevConfig => ({
@@ -209,6 +273,12 @@ export default function QuarterlyRankings() {
                         </button>
                     )}
                 </div>
+                {/* Badge loading indicator */}
+                {badgesLoading && (
+                    <div className="text-sm text-gray-500 mb-2">
+                        Loading player achievements...
+                    </div>
+                )}
             </div>
 
             {/* Rankings section with sticky header */}

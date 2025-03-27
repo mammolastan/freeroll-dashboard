@@ -41,7 +41,7 @@ export default function PlayersPage() {
 
         // If URL has UID, fetch player data using the stats endpoint
         if (urlUid) {
-            console.log("UID received from URL:", urlUid);
+
             // First fetch will get minimal player info
             fetch(`/api/players/search?q=${encodeURIComponent(urlUid)}`)
                 .then(response => response.json())
