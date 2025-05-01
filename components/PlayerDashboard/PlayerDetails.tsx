@@ -11,8 +11,8 @@ import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/too
 import { TooltipProvider, MobileTooltipTrigger } from "@/components/ui/tooltip"
 import VenueSelector from './VenueSelector';
 import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
-import { HelpCircle } from "lucide-react"
-
+import { HelpCircle, Swords } from "lucide-react"
+import { KnockoutStats } from './KnockoutStats';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -346,21 +346,50 @@ Math: log(total_players + 1 / Placement)`}
 
                     {/* Head to Head Stats */}
                     {
-                        selectedRange === 'all-time' && (<div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                            <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
-                                <h3 className="font-bold text-lg text-purple-900">Head to Head</h3>
-                            </div>
-                            <div className="p-4 space-y-4">
-
-                                <div>
-                                    <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
-                                    <div className="space-y-2">
-                                        {stats.mostKnockedOutBy.map((player, index) => {
-                                            return (
+                        selectedRange === 'all-time' && (
+                            <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                                <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
+                                    <h3 className="font-bold text-lg text-purple-900 flex items-center">
+                                        <Swords className="mr-2 h-5 w-5" />
+                                        Head to Head - 2
+                                    </h3>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <div>
+                                        <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
+                                        <div className="space-y-2">
+                                            {stats.mostKnockedOutBy.map((player, index) => {
+                                                return (
+                                                    <div key={player.name} className="flex items-baseline justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                            <Link
+                                                                href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                                className="freeroll-link"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                                }}
+                                                            >
+                                                                {player.nickname || player.name}
+                                                            </Link>
+                                                        </div>
+                                                        <span className="text-sm font-medium text-purple-700">
+                                                            {player.count} times
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
+                                        <div className="space-y-2">
+                                            {stats.mostKnockedOut.map((player, index) => (
                                                 <div key={player.name} className="flex items-baseline justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                        <Link
+                                                        <a
                                                             href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
                                                             className="freeroll-link"
                                                             onClick={(e) => {
@@ -368,45 +397,23 @@ Math: log(total_players + 1 / Placement)`}
                                                                 window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
                                                             }}
                                                         >
-                                                            {player.nickname || player.name}
-                                                        </Link>
+                                                            {player.name}
+                                                        </a>
                                                     </div>
                                                     <span className="text-sm font-medium text-purple-700">
                                                         {player.count} times
                                                     </span>
                                                 </div>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
-                                    <div className="space-y-2">
-                                        {stats.mostKnockedOut.map((player, index) => (
-                                            <div key={player.name} className="flex items-baseline justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                    <a
-                                                        href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
-                                                        className="freeroll-link"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
-                                                        }}
-                                                    >
-                                                        {player.name}
-                                                    </a>
-                                                </div>
-                                                <span className="text-sm font-medium text-purple-700">
-                                                    {player.count} times
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
 
+                                    <div className="mt-2 text-sm text-gray-500 text-center">
+                                        To view more detailed knockout statistics, scroll down to the bottom of this page.
+                                    </div>
+                                </div>
                             </div>
-                        </div>)
+                        )
                     }
 
 
@@ -468,7 +475,8 @@ Math: log(total_players + 1 / Placement)`}
                         </div>
                     </div>
                 </div>
-
+                {/* Knockout Statistics Section */}
+                <KnockoutStats playerUID={playerUID} playerName={playerName} />
             </div>
         </TooltipProvider>
     );
