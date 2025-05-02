@@ -351,7 +351,7 @@ Math: log(total_players + 1 / Placement)`}
                                 <div className="bg-purple-50 p-4 rounded-t-xl border-b border-purple-100">
                                     <h3 className="font-bold text-lg text-purple-900 flex items-center">
                                         <Swords className="mr-2 h-5 w-5" />
-                                        Head to Head - 2
+                                        Head to Head
                                     </h3>
                                 </div>
                                 <div className="p-4 space-y-4">
@@ -406,10 +406,6 @@ Math: log(total_players + 1 / Placement)`}
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-
-                                    <div className="mt-2 text-sm text-gray-500 text-center">
-                                        To view more detailed knockout statistics, scroll down to the bottom of this page.
                                     </div>
                                 </div>
                             </div>
