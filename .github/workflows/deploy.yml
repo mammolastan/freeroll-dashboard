@@ -1,21 +1,50 @@
-name: Deploy
+name: Deploy to Digital Ocean
 on:
   push:
     branches: [main]
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@${{ secrets.DROPLET_IP }} 'echo "SSH connection successful"'
+
       - name: Deploy to Digital Ocean
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+        run: |
+          ssh root@${{ secrets.DROPLET_IP }} '
+            set -e
+            echo "Starting deployment process..."
+            
+            # Navigate to project directory
             cd /var/www/freeroll-dashboard
+            
+            # Backup package.json in case of conflicts
+            cp package.json package.json.bak || true
+            
+            # Pull latest changes
+            echo "Pulling latest changes from git repository..."
             git pull
+            
+            # Install dependencies
+            echo "Installing dependencies..."
             npm install
+            
+            # Build the application
+            echo "Building the application..."
             npm run build
-            pm2 restart freeroll-dashboard
+            
+            # Restart the application
+            echo "Restarting the application..."
+            pm2 restart freeroll-dashboard || pm2 start npm --name "freeroll-dashboard" -- start
+            
+            echo "Deployment completed successfully!"
+          '
