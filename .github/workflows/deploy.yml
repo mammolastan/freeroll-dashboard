@@ -8,80 +8,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Debug SSH key format
-        run: |
-          # Check if the key is in the correct format (without revealing it)
-          echo "Checking SSH key format..."
-          KEY_FORMAT=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | grep -o "BEGIN.*PRIVATE KEY")
-          if [ -n "$KEY_FORMAT" ]; then
-            echo "✅ Key appears to be in the correct format: $KEY_FORMAT"
-          else
-            echo "❌ Key does not appear to be in the standard format"
-            echo "Make sure your key includes the BEGIN/END lines and is correctly formatted"
-          fi
-
-          # Count lines to ensure the entire key is present
-          KEY_LINES=$(echo "${{ secrets.SSH_PRIVATE_KEY }}" | wc -l)
-          echo "Key has $KEY_LINES lines (should typically be 25+ for RSA keys)"
-
-      - name: Set up SSH key
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          touch ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
-
-          # Start SSH agent and add key
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add ~/.ssh/id_rsa
-
-          # Print public key for verification
-          echo "The public key from the private key is:"
-          ssh-keygen -y -f ~/.ssh/id_rsa | head -n1
-          echo "Verify this matches the public key in your droplet's authorized_keys file"
-
-      - name: Try SSH connection with verbose output
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: ssh -v -o BatchMode=yes root@${{ secrets.DROPLET_IP }} 'echo "SSH connection successful"'
-
-      - name: Deploy to Digital Ocean
-        if: success()
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-          ssh root@${{ secrets.DROPLET_IP }} '
-            set -e
+      - name: Deploy using SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script_stop: true
+          script: |
             echo "Starting deployment process..."
-            
-            # Navigate to project directory
             cd /var/www/freeroll-dashboard
-            
-            # Backup package.json in case of conflicts
-            cp package.json package.json.bak || true
-            
-            # Pull latest changes
-            echo "Pulling latest changes from git repository..."
             git pull
-            
-            # Install dependencies
-            echo "Installing dependencies..."
             npm install
-            
-            # Build the application
-            echo "Building the application..."
             npm run build
-            
-            # Restart the application
-            echo "Restarting the application..."
             pm2 restart freeroll-dashboard || pm2 start npm --name "freeroll-dashboard" -- start
-            
             echo "Deployment completed successfully!"
-          '
