@@ -8,19 +8,26 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy using SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script_stop: true
-          script: |
-            echo "Starting deployment process..."
-            cd /var/www/freeroll-dashboard
-            git pull
-            npm install
-            npm run build
-            pm2 restart freeroll-dashboard || pm2 start npm --name "freeroll-dashboard" -- start
-            echo "Deployment completed successfully!"
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          cat >> ~/.ssh/config << END
+          Host digitalocean
+            HostName ${{ secrets.DROPLET_IP }}
+            User root
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking no
+          END
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy
+        run: |
+          ssh digitalocean '
+            cd /var/www/freeroll-dashboard && 
+            git pull && 
+            npm install && 
+            npm run build && 
+            (pm2 restart freeroll-dashboard || pm2 start npm --name "freeroll-dashboard" -- start)
+          '
