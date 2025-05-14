@@ -28,11 +28,48 @@ export async function GET(
         fileName: true,
         season: true,
         venue: true,
+        uid: true,
       },
       distinct: ["fileName"], // Ensure we don't get duplicate games
     });
 
-    return NextResponse.json({ games });
+    // For each game, get the player count and processed date
+    const gamesWithDetails = await Promise.all(
+      games.map(async (game) => {
+        // Get player count
+        const playerCount = await prisma.pokerTournament.count({
+          where: {
+            fileName: game.fileName,
+          },
+        });
+
+        // Get processed file info
+        let processedAt = null;
+        const processedFile = await prisma.processedFile.findFirst({
+          where: {
+            OR: [
+              { game_uid: game.uid || undefined },
+              ...(game.fileName ? [{ filename: game.fileName }] : []),
+            ],
+          },
+          select: {
+            processed_at: true,
+          },
+        });
+
+        if (processedFile) {
+          processedAt = processedFile.processed_at;
+        }
+
+        return {
+          ...game,
+          playerCount,
+          processedAt,
+        };
+      })
+    );
+
+    return NextResponse.json({ games: gamesWithDetails });
   } catch (error) {
     console.error("Error fetching games:", error);
     return NextResponse.json(

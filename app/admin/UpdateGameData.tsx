@@ -1,4 +1,21 @@
-// app/admin/UpdateGameData.tsx
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatGameDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+};// app/admin/UpdateGameData.tsx
 
 import React, { useState } from 'react'
 import { GameEditor } from './GameEditor';
@@ -9,6 +26,9 @@ interface GameData {
     gameDate: string;
     season: string;
     venue: string;
+    game_uid?: string;
+    playerCount?: number;
+    processedAt?: string;
 }
 
 export default function UpdateGameData() {
@@ -16,12 +36,15 @@ export default function UpdateGameData() {
     const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [reprocessing, setReprocessing] = useState<string | null>(null);
+    const [message, setMessage] = useState<string>('');
 
     const handleDate = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
         setSelectedFileName(null);
+        setMessage('');
 
         try {
             const gameDate = (document.getElementById('gameDate') as HTMLInputElement).value;
@@ -52,11 +75,59 @@ export default function UpdateGameData() {
         }
     };
 
+    const handleReprocess = async (game: GameData) => {
+        if (!confirm(`Are you sure you want to reprocess "${game.fileName}" from ${game.venue}? This will delete all existing data for this game and mark it for reprocessing.`)) {
+            return;
+        }
+
+        setReprocessing(game.fileName);
+        setMessage('');
+
+        try {
+            // First, we need to get the processed file info for this game
+            const processedFileResponse = await fetch(`/api/admin/processed-file-by-game?fileName=${encodeURIComponent(game.fileName)}&gameUid=${encodeURIComponent(game.game_uid || '')}`);
+
+            if (!processedFileResponse.ok) {
+                throw new Error('Could not find processed file record for this game');
+            }
+
+            const processedFileData = await processedFileResponse.json();
+
+            // Now reprocess using the existing endpoint
+            const response = await fetch('/api/admin/reprocess-game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fileId: processedFileData.id,
+                    filename: game.fileName,
+                    gameUid: game.game_uid
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setMessage(`Successfully marked "${game.fileName}" for reprocessing. ${result.details}`);
+                // Remove the game from the list since it's been reprocessed
+                setSelectedGames(prev => prev.filter(g => g.fileName !== game.fileName));
+            } else {
+                setMessage(`Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error reprocessing game:', error);
+            setMessage(`Error reprocessing game: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setReprocessing(null);
+        }
+    };
+
     return (
         <div className="">
             <div className="">
                 <label htmlFor="gameDate" className="">
-                    Choose date of game to adjust:
+                    Choose date of game to adjust or reprocess:
                 </label>
                 <div className="">
                     <input
@@ -70,7 +141,7 @@ export default function UpdateGameData() {
                         disabled={loading}
                         className=""
                     >
-                        {loading ? 'Loading...' : 'Submit'}
+                        {loading ? 'Loading...' : 'Find Games'}
                     </button>
                 </div>
             </div>
@@ -81,6 +152,13 @@ export default function UpdateGameData() {
                 </div>
             )}
 
+            {message && (
+                <div className={`mt-4 p-3 rounded ${message.includes('Error') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                    {message}
+                </div>
+            )}
+
             {!selectedFileName && selectedGames.length > 0 && (
                 <div className="">
                     <h3 className=""> Games on selected date:</h3>
@@ -88,15 +166,45 @@ export default function UpdateGameData() {
                         {selectedGames.map((game) => (
                             <div
                                 key={game.fileName}
-                                className="clickme"
-                                onClick={() => setSelectedFileName(game.fileName)}
+                                className="clickme border border-gray-300 rounded p-4 mb-3 bg-gray-50 hover:bg-gray-100 transition-colors"
                             >
-                                <div className="">{game.venue}</div>
-                                <div className="">
-                                    {game.fileName}
-                                </div>
-                                <div className="">
-                                    Season: {game.season}
+                                <div className="flex flex-col gap-3">
+                                    <div className="text-lg font-semibold text-gray-800">{game.venue}</div>
+                                    <div className="text-sm text-gray-600">
+                                        <strong>File:</strong> {game.fileName}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        <strong>Season:</strong> {game.season}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                        <div>
+                                            <strong>Players:</strong> {game.playerCount || 'Unknown'}
+                                        </div>
+                                        <div>
+                                            <strong>Game Date:</strong> {formatGameDate(game.gameDate)}
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <strong>Processed:</strong> {game.processedAt ? formatDate(game.processedAt) : 'Unknown'}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                                        <button
+                                            onClick={() => setSelectedFileName(game.fileName)}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium transition-colors"
+                                        >
+                                            Edit Game Data
+                                        </button>
+                                        <button
+                                            onClick={() => handleReprocess(game)}
+                                            disabled={reprocessing === game.fileName}
+                                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${reprocessing === game.fileName
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                                                }`}
+                                        >
+                                            {reprocessing === game.fileName ? 'Reprocessing...' : 'Reprocess Game'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
