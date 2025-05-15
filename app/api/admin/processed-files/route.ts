@@ -3,13 +3,12 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Set revalidation period to 6 hours (in seconds)
-// export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
+export const dynamic = "force-dynamic"; // This ensures the route always runs dynamically
 
 export async function GET() {
   try {
     const processedFiles = await prisma.processedFile.findMany({
-      take: 10,
+      take: 15,
       orderBy: {
         processed_at: "desc",
       },

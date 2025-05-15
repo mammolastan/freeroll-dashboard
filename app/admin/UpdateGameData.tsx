@@ -1,21 +1,4 @@
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-const formatGameDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-};// app/admin/UpdateGameData.tsx
+// app/admin/UpdateGameData.tsx
 
 import React, { useState } from 'react'
 import { GameEditor } from './GameEditor';
@@ -30,6 +13,51 @@ interface GameData {
     playerCount?: number;
     processedAt?: string;
 }
+
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/New_York'
+    });
+};
+
+const formatGameDate = (dateString: string) => {
+    // Fix: Handle both date-only strings (YYYY-MM-DD) and full ISO strings
+    // For game dates, we want to display the intended date, not the timezone-converted date
+
+    // Validate the input
+    if (!dateString) {
+        return 'Invalid Date';
+    }
+
+    let date: Date;
+
+    if (dateString.includes('T')) {
+        // Full ISO string - extract just the date part and treat it as local
+        const datePart = dateString.split('T')[0];
+        date = new Date(datePart + 'T12:00:00');
+    } else {
+        // Date-only string, add midday time to avoid timezone shifts
+        date = new Date(dateString + 'T12:00:00');
+    }
+
+    // Validate the date
+    if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+    }
+
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/New_York'
+    });
+};
 
 export default function UpdateGameData() {
     const [selectedGames, setSelectedGames] = useState<GameData[]>([]);
@@ -198,8 +226,8 @@ export default function UpdateGameData() {
                                             onClick={() => handleReprocess(game)}
                                             disabled={reprocessing === game.fileName}
                                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${reprocessing === game.fileName
-                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-orange-600 text-white hover:bg-orange-700'
                                                 }`}
                                         >
                                             {reprocessing === game.fileName ? 'Reprocessing...' : 'Reprocess Game'}
