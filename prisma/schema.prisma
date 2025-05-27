@@ -30,6 +30,7 @@ model PokerTournament {
   fileName        String?   @map("File_name")
   createdAt       DateTime  @default(now()) @map("created_at")
   gameDate        DateTime? @map("game_date")
+  gameUid         String?   @map("game_uid")
 
   @@map("poker_tournaments")
 }

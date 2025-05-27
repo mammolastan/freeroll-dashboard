@@ -20,48 +20,22 @@ const formatDate = (dateString: string) => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/New_York'
+        minute: '2-digit'
     });
 };
 
 const formatGameDate = (dateString: string) => {
-    // Fix: Handle both date-only strings (YYYY-MM-DD) and full ISO strings
-    // For game dates, we want to display the intended date, not the timezone-converted date
-
-    // Validate the input
-    if (!dateString) {
-        return 'Invalid Date';
-    }
-
-    let date: Date;
-
-    if (dateString.includes('T')) {
-        // Full ISO string - extract just the date part and treat it as local
-        const datePart = dateString.split('T')[0];
-        date = new Date(datePart + 'T12:00:00');
-    } else {
-        // Date-only string, add midday time to avoid timezone shifts
-        date = new Date(dateString + 'T12:00:00');
-    }
-
-    // Validate the date
-    if (isNaN(date.getTime())) {
-        return 'Invalid Date';
-    }
-
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric',
-        timeZone: 'America/New_York'
+        day: 'numeric'
     });
 };
 
 export default function UpdateGameData() {
     const [selectedGames, setSelectedGames] = useState<GameData[]>([]);
-    const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+    const [selectedGame, setSelectedGame] = useState<GameData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [reprocessing, setReprocessing] = useState<string | null>(null);
@@ -71,7 +45,7 @@ export default function UpdateGameData() {
         e.preventDefault();
         setError(null);
         setLoading(true);
-        setSelectedFileName(null);
+        setSelectedGame(null);
         setMessage('');
 
         try {
@@ -187,7 +161,7 @@ export default function UpdateGameData() {
                 </div>
             )}
 
-            {!selectedFileName && selectedGames.length > 0 && (
+            {!selectedGame && selectedGames.length > 0 && (
                 <div className="">
                     <h3 className=""> Games on selected date:</h3>
                     <div className="">
@@ -200,6 +174,9 @@ export default function UpdateGameData() {
                                     <div className="text-lg font-semibold text-gray-800">{game.venue}</div>
                                     <div className="text-sm text-gray-600">
                                         <strong>File:</strong> {game.fileName}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        <strong>Game UID:</strong> {game.game_uid || 'N/A'}
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         <strong>Season:</strong> {game.season}
@@ -217,8 +194,13 @@ export default function UpdateGameData() {
                                     </div>
                                     <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
                                         <button
-                                            onClick={() => setSelectedFileName(game.fileName)}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium transition-colors"
+                                            onClick={() => setSelectedGame(game)}
+                                            disabled={!game.game_uid}
+                                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${!game.game_uid
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                }`}
+                                            title={!game.game_uid ? 'Game UID required for editing' : ''}
                                         >
                                             Edit Game Data
                                         </button>
@@ -240,10 +222,11 @@ export default function UpdateGameData() {
                 </div>
             )}
 
-            {selectedFileName && (
+            {selectedGame && selectedGame.game_uid && (
                 <GameEditor
-                    fileName={selectedFileName}
-                    onClose={() => setSelectedFileName(null)}
+                    gameUid={selectedGame.game_uid}
+                    fileName={selectedGame.fileName}
+                    onClose={() => setSelectedGame(null)}
                 />
             )}
         </div>

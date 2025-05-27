@@ -15,11 +15,12 @@ interface Player {
 }
 
 interface GameEditorProps {
-    fileName: string;
+    gameUid: string;
+    fileName: string; // Keep for display purposes
     onClose: () => void;
 }
 
-export function GameEditor({ fileName, onClose }: GameEditorProps) {
+export function GameEditor({ gameUid, fileName, onClose }: GameEditorProps) {
     const [players, setPlayers] = useState<Player[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -28,12 +29,13 @@ export function GameEditor({ fileName, onClose }: GameEditorProps) {
     useEffect(() => {
         const fetchPlayers = async () => {
             try {
-                const response = await fetch(`/api/games/${fileName}/players`);
+                // Use gameUid to fetch players
+                const response = await fetch(`/api/games/${encodeURIComponent(gameUid)}/players`);
                 if (!response.ok) throw new Error('Failed to fetch players');
                 const data = await response.json();
                 setPlayers(data.players);
             } catch (err) {
-                setError('Failed to load player data');
+                setError(err instanceof Error ? err.message : 'Failed to load player data');
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -41,7 +43,7 @@ export function GameEditor({ fileName, onClose }: GameEditorProps) {
         };
 
         fetchPlayers();
-    }, [fileName]);
+    }, [gameUid]);
 
     const handlePlayerUpdate = (updatedPlayer: Player) => {
         setPlayers(players.map(p =>

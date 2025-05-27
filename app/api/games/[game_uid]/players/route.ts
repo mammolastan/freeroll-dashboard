@@ -1,4 +1,4 @@
-// app/api/games/[fileName]/players/route.ts
+// app/api/games/[game_uid]/players/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
@@ -7,12 +7,19 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { fileName: string } }
+  { params }: { params: { game_uid: string } }
 ) {
   try {
+    // The identifier could be either game_uid or fileName (as fallback)
+    const identifier = decodeURIComponent(params.game_uid);
+
+    // Try to find players by game_uid first, then fallback to fileName
     const players = await prisma.pokerTournament.findMany({
       where: {
-        fileName: params.fileName,
+        OR: [
+          { gameUid: identifier }, // Try game_uid first
+          { fileName: identifier }, // Fallback to fileName
+        ],
       },
       select: {
         id: true,

@@ -28,7 +28,7 @@ export async function GET(
         fileName: true,
         season: true,
         venue: true,
-        uid: true,
+        gameUid: true, // Use gameUid instead of uid (which is player UID)
       },
       distinct: ["fileName"], // Ensure we don't get duplicate games
     });
@@ -48,7 +48,7 @@ export async function GET(
         const processedFile = await prisma.processedFile.findFirst({
           where: {
             OR: [
-              { game_uid: game.uid || undefined },
+              { game_uid: game.gameUid || undefined },
               ...(game.fileName ? [{ filename: game.fileName }] : []),
             ],
           },
@@ -63,6 +63,7 @@ export async function GET(
 
         return {
           ...game,
+          game_uid: game.gameUid || game.fileName, // Use gameUid if available, fallback to fileName
           playerCount,
           processedAt,
         };
