@@ -50,7 +50,7 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
             < div className={`border-l-4
         ${player.isQualified ? 'border-l-green-500 bg-green-50' :
                     player.type === 'monthly' && player.isBubble ? 'border-l-yellow-500 bg-yellow-50' :
-                        'border-l-transparent'}
+                        'border-l-rose-500 bg-rose-200'}
       `}>
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                     {/* Player Name and Status Section */}
@@ -129,29 +129,31 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                         ) : (
                             // Quarterly Rankings Details
                             <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
+                                {/* Trophy */}
                                 <div className="flex items-center p-2 bg-green-50">
                                     <Trophy className="w-4 h-4 text-green-600 mr-2" />
                                     <span className="font-medium text-green-700">{player.totalPoints}</span>
                                 </div>
+                                {/* Zap */}
                                 <div className="flex items-center p-2 bg-orange-50">
                                     <Zap className="w-4 h-4 text-orange-600 mr-2" />
                                     <span className="font-medium text-orange-700">{player.avgScore}</span>
                                 </div>
+                                {/* Hexagon */}
                                 <div className="flex items-center p-2 bg-purple-50">
                                     <Hexagon className="w-4 h-4 text-purple-600 mr-2" />
                                     <span className="font-medium text-purple-700">{player.finalTables}</span>
                                 </div>
+                                {/* GalleryHorizontalEnd */}
                                 <div className="flex items-center p-2 bg-blue-50">
                                     <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
                                     <span className="font-medium text-blue-700">{player.gamesPlayed}</span>
                                 </div>
-
-                                <div className="flex items-center p-2 bg-red-50">
+                                {/* Swords (last element) */}
+                                <div className="flex items-center p-2 bg-red-50 col-span-2 sm:col-span-1">
                                     <Swords className="w-4 h-4 text-red-600 mr-2" />
                                     <span className="font-medium text-red-700">{player.totalKnockouts}</span>
                                 </div>
-
-
                             </div>
                         )}
                     </div>
