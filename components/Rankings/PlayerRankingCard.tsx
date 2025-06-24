@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertCircle, Trophy, Swords, GalleryHorizontalEnd, Hexagon, ChevronLeft, ChevronRight, Award, Users, Zap } from 'lucide-react';
+import { AlertCircle, Trophy, Swords, ChevronLeft, ChevronRight, Hexagon, Zap, Target, LandPlot, Calculator } from 'lucide-react';
 import { BadgeData, BadgeGroup } from '../ui/Badge';
 
 interface BasePlayerData {
@@ -33,6 +33,8 @@ interface QuarterlyPlayer extends BasePlayerData {
     totalKnockouts: number;
     finalTables: number;
     avgScore: number;
+    finalTablePercentage: number;
+    pointsPerGame: number;
     ranking: number;
 }
 
@@ -128,30 +130,35 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                             </div>
                         ) : (
                             // Quarterly Rankings Details
-                            <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
-                                {/* Trophy */}
+                            <div className="grid grid-cols-2 sm:grid-cols-6 text-sm">
+                                {/* Points */}
                                 <div className="flex items-center p-2 bg-green-50">
-                                    <Trophy className="w-4 h-4 text-green-600 mr-2" />
+                                    <Trophy className="w-4 h-4 text-green-600 mr-2 sm:hidden" />
                                     <span className="font-medium text-green-700">{player.totalPoints}</span>
                                 </div>
-                                {/* Zap */}
+                                {/* Power Rating */}
                                 <div className="flex items-center p-2 bg-orange-50">
-                                    <Zap className="w-4 h-4 text-orange-600 mr-2" />
-                                    <span className="font-medium text-orange-700">{player.avgScore}</span>
+                                    <Zap className="w-4 h-4 text-orange-600 mr-2 sm:hidden" />
+                                    <span className="font-medium text-orange-700">{typeof player.avgScore === 'number' ? player.avgScore.toFixed(2) : '0.00'}</span>
                                 </div>
-                                {/* Hexagon */}
+                                {/* Final Tables */}
                                 <div className="flex items-center p-2 bg-purple-50">
-                                    <Hexagon className="w-4 h-4 text-purple-600 mr-2" />
+                                    <Hexagon className="w-4 h-4 text-purple-600 mr-2 sm:hidden" />
                                     <span className="font-medium text-purple-700">{player.finalTables}</span>
                                 </div>
-                                {/* GalleryHorizontalEnd */}
-                                <div className="flex items-center p-2 bg-blue-50">
-                                    <GalleryHorizontalEnd className="w-4 h-4 text-blue-600 mr-2" />
-                                    <span className="font-medium text-blue-700">{player.gamesPlayed}</span>
+                                {/* Final Table Percentage */}
+                                <div className="flex items-center p-2 bg-indigo-50">
+                                    <LandPlot className="w-4 h-4 text-indigo-600 mr-2 sm:hidden" />
+                                    <span className="font-medium text-indigo-700">{typeof player.finalTablePercentage === 'number' ? player.finalTablePercentage.toFixed(1) : '0.0'}%</span>
                                 </div>
-                                {/* Swords (last element) */}
-                                <div className="flex items-center p-2 bg-red-50 col-span-2 sm:col-span-1">
-                                    <Swords className="w-4 h-4 text-red-600 mr-2" />
+                                {/* Points Per Game */}
+                                <div className="flex items-center p-2 bg-pink-50">
+                                    <Calculator className="w-4 h-4 text-pink-600 mr-2 sm:hidden" />
+                                    <span className="font-medium text-pink-700">{typeof player.pointsPerGame === 'number' ? player.pointsPerGame.toFixed(1) : '0.0'}</span>
+                                </div>
+                                {/* Knockouts */}
+                                <div className="flex items-center p-2 bg-red-50">
+                                    <Swords className="w-4 h-4 text-red-600 mr-2 sm:hidden" />
                                     <span className="font-medium text-red-700">{player.totalKnockouts}</span>
                                 </div>
                             </div>

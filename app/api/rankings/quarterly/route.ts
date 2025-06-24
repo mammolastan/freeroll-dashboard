@@ -84,6 +84,17 @@ export async function GET(request: Request) {
       ...player,
       ranking: index + 1,
       isQualified: index < 40, // Top 40 players qualify
+      // Ensure avgScore is properly converted to number
+      avgScore: player.avgScore ? Number(player.avgScore) : 0,
+      // Calculate FTP and PPG in JavaScript to ensure they're properly calculated
+      finalTablePercentage:
+        player.gamesPlayed > 0
+          ? Number(((player.finalTables / player.gamesPlayed) * 100).toFixed(2))
+          : 0,
+      pointsPerGame:
+        player.gamesPlayed > 0
+          ? Number((player.totalPoints / player.gamesPlayed).toFixed(2))
+          : 0,
     }));
 
     // Return the results with quarter and year

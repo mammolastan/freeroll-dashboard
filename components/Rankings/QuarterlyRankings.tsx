@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
 import { BadgeData } from '../ui/Badge';
@@ -15,6 +15,8 @@ interface PlayerRanking {
     totalKnockouts: number;
     finalTables: number;
     avgScore: number;
+    finalTablePercentage: number;
+    pointsPerGame: number;
     ranking: number;
     isQualified: boolean;
     nickname: string | null;
@@ -27,7 +29,7 @@ interface RankingsData {
     year: number;
 }
 
-type SortField = 'gamesPlayed' | 'totalPoints' | 'totalKnockouts' | 'finalTables' | 'ranking' | 'avgScore';
+type SortField = 'totalPoints' | 'totalKnockouts' | 'finalTables' | 'ranking' | 'avgScore' | 'finalTablePercentage' | 'pointsPerGame';
 type SortDirection = 'asc' | 'desc';
 
 export default function QuarterlyRankings() {
@@ -187,19 +189,34 @@ export default function QuarterlyRankings() {
         });
     };
 
-    const SortableHeader = ({ field, label, bg }: { field: SortField; label: string; bg: string }) => (
-        <button
-            onClick={() => handleSort(field)}
-            className={`bg-${bg}-50 flex flex-col items-center p-2 w-full transition-colors
-                ${field === sortConfig.field ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
-        >
-            <div className="flex items-center gap-1">
-                <span className="text-gray-600">{label}</span>
-                <ArrowUpDown size={14} className={`transition-opacity ${field === sortConfig.field ? 'opacity-100' : 'opacity-50'
-                    }`} />
-            </div>
-        </button>
-    );
+    const SortableHeader = ({ field, label, bg, icon }: { field: SortField; label: string; bg: string; icon: string }) => {
+        // Icon mapping
+        const iconMap: Record<string, React.ElementType> = {
+            Trophy,
+            Zap,
+            Hexagon,
+            LandPlot,
+            Calculator,
+            Swords
+        };
+
+        const IconComponent = iconMap[icon];
+
+        return (
+            <button
+                onClick={() => handleSort(field)}
+                className={`bg-${bg}-50 flex flex-col items-center p-2 w-full transition-colors
+                    ${field === sortConfig.field ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+            >
+                <div className="flex items-center gap-1">
+                    {IconComponent && <IconComponent size={14} className="text-gray-600" />}
+                    <span className="text-gray-600">{label}</span>
+                    <ArrowUpDown size={14} className={`transition-opacity ${field === sortConfig.field ? 'opacity-100' : 'opacity-50'
+                        }`} />
+                </div>
+            </button>
+        );
+    };
 
     if (loading && isTransitioning) {
         return (
@@ -294,12 +311,13 @@ export default function QuarterlyRankings() {
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="grid grid-cols-2 sm:grid-cols-5 text-sm">
-                                <SortableHeader field="totalPoints" label="Points" bg="green" />
-                                <SortableHeader field="avgScore" label="Power Rating" bg="orange" />
-                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" />
-                                <SortableHeader field="gamesPlayed" label="Games" bg="blue" />
-                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" />
+                            <div className="grid grid-cols-2 sm:grid-cols-6 text-sm">
+                                <SortableHeader field="totalPoints" label="Points" bg="green" icon="Trophy" />
+                                <SortableHeader field="avgScore" label="Power Rating" bg="orange" icon="Zap" />
+                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" icon="Hexagon" />
+                                <SortableHeader field="finalTablePercentage" label="FTP" bg="indigo" icon="LandPlot" />
+                                <SortableHeader field="pointsPerGame" label="PPG" bg="pink" icon="Calculator" />
+                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" icon="Swords" />
                             </div>
                         </div>
                     </div>
