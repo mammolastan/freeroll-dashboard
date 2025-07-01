@@ -1,7 +1,7 @@
 // components/Rankings/QuarterlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
+import { PlayerRankingCard } from '@/components/Rankings/PlayerRankingCard';
 import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
@@ -32,9 +32,72 @@ interface RankingsData {
 type SortField = 'totalPoints' | 'totalKnockouts' | 'finalTables' | 'ranking' | 'avgScore' | 'finalTablePercentage' | 'pointsPerGame';
 type SortDirection = 'asc' | 'desc';
 
+interface QuarterOption {
+    quarter: number;
+    year: number;
+    label: string;
+    value: string;
+}
+
+// Helper function to generate quarter options
+function generateQuarterOptions(): QuarterOption[] {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
+
+    const options: QuarterOption[] = [];
+
+    let year = currentYear;
+    let quarter = currentQuarter;
+
+    // Generate 6 quarters (current + 5 previous)
+    for (let i = 0; i < 6; i++) {
+        const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+        const monthRanges = [
+            'Jan - Mar',
+            'Apr - Jun',
+            'Jul - Sep',
+            'Oct - Dec'
+        ];
+
+        options.push({
+            quarter,
+            year,
+            label: `${quarterLabels[quarter - 1]} ${year} (${monthRanges[quarter - 1]})`,
+            value: `${quarter}-${year}`
+        });
+
+        // Move to previous quarter
+        quarter--;
+        if (quarter === 0) {
+            quarter = 4;
+            year--;
+        }
+    }
+
+    return options;
+}
+
+// Helper function to parse quarter from URL or get default
+function getSelectedQuarterFromURL(): string {
+    if (typeof window === 'undefined') return '';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const quarterParam = urlParams.get('quarter');
+
+    if (quarterParam && /^\d-\d{4}$/.test(quarterParam)) {
+        return quarterParam;
+    }
+
+    // Default to current quarter
+    const currentDate = new Date();
+    const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
+    const currentYear = currentDate.getFullYear();
+    return `${currentQuarter}-${currentYear}`;
+}
+
 export default function QuarterlyRankings() {
     const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
-    const [isCurrentQuarter, setIsCurrentQuarter] = useState(true);
     const [loading, setLoading] = useState(true);
     const [badgesLoading, setBadgesLoading] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -49,26 +112,30 @@ export default function QuarterlyRankings() {
         direction: 'asc'
     });
 
-    const getQuarterLabel = (quarter: number) => {
-        const quarters: Record<number, string> = {
-            1: 'January - March',
-            2: 'April - June',
-            3: 'July - September',
-            4: 'October - December'
-        };
-        return quarters[quarter];
+    // Generate quarter options and get selected quarter
+    const quarterOptions = generateQuarterOptions();
+    const [selectedQuarter, setSelectedQuarter] = useState<string>(() => getSelectedQuarterFromURL());
+
+    // Update URL when quarter changes
+    const updateURL = (quarterValue: string) => {
+        if (typeof window === 'undefined') return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('quarter', quarterValue);
+        window.history.replaceState({}, '', url.toString());
     };
 
-    const currentDate = new Date();
-    const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
-    const previousQuarter = currentQuarter === 1 ? 4 : currentQuarter - 1;
-    const previousQuarterYear = currentQuarter === 1 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+    const handleQuarterChange = (quarterValue: string) => {
+        setSelectedQuarter(quarterValue);
+        updateURL(quarterValue);
+    };
 
     useEffect(() => {
         async function fetchRankings() {
             setIsTransitioning(true);
             try {
-                const response = await fetch(`/api/rankings/quarterly?currentQuarter=${isCurrentQuarter}`);
+                const [quarter, year] = selectedQuarter.split('-').map(Number);
+                const response = await fetch(`/api/rankings/quarterly?quarter=${quarter}&year=${year}`);
                 if (!response.ok) throw new Error('Failed to fetch rankings');
                 const data = await response.json();
                 setRankingsData(data);
@@ -81,12 +148,14 @@ export default function QuarterlyRankings() {
                 }, 300);
             }
         }
-        fetchRankings();
-    }, [isCurrentQuarter]);
+
+        if (selectedQuarter) {
+            fetchRankings();
+        }
+    }, [selectedQuarter]);
 
     // Fetch badges for visible players
     useEffect(() => {
-
         if (!rankingsData?.rankings || rankingsData.rankings.length === 0) return;
 
         // Skip fetching if we already have badges data for the players
@@ -142,8 +211,7 @@ export default function QuarterlyRankings() {
         };
 
         fetchBadges();
-
-    }, [rankingsData]); // Only re-run when the rankingsData changes
+    }, [rankingsData]);
 
     const handleSort = (field: SortField) => {
         setSortConfig(prevConfig => ({
@@ -171,7 +239,6 @@ export default function QuarterlyRankings() {
                 isFavorite(player.uid)
             );
         }
-
 
         // Apply sort
         return [...filteredRankings].sort((a, b) => {
@@ -231,14 +298,24 @@ export default function QuarterlyRankings() {
 
     if (!rankingsData?.rankings.length) {
         return (
-            <div className="flex items-center justify-center min-h-[400px] gap-4">
-                <DateToggler
-                    isCurrentPeriod={isCurrentQuarter}
-                    setIsCurrentPeriod={setIsCurrentQuarter}
-                    currentLabel={`Q${currentQuarter} ${currentDate.getFullYear()}`}
-                    previousLabel={`Q${previousQuarter} ${previousQuarterYear}`}
-                />
-                <div className="text-xl text-gray-600">No players found for this quarter</div>
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-white mb-2">
+                        Select Quarter:
+                    </label>
+                    <select
+                        value={selectedQuarter}
+                        onChange={(e) => handleQuarterChange(e.target.value)}
+                        className="text-black px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {quarterOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="text-xl text-white">No players found for Q{rankingsData?.quarter} {rankingsData?.year}</div>
             </div>
         );
     }
@@ -253,22 +330,30 @@ export default function QuarterlyRankings() {
                     Quarterly Rankings - Q{rankingsData.quarter} {rankingsData.year}
                 </h2>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
-                    <DateToggler
-                        isCurrentPeriod={isCurrentQuarter}
-                        setIsCurrentPeriod={setIsCurrentQuarter}
-                        currentLabel={`Q${currentQuarter} ${currentDate.getFullYear()}`}
-                        previousLabel={`Q${previousQuarter} ${previousQuarterYear}`}
-                    />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                    {/* Quarter Selector */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Quarter:
+                        </label>
+                        <select
+                            value={selectedQuarter}
+                            onChange={(e) => handleQuarterChange(e.target.value)}
+                            className="text-black px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {quarterOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <FavoritesFilter
                         showFavoritesOnly={showFavoritesOnly}
                         onToggle={() => setShowFavoritesOnly(!showFavoritesOnly)}
                         favoritesCount={favorites.length}
                     />
-
-                    <div className="text-gray-600">
-                        {getQuarterLabel(rankingsData.quarter)}
-                    </div>
                 </div>
 
                 {/* Search filter */}
@@ -290,6 +375,7 @@ export default function QuarterlyRankings() {
                         </button>
                     )}
                 </div>
+
                 {/* Badge loading indicator */}
                 {badgesLoading && (
                     <div className="text-sm text-gray-500 mb-2">
@@ -326,7 +412,7 @@ export default function QuarterlyRankings() {
                 {/* Player rankings */}
                 <div>
                     {sortedAndFilteredRankings.map((player, index) => {
-                        const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}-${isCurrentQuarter ? 'current' : 'previous'}`;
+                        const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}`;
                         return (
                             <PlayerRankingCard
                                 key={uniqueKey}

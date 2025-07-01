@@ -32,24 +32,52 @@ function serializeResults(results: any[]) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const isCurrentQuarter = searchParams.get("currentQuarter") !== "false";
 
-    // Get current date in ET
-    const currentDate = getCurrentETDate();
-    const currentYear = currentDate.getFullYear();
-    const currentQuarter = getCurrentQuarter(currentDate);
+    // Check for specific quarter and year parameters first
+    const quarterParam = searchParams.get("quarter");
+    const yearParam = searchParams.get("year");
 
-    // Determine target quarter and year
-    const targetQuarter = isCurrentQuarter
-      ? currentQuarter
-      : currentQuarter === 1
-      ? 4
-      : currentQuarter - 1;
-    const targetYear = isCurrentQuarter
-      ? currentYear
-      : currentQuarter === 1
-      ? currentYear - 1
-      : currentYear;
+    let targetQuarter: number;
+    let targetYear: number;
+
+    if (quarterParam && yearParam) {
+      // Use specific quarter and year from parameters
+      targetQuarter = parseInt(quarterParam);
+      targetYear = parseInt(yearParam);
+
+      // Validate quarter (1-4) and year
+      if (
+        targetQuarter < 1 ||
+        targetQuarter > 4 ||
+        targetYear < 2020 ||
+        targetYear > new Date().getFullYear() + 1
+      ) {
+        return NextResponse.json(
+          { error: "Invalid quarter or year parameter" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Fall back to the old currentQuarter logic for backward compatibility
+      const isCurrentQuarter = searchParams.get("currentQuarter") !== "false";
+
+      // Get current date in ET
+      const currentDate = getCurrentETDate();
+      const currentYear = currentDate.getFullYear();
+      const currentQuarter = getCurrentQuarter(currentDate);
+
+      // Determine target quarter and year
+      targetQuarter = isCurrentQuarter
+        ? currentQuarter
+        : currentQuarter === 1
+        ? 4
+        : currentQuarter - 1;
+      targetYear = isCurrentQuarter
+        ? currentYear
+        : currentQuarter === 1
+        ? currentYear - 1
+        : currentYear;
+    }
 
     // Get date range for the quarter
     const { startOfQuarter, endOfQuarter } = getQuarterDateRange(
