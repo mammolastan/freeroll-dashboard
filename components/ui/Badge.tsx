@@ -12,6 +12,7 @@ export interface BadgeData {
     rarity: number;
     earned_at: string;
     expiration?: string | null; // Add expiration field
+    description?: string | null; // Add description field from player_badges table
 }
 
 interface BadgeProps {
@@ -74,7 +75,10 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
     const tooltipContent = (
         <div>
             <h3 className="font-bold">{badge.short_description}</h3>
-            <p className="text-sm mt-1">{badge.long_description}</p>
+            <p className="text-sm mt-1">
+                {badge.long_description}
+                {badge.description && ` ${badge.description}`}
+            </p>
             <div className="text-xs mt-2 text-gray-500">
                 <div>Earned {formatDate(badge.earned_at)}</div>
                 {badge.expiration && (

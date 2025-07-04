@@ -33,7 +33,8 @@ export async function POST(request: Request) {
         b.icon,
         b.rarity,
         pb.earned_at,
-        pb.expiration
+        pb.expiration,
+        pb.description
       FROM player_badges pb
       JOIN badges b ON pb.badge_id = b.badge_id
       WHERE pb.player_uid IN (${Prisma.join(playerUIDs)})
