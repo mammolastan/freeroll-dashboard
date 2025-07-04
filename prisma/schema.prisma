@@ -80,12 +80,13 @@ model Badge {
 }
 
 model PlayerBadge {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   player_uid String
   badge_id   Int
-  earned_at  DateTime @default(now())
-  player     Player   @relation(fields: [player_uid], references: [uid])
-  badge      Badge    @relation(fields: [badge_id], references: [badge_id])
+  earned_at  DateTime  @default(now())
+  expiration DateTime? @map("expiration") @db.Date
+  player     Player    @relation(fields: [player_uid], references: [uid])
+  badge      Badge     @relation(fields: [badge_id], references: [badge_id])
 
   @@unique([player_uid, badge_id])
   @@map("player_badges")

@@ -10,8 +10,9 @@ export async function GET(
 ) {
   try {
     const playerUID = params.uid;
+    const currentDate = new Date();
 
-    // Fetch badges for the specified player
+    // Fetch badges for the specified player, filtering out expired ones
     const playerBadges = await prisma.$queryRaw`
       SELECT 
         pb.id,
@@ -20,10 +21,12 @@ export async function GET(
         b.long_description,
         b.icon,
         b.rarity,
-        pb.earned_at
+        pb.earned_at,
+        pb.expiration
       FROM player_badges pb
       JOIN badges b ON pb.badge_id = b.badge_id
       WHERE pb.player_uid = ${playerUID}
+        AND (pb.expiration IS NULL OR pb.expiration >= CURDATE())
       ORDER BY pb.earned_at DESC
     `;
 
