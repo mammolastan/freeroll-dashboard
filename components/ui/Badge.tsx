@@ -12,7 +12,6 @@ export interface BadgeData {
     rarity: number;
     earned_at: string;
     expiration?: string | null; // Add expiration field
-    description?: string | null; // Add description field from player_badges table
 }
 
 interface BadgeProps {
@@ -45,6 +44,18 @@ const isBadgeExpiringSoon = (expiration: string | null | undefined): boolean => 
     return expirationDate <= thirtyDaysFromNow && expirationDate >= now;
 };
 
+// Helper function to sort badges by rarity (highest first)
+const sortBadgesByRarity = (badges: BadgeData[]): BadgeData[] => {
+    return [...badges].sort((a, b) => {
+        // Sort by rarity descending (highest rarity first)
+        if (b.rarity !== a.rarity) {
+            return b.rarity - a.rarity;
+        }
+        // If rarity is the same, sort by earned_at descending (most recent first)
+        return new Date(b.earned_at).getTime() - new Date(a.earned_at).getTime();
+    });
+};
+
 export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) {
     const sizeClasses = {
         small: 'w-8 h-8',
@@ -75,11 +86,9 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
     const tooltipContent = (
         <div>
             <h3 className="font-bold">{badge.short_description}</h3>
-            <p className="text-sm mt-1">
-                {badge.long_description}
-                {badge.description && ` ${badge.description}`}
-            </p>
+            <p className="text-sm mt-1">{badge.long_description}</p>
             <div className="text-xs mt-2 text-gray-500">
+                <div>Rarity: {badge.rarity}%</div>
                 <div>Earned {formatDate(badge.earned_at)}</div>
                 {badge.expiration && (
                     <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
@@ -131,8 +140,11 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
     // Filter out expired badges first
     const validBadges = badges.filter(badge => !isBadgeExpired(badge.expiration));
 
-    const displayBadges = limit > 0 ? validBadges.slice(0, limit) : validBadges;
-    const hasMoreBadges = limit > 0 && validBadges.length > limit;
+    // Sort badges by rarity (highest first), then by earned_at (most recent first)
+    const sortedBadges = sortBadgesByRarity(validBadges);
+
+    const displayBadges = limit > 0 ? sortedBadges.slice(0, limit) : sortedBadges;
+    const hasMoreBadges = limit > 0 && sortedBadges.length > limit;
 
     return (
         <>
@@ -154,11 +166,11 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
                 flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold
                 ${size === 'small' ? 'w-8 h-8 text-xs' : size === 'medium' ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
               `}>
-                                    +{validBadges.length - limit}
+                                    +{sortedBadges.length - limit}
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {validBadges.length - limit} more badge{validBadges.length - limit !== 1 ? 's' : ''}
+                                {sortedBadges.length - limit} more badge{sortedBadges.length - limit !== 1 ? 's' : ''}
                             </TooltipContent>
                         </TooltipRoot>
                     </TooltipProvider>
