@@ -88,7 +88,15 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
             <h3 className="font-bold">{badge.short_description}</h3>
             <p className="text-sm mt-1">{badge.long_description}</p>
             <div className="text-xs mt-2 text-gray-500">
-                <div>Rarity: {badge.rarity}%</div>
+                <div>Rarity: {badge.rarity > 99 ? (
+                    <span className="text-purple-600">Legendary</span>
+                ) : badge.rarity > 66 ? (
+                    <span className="text-red-600">Rare</span>
+                ) : badge.rarity > 33 ? (
+                    <span className="text-yellow-600">Uncommon</span>
+                ) : (
+                    <span className="text-green-600">Common</span>
+                )}%</div>
                 <div>Earned {formatDate(badge.earned_at)}</div>
                 {badge.expiration && (
                     <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
