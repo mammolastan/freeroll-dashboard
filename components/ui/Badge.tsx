@@ -11,7 +11,8 @@ export interface BadgeData {
     icon: string;
     rarity: number;
     earned_at: string;
-    expiration?: string | null; // Add expiration field
+    expiration?: string | null;
+    description?: string | null; // Description from player_badges table
 }
 
 interface BadgeProps {
@@ -87,6 +88,9 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
         <div>
             <h3 className="font-bold">{badge.short_description}</h3>
             <p className="text-sm mt-1">{badge.long_description}</p>
+            {badge.description && (
+                <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
+            )}
             <div className="text-xs mt-2 text-gray-500">
                 <div>{badge.rarity > 99 ? (
                     <span className="text-purple-600">Legendary</span>
