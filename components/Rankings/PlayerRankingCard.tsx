@@ -92,7 +92,7 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                                         <BadgeGroup
                                             badges={player.badges}
                                             size="small"
-                                            limit={3}
+                                            limit={5}
                                             showName={false}
                                         />
                                     </div>
