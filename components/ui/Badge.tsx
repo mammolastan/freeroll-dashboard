@@ -160,7 +160,7 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
 
     return (
         <>
-            <div className="items-center gap-1 text-center">
+            <div className="items-center gap-1">
                 {displayBadges.map(badge => (
                     <Badge
                         key={badge.id}

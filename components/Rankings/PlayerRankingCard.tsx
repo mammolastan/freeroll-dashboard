@@ -134,7 +134,7 @@ export function PlayerRankingCard({ player, favoriteButton }: PlayerRankingCardP
                                 {/* Points */}
                                 <div className="flex items-center p-2 bg-green-50">
                                     <Trophy className="w-4 h-4 text-green-600 mr-2 sm:hidden" />
-                                    <span className="font-medium text-green-700">{player.totalPoints}</span>
+                                    <span className="font-medium text-green-700">{player.totalPoints ? player.totalPoints : 0}</span>
                                 </div>
                                 {/* Power Rating */}
                                 <div className="flex items-center p-2 bg-orange-50">
