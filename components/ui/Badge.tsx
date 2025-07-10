@@ -85,29 +85,41 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
     const isExpiringSoon = isBadgeExpiringSoon(badge.expiration);
 
     const tooltipContent = (
-        <div>
-            <h3 className="font-bold">{badge.short_description}</h3>
-            <p className="text-sm mt-1">{badge.long_description}</p>
-            {badge.description && (
-                <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
-            )}
-            <div className="text-xs mt-2 text-gray-500">
-                <div>{badge.rarity > 99 ? (
-                    <span className="text-purple-600">Legendary</span>
-                ) : badge.rarity > 66 ? (
-                    <span className="text-red-600">Rare</span>
-                ) : badge.rarity > 33 ? (
-                    <span className="text-yellow-600">Uncommon</span>
-                ) : (
-                    <span className="text-green-600">Common</span>
-                )}</div>
-                <div>Earned {formatDate(badge.earned_at)}</div>
-                {badge.expiration && (
-                    <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
-                        {isExpiringSoon ? '⚠️ ' : ''}
-                        Expires {formatDate(badge.expiration)}
-                    </div>
+        <div className="flex flex-col items-center gap-3">
+            {/* Large badge icon */}
+            <div className="w-16 h-16 flex-shrink-0">
+                <img
+                    alt={badge.name}
+                    src={`${getIconPath(badge.icon)}`}
+                    className="w-full h-full object-contain"
+                />
+            </div>
+
+            {/* Badge details */}
+            <div className="text-center">
+                <h3 className="font-bold">{badge.short_description}</h3>
+                <p className="text-sm mt-1">{badge.long_description}</p>
+                {badge.description && (
+                    <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
                 )}
+                <div className="text-xs mt-2 text-gray-300">
+                    <div>{badge.rarity > 99 ? (
+                        <span className="text-purple-400">Legendary</span>
+                    ) : badge.rarity > 66 ? (
+                        <span className="text-red-400">Rare</span>
+                    ) : badge.rarity > 33 ? (
+                        <span className="text-yellow-400">Uncommon</span>
+                    ) : (
+                        <span className="text-green-400">Common</span>
+                    )}</div>
+                    <div>Earned {formatDate(badge.earned_at)}</div>
+                    {badge.expiration && (
+                        <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
+                            {isExpiringSoon ? '⚠️ ' : ''}
+                            Expires {formatDate(badge.expiration)}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
