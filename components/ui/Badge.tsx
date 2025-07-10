@@ -86,6 +86,7 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
 
     const tooltipContent = (
         <div className="flex flex-col items-center gap-3">
+            <h3 className="font-bold">{badge.short_description}</h3>
             {/* Large badge icon */}
             <div className="w-16 h-16 flex-shrink-0">
                 <img
@@ -97,7 +98,6 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
 
             {/* Badge details */}
             <div className="text-center">
-                <h3 className="font-bold">{badge.short_description}</h3>
                 <p className="text-sm mt-1">{badge.long_description}</p>
                 {badge.description && (
                     <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
