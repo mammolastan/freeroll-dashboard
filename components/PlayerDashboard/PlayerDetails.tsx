@@ -229,11 +229,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                         <div className="items-center text-center m-2">
                             <h3>Achievements</h3>
                             <BadgeGroup badges={badges} size="large" />
-                            {badges.length > 5 && (
-                                <span className="text-sm text-gray-500 ml-2">
-                                    + {badges.length - 5} more
-                                </span>
-                            )}
+
                         </div>
                     )}
                     {/* date selector */}
