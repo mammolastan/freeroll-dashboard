@@ -85,41 +85,29 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
     const isExpiringSoon = isBadgeExpiringSoon(badge.expiration);
 
     const tooltipContent = (
-        <div className="flex flex-col items-center gap-3">
+        <div>
             <h3 className="font-bold">{badge.short_description}</h3>
-            {/* Large badge icon */}
-            <div className="w-16 h-16 flex-shrink-0">
-                <img
-                    alt={badge.name}
-                    src={`${getIconPath(badge.icon)}`}
-                    className="w-full h-full object-contain"
-                />
-            </div>
-
-            {/* Badge details */}
-            <div className="text-center">
-                <p className="text-sm mt-1">{badge.long_description}</p>
-                {badge.description && (
-                    <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
+            <p className="text-sm mt-1">{badge.long_description}</p>
+            {badge.description && (
+                <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
+            )}
+            <div className="text-xs mt-2 text-gray-500">
+                <div>{badge.rarity > 99 ? (
+                    <span className="text-purple-600">Legendary</span>
+                ) : badge.rarity > 66 ? (
+                    <span className="text-red-600">Rare</span>
+                ) : badge.rarity > 33 ? (
+                    <span className="text-yellow-600">Uncommon</span>
+                ) : (
+                    <span className="text-green-600">Common</span>
+                )}</div>
+                <div>Earned {formatDate(badge.earned_at)}</div>
+                {badge.expiration && (
+                    <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
+                        {isExpiringSoon ? '⚠️ ' : ''}
+                        Expires {formatDate(badge.expiration)}
+                    </div>
                 )}
-                <div className="text-xs mt-2 text-gray-300">
-                    <div>{badge.rarity > 99 ? (
-                        <span className="text-purple-400">Legendary</span>
-                    ) : badge.rarity > 66 ? (
-                        <span className="text-red-400">Rare</span>
-                    ) : badge.rarity > 33 ? (
-                        <span className="text-yellow-400">Uncommon</span>
-                    ) : (
-                        <span className="text-green-400">Common</span>
-                    )}</div>
-                    <div>Earned {formatDate(badge.earned_at)}</div>
-                    {badge.expiration && (
-                        <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
-                            {isExpiringSoon ? '⚠️ ' : ''}
-                            Expires {formatDate(badge.expiration)}
-                        </div>
-                    )}
-                </div>
             </div>
         </div>
     );
@@ -171,35 +159,33 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
     const hasMoreBadges = limit > 0 && sortedBadges.length > limit;
 
     return (
-        <>
-            <div className="items-center gap-1">
-                {displayBadges.map(badge => (
-                    <Badge
-                        key={badge.id}
-                        badge={badge}
-                        size={size}
-                        showName={showName}
-                    />
-                ))}
+        <div className="flex items-center gap-1 flex-wrap">
+            {displayBadges.map(badge => (
+                <Badge
+                    key={badge.id}
+                    badge={badge}
+                    size={size}
+                    showName={showName}
+                />
+            ))}
 
-                {hasMoreBadges && (
-                    <TooltipProvider>
-                        <TooltipRoot>
-                            <TooltipTrigger asChild>
-                                <div className={`
-                flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold
-                ${size === 'small' ? 'w-8 h-8 text-xs' : size === 'medium' ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
-              `}>
-                                    +{sortedBadges.length - limit}
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                {sortedBadges.length - limit} more badge{sortedBadges.length - limit !== 1 ? 's' : ''}
-                            </TooltipContent>
-                        </TooltipRoot>
-                    </TooltipProvider>
-                )}
-            </div>
-        </>
+            {hasMoreBadges && (
+                <TooltipProvider>
+                    <TooltipRoot>
+                        <TooltipTrigger asChild>
+                            <div className={`
+                                flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold
+                                ${size === 'small' ? 'w-8 h-8 text-xs' : size === 'medium' ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
+                            `}>
+                                +{sortedBadges.length - limit}
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {sortedBadges.length - limit} more badge{sortedBadges.length - limit !== 1 ? 's' : ''}
+                        </TooltipContent>
+                    </TooltipRoot>
+                </TooltipProvider>
+            )}
+        </div>
     );
 }
