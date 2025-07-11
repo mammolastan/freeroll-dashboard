@@ -85,8 +85,17 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
     const isExpiringSoon = isBadgeExpiringSoon(badge.expiration);
 
     const tooltipContent = (
-        <div>
+        <div className="flex flex-col items-center gap-3">
             <h3 className="font-bold">{badge.short_description}</h3>
+            {/* Large badge icon */}
+            <div className="w-16 h-16 flex-shrink-0">
+                <img
+                    alt={badge.name}
+                    src={`${getIconPath(badge.icon)}`}
+                    className="w-full h-full object-contain"
+                />
+            </div>
+
             <p className="text-sm mt-1">{badge.long_description}</p>
             {badge.description && (
                 <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
