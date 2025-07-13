@@ -1,7 +1,8 @@
 // components/Rankings/MonthlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { PlayerRankingCard, DateToggler } from '@/components/Rankings/PlayerRankingCard';
+import { MonthlyPlayerCard } from '@/components/Rankings/MonthlyPlayerCard';
+import { DateToggler } from '@/components/Rankings/DateToggler';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface VenueRanking {
@@ -34,6 +35,7 @@ export default function MonthlyRankings() {
     const [selectedVenue, setSelectedVenue] = useState<string>('all');
     const [availableVenues, setAvailableVenues] = useState<string[]>([]);
     const [filterText, setFilterText] = useState('');
+
     useEffect(() => {
         async function fetchRankings() {
             setIsTransitioning(true);
@@ -198,9 +200,9 @@ export default function MonthlyRankings() {
             {/* Rankings Grid */}
             <div className="">
                 {getFilteredRankings().map((player) => (
-                    <PlayerRankingCard
+                    <MonthlyPlayerCard
                         key={player.uid}
-                        player={{ ...player, type: 'monthly' }}
+                        player={player}
                     />
                 ))}
             </div>

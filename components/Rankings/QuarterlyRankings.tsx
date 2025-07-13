@@ -1,7 +1,7 @@
 // components/Rankings/QuarterlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { PlayerRankingCard } from '@/components/Rankings/PlayerRankingCard';
+import { QuarterlyPlayerCard } from '@/components/Rankings/QuarterlyPlayerCard';
 import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
@@ -414,12 +414,9 @@ export default function QuarterlyRankings() {
                     {sortedAndFilteredRankings.map((player, index) => {
                         const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}`;
                         return (
-                            <PlayerRankingCard
+                            <QuarterlyPlayerCard
                                 key={uniqueKey}
-                                player={{
-                                    ...player,
-                                    type: 'quarterly'
-                                }}
+                                player={player}
                                 favoriteButton={
                                     <FavoriteButton
                                         uid={player.uid}

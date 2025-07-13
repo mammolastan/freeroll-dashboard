@@ -21,13 +21,6 @@ interface BadgeProps {
     showName?: boolean;
 }
 
-const rarityColors = (rarity: number) => {
-    if (rarity < 33) return 'bg-gray-200 border-gray-400';
-    if (rarity >= 33 && rarity <= 66) return 'bg-green-100 border-green-500';
-    if (rarity > 66 && rarity <= 99) return 'bg-blue-100 border-blue-500';
-    return 'bg-purple-100 border-purple-500';
-};
-
 // Helper function to check if badge is expired
 const isBadgeExpired = (expiration: string | null | undefined): boolean => {
     if (!expiration) return false; // No expiration means it doesn't expire
