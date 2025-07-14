@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { QuarterlyPlayerCard } from './QuarterlyPlayerCard'; // Updated import
 import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
-import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
+import { useFavorites, FavoritesFilter } from './FavoritesComponents';
 import { BadgeData } from '../ui/Badge';
 
 interface PlayerRanking {
@@ -399,7 +399,6 @@ export default function QuarterlyRankings() {
                                 label="Points"
                                 bg="stat1"
                                 icon="Trophy"
-                            // Pass an extra prop to force arrow opacity if needed
                             />
                         </div>
                         <SortableHeader field="avgScore" label="Power Rating" bg="stat2" icon="Zap" />
@@ -417,13 +416,8 @@ export default function QuarterlyRankings() {
                             <QuarterlyPlayerCard
                                 key={uniqueKey}
                                 player={player}
-                                favoriteButton={
-                                    <FavoriteButton
-                                        uid={player.uid}
-                                        isFavorite={isFavorite(player.uid)}
-                                        onToggle={toggleFavorite}
-                                    />
-                                }
+                                isFavorite={isFavorite(player.uid)}
+                                onToggleFavorite={toggleFavorite}
                             />
                         );
                     })}

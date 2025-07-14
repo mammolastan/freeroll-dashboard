@@ -24,10 +24,11 @@ interface QuarterlyPlayer {
 
 interface QuarterlyPlayerCardProps {
     player: QuarterlyPlayer;
-    favoriteButton?: React.ReactNode;
+    isFavorite?: boolean;
+    onToggleFavorite?: (uid: string) => void;
 }
 
-export function QuarterlyPlayerCard({ player, favoriteButton }: QuarterlyPlayerCardProps) {
+export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: QuarterlyPlayerCardProps) {
     const displayName = player.nickname || player.name;
 
     // Stats for the grid (Power Rating, Final Tables, FTP, PPG)
@@ -54,19 +55,33 @@ export function QuarterlyPlayerCard({ player, favoriteButton }: QuarterlyPlayerC
         }
     ];
 
+    const handleRankingClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onToggleFavorite) {
+            onToggleFavorite(player.uid);
+        }
+    };
+
     return (
         <div className={`playerCardContainer ${player.isQualified ? 'qualified' : ''}`}>
-            {/* Ranking Badge */}
-            <div className="ranking">
+            {/* Ranking Badge - now clickable for favorites */}
+            <div
+                className={`ranking ${isFavorite ? 'favorited' : ''}`}
+                onClick={handleRankingClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleRankingClick(e as any);
+                    }
+                }}
+                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
                 <p className="rank">{player.ranking}</p>
             </div>
-
-            {/* Favorite Button */}
-            {favoriteButton && (
-                <div className="favorite">
-                    {favoriteButton}
-                </div>
-            )}
 
             {/* Profile Picture Placeholder */}
             <div className="profilePicture">

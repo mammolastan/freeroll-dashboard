@@ -38,7 +38,13 @@
   align-items: center;
   justify-content: center;
   font-size: 125%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px #000;
+  transition: all 0.3s ease;
+}
+.ranking:hover {
+  /* background-color: rgba(255, 255, 0, 0.7); */
+  box-shadow: 0 2px 8px #ffff00;
+  transform: scale(1.1);
 }
 
 .rank {
@@ -48,10 +54,18 @@
   font-size: 14px;
 }
 
+.ranking.favorited {
+  background-color: #ff0;
+  box-shadow: 0 2px 8px #ff0000;
+  transform: scale(1.1);
+  z-index: 10;
+}
+
 .favorite {
   position: absolute;
   bottom: 0;
   left: 0;
+  display: none;
 }
 
 .profilePicture {
@@ -181,7 +195,28 @@
 
   .playerName {
     margin-right: 10px;
-    max-width: 150px;
+  }
+  .mainStat {
+    flex-direction: row;
+  }
+
+  .statMain {
+    font-size: 100%;
+  }
+  .statGrid {
+    display: flex;
+  }
+
+  .statGridItem {
+    width: 80px;
+    flex-direction: row;
+  }
+  .playerCardContainer {
+    margin: 1px 0;
+  }
+  .ranking {
+    position: initial;
+    height: unset;
   }
 }
 
