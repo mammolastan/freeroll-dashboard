@@ -49,7 +49,7 @@ export function FavoriteButton({
                 e.stopPropagation();
                 onToggle(uid);
             }}
-            className={`p-1 rounded-full transition-all duration-200 
+            className={`transition-all duration-200 
                 ${isFavorite
                     ? 'text-yellow-500 hover:text-yellow-600'
                     : 'text-gray-400 hover:text-yellow-500'}`}

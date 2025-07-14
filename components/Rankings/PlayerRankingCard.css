@@ -1,0 +1,211 @@
+/* components/Rankings/PlayerRankingCard.css */
+
+.playerCardContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  background-color: #d6b8b8;
+  position: relative;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.playerCardContainer:nth-of-type(odd) {
+  background-color: #e0eafc;
+}
+
+.playerCardContainer:hover {
+  background-color: #dd8b8b;
+  padding: 0px 5px;
+}
+
+.infoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 25px;
+}
+
+.ranking {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 125%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.rank {
+  margin: 0;
+  font-weight: bold;
+  color: #333;
+  font-size: 14px;
+}
+
+.favorite {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.profilePicture {
+  display: flex;
+  align-items: center;
+  display: none; /* Hide for now */
+}
+
+.profilePicture img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.playerName {
+  font-size: 1em;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.statsContainer {
+  margin-left: auto;
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.mainStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--stat1);
+  height: 100%;
+  padding: 0 15px;
+  min-width: 80px;
+}
+
+.mainStatIcon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 4px;
+}
+
+.statMain {
+  font-weight: bold;
+  color: #222;
+  text-align: center;
+  font-size: 200%;
+  margin: 0;
+  line-height: 1;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 0;
+  align-items: center;
+  height: 100%;
+  min-width: 120px;
+}
+
+.statGridItem {
+  text-align: center;
+  height: 100%;
+  margin: 0;
+  padding: 8px 4px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.statGridItem:nth-child(1) {
+  background-color: var(--stat2);
+}
+
+.statGridItem:nth-child(2) {
+  background-color: var(--stat3);
+}
+
+.statGridItem:nth-child(3) {
+  background-color: var(--stat4);
+}
+
+.statGridItem:nth-child(4) {
+  background-color: var(--stat5);
+}
+
+.statIcon {
+  width: 12px;
+  height: 12px;
+  margin-bottom: 2px;
+}
+
+.statValue {
+  margin: 0;
+  line-height: 1;
+  font-size: 11px;
+}
+
+/* Responsive adjustments */
+@media screen and (min-width: 768px) {
+  .infoContainer {
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .playerName {
+    margin-right: 10px;
+    max-width: 150px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .mainStat {
+    padding: 0 10px;
+    min-width: 60px;
+  }
+
+  .statMain {
+    font-size: 150%;
+  }
+
+  .statGrid {
+    min-width: 100px;
+  }
+
+  .statGridItem {
+    padding: 4px 2px;
+    font-size: 10px;
+  }
+
+  .statIcon {
+    width: 10px;
+    height: 10px;
+  }
+}

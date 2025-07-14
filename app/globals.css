@@ -5,6 +5,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --stat1: hsl(110, 15%, 80%);
+  --stat2: hsl(0, 30%, 75%);
+  --stat3: hsl(40, 40%, 70%);
+  --stat4: hsl(50, 50%, 80%);
+  --stat5: hsl(300, 35%, 60%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,4 +42,20 @@ a.freeroll-link:where(:hover, :focus-visible) {
 
 a.freeroll-link:active {
   color: darkred;
+}
+
+.stat1 {
+  background: var(--stat1);
+}
+.stat2 {
+  background: var(--stat2);
+}
+.stat3 {
+  background: var(--stat3);
+}
+.stat4 {
+  background: var(--stat4);
+}
+.stat5 {
+  background: var(--stat5);
 }

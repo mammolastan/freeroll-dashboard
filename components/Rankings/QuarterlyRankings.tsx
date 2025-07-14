@@ -1,7 +1,7 @@
 // components/Rankings/QuarterlyRankings.tsx
 
 import React, { useState, useEffect } from 'react';
-import { QuarterlyPlayerCard } from '@/components/Rankings/QuarterlyPlayerCard';
+import { QuarterlyPlayerCard } from './QuarterlyPlayerCard'; // Updated import
 import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoriteButton, FavoritesFilter } from './FavoritesComponents';
@@ -272,14 +272,18 @@ export default function QuarterlyRankings() {
         return (
             <button
                 onClick={() => handleSort(field)}
-                className={`bg-${bg}-50 flex flex-col items-center p-2 w-full transition-colors
-                    ${field === sortConfig.field ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+                className={`${bg} flex flex-col items-center p-2 w-full transition-colors`}
             >
                 <div className="flex items-center gap-1">
                     {IconComponent && <IconComponent size={14} className="text-gray-600" />}
                     <span className="text-gray-600">{label}</span>
-                    <ArrowUpDown size={14} className={`transition-opacity ${field === sortConfig.field ? 'opacity-100' : 'opacity-50'
-                        }`} />
+                    <ArrowUpDown
+                        size={14}
+                        className={`text-blue-600 transition-opacity ${field === sortConfig.field || (field === 'totalPoints' && sortConfig.field === 'ranking')
+                            ? 'opacity-100'
+                            : 'opacity-20'
+                            }`}
+                    />
                 </div>
             </button>
         );
@@ -323,14 +327,14 @@ export default function QuarterlyRankings() {
     const sortedAndFilteredRankings = getSortedAndFilteredRankings();
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto py-8">
             {/* Header section */}
             <div className="mb-8">
                 <h2 className="text-2xl font-bold mb-4">
                     Quarterly Rankings - Q{rankingsData.quarter} {rankingsData.year}
                 </h2>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row items-center lg:items-end gap-4 mb-4">
                     {/* Quarter Selector */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -384,32 +388,28 @@ export default function QuarterlyRankings() {
                 )}
             </div>
 
-            {/* Rankings section with sticky header */}
+            {/* Rankings section with optional sortable headers */}
             <div className="relative">
-                {/* Sticky column headers */}
-                <div className="md:sticky top-0 bg-white shadow-sm z-10 border-b">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                        <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="text-lg font-medium text-gray-600 truncate">
-                                    Player
-                                </div>
-                            </div>
+                {/* Optional: Keep sortable headers if needed */}
+                <div className="mb-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 text-sm gap-1">
+                        <div className="col-span-2 sm:col-span-1">
+                            <SortableHeader
+                                field="totalPoints"
+                                label="Points"
+                                bg="stat1"
+                                icon="Trophy"
+                            // Pass an extra prop to force arrow opacity if needed
+                            />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="grid grid-cols-2 sm:grid-cols-6 text-sm">
-                                <SortableHeader field="totalPoints" label="Points" bg="green" icon="Trophy" />
-                                <SortableHeader field="avgScore" label="Power Rating" bg="orange" icon="Zap" />
-                                <SortableHeader field="finalTables" label="Final Tables" bg="purple" icon="Hexagon" />
-                                <SortableHeader field="finalTablePercentage" label="FTP" bg="indigo" icon="LandPlot" />
-                                <SortableHeader field="pointsPerGame" label="PPG" bg="pink" icon="Calculator" />
-                                <SortableHeader field="totalKnockouts" label="KOs" bg="red" icon="Swords" />
-                            </div>
-                        </div>
+                        <SortableHeader field="avgScore" label="Power Rating" bg="stat2" icon="Zap" />
+                        <SortableHeader field="finalTables" label="Final Tables" bg="stat3" icon="Hexagon" />
+                        <SortableHeader field="finalTablePercentage" label="FTP" bg="stat4" icon="LandPlot" />
+                        <SortableHeader field="pointsPerGame" label="PPG" bg="stat5" icon="Calculator" />
                     </div>
                 </div>
 
-                {/* Player rankings */}
+                {/* Player rankings using new card layout */}
                 <div>
                     {sortedAndFilteredRankings.map((player, index) => {
                         const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}`;
