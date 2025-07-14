@@ -119,7 +119,7 @@ export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: Qu
                         <BadgeGroup
                             badges={player.badges}
                             size="small"
-                            limit={5}
+                            limit={7}
                             showName={false}
                         />
                     </div>

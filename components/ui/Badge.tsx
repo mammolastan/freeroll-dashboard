@@ -1,7 +1,6 @@
-// components/ui/Badge.tsx
-import React from 'react';
-import { TooltipProvider, MobileTooltipTrigger, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import Image from 'next/image';
+// Updated Badge.tsx component
+import React, { useState } from 'react';
+import { BadgeModal } from './BadgeModal';
 
 export interface BadgeData {
     id: string;
@@ -12,7 +11,7 @@ export interface BadgeData {
     rarity: number;
     earned_at: string;
     expiration?: string | null;
-    description?: string | null; // Description from player_badges table
+    description?: string | null;
 }
 
 interface BadgeProps {
@@ -23,7 +22,7 @@ interface BadgeProps {
 
 // Helper function to check if badge is expired
 const isBadgeExpired = (expiration: string | null | undefined): boolean => {
-    if (!expiration) return false; // No expiration means it doesn't expire
+    if (!expiration) return false;
     const now = new Date();
     const expirationDate = new Date(expiration);
     return expirationDate < now;
@@ -39,35 +38,22 @@ const isBadgeExpiringSoon = (expiration: string | null | undefined): boolean => 
 };
 
 // Helper function to sort badges by rarity (highest first)
-const sortBadgesByRarity = (badges: BadgeData[]): BadgeData[] => {
+const sortBadgesByrarity = (badges: BadgeData[]): BadgeData[] => {
     return [...badges].sort((a, b) => {
-        // Sort by rarity descending (highest rarity first)
         if (b.rarity !== a.rarity) {
             return b.rarity - a.rarity;
         }
-        // If rarity is the same, sort by earned_at descending (most recent first)
         return new Date(b.earned_at).getTime() - new Date(a.earned_at).getTime();
     });
 };
 
 export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const sizeClasses = {
         small: 'w-8 h-8',
         medium: 'w-12 h-12',
         large: 'w-16 h-16'
-    };
-
-    const getIconPath = (iconName: string) => {
-        return `/images/badges/${iconName}`;
-    };
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
     };
 
     // Don't render expired badges
@@ -77,71 +63,56 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
 
     const isExpiringSoon = isBadgeExpiringSoon(badge.expiration);
 
-    const tooltipContent = (
-        <div className="flex flex-col items-center gap-3">
-            <h3 className="font-bold">{badge.short_description}</h3>
-            {/* Large badge icon */}
-            <div className="w-16 h-16 flex-shrink-0">
-                <img
-                    alt={badge.name}
-                    src={`${getIconPath(badge.icon)}`}
-                    className="w-full h-full object-contain"
-                />
-            </div>
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsModalOpen(true);
+    };
 
-            <p className="text-sm mt-1">{badge.long_description}</p>
-            {badge.description && (
-                <p className="text-sm mt-1 text-blue-200">{badge.description}</p>
-            )}
-            <div className="text-xs mt-2 text-gray-500">
-                <div>{badge.rarity > 99 ? (
-                    <span className="text-purple-600">Legendary</span>
-                ) : badge.rarity > 66 ? (
-                    <span className="text-red-600">Rare</span>
-                ) : badge.rarity > 33 ? (
-                    <span className="text-yellow-600">Uncommon</span>
-                ) : (
-                    <span className="text-green-600">Common</span>
-                )}</div>
-                <div>Earned {formatDate(badge.earned_at)}</div>
-                {badge.expiration && (
-                    <div className={isExpiringSoon ? 'text-yellow-400 font-medium' : ''}>
-                        {isExpiringSoon ? '⚠️ ' : ''}
-                        Expires {formatDate(badge.expiration)}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsModalOpen(true);
+        }
+    };
 
     return (
-        <TooltipProvider delayDuration={300} skipDelayDuration={0}>
-            <MobileTooltipTrigger content={tooltipContent}>
-                <div className="inline-flex flex-col items-center mr-1">
-                    <div
-                        className={`${sizeClasses[size]} overflow-hidden transition-transform hover:scale-110 relative`}
-                    >
-                        <div className="relative w-full h-full">
-                            <img
-                                alt={badge.name}
-                                src={`${getIconPath(badge.icon)}`}
-                                width={`${size === 'small' ? '32px' : size === 'medium' ? '48px' : '64px'}`}
-                            />
+        <>
+            <div className="inline-flex flex-col items-center mr-1">
+                <div
+                    className={`${sizeClasses[size]} overflow-hidden transition-transform hover:scale-110 cursor-pointer relative`}
+                    onClick={handleClick}
+                    onKeyDown={handleKeyDown}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View details for ${badge.short_description} achievement`}
+                >
+                    <div className="relative w-full h-full">
+                        <img
+                            alt={badge.name}
+                            src={`/images/badges/${badge.icon}`}
+                            className="w-full h-full object-contain"
+                        />
 
-                            {/* Expiring soon indicator */}
-                            {isExpiringSoon && (
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 border border-yellow-600 rounded-full animate-pulse" />
-                            )}
-                        </div>
+                        {/* Expiring soon indicator */}
+                        {isExpiringSoon && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 border border-yellow-600 rounded-full animate-pulse" />
+                        )}
                     </div>
-                    {showName && (
-                        <span className={`text-xs mt-1 text-center max-w-[80px] ${isExpiringSoon ? 'text-yellow-600' : ''}`}>
-                            {badge.short_description}
-                        </span>
-                    )}
                 </div>
-            </MobileTooltipTrigger>
-        </TooltipProvider>
+                {showName && (
+                    <span className={`text-xs mt-1 text-center max-w-[80px] ${isExpiringSoon ? 'text-yellow-600' : ''}`}>
+                        {badge.short_description}
+                    </span>
+                )}
+            </div>
+
+            <BadgeModal
+                badge={badge}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
+        </>
     );
 }
 
@@ -155,7 +126,7 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
     const validBadges = badges.filter(badge => !isBadgeExpired(badge.expiration));
 
     // Sort badges by rarity (highest first), then by earned_at (most recent first)
-    const sortedBadges = sortBadgesByRarity(validBadges);
+    const sortedBadges = sortBadgesByrarity(validBadges);
 
     const displayBadges = limit > 0 ? sortedBadges.slice(0, limit) : sortedBadges;
     const hasMoreBadges = limit > 0 && sortedBadges.length > limit;
@@ -172,21 +143,12 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
             ))}
 
             {hasMoreBadges && (
-                <TooltipProvider>
-                    <TooltipRoot>
-                        <TooltipTrigger asChild>
-                            <div className={`
-                                flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold
-                                ${size === 'small' ? 'w-8 h-8 text-xs' : size === 'medium' ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
-                            `}>
-                                +{sortedBadges.length - limit}
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {sortedBadges.length - limit} more badge{sortedBadges.length - limit !== 1 ? 's' : ''}
-                        </TooltipContent>
-                    </TooltipRoot>
-                </TooltipProvider>
+                <div className={`
+                    flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-semibold cursor-pointer hover:bg-gray-300 transition-colors
+                    ${size === 'small' ? 'w-8 h-8 text-xs' : size === 'medium' ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
+                `}>
+                    +{sortedBadges.length - limit}
+                </div>
             )}
         </div>
     );
