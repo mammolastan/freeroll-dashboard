@@ -73,13 +73,7 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
                 {/* Header */}
                 <div className="badge-modal-header">
                     <h2 className="badge-modal-title">{badge.short_description}</h2>
-                    <button
-                        onClick={onClose}
-                        className="badge-modal-close-btn"
-                        aria-label="Close modal"
-                    >
-                        <X size={24} />
-                    </button>
+
                 </div>
 
                 {/* Content */}
@@ -130,7 +124,6 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
                                 <span className={`badge-modal-detail-value ${isExpiringSoon ? 'expiring' : ''}`}>
                                     {isExpiringSoon && '⚠️ '}
                                     {formatDate(badge.expiration)}
-                                    {isExpiringSoon && ' (Soon)'}
                                 </span>
                             </div>
                         )}
