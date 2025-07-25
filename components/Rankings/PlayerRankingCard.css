@@ -17,7 +17,10 @@
 
 .playerCardContainer:hover {
   background-color: #dd8b8b;
-  padding: 0px 5px;
+}
+
+.playerCardContainer:hover .mainStat {
+  padding: 10px 0px;
 }
 
 .infoContainer {
@@ -42,7 +45,6 @@
   transition: all 0.3s ease;
 }
 .ranking:hover {
-  /* background-color: rgba(255, 255, 0, 0.7); */
   box-shadow: 0 2px 8px #ffff00;
   transform: scale(1.1);
 }
@@ -115,6 +117,7 @@
   height: 100%;
   padding: 0 15px;
   min-width: 80px;
+  transition: padding 0.3s ease;
 }
 
 .mainStatIcon {

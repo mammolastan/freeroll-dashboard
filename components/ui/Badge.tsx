@@ -12,6 +12,7 @@ export interface BadgeData {
     earned_at: string;
     expiration?: string | null;
     description?: string | null;
+    tier?: string | null;
 }
 
 interface BadgeProps {

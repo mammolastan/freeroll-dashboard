@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         b.long_description,
         b.icon,
         b.rarity,
+        b.tier,
         pb.earned_at,
         pb.expiration,
         pb.description
