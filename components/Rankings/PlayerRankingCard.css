@@ -44,9 +44,14 @@
   box-shadow: 0 2px 8px #000;
   transition: all 0.3s ease;
 }
+
 .ranking:hover {
   box-shadow: 0 2px 8px #ffff00;
   transform: scale(1.1);
+}
+
+.qualified .ranking {
+  background-color: #00ff00;
 }
 
 .rank {
