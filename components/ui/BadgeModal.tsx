@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { BadgeData } from './Badge';
 import './BadgeModal.css';
+import { get } from 'http';
 
 interface BadgeModalProps {
     badge: BadgeData;
@@ -63,7 +64,7 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
 
     return (
         <div
-            className="badge-modal-overlay"
+            className={`badge-modal-overlay ${getRarityInfo(badge.rarity).className}`}
             onClick={handleBackdropClick}
         >
             <div
