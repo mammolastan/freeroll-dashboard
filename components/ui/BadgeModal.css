@@ -171,7 +171,6 @@
 }
 
 .badge-modal-achievement-text {
-  color: #1e40af;
   font-size: 0.875rem;
   margin: 0;
 }
@@ -241,6 +240,11 @@
   .badge-modal-title {
     color: #00a400;
   }
+  .badge-modal-achievement-box {
+    background-color: #00ff00;
+    color: #000;
+  }
+
   .badge-modal-footer-btn {
     background-color: #00ff00;
     color: #000;
@@ -250,8 +254,13 @@
   .badge-modal-title {
     color: #abab41;
   }
+  .badge-modal-achievement-box {
+    background-color: #e4e400;
+    color: #000;
+  }
+
   .badge-modal-footer-btn {
-    background-color: #ffff00;
+    background-color: #e4e400;
     color: #000;
   }
 }
@@ -259,6 +268,10 @@
 .rare {
   .badge-modal-title {
     color: #ff0000;
+  }
+  .badge-modal-achievement-box {
+    background-color: #ad0000;
+    color: #fff;
   }
   .badge-modal-footer-btn {
     background-color: #ad0000;
