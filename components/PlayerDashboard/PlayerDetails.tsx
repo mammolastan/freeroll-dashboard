@@ -13,6 +13,7 @@ import VenueSelector from './VenueSelector';
 import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
 import { HelpCircle, Swords } from "lucide-react"
 import { KnockoutStats } from './KnockoutStats';
+import { PersonalBestCard } from './PersonalBestCard';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -467,6 +468,8 @@ Math: log(total_players + 1 / Placement)`}
                         </div>
                     </div>
                 </div>
+                {/* Personal Best Statistics Section */}
+                <PersonalBestCard playerUID={playerUID} playerName={playerName} />
                 {/* Knockout Statistics Section */}
                 <KnockoutStats playerUID={playerUID} playerName={playerName} />
             </div>
