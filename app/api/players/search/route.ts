@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     let players;
 
     if (isNameSearch) {
-      // Search by name or nickname
+      // Search by name or nickname - ordered by recent activity
       const searchTerm = `%${query}%`;
       players = await prisma.$queryRaw`
         SELECT 
@@ -38,13 +38,21 @@ export async function GET(request: NextRequest) {
           p.UID,
           pl.nickname,
           COUNT(DISTINCT p.File_name) as TotalGames,
-          SUM(p.Total_Points) as TotalPoints      
+          SUM(p.Total_Points) as TotalPoints,
+          MAX(p.game_date) as LastGameDate
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE p.Name LIKE ${searchTerm} 
           OR pl.nickname LIKE ${searchTerm}
         GROUP BY p.Name, p.UID, pl.nickname
-        ORDER BY p.Name
+        ORDER BY 
+          CASE 
+            WHEN MAX(p.game_date) IS NULL THEN 1 
+            ELSE 0 
+          END,
+          MAX(p.game_date) DESC,
+          SUM(p.Total_Points) DESC,
+          p.Name ASC
         LIMIT 10
       `;
     } else {
@@ -55,18 +63,33 @@ export async function GET(request: NextRequest) {
           p.UID,
           pl.nickname,
           COUNT(DISTINCT p.File_name) as TotalGames,
-          SUM(p.Total_Points) as TotalPoints      
+          SUM(p.Total_Points) as TotalPoints,
+          MAX(p.game_date) as LastGameDate
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE p.UID = ${query}
         GROUP BY p.Name, p.UID, pl.nickname
-        ORDER BY p.Name
+        ORDER BY 
+          CASE 
+            WHEN MAX(p.game_date) IS NULL THEN 1 
+            ELSE 0 
+          END,
+          MAX(p.game_date) DESC,
+          SUM(p.Total_Points) DESC,
+          p.Name ASC
         LIMIT 10
       `;
     }
 
     const serializedPlayers = serializeResults(players as any[]);
-    return NextResponse.json(serializedPlayers);
+
+    // Remove LastGameDate from response since it's only used for sorting
+    const cleanedPlayers = serializedPlayers.map((player) => {
+      const { LastGameDate, ...cleanPlayer } = player;
+      return cleanPlayer;
+    });
+
+    return NextResponse.json(cleanedPlayers);
   } catch (error) {
     console.error("Search error:", error);
     return NextResponse.json(

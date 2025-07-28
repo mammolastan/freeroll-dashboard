@@ -92,7 +92,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
                                     </div>
                                     {player.TotalGames && (
                                         <div className="text-sm text-gray-500">
-                                            {player.TotalGames} games played
+                                            {player.TotalGames > 100 ? '+100' : player.TotalGames} games played
                                         </div>
                                     )}
                                 </li>

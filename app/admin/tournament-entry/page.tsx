@@ -96,6 +96,9 @@ export default function TournamentEntryPage() {
         players: []
     });
     const [newPlayerName, setNewPlayerName] = useState('');
+    const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([]);
+    const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
     const [saveStatus, setSaveStatus] = useState('');
 
     // Load data from localStorage on component mount
@@ -113,14 +116,32 @@ export default function TournamentEntryPage() {
         }
     }, []);
 
-    // Save data to localStorage whenever tournamentData changes
+    // Player search effect - similar to PlayerSearch component
     useEffect(() => {
-        // Don't save empty initial state
-        if (tournamentData.name || tournamentData.director || tournamentData.players.length > 0) {
-            console.log('Saving to localStorage:', tournamentData); // Debug log
-            localStorage.setItem('tournamentData', JSON.stringify(tournamentData));
+        if (newPlayerName.length < 2) {
+            setPlayerSearchResults([]);
+            setShowPlayerDropdown(false);
+            return;
         }
-    }, [tournamentData]);
+
+        const searchTimer = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const response = await fetch(`/api/players/search?q=${encodeURIComponent(newPlayerName)}&name=true`);
+                const data = await response.json();
+                setPlayerSearchResults(data);
+                setShowPlayerDropdown(data.length > 0);
+            } catch (error) {
+                console.error('Failed to search players:', error);
+                setPlayerSearchResults([]);
+                setShowPlayerDropdown(false);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(searchTimer);
+    }, [newPlayerName]);
 
     const handleLogin = async (e: any) => {
         if (e.key === 'Enter' || e.type === 'click') {
@@ -141,6 +162,28 @@ export default function TournamentEntryPage() {
         const newPlayer: Player = {
             id: Date.now().toString(),
             name: newPlayerName.trim(),
+            hitman: '',
+            koPosition: null
+        };
+
+        setTournamentData(prev => ({
+            ...prev,
+            players: [...prev.players, newPlayer]
+        }));
+
+        setNewPlayerName('');
+        setShowPlayerDropdown(false);
+    };
+
+    const handlePlayerSelect = (player: any) => {
+        const playerName = player.nickname || player.Name;
+        setNewPlayerName(playerName);
+        setShowPlayerDropdown(false);
+
+        // Auto-add the selected player
+        const newPlayer: Player = {
+            id: Date.now().toString(),
+            name: playerName,
             hitman: '',
             koPosition: null
         };
@@ -387,22 +430,55 @@ export default function TournamentEntryPage() {
                         </div>
 
                         {/* Add New Player */}
-                        <div className="flex gap-2 mb-6">
-                            <input
-                                type="text"
-                                value={newPlayerName}
-                                onChange={(e) => setNewPlayerName(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
-                                className="flex-1 px-3 py-2 border rounded text-black"
-                                placeholder="Enter new player name"
-                            />
-                            <button
-                                onClick={addPlayer}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                <Plus size={16} />
-                                Add Player
-                            </button>
+                        <div className="relative mb-6">
+                            <div className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        value={newPlayerName}
+                                        onChange={(e) => setNewPlayerName(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
+                                        onFocus={() => newPlayerName.length >= 2 && setShowPlayerDropdown(playerSearchResults.length > 0)}
+                                        onBlur={() => setTimeout(() => setShowPlayerDropdown(false), 200)}
+                                        className="w-full px-3 py-2 border rounded text-black"
+                                        placeholder="Enter new player name (type 2+ chars to search existing)"
+                                    />
+
+                                    {isSearching && (
+                                        <div className="absolute right-3 top-3 text-gray-400">
+                                            Searching...
+                                        </div>
+                                    )}
+
+                                    {showPlayerDropdown && (
+                                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
+                                            {playerSearchResults.map((player) => (
+                                                <div
+                                                    key={player.UID}
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-black border-b border-gray-100 last:border-0"
+                                                    onMouseDown={() => handlePlayerSelect(player)}
+                                                >
+                                                    <div className="font-medium">
+                                                        {player.nickname || player.Name}
+                                                    </div>
+                                                    {player.TotalGames && (
+                                                        <div className="text-sm text-gray-500">
+                                                            {player.TotalGames} games played
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={addPlayer}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                    <Plus size={16} />
+                                    Add Player
+                                </button>
+                            </div>
                         </div>
 
                         {/* Players Table */}
