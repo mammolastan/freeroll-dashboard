@@ -99,6 +99,10 @@ export default function TournamentEntryPage() {
     const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([]);
     const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [sortConfig, setSortConfig] = useState<{
+        key: 'name' | 'hitman' | 'koPosition' | null;
+        direction: 'asc' | 'desc';
+    }>({ key: null, direction: 'asc' });
     const [saveStatus, setSaveStatus] = useState('');
 
     // Load data from localStorage on component mount
@@ -239,6 +243,58 @@ export default function TournamentEntryPage() {
     // Get list of all player names for hitman dropdown
     const getPlayerNames = () => {
         return tournamentData.players.map(player => player.name).filter(name => name.trim() !== '');
+    };
+
+    // Sorting function
+    const handleSort = (key: 'name' | 'hitman' | 'koPosition') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    // Get sorted players
+    const getSortedPlayers = () => {
+        if (!sortConfig.key) {
+            return tournamentData.players;
+        }
+
+        return [...tournamentData.players].sort((a, b) => {
+            const aValue = a[sortConfig.key!];
+            const bValue = b[sortConfig.key!];
+
+            // Handle null values for koPosition
+            if (sortConfig.key === 'koPosition') {
+                const aPos = aValue as number | null;
+                const bPos = bValue as number | null;
+
+                if (aPos === null && bPos === null) return 0;
+                if (aPos === null) return sortConfig.direction === 'asc' ? 1 : -1;
+                if (bPos === null) return sortConfig.direction === 'asc' ? -1 : 1;
+                return sortConfig.direction === 'asc' ? aPos - bPos : bPos - aPos;
+            }
+
+            // Handle string values
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+                return sortConfig.direction === 'asc' ? comparison : -comparison;
+            }
+
+            return 0;
+        });
+    };
+
+    // Sort indicator component
+    const SortIndicator = ({ column }: { column: 'name' | 'hitman' | 'koPosition' }) => {
+        if (sortConfig.key !== column) {
+            return <span className="text-gray-400 ml-1">↕</span>;
+        }
+        return (
+            <span className="text-blue-600 ml-1">
+                {sortConfig.direction === 'asc' ? '↑' : '↓'}
+            </span>
+        );
     };
 
     const exportToText = () => {
@@ -429,6 +485,7 @@ export default function TournamentEntryPage() {
                             </div>
                         </div>
 
+
                         {/* Add New Player */}
                         <div className="relative mb-6">
                             <div className="flex gap-2">
@@ -480,6 +537,7 @@ export default function TournamentEntryPage() {
                                 </button>
                             </div>
                         </div>
+
                         {/* Tournament Summary */}
                         {tournamentData.players.length > 0 && (
                             <div className="mt-6 p-4 bg-gray-50 rounded">
@@ -511,14 +569,38 @@ export default function TournamentEntryPage() {
                             <table className="w-full border-collapse border border-gray-300">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">Player Name</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">Hitman</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">KO Position</th>
+                                        <th
+                                            className="border border-gray-300 px-4 py-2 text-left text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                                            onClick={() => handleSort('name')}
+                                        >
+                                            <div className="flex items-center">
+                                                Player Name
+                                                <SortIndicator column="name" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="border border-gray-300 px-4 py-2 text-left text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                                            onClick={() => handleSort('hitman')}
+                                        >
+                                            <div className="flex items-center">
+                                                Hitman
+                                                <SortIndicator column="hitman" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="border border-gray-300 px-4 py-2 text-left text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                                            onClick={() => handleSort('koPosition')}
+                                        >
+                                            <div className="flex items-center">
+                                                KO Position
+                                                <SortIndicator column="koPosition" />
+                                            </div>
+                                        </th>
                                         <th className="border border-gray-300 px-4 py-2 text-center text-gray-900">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tournamentData.players.map((player) => (
+                                    {getSortedPlayers().map((player) => (
                                         <tr key={player.id} className="hover:bg-gray-50">
                                             <td className="border border-gray-300 px-4 py-2">
                                                 <input
