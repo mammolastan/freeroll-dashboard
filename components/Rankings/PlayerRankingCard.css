@@ -10,6 +10,10 @@
   margin: 0;
   border-bottom: 2px solid #000;
   transition: all 0.3s ease;
+
+  &.qualified .ranking {
+    background-color: #4ce44c;
+  }
 }
 
 .playerCardContainer:nth-of-type(odd) {
@@ -58,7 +62,7 @@
 }
 
 .ranking.favorited {
-  background-color: #ff0;
+  background-color: #ff0 !important;
   box-shadow: 0 2px 8px #ff0000;
   transform: scale(1.1);
   z-index: 10;
@@ -160,8 +164,6 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #000;
-  border-radius: 4px;
   color: #333;
   transition: all 0.2s ease;
 }
