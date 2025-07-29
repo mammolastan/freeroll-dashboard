@@ -163,9 +163,22 @@ export default function TournamentEntryPage() {
     const addPlayer = () => {
         if (!newPlayerName.trim()) return;
 
+        const playerName = newPlayerName.trim();
+
+        // Check if player already exists (case-insensitive)
+        const existingPlayer = tournamentData.players.find(
+            player => player.name.toLowerCase() === playerName.toLowerCase()
+        );
+
+        if (existingPlayer) {
+            alert(`Player "${playerName}" is already in the tournament!`);
+            setNewPlayerName('');
+            return;
+        }
+
         const newPlayer: Player = {
             id: Date.now().toString(),
-            name: newPlayerName.trim(),
+            name: playerName,
             hitman: '',
             koPosition: null
         };
@@ -181,6 +194,19 @@ export default function TournamentEntryPage() {
 
     const handlePlayerSelect = (player: any) => {
         const playerName = player.nickname || player.Name;
+
+        // Check if player already exists (case-insensitive)
+        const existingPlayer = tournamentData.players.find(
+            p => p.name.toLowerCase() === playerName.toLowerCase()
+        );
+
+        if (existingPlayer) {
+            alert(`Player "${playerName}" is already in the tournament!`);
+            setNewPlayerName('');
+            setShowPlayerDropdown(false);
+            return;
+        }
+
         setNewPlayerName(playerName);
         setShowPlayerDropdown(false);
 
@@ -485,7 +511,6 @@ export default function TournamentEntryPage() {
                             </div>
                         </div>
 
-
                         {/* Add New Player */}
                         <div className="relative mb-6">
                             <div className="flex gap-2">
@@ -509,22 +534,33 @@ export default function TournamentEntryPage() {
 
                                     {showPlayerDropdown && (
                                         <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
-                                            {playerSearchResults.map((player) => (
-                                                <div
-                                                    key={player.UID}
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-black border-b border-gray-100 last:border-0"
-                                                    onMouseDown={() => handlePlayerSelect(player)}
-                                                >
-                                                    <div className="font-medium">
-                                                        {player.nickname || player.Name}
-                                                    </div>
-                                                    {player.TotalGames && (
-                                                        <div className="text-sm text-gray-500">
-                                                            {player.TotalGames} games played
+                                            {playerSearchResults.map((player) => {
+                                                const playerName = player.nickname || player.Name;
+                                                const isAlreadyAdded = tournamentData.players.some(
+                                                    p => p.name.toLowerCase() === playerName.toLowerCase()
+                                                );
+
+                                                return (
+                                                    <div
+                                                        key={player.UID}
+                                                        className={`px-4 py-2 cursor-pointer text-black border-b border-gray-100 last:border-0 ${isAlreadyAdded
+                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                            : 'hover:bg-gray-100'
+                                                            }`}
+                                                        onMouseDown={() => !isAlreadyAdded && handlePlayerSelect(player)}
+                                                    >
+                                                        <div className={`font-medium ${isAlreadyAdded ? 'line-through' : ''}`}>
+                                                            {playerName}
+                                                            {isAlreadyAdded && <span className="ml-2 text-xs">(Already added)</span>}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                        {player.TotalGames && (
+                                                            <div className="text-sm text-gray-500">
+                                                                {player.TotalGames} games played
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -538,32 +574,6 @@ export default function TournamentEntryPage() {
                             </div>
                         </div>
 
-                        {/* Tournament Summary */}
-                        {tournamentData.players.length > 0 && (
-                            <div className="mt-6 p-4 bg-gray-50 rounded">
-                                <h3 className="font-medium text-gray-900 mb-2">Tournament Summary</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-900">
-                                    <div>
-                                        <span className="font-medium">Total Players:</span> {tournamentData.players.length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Knocked Out:</span> {tournamentData.players.filter(p => p.koPosition !== null).length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Still Playing:</span> {tournamentData.players.filter(p => p.koPosition === null).length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Data Auto-Saved:</span> ✓
-                                    </div>
-                                </div>
-
-                                {/* Debug info - remove after testing */}
-                                <div className="mt-4 p-2 bg-yellow-100 rounded text-xs text-gray-700">
-                                    <strong>Debug:</strong> Check browser console for localStorage logs.
-                                    Try opening Developer Tools (F12) → Console tab to see save/load messages.
-                                </div>
-                            </div>
-                        )}
                         {/* Players Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse border border-gray-300">
@@ -649,7 +659,32 @@ export default function TournamentEntryPage() {
                             )}
                         </div>
 
+                        {/* Tournament Summary */}
+                        {tournamentData.players.length > 0 && (
+                            <div className="mt-6 p-4 bg-gray-50 rounded">
+                                <h3 className="font-medium text-gray-900 mb-2">Tournament Summary</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-900">
+                                    <div>
+                                        <span className="font-medium">Total Players:</span> {tournamentData.players.length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Knocked Out:</span> {tournamentData.players.filter(p => p.koPosition !== null).length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Still Playing:</span> {tournamentData.players.filter(p => p.koPosition === null).length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Data Auto-Saved:</span> ✓
+                                    </div>
+                                </div>
 
+                                {/* Debug info - remove after testing */}
+                                <div className="mt-4 p-2 bg-yellow-100 rounded text-xs text-gray-700">
+                                    <strong>Debug:</strong> Check browser console for localStorage logs.
+                                    Try opening Developer Tools (F12) → Console tab to see save/load messages.
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

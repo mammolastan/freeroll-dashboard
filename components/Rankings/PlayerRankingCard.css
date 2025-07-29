@@ -5,14 +5,15 @@
   flex-direction: row;
   align-items: stretch;
   gap: 10px;
-  background-color: #d6b8b8;
+  background-color: #fff;
   position: relative;
   margin: 0;
+  border-bottom: 2px solid #000;
   transition: all 0.3s ease;
 }
 
 .playerCardContainer:nth-of-type(odd) {
-  background-color: #e0eafc;
+  background-color: #e7e7e7;
 }
 
 .playerCardContainer:hover {
@@ -44,14 +45,9 @@
   box-shadow: 0 2px 8px #000;
   transition: all 0.3s ease;
 }
-
 .ranking:hover {
   box-shadow: 0 2px 8px #ffff00;
   transform: scale(1.1);
-}
-
-.qualified .ranking {
-  background-color: #00ff00;
 }
 
 .rank {
@@ -122,6 +118,8 @@
   height: 100%;
   padding: 0 15px;
   min-width: 80px;
+  border-left: 2px solid #000;
+  border-right: 2px solid #000;
   transition: padding 0.3s ease;
 }
 
@@ -162,7 +160,16 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
+  border: 1px solid #000;
+  border-radius: 4px;
   color: #333;
+  transition: all 0.2s ease;
+}
+.statGridItem:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-color: #ff00ff;
 }
 
 .statGridItem:nth-child(1) {

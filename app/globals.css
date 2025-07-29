@@ -9,7 +9,7 @@
   --stat2: hsl(0, 30%, 75%);
   --stat3: hsl(40, 40%, 70%);
   --stat4: hsl(50, 50%, 80%);
-  --stat5: hsl(300, 35%, 60%);
+  --stat5: hsl(040, 30%, 80%);
 }
 
 @media (prefers-color-scheme: dark) {
