@@ -14,6 +14,7 @@ interface QuarterlyStats {
   avgScore: number;
   leagueRanking: number;
   totalPlayersInQuarter: number;
+  wins: number; // Added wins field
 }
 
 export async function GET(
@@ -35,6 +36,7 @@ export async function GET(
         gamesPlayed: bigint;
         totalPoints: bigint;
         finalTables: bigint;
+        wins: bigint; // Added wins field
         avgScore: number;
       }>
     >`
@@ -44,6 +46,7 @@ export async function GET(
         COUNT(*) as gamesPlayed,
         COALESCE(SUM(Total_Points), 0) as totalPoints,
         COALESCE(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+        COALESCE(SUM(CASE WHEN Placement = 1 THEN 1 ELSE 0 END), 0) as wins,
         COALESCE(AVG(Player_Score), 0) as avgScore
       FROM poker_tournaments
       WHERE UID = ${playerUID}
@@ -63,6 +66,7 @@ export async function GET(
           highestFTP: null,
           highestPowerRating: null,
           bestLeagueRanking: null,
+          mostWins: null, // Added mostWins field
         },
         totalQuarters: 0,
       });
@@ -119,6 +123,7 @@ export async function GET(
           gamesPlayed: Number(playerQuarter.gamesPlayed),
           totalPoints: Number(playerQuarter.totalPoints),
           finalTables: Number(playerQuarter.finalTables),
+          wins: Number(playerQuarter.wins), // Added wins field
           finalTablePercentage: Number(
             (
               (Number(playerQuarter.finalTables) /
@@ -154,6 +159,9 @@ export async function GET(
           ? current
           : best
       ),
+      mostWins: quarterlyStatsWithRankings.reduce((max, current) =>
+        current.wins > (max?.wins || 0) ? current : max
+      ), // Added mostWins personal best
     };
 
     return NextResponse.json({

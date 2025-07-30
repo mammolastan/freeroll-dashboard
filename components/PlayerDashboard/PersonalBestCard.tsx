@@ -1,6 +1,6 @@
 // components/PlayerDashboard/PersonalBestCard.tsx
 import React, { useState, useEffect } from 'react';
-import { Trophy, Zap, Hexagon, LandPlot, Star, TrendingUp, Crown } from 'lucide-react';
+import { Trophy, Zap, Hexagon, LandPlot, Star, TrendingUp, Crown, Award } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface QuarterlyStats {
@@ -13,6 +13,7 @@ interface QuarterlyStats {
     avgScore: number;
     leagueRanking: number;
     totalPlayersInQuarter: number;
+    wins: number; // Added wins field
 }
 
 interface PersonalBests {
@@ -21,6 +22,7 @@ interface PersonalBests {
     highestFTP: QuarterlyStats | null;
     highestPowerRating: QuarterlyStats | null;
     bestLeagueRanking: QuarterlyStats | null;
+    mostWins: QuarterlyStats | null; // Added mostWins field
 }
 
 interface PersonalBestData {
@@ -145,7 +147,7 @@ export function PersonalBestCard({ playerUID, playerName }: PersonalBestCardProp
 
     const { personalBests, totalQuarters } = data;
 
-    // Personal best stat cards data
+    // Personal best stat cards data - updated to include 6 stats
     const personalBestStats = [
         {
             title: 'Best League Ranking',
@@ -156,6 +158,16 @@ export function PersonalBestCard({ playerUID, playerName }: PersonalBestCardProp
             bgColor: 'bg-yellow-50',
             textColor: 'text-yellow-900',
             iconColor: 'text-yellow-600'
+        },
+        {
+            title: 'Most Wins',
+            icon: <Award className="h-6 w-6" />,
+            value: personalBests.mostWins?.wins || 0,
+            quarter: personalBests.mostWins ? formatQuarter(personalBests.mostWins.quarter, personalBests.mostWins.year) : null,
+            detail: personalBests.mostWins ? `${personalBests.mostWins.gamesPlayed} games played` : null,
+            bgColor: 'bg-emerald-50',
+            textColor: 'text-emerald-900',
+            iconColor: 'text-emerald-600'
         },
         {
             title: 'Most Final Tables',
@@ -222,8 +234,8 @@ export function PersonalBestCard({ playerUID, playerName }: PersonalBestCardProp
                     </p>
                 </div>
 
-                {/* Personal Best Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Personal Best Stats Grid - Updated to 3x2 grid for 6 stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {personalBestStats.map((stat, index) => (
                         <div
                             key={index}

@@ -573,7 +573,32 @@ export default function TournamentEntryPage() {
                                 </button>
                             </div>
                         </div>
+                        {/* Tournament Summary */}
+                        {tournamentData.players.length > 0 && (
+                            <div className="mt-6 p-4 bg-gray-50 rounded">
+                                <h3 className="font-medium text-gray-900 mb-2">Tournament Summary</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-900">
+                                    <div>
+                                        <span className="font-medium">Total Players:</span> {tournamentData.players.length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Knocked Out:</span> {tournamentData.players.filter(p => p.koPosition !== null).length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Still Playing:</span> {tournamentData.players.filter(p => p.koPosition === null).length}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Data Auto-Saved:</span> ✓
+                                    </div>
+                                </div>
 
+                                {/* Debug info - remove after testing */}
+                                <div className="mt-4 p-2 bg-yellow-100 rounded text-xs text-gray-700">
+                                    <strong>Debug:</strong> Check browser console for localStorage logs.
+                                    Try opening Developer Tools (F12) → Console tab to see save/load messages.
+                                </div>
+                            </div>
+                        )}
                         {/* Players Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse border border-gray-300">
@@ -659,32 +684,7 @@ export default function TournamentEntryPage() {
                             )}
                         </div>
 
-                        {/* Tournament Summary */}
-                        {tournamentData.players.length > 0 && (
-                            <div className="mt-6 p-4 bg-gray-50 rounded">
-                                <h3 className="font-medium text-gray-900 mb-2">Tournament Summary</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-900">
-                                    <div>
-                                        <span className="font-medium">Total Players:</span> {tournamentData.players.length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Knocked Out:</span> {tournamentData.players.filter(p => p.koPosition !== null).length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Still Playing:</span> {tournamentData.players.filter(p => p.koPosition === null).length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Data Auto-Saved:</span> ✓
-                                    </div>
-                                </div>
 
-                                {/* Debug info - remove after testing */}
-                                <div className="mt-4 p-2 bg-yellow-100 rounded text-xs text-gray-700">
-                                    <strong>Debug:</strong> Check browser console for localStorage logs.
-                                    Try opening Developer Tools (F12) → Console tab to see save/load messages.
-                                </div>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </div>
