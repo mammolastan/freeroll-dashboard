@@ -6,6 +6,7 @@ import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoritesFilter } from './FavoritesComponents';
 import { BadgeData } from '../ui/Badge';
+import { QualificationBarrier } from './QualificationBarrier';
 
 interface PlayerRanking {
     name: string;
@@ -408,17 +409,27 @@ export default function QuarterlyRankings() {
                     </div>
                 </div>
 
-                {/* Player rankings using new card layout */}
+                {/* Player rankings */}
                 <div>
                     {sortedAndFilteredRankings.map((player, index) => {
                         const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}`;
+                        const isQualificationBarrier = player.ranking === 41 && !showFavoritesOnly && !filterText;
+
                         return (
-                            <QuarterlyPlayerCard
-                                key={uniqueKey}
-                                player={player}
-                                isFavorite={isFavorite(player.uid)}
-                                onToggleFavorite={toggleFavorite}
-                            />
+                            <React.Fragment key={uniqueKey}>
+                                {/* Show qualification barrier before 41st place */}
+                                {isQualificationBarrier && (
+                                    <QualificationBarrier
+                                        qualifiedCount={Math.min(40, sortedAndFilteredRankings.length)}
+                                        totalPlayers={sortedAndFilteredRankings.length}
+                                    />
+                                )}
+                                <QuarterlyPlayerCard
+                                    player={player}
+                                    isFavorite={isFavorite(player.uid)}
+                                    onToggleFavorite={toggleFavorite}
+                                />
+                            </React.Fragment>
                         );
                     })}
                 </div>
