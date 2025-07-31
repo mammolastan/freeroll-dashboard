@@ -27,7 +27,8 @@ export async function POST(request: Request) {
       SELECT 
         pb.player_uid,
         pb.id,
-        b.name,
+        b.quote,
+        b.criteria,
         b.short_description,
         b.long_description,
         b.icon,
