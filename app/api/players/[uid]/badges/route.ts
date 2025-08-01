@@ -16,7 +16,8 @@ export async function GET(
     const playerBadges = await prisma.$queryRaw`
       SELECT 
         pb.id,
-        b.name,
+        b.quote,
+        b.criteria,
         b.short_description,
         b.long_description,
         b.icon,

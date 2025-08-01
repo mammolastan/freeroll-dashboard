@@ -4,7 +4,8 @@ import { BadgeModal } from './BadgeModal';
 
 export interface BadgeData {
     id: string;
-    name: string;
+    quote: string;
+    criteria: string;
     short_description: string;
     long_description: string;
     icon: string;
@@ -90,7 +91,7 @@ export function Badge({ badge, size = 'medium', showName = false }: BadgeProps) 
                 >
                     <div className="relative w-full h-full">
                         <img
-                            alt={badge.name}
+                            alt={badge.short_description}
                             src={`/images/badges/${badge.icon}`}
                             className="w-full h-full object-contain"
                         />

@@ -80,6 +80,7 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
                             {badge.tier}
                         </div>
                     )}
+                    <p>{badge.criteria}</p>
 
                 </div>
 
@@ -90,7 +91,7 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
                         <div className="badge-modal-icon">
                             <img
                                 src={`/images/badges/${badge.icon}`}
-                                alt={badge.name}
+                                alt={badge.short_description}
                             />
                         </div>
 
@@ -102,9 +103,7 @@ export function BadgeModal({ badge, isOpen, onClose }: BadgeModalProps) {
 
                     {/* Description */}
                     <div className="badge-modal-description-section">
-                        <p className="badge-modal-description-text">
-                            {badge.long_description}
-                        </p>
+
 
                         {/* Custom achievement description */}
                         {badge.description && (
