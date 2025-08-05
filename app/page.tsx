@@ -65,6 +65,16 @@ export default function Home() {
             </CardContent>
           </Card>
         </Link>
+        <Link href={"/badges"}>
+          <Card className="hover:bg-accent transition-colors">
+            <CardHeader>
+              <CardTitle>Badges</CardTitle>
+            </CardHeader>
+            <CardContent>
+
+            </CardContent>
+          </Card>
+        </Link>
 
 
 
