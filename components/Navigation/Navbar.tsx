@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import NavLink from './NavLink';
 import Link from 'next/link';
-import { Home, Store, CircleUserRound, Menu, X, Trophy, ChevronDown, ChevronUp, GalleryHorizontalEnd } from 'lucide-react';
+import { Home, Store, CircleUserRound, Menu, X, Trophy, ChevronDown, ChevronUp, GalleryHorizontalEnd, Award } from 'lucide-react';
 
 interface NavItem {
     href: string;
@@ -40,6 +40,7 @@ const Navbar = () => {
         { href: '/games', icon: <GalleryHorizontalEnd size={20} />, text: 'Games' },
         { href: '/players', icon: <CircleUserRound size={20} />, text: 'Players' },
         { href: '/venues', icon: <Store size={20} />, text: 'Venues' },
+        { href: '/badges', icon: <Award size={20} />, text: 'Badges' },
     ];
 
     const handleNavigation = (href: string) => {

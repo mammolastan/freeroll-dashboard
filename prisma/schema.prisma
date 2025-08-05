@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,47 +9,44 @@ datasource db {
 
 model PokerTournament {
   id              Int       @id @default(autoincrement())
-  name            String    @map("Name")
-  uid             String    @map("UID")
+  name            String?   @map("Name") @db.VarChar(255)
+  uid             String?   @map("UID") @db.VarChar(255)
   bustTime        BigInt?   @map("Bust_Time")
   bustRound       Int?      @map("Bust_Round")
-  hitman          String?   @map("Hitman")
+  hitman          String?   @map("Hitman") @db.VarChar(255)
   placement       Int?      @map("Placement")
   knockouts       Int?      @map("Knockouts")
   startPoints     Int?      @map("Start_Points")
   hitPoints       Int?      @map("Hit_Points")
   placementPoints Int?      @map("Placement_Points")
   cash            Int?      @map("Cash")
-  place           String?   @map("Place")
-  season          String?   @map("Season")
-  venue           String?   @map("Venue")
+  place           String?   @map("Place") @db.VarChar(50)
+  season          String?   @map("Season") @db.VarChar(100)
+  venue           String?   @map("Venue") @db.VarChar(255)
   totalPoints     Int?      @map("Total_Points")
-  playerScore     Float?    @map("Player_Score")
-  fileName        String?   @map("File_name")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  gameDate        DateTime? @map("game_date")
-  gameUid         String?   @map("game_uid")
+  playerScore     Float?    @map("Player_Score") @db.Float
+  fileName        String?   @map("File_name") @db.VarChar(255)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  gameDate        DateTime? @map("game_date") @db.Date
+  gameUid         String?   @map("game_uid") @db.VarChar(100)
 
   @@map("poker_tournaments")
 }
 
 model ProcessedFile {
-  id                  Int      @id @default(autoincrement())
-  filename            String   @unique
-  processed_at        DateTime @default(now()) @map("processed_at")
+  id                  Int       @id @default(autoincrement())
+  filename            String    @unique(map: "filename") @db.VarChar(255)
+  processed_at        DateTime  @default(now()) @map("processed_at") @db.Timestamp(0)
   status              Status
-  error_message       String?  @map("error_message") @db.Text
-  drive_file_id       String   @map("drive_file_id")
-  md5_checksum        String?  @map("md5_checksum")
-  drive_modified_time DateTime @map("drive_modified_time")
-  game_uid            String?  @map("game_uid")
+  error_message       String?   @map("error_message") @db.Text
+  drive_file_id       String    @map("drive_file_id") @db.VarChar(255)
+  md5_checksum        String?   @map("md5_checksum") @db.VarChar(32)
+  drive_modified_time DateTime  @map("drive_modified_time") @db.DateTime(0)
+  game_uid            String?   @map("game_uid") @db.VarChar(100)
+  game_date           DateTime? @db.Date
 
+  @@index([md5_checksum], map: "idx_md5_checksum")
   @@map("processed_files")
-}
-
-enum Status {
-  success
-  error
 }
 
 model Player {
@@ -59,21 +54,25 @@ model Player {
   name        String
   nickname    String?
   created_at  DateTime      @default(now())
-  updated_at  DateTime      @updatedAt
+  updated_at  DateTime      @default(now()) @updatedAt
   PlayerBadge PlayerBadge[]
 
   @@map("players")
 }
 
 model Badge {
-  badge_id          Int           @id @default(autoincrement())
-  name              String
-  short_description String
+  badge_id          String        @id @db.VarChar(36)
+  quote             String        @db.Text
+  short_description String        @db.VarChar(100)
   long_description  String        @db.Text
-  icon              String
-  rarity            String        @default("common")
-  created_at        DateTime      @default(now())
-  updated_at        DateTime      @updatedAt
+  criteria          String        @db.VarChar(100)
+  category          String        @db.VarChar(30)
+  rarity            Int           @db.TinyInt
+  icon              String?       @db.VarChar(255)
+  enabled           Boolean?      @default(true)
+  created_at        DateTime      @default(now()) @db.DateTime(0)
+  updated_at        DateTime      @default(now()) @updatedAt @db.DateTime(0)
+  tier              String?       @db.TinyText
   players           PlayerBadge[]
 
   @@map("badges")
@@ -81,14 +80,69 @@ model Badge {
 
 model PlayerBadge {
   id          Int       @id @default(autoincrement())
-  player_uid  String
-  badge_id    Int
-  earned_at   DateTime  @default(now())
+  player_uid  String    @db.VarChar(36)
+  badge_id    String    @db.VarChar(36)
+  earned_at   DateTime  @db.DateTime(0)
+  quarter     String?   @db.VarChar(7)
+  year        Int?
+  game_id     String?   @db.VarChar(255)
   expiration  DateTime? @map("expiration") @db.Date
   description String?   @map("description") @db.Text
-  player      Player    @relation(fields: [player_uid], references: [uid])
-  badge       Badge     @relation(fields: [badge_id], references: [badge_id])
+  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
+  player      Player    @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "player_badges_ibfk_1")
+  badge       Badge     @relation(fields: [badge_id], references: [badge_id], onUpdate: Restrict, map: "player_badges_ibfk_2")
 
-  @@unique([player_uid, badge_id])
+  @@unique([player_uid, badge_id, quarter, year], map: "player_uid")
+  @@index([badge_id], map: "badge_id")
+  @@index([expiration], map: "idx_player_badges_expiration")
   @@map("player_badges")
+}
+
+model poker_tournaments_test {
+  id               Int       @id @default(autoincrement())
+  Name             String?   @db.VarChar(255)
+  UID              String?   @db.VarChar(255)
+  Bust_Time        BigInt?
+  Bust_Round       Int?
+  Hitman           String?   @db.VarChar(255)
+  Placement        Int?
+  Knockouts        Int?
+  Start_Points     Int?
+  Hit_Points       Int?
+  Placement_Points Int?
+  Cash             Int?
+  Place            String?   @db.VarChar(50)
+  Season           String?   @db.VarChar(100)
+  Venue            String?   @db.VarChar(255)
+  Total_Points     Int?
+  Player_Score     Float?    @db.Float
+  File_name        String?   @db.VarChar(255)
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  game_date        DateTime? @db.Date
+  game_uid         String?   @db.VarChar(100)
+}
+
+model processed_files_test {
+  id                  Int                         @id @default(autoincrement())
+  filename            String                      @unique(map: "filename") @db.VarChar(255)
+  processed_at        DateTime                    @default(now()) @db.Timestamp(0)
+  status              processed_files_test_status
+  error_message       String?                     @db.Text
+  drive_file_id       String                      @db.VarChar(255)
+  md5_checksum        String?                     @db.VarChar(32)
+  drive_modified_time DateTime                    @db.DateTime(0)
+  game_uid            String?                     @db.VarChar(100)
+  game_date           DateTime?                   @db.Date
+
+  @@index([md5_checksum], map: "idx_md5_checksum")
+}
+
+enum Status {
+  success
+  error
+}
+
+enum processed_files_test_status {
+  success
+  error
 }
