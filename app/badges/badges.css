@@ -781,8 +781,6 @@
 
 .badge-container.hovered {
   transform: scale(1.1) translateY(-4px);
-  filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.1))
-    drop-shadow(0 4px 3px rgba(96, 165, 250, 0.2));
 }
 
 /* Focus states for accessibility */
