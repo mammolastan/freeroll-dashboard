@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X } from 'lucide-react';
-
+import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown } from 'lucide-react';
 
 interface TournamentDraft {
     id: number;
@@ -68,6 +67,13 @@ export default function TournamentEntryPage() {
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
 
+    // Venue management
+    const [venues, setVenues] = useState<string[]>([]);
+    const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+    const [isAddingNewVenue, setIsAddingNewVenue] = useState(false);
+    const [newVenueInput, setNewVenueInput] = useState('');
+    const [loadingVenues, setLoadingVenues] = useState(false);
+
 
     // Load tournaments list
     const loadTournaments = async () => {
@@ -110,10 +116,16 @@ export default function TournamentEntryPage() {
             setPlayers([]);
             setCurrentView('entry');
             setShowCreateModal(false);
-            setNewTournament({ tournament_date: '', director_name: '', venue: '', start_points: 0 });
+            setNewTournament({
+                tournament_date: getTodayDateString(), // Changed this line
+                director_name: '',
+                venue: '',
+                start_points: 0
+            });
 
-            // Refresh tournaments list
+            // Refresh tournaments list and venues (in case a new venue was added)
             loadTournaments();
+            loadVenues(); // Add this line
         } catch (error) {
             console.error('Error creating tournament:', error);
             alert(`Failed to create tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -175,6 +187,54 @@ export default function TournamentEntryPage() {
             alert(`Failed to delete tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
+
+    // Format today's date for input field (YYYY-MM-DD)
+    const getTodayDateString = () => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    };
+
+    // Load venues from API
+    const loadVenues = async () => {
+        setLoadingVenues(true);
+        try {
+            const response = await fetch('/api/venues');
+            if (!response.ok) throw new Error('Failed to load venues');
+
+            const venuesData = await response.json();
+            setVenues(venuesData);
+        } catch (error) {
+            console.error('Error loading venues:', error);
+            alert('Failed to load venues');
+        } finally {
+            setLoadingVenues(false);
+        }
+    };
+
+    // Handle venue selection
+    const handleVenueSelect = (venue: string) => {
+        setNewTournament({
+            ...newTournament,
+            venue: venue
+        });
+        setShowVenueDropdown(false);
+        setIsAddingNewVenue(false);
+        setNewVenueInput('');
+    };
+
+    // Handle new venue addition
+    const handleAddNewVenue = () => {
+        if (newVenueInput.trim()) {
+            setNewTournament({
+                ...newTournament,
+                venue: newVenueInput.trim()
+            });
+            setShowVenueDropdown(false);
+            setIsAddingNewVenue(false);
+            setNewVenueInput('');
+        }
+    };
+
     // Update tournament field
     const updateTournamentField = async (field: string, value: string | number) => {
         if (!currentDraft || currentDraft.status === 'integrated') return;
@@ -550,8 +610,18 @@ export default function TournamentEntryPage() {
     useEffect(() => {
         if (isAuthenticated) {
             loadTournaments();
+            loadVenues();
         }
     }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (showCreateModal) {
+            setNewTournament(prev => ({
+                ...prev,
+                tournament_date: getTodayDateString()
+            }));
+        }
+    }, [showCreateModal]);
 
     if (!isAuthenticated) {
         return (
@@ -727,17 +797,80 @@ export default function TournamentEntryPage() {
                                             <label className="block text-sm font-medium text-gray-900 mb-1">
                                                 Venue *
                                             </label>
-                                            <input
-                                                type="text"
-                                                value={newTournament.venue}
-                                                onChange={(e) => setNewTournament({
-                                                    ...newTournament,
-                                                    venue: e.target.value
-                                                })}
-                                                className="w-full px-3 py-2 border rounded text-black"
-                                                placeholder="Tournament venue"
-                                                required
-                                            />
+                                            <div className="relative">
+                                                {!isAddingNewVenue ? (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowVenueDropdown(!showVenueDropdown)}
+                                                            className="w-full px-3 py-2 border rounded text-black text-left bg-white flex items-center justify-between"
+                                                        >
+                                                            <span className={newTournament.venue ? 'text-black' : 'text-gray-500'}>
+                                                                {newTournament.venue || 'Select venue...'}
+                                                            </span>
+                                                            <ChevronDown size={16} />
+                                                        </button>
+
+                                                        {showVenueDropdown && (
+                                                            <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                                                                {loadingVenues ? (
+                                                                    <div className="px-3 py-2 text-gray-500">Loading venues...</div>
+                                                                ) : (
+                                                                    <>
+                                                                        {venues.map((venue, index) => (
+                                                                            <button
+                                                                                key={index}
+                                                                                type="button"
+                                                                                onClick={() => handleVenueSelect(venue)}
+                                                                                className="w-full px-3 py-2 text-left hover:bg-gray-100 text-black"
+                                                                            >
+                                                                                {venue}
+                                                                            </button>
+                                                                        ))}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setIsAddingNewVenue(true)}
+                                                                            className="w-full px-3 py-2 text-left hover:bg-gray-100 text-blue-600 border-t"
+                                                                        >
+                                                                            + Add new venue
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={newVenueInput}
+                                                            onChange={(e) => setNewVenueInput(e.target.value)}
+                                                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewVenue()}
+                                                            placeholder="Enter new venue name"
+                                                            className="flex-1 px-3 py-2 border rounded text-black"
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddNewVenue}
+                                                            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                                        >
+                                                            <Check size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setIsAddingNewVenue(false);
+                                                                setNewVenueInput('');
+                                                                setShowVenueDropdown(true);
+                                                            }}
+                                                            className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -777,7 +910,12 @@ export default function TournamentEntryPage() {
                                                 Create Tournament
                                             </button>
                                             <button
-                                                onClick={() => setShowCreateModal(false)}
+                                                onClick={() => {
+                                                    setShowCreateModal(false);
+                                                    setIsAddingNewVenue(false); // Add this line
+                                                    setNewVenueInput(''); // Add this line
+                                                    setShowVenueDropdown(false); // Add this line
+                                                }}
                                                 className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                                             >
                                                 Cancel
@@ -945,10 +1083,21 @@ export default function TournamentEntryPage() {
                                                 setShowPlayerDropdown(true);
                                             }
                                         }}
-                                        className="w-full px-3 py-2 border rounded text-black"
+                                        className="w-full px-3 py-2 pr-8 border rounded text-black"
                                         placeholder="Start typing player name..."
                                         id="player-search-input"
                                     />
+
+                                    {/* Close button - only show when dropdown is open */}
+                                    {showPlayerDropdown && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPlayerDropdown(false)}
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
 
                                     {showPlayerDropdown && (
                                         <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
