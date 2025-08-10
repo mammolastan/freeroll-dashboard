@@ -567,7 +567,7 @@ export default function TournamentEntryPage() {
 
             const result = await response.json();
 
-            if (response.ok) {
+            if (response.ok && result.success) {
                 alert(`Tournament successfully integrated!\n\nGame UID: ${result.gameUID}\nFile Name: ${result.fileName}\nPlayers: ${result.playersIntegrated}\nNew Players Created: ${result.newPlayersCreated}`);
 
                 // Update current draft status
@@ -577,11 +577,14 @@ export default function TournamentEntryPage() {
                 // Refresh tournaments list
                 loadTournaments();
             } else {
-                alert(`Integration failed:\n${result.error}\n${result.details ? result.details.join('\n') : ''}`);
+                // Handle the new error format from the fixed backend
+                const errorMessage = result.error || 'Integration failed';
+                const details = result.details || '';
+                alert(`Integration failed:\n${errorMessage}${details ? `\n${details}` : ''}`);
             }
         } catch (error) {
             console.error('Error integrating tournament:', error);
-            alert('Failed to integrate tournament');
+            alert(`Failed to integrate tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsIntegrating(false);
         }

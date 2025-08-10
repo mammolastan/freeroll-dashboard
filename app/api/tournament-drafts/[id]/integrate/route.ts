@@ -50,151 +50,137 @@ export async function POST(
   const draftId = parseInt(params.id);
 
   try {
-    // Start transaction
-    await prisma.$executeRaw`START TRANSACTION`;
-
-    // 1. Get tournament draft
-    const draftResult = await prisma.$queryRaw<DraftTournament[]>`
-      SELECT * FROM tournament_drafts WHERE id = ${draftId} AND status = 'in_progress'
-    `;
-
-    if (draftResult.length === 0) {
-      await prisma.$executeRaw`ROLLBACK`;
-      return NextResponse.json(
-        { error: "Tournament draft not found or not in progress" },
-        { status: 404 }
-      );
-    }
-
-    const draft = draftResult[0];
-
-    // 2. Get all players for this draft
-    const playersResult = await prisma.$queryRaw<DraftPlayer[]>`
-      SELECT * FROM tournament_draft_players 
-      WHERE tournament_draft_id = ${draftId}
-      ORDER BY placement ASC NULLS LAST, player_name ASC
-    `;
-
-    if (playersResult.length === 0) {
-      await prisma.$executeRaw`ROLLBACK`;
-      return NextResponse.json(
-        { error: "No players found for this tournament" },
-        { status: 400 }
-      );
-    }
-
-    // 3. Validation
-    const validationErrors = [];
-
-    // Check for required tournament fields
-    if (!draft.tournament_date || !draft.venue) {
-      validationErrors.push("Missing required tournament information");
-    }
-
-    // Check for duplicate placements
-    const placements = playersResult
-      .filter((p) => p.placement !== null)
-      .map((p) => p.placement);
-    const uniquePlacements = new Set(placements);
-    if (placements.length !== uniquePlacements.size) {
-      validationErrors.push("Duplicate placement positions found");
-    }
-
-    // Check hitman references
-    const playerNames = playersResult.map((p) => p.player_name);
-    for (const player of playersResult) {
-      if (player.hitman_name && !playerNames.includes(player.hitman_name)) {
-        validationErrors.push(
-          `Hitman '${player.hitman_name}' not found in player list`
-        );
-      }
-    }
-
-    if (validationErrors.length > 0) {
-      await prisma.$executeRaw`ROLLBACK`;
-      return NextResponse.json(
-        { error: "Validation failed", details: validationErrors },
-        { status: 400 }
-      );
-    }
-
-    // 4. Create UIDs for new players and add to players table
-    const newPlayerUIDs: { [key: string]: string } = {};
-
-    for (const player of playersResult) {
-      if (player.is_new_player && !player.player_uid) {
-        const newUID = uuidv4();
-        newPlayerUIDs[player.player_name] = newUID;
-
-        // Insert into players table
-        await prisma.$executeRaw`
-          INSERT INTO players (uid, name, created_at, updated_at)
-          VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
-        `;
-
-        // Update draft player record with new UID
-        await prisma.$executeRaw`
-          UPDATE tournament_draft_players 
-          SET player_uid = ${newUID}, is_new_player = FALSE
-          WHERE id = ${player.id}
-        `;
-      }
-    }
-
-    // 5. Generate file name and game UID
-    const fileName = generateFileName(draft.tournament_date, draft.venue);
-    const gameUID = uuidv4();
-
-    // 6. Create poker_tournaments records
-    const totalPlayers = playersResult.length;
-    const gameDate = new Date(draft.tournament_date);
-
-    for (const player of playersResult) {
-      const playerUID = player.player_uid || newPlayerUIDs[player.player_name];
-      const placement = player.placement || totalPlayers; // Default to last place if no placement
-      const placementPoints = calculatePlacementPoints(placement);
-      const totalPoints = draft.start_points + placementPoints;
-      const playerScore = calculatePlayerScore(placement, totalPlayers);
-
-      await prisma.$executeRaw`
-        INSERT INTO poker_tournaments (
-          Name, UID, Hitman, Placement, Knockouts, Start_Points, 
-          Hit_Points, Placement_Points, Venue, Total_Points, 
-          Player_Score, File_name, game_date, game_uid, Season, created_at
-        ) VALUES (
-          ${player.player_name}, ${playerUID}, ${player.hitman_name}, 
-          ${placement}, 0, ${draft.start_points}, 0, ${placementPoints}, 
-          ${draft.venue}, ${totalPoints}, ${playerScore}, ${fileName}, 
-          ${gameDate}, ${gameUID}, 'Winter 2025', NOW()
-        )
+    // Use Prisma's $transaction instead of raw SQL transaction commands
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Get tournament draft
+      const draftResult = await tx.$queryRaw<DraftTournament[]>`
+        SELECT * FROM tournament_drafts WHERE id = ${draftId} AND status = 'in_progress'
       `;
-    }
 
-    // 7. Update draft status and add integration info
-    await prisma.$executeRaw`
-      UPDATE tournament_drafts 
-      SET 
-        status = 'integrated',
-        game_uid = ${gameUID},
-        file_name = ${fileName},
-        updated_at = NOW()
-      WHERE id = ${draftId}
-    `;
+      if (draftResult.length === 0) {
+        throw new Error("Tournament draft not found or not in progress");
+      }
 
-    // Commit transaction
-    await prisma.$executeRaw`COMMIT`;
+      const draft = draftResult[0];
 
-    return NextResponse.json({
-      success: true,
-      message: "Tournament successfully integrated",
-      gameUID,
-      fileName,
-      playersIntegrated: totalPlayers,
-      newPlayersCreated: Object.keys(newPlayerUIDs).length,
+      // 2. Get all players for this draft
+      const playersResult = await tx.$queryRaw<DraftPlayer[]>`
+        SELECT * FROM tournament_draft_players 
+        WHERE tournament_draft_id = ${draftId}
+        ORDER BY CASE WHEN placement IS NULL THEN 1 ELSE 0 END, placement ASC, player_name ASC
+      `;
+
+      if (playersResult.length === 0) {
+        throw new Error("No players found for this tournament");
+      }
+
+      // 3. Validation
+      const validationErrors = [];
+
+      // Check for required tournament fields
+      if (!draft.tournament_date || !draft.venue) {
+        validationErrors.push("Missing required tournament information");
+      }
+
+      // Check for duplicate placements
+      const placements = playersResult
+        .filter((p) => p.placement !== null)
+        .map((p) => p.placement);
+      const uniquePlacements = new Set(placements);
+      if (placements.length !== uniquePlacements.size) {
+        validationErrors.push("Duplicate placement positions found");
+      }
+
+      // Check hitman references
+      const playerNames = playersResult.map((p) => p.player_name);
+      for (const player of playersResult) {
+        if (player.hitman_name && !playerNames.includes(player.hitman_name)) {
+          validationErrors.push(
+            `Hitman '${player.hitman_name}' not found in player list`
+          );
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        throw new Error(`Validation failed: ${validationErrors.join(", ")}`);
+      }
+
+      // 4. Create UIDs for new players and add to players table
+      const newPlayerUIDs: { [key: string]: string } = {};
+
+      for (const player of playersResult) {
+        if (player.is_new_player && !player.player_uid) {
+          const newUID = uuidv4();
+          newPlayerUIDs[player.player_name] = newUID;
+
+          // Insert into players table
+          await tx.$executeRaw`
+            INSERT INTO players (uid, name, created_at, updated_at)
+            VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
+          `;
+
+          // Update draft player record with new UID
+          await tx.$executeRaw`
+            UPDATE tournament_draft_players 
+            SET player_uid = ${newUID}, is_new_player = FALSE
+            WHERE id = ${player.id}
+          `;
+        }
+      }
+
+      // 5. Generate file name and game UID
+      const fileName = generateFileName(draft.tournament_date, draft.venue);
+      const gameUID = uuidv4();
+
+      // 6. Create poker_tournaments records
+      const totalPlayers = playersResult.length;
+      const gameDate = new Date(draft.tournament_date);
+
+      for (const player of playersResult) {
+        const playerUID =
+          player.player_uid || newPlayerUIDs[player.player_name];
+        const placement = player.placement || totalPlayers; // Default to last place if no placement
+        const placementPoints = calculatePlacementPoints(placement);
+        const totalPoints = draft.start_points + placementPoints;
+        const playerScore = calculatePlayerScore(placement, totalPlayers);
+
+        await tx.$executeRaw`
+          INSERT INTO poker_tournaments (
+            Name, UID, Hitman, Placement, Knockouts, Start_Points, 
+            Hit_Points, Placement_Points, Venue, Total_Points, 
+            Player_Score, File_name, game_date, game_uid, Season, created_at
+          ) VALUES (
+            ${player.player_name}, ${playerUID}, ${player.hitman_name}, 
+            ${placement}, 0, ${draft.start_points}, 0, ${placementPoints}, 
+            ${draft.venue}, ${totalPoints}, ${playerScore}, ${fileName}, 
+            ${gameDate}, ${gameUID}, 'Winter 2025', NOW()
+          )
+        `;
+      }
+
+      // 7. Update draft status and add integration info
+      await tx.$executeRaw`
+        UPDATE tournament_drafts 
+        SET 
+          status = 'integrated',
+          game_uid = ${gameUID},
+          file_name = ${fileName},
+          updated_at = NOW()
+        WHERE id = ${draftId}
+      `;
+
+      return {
+        success: true,
+        message: "Tournament successfully integrated",
+        gameUID,
+        fileName,
+        playersIntegrated: totalPlayers,
+        newPlayersCreated: Object.keys(newPlayerUIDs).length,
+      };
     });
+
+    return NextResponse.json(result);
   } catch (error) {
-    // Rollback on any error
-    await prisma.$executeRaw`ROLLBACK`;
     console.error("Error integrating tournament:", error);
     return NextResponse.json(
       {
