@@ -1,8 +1,20 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, Download, Copy, Save, RotateCcw, CheckCircle, AlertCircle, Clock, Database } from 'lucide-react';
+import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X } from 'lucide-react';
+
+interface TournamentDraft {
+    id: number;
+    tournament_date: string;
+    director_name: string;
+    venue: string;
+    start_points: number;
+    status: 'in_progress' | 'finalized' | 'integrated';
+    created_at: string;
+    updated_at: string;
+    player_count: number;
+}
 
 interface Player {
     id: number;
@@ -14,187 +26,176 @@ interface Player {
     placement: number | null;
 }
 
-interface TournamentDraft {
-    id: number;
-    tournament_name: string;
-    tournament_date: string;
-    director_name: string;
-    venue: string;
-    start_points: number;
-    status: string;
-    updated_at: string;
-}
-
-interface HitmanDropdownProps {
-    playerId: number;
-    currentValue: string;
-    playerNames: string[];
-    onSelect: (playerId: number, hitman: string) => void;
-}
-
-interface SaveStatus {
-    status: 'idle' | 'saving' | 'saved' | 'error';
-    message: string;
-}
-
-function HitmanDropdown({ playerId, currentValue, playerNames, onSelect }: HitmanDropdownProps) {
-    const [inputValue, setInputValue] = useState(currentValue || '');
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [filteredNames, setFilteredNames] = useState<string[]>([]);
-
-    useEffect(() => {
-        setInputValue(currentValue || '');
-    }, [currentValue]);
-
-    useEffect(() => {
-        if (inputValue.length >= 1) {
-            const filtered = playerNames.filter(name =>
-                name.toLowerCase().includes(inputValue.toLowerCase()) && name !== inputValue
-            );
-            setFilteredNames(filtered);
-            setShowDropdown(filtered.length > 0);
-        } else {
-            setShowDropdown(false);
-            setFilteredNames([]);
-        }
-    }, [inputValue, playerNames]);
-
-    const handleInputChange = (value: string) => {
-        setInputValue(value);
-        onSelect(playerId, value);
-    };
-
-    const handleSelectName = (name: string) => {
-        setInputValue(name);
-        onSelect(playerId, name);
-        setShowDropdown(false);
-    };
-
-    return (
-        <div className="relative">
-            <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onFocus={() => inputValue.length >= 1 && setShowDropdown(filteredNames.length > 0)}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                className="w-full px-2 py-1 border rounded text-black"
-                placeholder="Who knocked them out?"
-            />
-            {showDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-32 overflow-y-auto">
-                    {filteredNames.map((name, index) => (
-                        <div
-                            key={index}
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
-                            onMouseDown={() => handleSelectName(name)}
-                        >
-                            {name}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+interface PlayerSearchResult {
+    Name: string;
+    UID: string;
+    nickname: string | null;
+    TotalGames?: number;
+    TotalPoints?: number;
 }
 
 export default function TournamentEntryPage() {
+    // Authentication
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
+
+    // Tournament management
+    const [currentView, setCurrentView] = useState<'welcome' | 'entry'>('welcome');
+    const [tournaments, setTournaments] = useState<TournamentDraft[]>([]);
     const [currentDraft, setCurrentDraft] = useState<TournamentDraft | null>(null);
+    const [loadingTournaments, setLoadingTournaments] = useState(false);
+
+    // New tournament modal
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newTournament, setNewTournament] = useState({
+        tournament_date: '',
+        director_name: '',
+        venue: '',
+        start_points: 0
+    });
+
+    // Player management
     const [players, setPlayers] = useState<Player[]>([]);
     const [newPlayerName, setNewPlayerName] = useState('');
-    const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([]);
+    const [playerSearchResults, setPlayerSearchResults] = useState<PlayerSearchResult[]>([]);
     const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<SaveStatus>({ status: 'idle', message: '' });
-    const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
     const [isIntegrating, setIsIntegrating] = useState(false);
+    const [sortBy, setSortBy] = useState<'name' | 'ko_position'>('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-    // Auto-save debounced function
-    const debouncedSave = useCallback(async (data: any, type: 'tournament' | 'player', playerId?: number) => {
-        if (saveTimeout) {
-            clearTimeout(saveTimeout);
-        }
-
-        const timeout = setTimeout(async () => {
-            setSaveStatus({ status: 'saving', message: 'Saving...' });
-
-            try {
-                if (type === 'tournament' && currentDraft) {
-                    const response = await fetch(`/api/tournament-drafts/${currentDraft.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-
-                    if (!response.ok) throw new Error('Failed to save tournament');
-                } else if (type === 'player' && playerId && currentDraft) {
-                    const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${playerId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-
-                    if (!response.ok) throw new Error('Failed to save player');
-                }
-
-                setSaveStatus({ status: 'saved', message: 'Saved' });
-                setTimeout(() => setSaveStatus({ status: 'idle', message: '' }), 2000);
-            } catch (error) {
-                setSaveStatus({ status: 'error', message: 'Error saving' });
-                setTimeout(() => setSaveStatus({ status: 'idle', message: '' }), 3000);
-            }
-        }, 500);
-
-        setSaveTimeout(timeout);
-    }, [currentDraft, saveTimeout]);
-
-    // Initialize or create new tournament
-    const initializeTournament = async () => {
+    // Load tournaments list
+    const loadTournaments = async () => {
+        setLoadingTournaments(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
-            const response = await fetch('/api/tournament-drafts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tournament_name: '',
-                    tournament_date: today,
-                    director_name: '',
-                    venue: 'New Venue',
-                    start_points: 3
-                })
-            });
+            const response = await fetch('/api/tournament-drafts');
+            if (!response.ok) throw new Error('Failed to load tournaments');
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('API Error:', errorData);
-                throw new Error(`Failed to create tournament: ${errorData.error || response.statusText}`);
-            }
-
-            const newDraft = await response.json();
-            console.log('New draft received:', newDraft);
-
-            // Handle both array and object responses
-            const draftData = Array.isArray(newDraft) ? newDraft[0] : newDraft;
-            setCurrentDraft(draftData);
-            loadPlayers(draftData.id);
+            const data = await response.json();
+            setTournaments(data);
         } catch (error) {
-            console.error('Error initializing tournament:', error);
-            alert(`Failed to initialize tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error('Error loading tournaments:', error);
+            alert('Failed to load tournaments');
+        } finally {
+            setLoadingTournaments(false);
         }
     };
 
-    // Load players for current tournament
-    const loadPlayers = async (draftId: number) => {
+    // Create new tournament
+    const createTournament = async () => {
+        if (!newTournament.tournament_date || !newTournament.venue) {
+            alert('Date and venue are required');
+            return;
+        }
+
         try {
-            const response = await fetch(`/api/tournament-drafts/${draftId}/players`);
+            const response = await fetch('/api/tournament-drafts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTournament)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create tournament');
+            }
+
+            const tournament = await response.json();
+            setCurrentDraft(tournament);
+            setPlayers([]);
+            setCurrentView('entry');
+            setShowCreateModal(false);
+            setNewTournament({ tournament_date: '', director_name: '', venue: '', start_points: 0 });
+
+            // Refresh tournaments list
+            loadTournaments();
+        } catch (error) {
+            console.error('Error creating tournament:', error);
+            alert(`Failed to create tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    // Select existing tournament
+    const selectTournament = async (tournament: TournamentDraft) => {
+        setCurrentDraft(tournament);
+        setCurrentView('entry');
+
+        // Load players for this tournament
+        try {
+            const response = await fetch(`/api/tournament-drafts/${tournament.id}/players`);
             if (!response.ok) throw new Error('Failed to load players');
 
             const playersData = await response.json();
             setPlayers(playersData);
         } catch (error) {
             console.error('Error loading players:', error);
+            setPlayers([]);
+        }
+    };
+
+    // Update tournament field
+    const updateTournamentField = async (field: string, value: string | number) => {
+        if (!currentDraft || currentDraft.status === 'integrated') return;
+
+        try {
+            // Include tournament_name since it still exists in the database schema
+            const updateData = {
+                tournament_name: '', // Empty since we're not using tournament names anymore
+                tournament_date: field === 'tournament_date' ? value : currentDraft.tournament_date,
+                director_name: field === 'director_name' ? value : currentDraft.director_name,
+                venue: field === 'venue' ? value : currentDraft.venue,
+                start_points: field === 'start_points' ? value : currentDraft.start_points
+            };
+
+            const response = await fetch(`/api/tournament-drafts/${currentDraft.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+
+            if (response.ok) {
+                // Update local state
+                setCurrentDraft({ ...currentDraft, [field]: value });
+            } else {
+                const errorText = await response.text();
+                console.error('Failed to update tournament field:', errorText);
+            }
+        } catch (error) {
+            console.error('Error updating tournament:', error);
+        }
+    };
+
+    // Format date for input field (convert from ISO to YYYY-MM-DD)
+    const formatDateForInput = (isoDate: string) => {
+        if (!isoDate) return '';
+        return isoDate.split('T')[0];
+    };
+
+    // Sort players
+    const sortPlayers = (playersToSort: Player[]) => {
+        return [...playersToSort].sort((a, b) => {
+            if (sortBy === 'name') {
+                const nameA = a.player_name.toLowerCase();
+                const nameB = b.player_name.toLowerCase();
+                return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            } else if (sortBy === 'ko_position') {
+                // Handle null values for KO position
+                if (a.ko_position === null && b.ko_position === null) return 0;
+                if (a.ko_position === null) return sortOrder === 'asc' ? 1 : -1;
+                if (b.ko_position === null) return sortOrder === 'asc' ? -1 : 1;
+                return sortOrder === 'asc' ? a.ko_position - b.ko_position : b.ko_position - a.ko_position;
+            }
+            return 0;
+        });
+    };
+
+    // Handle column header click for sorting
+    const handleSort = (column: 'name' | 'ko_position') => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('asc');
         }
     };
 
@@ -212,11 +213,11 @@ export default function TournamentEntryPage() {
                 const response = await fetch(`/api/players/search?q=${encodeURIComponent(newPlayerName)}&name=true`);
                 const data = await response.json();
                 setPlayerSearchResults(data);
-                setShowPlayerDropdown(data.length > 0);
+                setShowPlayerDropdown(true);
             } catch (error) {
                 console.error('Failed to search players:', error);
                 setPlayerSearchResults([]);
-                setShowPlayerDropdown(false);
+                setShowPlayerDropdown(true);
             } finally {
                 setIsSearching(false);
             }
@@ -225,197 +226,122 @@ export default function TournamentEntryPage() {
         return () => clearTimeout(searchTimer);
     }, [newPlayerName]);
 
-    // Initialize tournament on component mount
-    useEffect(() => {
-        if (isAuthenticated && !currentDraft) {
-            initializeTournament();
-        }
-    }, [isAuthenticated]);
-
-    const handleLogin = async (e: any) => {
-        if (e.key === 'Enter' || e.type === 'click') {
-            const response = await fetch('/api/admin/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
-            });
-            const data = await response.json();
-            setIsAuthenticated(data.authenticated);
-        }
-    };
-
-    const updateTournamentField = (field: string, value: string | number) => {
+    // Add player
+    const addPlayer = async (playerData: { name: string; uid?: string; isNew?: boolean }) => {
         if (!currentDraft) return;
-
-        const updatedDraft = { ...currentDraft, [field]: value };
-        setCurrentDraft(updatedDraft);
-
-        // Auto-save tournament data
-        debouncedSave({
-            tournament_name: updatedDraft.tournament_name,
-            tournament_date: updatedDraft.tournament_date,
-            director_name: updatedDraft.director_name,
-            venue: updatedDraft.venue,
-            start_points: updatedDraft.start_points
-        }, 'tournament');
-    };
-
-    const addPlayer = async () => {
-        if (!newPlayerName.trim() || !currentDraft) return;
-
-        const playerName = newPlayerName.trim();
-
-        // Check if player already exists
-        const existingPlayer = players.find(
-            player => player.player_name.toLowerCase() === playerName.toLowerCase()
-        );
-
-        if (existingPlayer) {
-            alert(`Player "${playerName}" is already in the tournament!`);
-            setNewPlayerName('');
-            return;
-        }
 
         try {
             const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    player_name: playerName,
-                    player_uid: null,
-                    is_new_player: true
+                    player_name: playerData.name,
+                    player_uid: playerData.uid || null,
+                    is_new_player: playerData.isNew || false
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to add player');
+            if (response.ok) {
+                const newPlayerResponse = await response.json();
+                const newPlayer = Array.isArray(newPlayerResponse) ? newPlayerResponse[0] : newPlayerResponse;
 
-            const newPlayer = await response.json();
-            setPlayers(prev => [...prev, newPlayer[0]]);
-            setNewPlayerName('');
-            setShowPlayerDropdown(false);
-        } catch (error) {
-            console.error('Error adding player:', error);
-            alert('Failed to add player');
-        }
-    };
+                // Add new player to the TOP of the list
+                setPlayers([newPlayer, ...players]);
+                setNewPlayerName('');
+                setShowPlayerDropdown(false);
 
-    const handlePlayerSelect = async (player: any) => {
-        if (!currentDraft) return;
-
-        const playerName = player.nickname || player.Name;
-
-        // Check if player already exists
-        const existingPlayer = players.find(
-            p => p.player_name.toLowerCase() === playerName.toLowerCase()
-        );
-
-        if (existingPlayer) {
-            alert(`Player "${playerName}" is already in the tournament!`);
-            setNewPlayerName('');
-            setShowPlayerDropdown(false);
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    player_name: playerName,
-                    player_uid: player.UID,
-                    is_new_player: false
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to add player');
-
-            const newPlayer = await response.json();
-            setPlayers(prev => [...prev, newPlayer[0]]);
-            setNewPlayerName('');
-            setShowPlayerDropdown(false);
-        } catch (error) {
-            console.error('Error adding player:', error);
-            alert('Failed to add player');
-        }
-    };
-
-    const updatePlayer = (playerId: number, field: string, value: string | number | null) => {
-        setPlayers(prev => {
-            const updatedPlayers = prev.map(player => {
-                if (player.id === playerId) {
-                    let updatedPlayer = {
-                        ...player,
-                        [field]: field === 'ko_position' || field === 'placement'
-                            ? (value === '' || value === null ? null : Number(value))
-                            : value
-                    };
-
-                    // Auto-increment KO position when hitman is set and KO position is empty
-                    if (field === 'hitman_name' && value && !updatedPlayer.ko_position) {
-                        const maxKoPosition = prev
-                            .filter(p => p.ko_position !== null)
-                            .reduce((max, p) => Math.max(max, p.ko_position!), 0);
-                        updatedPlayer.ko_position = maxKoPosition + 1;
+                // Focus back to the input field
+                setTimeout(() => {
+                    const inputField = document.getElementById('player-search-input') as HTMLInputElement;
+                    if (inputField) {
+                        inputField.focus();
                     }
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error adding player:', error);
+        }
+    };
 
-                    // Auto-save player data
-                    debouncedSave({
-                        player_name: updatedPlayer.player_name,
-                        hitman_name: updatedPlayer.hitman_name,
-                        ko_position: updatedPlayer.ko_position,
-                        placement: updatedPlayer.placement
-                    }, 'player', playerId);
+    // Update player
+    const updatePlayer = async (playerId: number, field: string, value: string | number | null) => {
+        try {
+            const player = players.find(p => p.id === playerId);
+            if (!player) return;
 
-                    return updatedPlayer;
+            let updatedPlayer = { ...player, [field]: value };
+
+            // Auto-assign KO position when hitman is selected
+            if (field === 'hitman_name' && value) {
+                // Find the next available KO position
+                const usedKoPositions = players
+                    .filter(p => p.ko_position !== null && p.id !== playerId)
+                    .map(p => p.ko_position)
+                    .sort((a, b) => (a || 0) - (b || 0));
+
+                let nextKoPosition = 1;
+                for (const pos of usedKoPositions) {
+                    if (pos === nextKoPosition) {
+                        nextKoPosition++;
+                    } else {
+                        break;
+                    }
                 }
-                return player;
+
+                updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
+            }
+
+            // Clear KO position if hitman is removed
+            if (field === 'hitman_name' && !value) {
+                updatedPlayer = { ...updatedPlayer, ko_position: null };
+            }
+
+            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedPlayer)
             });
 
-            return updatedPlayers;
-        });
+            if (response.ok) {
+                setPlayers(players.map(p => p.id === playerId ? updatedPlayer : p));
+            }
+        } catch (error) {
+            console.error('Error updating player:', error);
+        }
     };
 
-    const handleHitmanSelect = (playerId: number, hitman: string) => {
-        updatePlayer(playerId, 'hitman_name', hitman);
-    };
-
+    // Remove player
     const removePlayer = async (playerId: number) => {
-        if (!currentDraft) return;
-
         try {
-            const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${playerId}`, {
+            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
                 method: 'DELETE'
             });
 
-            if (!response.ok) throw new Error('Failed to remove player');
-
-            setPlayers(prev => prev.filter(player => player.id !== playerId));
+            if (response.ok) {
+                setPlayers(players.filter(p => p.id !== playerId));
+            }
         } catch (error) {
             console.error('Error removing player:', error);
-            alert('Failed to remove player');
         }
     };
 
-    const getPlayerNames = () => {
-        return players.map(player => player.player_name).filter(name => name.trim() !== '');
-    };
-
-    const exportToText = () => {
-        if (!currentDraft) return;
-
-        let output = `Tournament: ${currentDraft.tournament_name}\n`;
-        output += `Date: ${currentDraft.tournament_date}\n`;
-        output += `Director: ${currentDraft.director_name}\n`;
-        output += `Venue: ${currentDraft.venue}\n`;
-        output += `Start Points: ${currentDraft.start_points}\n`;
-        output += `\n--- PLAYERS ---\n`;
+    // Export tournament
+    const exportTournament = () => {
+        if (!currentDraft || players.length === 0) return;
 
         const sortedPlayers = [...players].sort((a, b) => {
-            if (a.ko_position === null && b.ko_position === null) return 0;
-            if (a.ko_position === null) return 1;
-            if (b.ko_position === null) return -1;
-            return a.ko_position - b.ko_position;
+            if (a.placement !== null && b.placement !== null) {
+                return a.placement - b.placement;
+            }
+            if (a.placement !== null) return -1;
+            if (b.placement !== null) return 1;
+            return a.player_name.localeCompare(b.player_name);
         });
+
+        let output = `Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}\n`;
+        output += `Director: ${currentDraft.director_name}\n`;
+        output += `Players: ${players.length}\n`;
+        output += `Start Points: ${currentDraft.start_points}\n\n`;
 
         sortedPlayers.forEach(player => {
             output += `Player: ${player.player_name}`;
@@ -430,13 +356,14 @@ export default function TournamentEntryPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `tournament_${currentDraft.tournament_name.replace(/\s+/g, '_')}_${currentDraft.tournament_date}.txt`;
+        a.download = `tournament_${currentDraft.venue.replace(/\s+/g, '_')}_${currentDraft.tournament_date}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
+    // Integrate tournament
     const integrateToMainSystem = async () => {
         if (!currentDraft) return;
 
@@ -471,9 +398,12 @@ export default function TournamentEntryPage() {
             if (response.ok) {
                 alert(`Tournament successfully integrated!\n\nGame UID: ${result.gameUID}\nFile Name: ${result.fileName}\nPlayers: ${result.playersIntegrated}\nNew Players Created: ${result.newPlayersCreated}`);
 
-                // Refresh current draft to show integrated status
-                const updatedDraft = { ...currentDraft, status: 'integrated' };
+                // Update current draft status
+                const updatedDraft = { ...currentDraft, status: 'integrated' as const };
                 setCurrentDraft(updatedDraft);
+
+                // Refresh tournaments list
+                loadTournaments();
             } else {
                 alert(`Integration failed:\n${result.error}\n${result.details ? result.details.join('\n') : ''}`);
             }
@@ -485,27 +415,31 @@ export default function TournamentEntryPage() {
         }
     };
 
-    const clearTournament = async () => {
-        if (!confirm('Are you sure you want to clear all tournament data? This will create a new draft.')) {
-            return;
-        }
+    // Authentication
+    const handleLogin = async (e: any) => {
+        if (e.key === 'Enter' || e.type === 'click') {
+            const response = await fetch('/api/admin/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
 
-        if (currentDraft) {
-            try {
-                // Delete current draft
-                await fetch(`/api/tournament-drafts/${currentDraft.id}`, {
-                    method: 'DELETE'
-                });
-            } catch (error) {
-                console.error('Error deleting draft:', error);
+            if (response.ok) {
+                setIsAuthenticated(true);
+                loadTournaments();
+            } else {
+                alert('Invalid password');
+                setPassword('');
             }
         }
-
-        // Create new draft
-        setCurrentDraft(null);
-        setPlayers([]);
-        await initializeTournament();
     };
+
+    // Load tournaments on authentication
+    useEffect(() => {
+        if (isAuthenticated) {
+            loadTournaments();
+        }
+    }, [isAuthenticated]);
 
     if (!isAuthenticated) {
         return (
@@ -520,7 +454,7 @@ export default function TournamentEntryPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
+                                onKeyPress={handleLogin}
                                 className="w-full px-3 py-2 border rounded text-black"
                                 placeholder="Enter admin password"
                                 required
@@ -538,6 +472,202 @@ export default function TournamentEntryPage() {
         );
     }
 
+    // Welcome Screen
+    if (currentView === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gray-100 p-4">
+                <div className="max-w-6xl mx-auto">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Trophy className="w-6 h-6 text-blue-600" />
+                                    <span>Tournament Entry System</span>
+                                </div>
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                >
+                                    <Plus size={16} />
+                                    Create New Tournament
+                                </button>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="mb-6">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                                    Select a Tournament or Create New
+                                </h2>
+                                <p className="text-gray-600">
+                                    Choose an existing tournament draft to continue working on, or create a new tournament.
+                                </p>
+                            </div>
+
+                            {loadingTournaments ? (
+                                <div className="text-center py-8">
+                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <p className="mt-2 text-gray-600">Loading tournaments...</p>
+                                </div>
+                            ) : tournaments.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-gray-600">No tournament drafts found.</p>
+                                    <p className="text-gray-500 text-sm">Click "Create New Tournament" to get started.</p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4">
+                                    {tournaments.map((tournament) => (
+                                        <div
+                                            key={tournament.id}
+                                            onClick={() => selectTournament(tournament)}
+                                            className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                                            <Calendar className="w-4 h-4 text-blue-600" />
+                                                            {new Date(tournament.tournament_date).toLocaleDateString()}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <MapPin className="w-4 h-4" />
+                                                            {tournament.venue}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                        <div className="flex items-center gap-1">
+                                                            <Users className="w-4 h-4" />
+                                                            {tournament.player_count} players
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <User className="w-4 h-4" />
+                                                            {tournament.director_name || 'No director'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${tournament.status === 'in_progress'
+                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                        : tournament.status === 'integrated'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-blue-100 text-blue-800'
+                                                        }`}>
+                                                        {tournament.status === 'in_progress'
+                                                            ? 'In Progress'
+                                                            : tournament.status === 'integrated'
+                                                                ? 'Integrated'
+                                                                : 'Finalized'
+                                                        }
+                                                    </div>
+                                                    <div className="text-xs text-gray-400">
+                                                        Updated {new Date(tournament.updated_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Create Tournament Modal */}
+                    {showCreateModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <Card className="w-96">
+                                <CardHeader>
+                                    <CardTitle>Create New Tournament</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-1">
+                                                Date *
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={newTournament.tournament_date}
+                                                onChange={(e) => setNewTournament({
+                                                    ...newTournament,
+                                                    tournament_date: e.target.value
+                                                })}
+                                                className="w-full px-3 py-2 border rounded text-black"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-1">
+                                                Venue *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newTournament.venue}
+                                                onChange={(e) => setNewTournament({
+                                                    ...newTournament,
+                                                    venue: e.target.value
+                                                })}
+                                                className="w-full px-3 py-2 border rounded text-black"
+                                                placeholder="Tournament venue"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-1">
+                                                Director
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newTournament.director_name}
+                                                onChange={(e) => setNewTournament({
+                                                    ...newTournament,
+                                                    director_name: e.target.value
+                                                })}
+                                                className="w-full px-3 py-2 border rounded text-black"
+                                                placeholder="Tournament director"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-1">
+                                                Start Points
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={newTournament.start_points}
+                                                onChange={(e) => setNewTournament({
+                                                    ...newTournament,
+                                                    start_points: parseInt(e.target.value) || 0
+                                                })}
+                                                className="w-full px-3 py-2 border rounded text-black"
+                                                placeholder="Starting points"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 pt-4">
+                                            <button
+                                                onClick={createTournament}
+                                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                            >
+                                                Create Tournament
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCreateModal(false)}
+                                                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // Tournament Entry Interface
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <div className="max-w-6xl mx-auto">
@@ -545,50 +675,52 @@ export default function TournamentEntryPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <span>Tournament Entry System</span>
-                                <div className="flex items-center gap-2">
-                                    <Database size={16} className="text-blue-600" />
-                                    <span className="text-sm text-gray-600">Auto-Save Enabled</span>
+                                <button
+                                    onClick={() => setCurrentView('welcome')}
+                                    className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                                >
+                                    <ArrowLeft size={16} />
+                                    Back to Tournaments
+                                </button>
+
+                                <div>
+                                    <div className="text-lg font-semibold">
+                                        {new Date(currentDraft?.tournament_date || '').toLocaleDateString()} - {currentDraft?.venue}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        {currentDraft?.director_name ? `Director: ${currentDraft.director_name}` : 'No director assigned'}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {/* Save Status Indicator */}
-                                {saveStatus.status !== 'idle' && (
-                                    <div className="flex items-center gap-1 text-sm">
-                                        {saveStatus.status === 'saving' && <Clock size={14} className="text-blue-500" />}
-                                        {saveStatus.status === 'saved' && <CheckCircle size={14} className="text-green-500" />}
-                                        {saveStatus.status === 'error' && <AlertCircle size={14} className="text-red-500" />}
-                                        <span className={`
-                                            ${saveStatus.status === 'saving' ? 'text-blue-600' : ''}
-                                            ${saveStatus.status === 'saved' ? 'text-green-600' : ''}
-                                            ${saveStatus.status === 'error' ? 'text-red-600' : ''}
-                                        `}>
-                                            {saveStatus.message}
-                                        </span>
-                                    </div>
-                                )}
 
+                            <div className="flex items-center gap-2">
                                 <button
-                                    onClick={exportToText}
-                                    className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                                    onClick={exportTournament}
+                                    className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                                 >
-                                    <Download size={16} />
+                                    <Upload size={16} />
                                     Export
                                 </button>
 
                                 {currentDraft?.status === 'in_progress' && (
                                     <button
                                         onClick={integrateToMainSystem}
-                                        disabled={isIntegrating || players.length === 0}
-                                        className="flex items-center gap-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm disabled:bg-gray-400"
+                                        disabled={isIntegrating}
+                                        className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm disabled:opacity-50"
                                     >
-                                        <Database size={16} />
+                                        <Check size={16} />
                                         {isIntegrating ? 'Integrating...' : 'Integrate to Main System'}
                                     </button>
                                 )}
 
                                 <button
-                                    onClick={clearTournament}
+                                    onClick={() => {
+                                        if (confirm('Are you sure you want to create a new tournament? This will leave the current tournament.')) {
+                                            setCurrentView('welcome');
+                                            setCurrentDraft(null);
+                                            setPlayers([]);
+                                        }
+                                    }}
                                     className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                 >
                                     <RotateCcw size={16} />
@@ -618,42 +750,16 @@ export default function TournamentEntryPage() {
                         )}
 
                         {/* Tournament Metadata */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-900 mb-1">
-                                    Tournament Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={currentDraft?.tournament_name || ''}
-                                    onChange={(e) => updateTournamentField('tournament_name', e.target.value)}
-                                    className="w-full px-3 py-2 border rounded text-black"
-                                    placeholder="Enter tournament name"
-                                    disabled={currentDraft?.status === 'integrated'}
-                                />
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-900 mb-1">
                                     Date
                                 </label>
                                 <input
                                     type="date"
-                                    value={currentDraft?.tournament_date || ''}
+                                    value={formatDateForInput(currentDraft?.tournament_date || '')}
                                     onChange={(e) => updateTournamentField('tournament_date', e.target.value)}
                                     className="w-full px-3 py-2 border rounded text-black"
-                                    disabled={currentDraft?.status === 'integrated'}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-900 mb-1">
-                                    Tournament Director
-                                </label>
-                                <input
-                                    type="text"
-                                    value={currentDraft?.director_name || ''}
-                                    onChange={(e) => updateTournamentField('director_name', e.target.value)}
-                                    className="w-full px-3 py-2 border rounded text-black"
-                                    placeholder="Enter TD name"
                                     disabled={currentDraft?.status === 'integrated'}
                                 />
                             </div>
@@ -666,7 +772,20 @@ export default function TournamentEntryPage() {
                                     value={currentDraft?.venue || ''}
                                     onChange={(e) => updateTournamentField('venue', e.target.value)}
                                     className="w-full px-3 py-2 border rounded text-black"
-                                    placeholder="Enter venue name"
+                                    placeholder="Tournament venue"
+                                    disabled={currentDraft?.status === 'integrated'}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-900 mb-1">
+                                    Director
+                                </label>
+                                <input
+                                    type="text"
+                                    value={currentDraft?.director_name || ''}
+                                    onChange={(e) => updateTournamentField('director_name', e.target.value)}
+                                    className="w-full px-3 py-2 border rounded text-black"
+                                    placeholder="Director name"
                                     disabled={currentDraft?.status === 'integrated'}
                                 />
                             </div>
@@ -679,195 +798,252 @@ export default function TournamentEntryPage() {
                                     value={currentDraft?.start_points || 0}
                                     onChange={(e) => updateTournamentField('start_points', parseInt(e.target.value) || 0)}
                                     className="w-full px-3 py-2 border rounded text-black"
-                                    min="0"
                                     disabled={currentDraft?.status === 'integrated'}
                                 />
                             </div>
                         </div>
 
-                        {/* Add New Player */}
-                        {currentDraft?.status === 'in_progress' && (
-                            <div className="relative mb-6">
-                                <div className="flex gap-2">
-                                    <div className="flex-1 relative">
-                                        <input
-                                            type="text"
-                                            value={newPlayerName}
-                                            onChange={(e) => setNewPlayerName(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
-                                            onFocus={() => newPlayerName.length >= 2 && setShowPlayerDropdown(playerSearchResults.length > 0)}
-                                            onBlur={() => setTimeout(() => setShowPlayerDropdown(false), 200)}
-                                            className="w-full px-3 py-2 border rounded text-black"
-                                            placeholder="Enter new player name (type 2+ chars to search existing)"
-                                        />
+                        {/* Add Player Section */}
+                        {currentDraft?.status !== 'integrated' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-900 mb-1">
+                                    Add Player
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={newPlayerName}
+                                        onChange={(e) => setNewPlayerName(e.target.value)}
+                                        onFocus={() => {
+                                            if (newPlayerName.length >= 2) {
+                                                setShowPlayerDropdown(true);
+                                            }
+                                        }}
+                                        className="w-full px-3 py-2 border rounded text-black"
+                                        placeholder="Start typing player name..."
+                                        id="player-search-input"
+                                    />
 
-                                        {isSearching && (
-                                            <div className="absolute right-3 top-3 text-gray-400">
-                                                Searching...
-                                            </div>
-                                        )}
+                                    {showPlayerDropdown && (
+                                        <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                                            {isSearching ? (
+                                                <div className="px-3 py-2 text-gray-500">Searching...</div>
+                                            ) : (
+                                                <>
+                                                    {playerSearchResults.map((player) => {
+                                                        const isAlreadyAdded = players.some(p => {
+                                                            const uidMatch = p.player_uid === player.UID;
+                                                            const nameMatch = p.player_name.toLowerCase() === player.Name.toLowerCase();
+                                                            const nicknameMatch = p.player_name.toLowerCase() === (player.nickname || '').toLowerCase();
+                                                            return uidMatch || nameMatch || nicknameMatch;
+                                                        });
 
-                                        {showPlayerDropdown && (
-                                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
-                                                {playerSearchResults.map((player) => {
-                                                    const playerName = player.nickname || player.Name;
-                                                    const isAlreadyAdded = players.some(
-                                                        p => p.player_name.toLowerCase() === playerName.toLowerCase()
-                                                    );
-
-                                                    return (
-                                                        <div
-                                                            key={player.UID}
-                                                            className={`px-4 py-2 cursor-pointer text-black border-b border-gray-100 last:border-0 ${isAlreadyAdded
-                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                : 'hover:bg-gray-100'
-                                                                }`}
-                                                            onMouseDown={() => !isAlreadyAdded && handlePlayerSelect(player)}
-                                                        >
-                                                            <div className={`font-medium ${isAlreadyAdded ? 'line-through' : ''}`}>
-                                                                {playerName}
-                                                                {isAlreadyAdded && <span className="ml-2 text-xs">(Already added)</span>}
-                                                            </div>
-                                                            {player.TotalGames && (
-                                                                <div className="text-sm text-gray-500">
-                                                                    {player.TotalGames} games played
+                                                        return (
+                                                            <div
+                                                                key={player.UID}
+                                                                onClick={() => {
+                                                                    if (!isAlreadyAdded) {
+                                                                        addPlayer({ name: player.Name, uid: player.UID });
+                                                                    } else {
+                                                                        alert('This player is already in the tournament!');
+                                                                    }
+                                                                }}
+                                                                className={`px-3 py-2 border-b last:border-b-0 ${isAlreadyAdded
+                                                                    ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-75'
+                                                                    : 'hover:bg-blue-50 cursor-pointer'
+                                                                    }`}
+                                                            >
+                                                                <div className={`font-medium ${isAlreadyAdded ? 'line-through' : 'text-gray-900'}`}>
+                                                                    {player.nickname || player.Name}
+                                                                    {isAlreadyAdded && <span className="ml-2 text-xs text-red-600 font-bold">(ALREADY ADDED)</span>}
                                                                 </div>
-                                                            )}
+                                                                {(player.TotalGames || player.TotalPoints) && (
+                                                                    <div className="text-sm text-gray-600">
+                                                                        {player.TotalGames || 0} games, {player.TotalPoints || 0} points
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {newPlayerName.trim() && (
+                                                        <div
+                                                            onClick={() => addPlayer({ name: newPlayerName.trim(), isNew: true })}
+                                                            className="px-3 py-2 hover:bg-green-50 cursor-pointer border-t bg-green-25"
+                                                        >
+                                                            <div className="font-medium text-green-700">
+                                                                Add "{newPlayerName.trim()}" as new player
+                                                            </div>
+                                                            <div className="text-sm text-green-600">
+                                                                This will create a new player record
+                                                            </div>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={addPlayer}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                    >
-                                        <Plus size={16} />
-                                        Add Player
-                                    </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
 
                         {/* Tournament Summary */}
                         {players.length > 0 && (
-                            <div className="mt-6 p-4 bg-gray-50 rounded">
-                                <h3 className="font-medium text-gray-900 mb-2">Tournament Summary</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm text-gray-900">
+                            <div className="mb-6 p-4 bg-gray-50 rounded">
+                                <h4 className="font-semibold text-black mb-2">Tournament Summary</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                     <div>
-                                        <span className="font-medium">Total Players:</span> {players.length}
+                                        <span className="text-black">Total Players:</span>
+                                        <span className="ml-2 text-black font-medium">{players.length}</span>
                                     </div>
                                     <div>
-                                        <span className="font-medium">New Players:</span> {players.filter(p => p.is_new_player).length}
+                                        <span className="text-black">New Players:</span>
+                                        <span className="ml-2 font-medium text-black ">{players.filter(p => p.is_new_player).length}</span>
                                     </div>
                                     <div>
-                                        <span className="font-medium">With Placements:</span> {players.filter(p => p.placement !== null).length}
+                                        <span className="text-black">With Placements:</span>
+                                        <span className="ml-2 font-medium text-black ">{players.filter(p => p.placement !== null).length}</span>
                                     </div>
                                     <div>
-                                        <span className="font-medium">Knocked Out:</span> {players.filter(p => p.ko_position !== null).length}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Auto-Save:</span> <CheckCircle size={16} className="inline text-green-600" />
+                                        <span className="text-black">With Hitmen:</span>
+                                        <span className="ml-2 font-medium text-black ">{players.filter(p => p.hitman_name !== null).length}</span>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Players Table */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse border border-gray-300">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">
+                        {/* Players List */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    Players ({players.length})
+                                </h3>
+                            </div>
+
+                            {players.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    No players added yet. Start typing a name above to add players.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {/* Column Headers */}
+                                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
+                                        <div
+                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                                            onClick={() => handleSort('name')}
+                                        >
                                             Player Name
-                                        </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">
-                                            Hitman
-                                        </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">
+                                            {sortBy === 'name' && (
+                                                <span className="text-xs">
+                                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>Hitman</div>
+                                        <div
+                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                                            onClick={() => handleSort('ko_position')}
+                                        >
                                             KO Position
-                                        </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left text-gray-900">
-                                            Final Placement
-                                        </th>
-                                        {currentDraft?.status === 'in_progress' && (
-                                            <th className="border border-gray-300 px-4 py-2 text-center text-gray-900">Actions</th>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {players.map((player) => (
-                                        <tr key={player.id} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={player.player_name}
-                                                        onChange={(e) => updatePlayer(player.id, 'player_name', e.target.value)}
-                                                        className="w-full px-2 py-1 border rounded text-black"
-                                                        disabled={currentDraft?.status === 'integrated'}
-                                                    />
-                                                    {player.is_new_player && (
-                                                        <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded font-medium">
-                                                            NEW
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {currentDraft?.status === 'in_progress' ? (
-                                                    <HitmanDropdown
-                                                        playerId={player.id}
-                                                        currentValue={player.hitman_name || ''}
-                                                        playerNames={getPlayerNames()}
-                                                        onSelect={handleHitmanSelect}
-                                                    />
-                                                ) : (
-                                                    <span className="text-black">{player.hitman_name || '-'}</span>
+                                            {sortBy === 'ko_position' && (
+                                                <span className="text-xs">
+                                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>Final Position</div>
+                                        <div>Status</div>
+                                        <div>Actions</div>
+                                    </div>
+
+                                    {/* Show players in insertion order (newest first) when no custom sorting is applied */}
+                                    {(sortBy === 'name' && sortOrder === 'asc' ?
+                                        players : // Show in insertion order (newest first since we prepend)
+                                        sortPlayers(players)
+                                    ).map((player) => (
+                                        <div
+                                            key={player.id}
+                                            className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border rounded hover:bg-gray-50"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-gray-900">
+                                                    {player.player_name}
+                                                </span>
+                                                {player.is_new_player && (
+                                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                                        NEW
+                                                    </span>
                                                 )}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
+                                            </div>
+
+                                            <div>
+                                                <select
+                                                    value={player.hitman_name || ''}
+                                                    onChange={(e) => updatePlayer(player.id, 'hitman_name', e.target.value || null)}
+                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
+                                                    disabled={currentDraft?.status === 'integrated'}
+                                                >
+                                                    <option value="">No Hitman</option>
+                                                    {players
+                                                        .filter(p => p.id !== player.id)
+                                                        .map(p => (
+                                                            <option key={`hitman-${p.id}`} value={p.player_name}>
+                                                                {p.player_name}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
                                                 <input
                                                     type="number"
                                                     value={player.ko_position || ''}
-                                                    onChange={(e) => updatePlayer(player.id, 'ko_position', e.target.value)}
-                                                    className="w-full px-2 py-1 border rounded text-black"
-                                                    placeholder="KO order"
-                                                    min="1"
+                                                    onChange={(e) => updatePlayer(player.id, 'ko_position', parseInt(e.target.value) || null)}
+                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
+                                                    placeholder="KO Position"
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
+                                            </div>
+
+                                            <div>
                                                 <input
                                                     type="number"
                                                     value={player.placement || ''}
-                                                    onChange={(e) => updatePlayer(player.id, 'placement', e.target.value)}
-                                                    className="w-full px-2 py-1 border rounded text-black"
-                                                    placeholder="Final position"
-                                                    min="1"
+                                                    onChange={(e) => updatePlayer(player.id, 'placement', parseInt(e.target.value) || null)}
+                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
+                                                    placeholder="Final Position"
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
-                                            </td>
-                                            {currentDraft?.status === 'in_progress' && (
-                                                <td className="border border-gray-300 px-4 py-2 text-center">
-                                                    <button
-                                                        onClick={() => removePlayer(player.id)}
-                                                        className="text-red-600 hover:text-red-800"
-                                                        title="Remove player"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                            </div>
 
-                            {players.length === 0 && (
-                                <div className="text-center py-8 text-gray-900">
-                                    No players added yet. Add a player above to get started.
+                                            <div className="flex items-center gap-2">
+                                                {player.placement === 1 && (
+                                                    <span className="text-yellow-500">👑</span>
+                                                )}
+                                                {player.placement === 2 && (
+                                                    <span className="text-gray-400">🥈</span>
+                                                )}
+                                                {player.placement === 3 && (
+                                                    <span className="text-orange-600">🥉</span>
+                                                )}
+                                            </div>
+
+                                            <div className="flex justify-end">
+                                                {currentDraft?.status !== 'integrated' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm(`Remove ${player.player_name} from tournament?`)) {
+                                                                removePlayer(player.id);
+                                                            }
+                                                        }}
+                                                        className="text-red-600 hover:text-red-800 p-1"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
