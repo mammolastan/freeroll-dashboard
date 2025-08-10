@@ -146,3 +146,55 @@ enum processed_files_test_status {
   success
   error
 }
+
+model TournamentDraft {
+  id              Int                   @id @default(autoincrement())
+  tournament_name String                @db.VarChar(255)
+  tournament_date DateTime              @db.Date
+  director_name   String                @db.VarChar(255)
+  venue           String                @db.VarChar(255)
+  start_points    Int                   @default(0)
+  status          TournamentDraftStatus @default(in_progress)
+  created_by      String?               @db.VarChar(255)
+  created_at      DateTime              @default(now()) @db.Timestamp(0)
+  updated_at      DateTime              @default(now()) @updatedAt @db.Timestamp(0)
+  game_uid        String?               @db.VarChar(100)
+  file_name       String?               @db.VarChar(255)
+
+  // Relations
+  players TournamentDraftPlayer[]
+
+  @@index([status], map: "idx_status")
+  @@index([tournament_date], map: "idx_tournament_date")
+  @@index([game_uid], map: "idx_game_uid")
+  @@map("tournament_drafts")
+}
+
+model TournamentDraftPlayer {
+  id                  Int      @id @default(autoincrement())
+  tournament_draft_id Int
+  player_name         String   @db.VarChar(255)
+  player_uid          String?  @db.VarChar(255)
+  is_new_player       Boolean  @default(false)
+  hitman_name         String?  @db.VarChar(255)
+  ko_position         Int?
+  placement           Int?
+  created_at          DateTime @default(now()) @db.Timestamp(0)
+  updated_at          DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  tournament_draft TournamentDraft @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade)
+
+  @@unique([tournament_draft_id, player_name], map: "unique_player_per_tournament")
+  @@unique([tournament_draft_id, placement], map: "unique_placement_per_tournament")
+  @@index([tournament_draft_id], map: "idx_tournament_draft_id")
+  @@index([player_uid], map: "idx_player_uid")
+  @@index([placement], map: "idx_placement")
+  @@map("tournament_draft_players")
+}
+
+enum TournamentDraftStatus {
+  in_progress
+  finalized
+  integrated
+}
