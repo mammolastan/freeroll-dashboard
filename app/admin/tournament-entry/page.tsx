@@ -62,8 +62,9 @@ export default function TournamentEntryPage() {
     const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [isIntegrating, setIsIntegrating] = useState(false);
-    const [sortBy, setSortBy] = useState<'name' | 'ko_position'>('name');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion'>('insertion');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // desc means newest first for insertion
+
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
 
@@ -241,10 +242,15 @@ export default function TournamentEntryPage() {
     };
 
     const resetToDefaultSort = () => {
-        setSortBy('name');
-        setSortOrder('asc');
+        if (sortBy === 'insertion') {
+            // If already in insertion mode, toggle the order
+            setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+        } else {
+            // If not in insertion mode, go to insertion mode with newest first
+            setSortBy('insertion');
+            setSortOrder('desc'); // desc means newest first
+        }
     };
-
 
     // Player search effect
     useEffect(() => {
@@ -1034,14 +1040,25 @@ export default function TournamentEntryPage() {
 
                         {/* Players List */}
                         <div>
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
                                 <h3
                                     className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
                                     onClick={resetToDefaultSort}
-                                    title="Click to reset to default order (newest players first)"
+                                    title={sortBy === 'insertion' ?
+                                        `Click to sort ${sortOrder === 'desc' ? 'oldest first' : 'newest first'}` :
+                                        'Click to sort by insertion order (newest first)'
+                                    }
                                 >
                                     Players ({players.length})
                                 </h3>
+                                {sortBy === 'insertion' && (
+                                    <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                                        Insertion Order
+                                        <span className="text-xs">
+                                            {sortOrder === 'desc' ? '↓ Newest First' : '↑ Oldest First'}
+                                        </span>
+                                    </span>
+                                )}
                             </div>
 
                             {players.length === 0 ? (
@@ -1080,9 +1097,10 @@ export default function TournamentEntryPage() {
                                         <div>Actions</div>
                                     </div>
 
-                                    {/* Show players in insertion order (newest first) when no custom sorting is applied */}
-                                    {(sortBy === 'name' && sortOrder === 'asc' ?
-                                        players : // Show in insertion order (newest first since we prepend)
+
+                                    {/* Show players in insertion order when sortBy is 'insertion', otherwise use sortPlayers */}
+                                    {(sortBy === 'insertion' ?
+                                        (sortOrder === 'desc' ? players : [...players].reverse()) : // desc = newest first, asc = oldest first
                                         sortPlayers(players)
                                     ).map((player) => (
                                         <div
