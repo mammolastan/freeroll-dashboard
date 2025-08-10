@@ -81,29 +81,63 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const draftId = parseInt(params.id);
+    const tournamentId = parseInt(params.id);
 
-    // Check if draft can be deleted (only in_progress status)
-    const draft = await prisma.$queryRaw`
-      SELECT status FROM tournament_drafts WHERE id = ${draftId}
-    `;
-
-    if (!draft || (draft as any[])[0]?.status !== "in_progress") {
+    if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { error: "Can only delete drafts in progress" },
+        { error: "Invalid tournament ID" },
         { status: 400 }
       );
     }
 
-    await prisma.$queryRaw`
-      DELETE FROM tournament_drafts WHERE id = ${draftId}
+    // Check if tournament exists and get its status
+    const existingTournament = await prisma.$queryRaw`
+      SELECT id, status FROM tournament_drafts WHERE id = ${tournamentId}
     `;
 
-    return NextResponse.json({ success: true });
+    if ((existingTournament as any[]).length === 0) {
+      return NextResponse.json(
+        { error: "Tournament not found" },
+        { status: 404 }
+      );
+    }
+
+    const tournament = (existingTournament as any[])[0];
+
+    // Prevent deletion of integrated tournaments (optional - you can remove this if you want to allow deletion of integrated tournaments)
+    if (tournament.status === "integrated") {
+      return NextResponse.json(
+        { error: "Cannot delete integrated tournaments" },
+        { status: 400 }
+      );
+    }
+
+    // Use Prisma's transaction functionality
+    await prisma.$transaction(async (tx) => {
+      // Delete all players first (due to foreign key constraint)
+      await tx.$executeRaw`
+        DELETE FROM tournament_draft_players 
+        WHERE tournament_draft_id = ${tournamentId}
+      `;
+
+      // Delete the tournament
+      await tx.$executeRaw`
+        DELETE FROM tournament_drafts 
+        WHERE id = ${tournamentId}
+      `;
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Tournament deleted successfully",
+    });
   } catch (error) {
-    console.error("Error deleting tournament draft:", error);
+    console.error("Error deleting tournament:", error);
     return NextResponse.json(
-      { error: "Failed to delete tournament draft" },
+      {
+        error: "Failed to delete tournament",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   } finally {

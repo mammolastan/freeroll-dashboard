@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X } from 'lucide-react';
 
+
 interface TournamentDraft {
     id: number;
     tournament_date: string;
@@ -63,6 +64,9 @@ export default function TournamentEntryPage() {
     const [isIntegrating, setIsIntegrating] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'ko_position'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
+    const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
+
 
     // Load tournaments list
     const loadTournaments = async () => {
@@ -117,22 +121,59 @@ export default function TournamentEntryPage() {
 
     // Select existing tournament
     const selectTournament = async (tournament: TournamentDraft) => {
+        console.log('Selecting tournament:', tournament.id);
         setCurrentDraft(tournament);
         setCurrentView('entry');
 
         // Load players for this tournament
         try {
+            console.log('Loading players for tournament:', tournament.id);
             const response = await fetch(`/api/tournament-drafts/${tournament.id}/players`);
-            if (!response.ok) throw new Error('Failed to load players');
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to load players:', response.status, errorText);
+                throw new Error(`Failed to load players: ${errorText}`);
+            }
 
             const playersData = await response.json();
-            setPlayers(playersData);
+            console.log('Loaded players data:', playersData);
+
+            // Ensure the data structure is correct
+            const formattedPlayers = Array.isArray(playersData) ? playersData : [];
+            setPlayers(formattedPlayers);
+
+            console.log('Players state set to:', formattedPlayers);
         } catch (error) {
             console.error('Error loading players:', error);
             setPlayers([]);
+            alert(`Failed to load players: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
+    const deleteTournament = async (tournamentId: number, tournamentName: string) => {
+        if (!confirm(`Are you sure you want to delete the tournament "${tournamentName}"?\n\nThis will permanently delete the tournament and all its players. This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/tournament-drafts/${tournamentId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Remove tournament from local state
+                setTournaments(tournaments.filter(t => t.id !== tournamentId));
+                alert('Tournament deleted successfully');
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete tournament');
+            }
+        } catch (error) {
+            console.error('Error deleting tournament:', error);
+            alert(`Failed to delete tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
     // Update tournament field
     const updateTournamentField = async (field: string, value: string | number) => {
         if (!currentDraft || currentDraft.status === 'integrated') return;
@@ -198,6 +239,12 @@ export default function TournamentEntryPage() {
             setSortOrder('asc');
         }
     };
+
+    const resetToDefaultSort = () => {
+        setSortBy('name');
+        setSortOrder('asc');
+    };
+
 
     // Player search effect
     useEffect(() => {
@@ -267,7 +314,10 @@ export default function TournamentEntryPage() {
     const updatePlayer = async (playerId: number, field: string, value: string | number | null) => {
         try {
             const player = players.find(p => p.id === playerId);
-            if (!player) return;
+            if (!player) {
+                console.error('Player not found:', playerId);
+                return;
+            }
 
             let updatedPlayer = { ...player, [field]: value };
 
@@ -296,6 +346,8 @@ export default function TournamentEntryPage() {
                 updatedPlayer = { ...updatedPlayer, ko_position: null };
             }
 
+            console.log('Sending update request for player:', playerId, 'with data:', updatedPlayer);
+
             const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -303,10 +355,21 @@ export default function TournamentEntryPage() {
             });
 
             if (response.ok) {
-                setPlayers(players.map(p => p.id === playerId ? updatedPlayer : p));
+                const serverUpdatedPlayer = await response.json();
+                console.log('Server returned updated player:', serverUpdatedPlayer);
+
+                // Update local state with server response to ensure consistency
+                setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
+
+                console.log('Local state updated successfully');
+            } else {
+                const errorText = await response.text();
+                console.error('Failed to update player:', response.status, errorText);
+                alert(`Failed to update player: ${errorText}`);
             }
         } catch (error) {
             console.error('Error updating player:', error);
+            alert(`Error updating player: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
@@ -324,6 +387,49 @@ export default function TournamentEntryPage() {
             console.error('Error removing player:', error);
         }
     };
+
+    // Filter players for hitman selection
+    const getHitmanCandidates = (currentPlayerId: number, searchTerm: string) => {
+        if (!searchTerm || searchTerm.length < 1) return [];
+
+        return players
+            .filter(p => p.id !== currentPlayerId) // Exclude the current player
+            .filter(p => p.player_name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .slice(0, 10); // Limit to 10 results
+    };
+
+    // Handle hitman selection
+    const selectHitman = (playerId: number, hitmanName: string) => {
+        updatePlayer(playerId, 'hitman_name', hitmanName || null);
+        setHitmanSearchValues(prev => ({ ...prev, [playerId]: hitmanName }));
+        setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
+    };
+
+    // Handle hitman search input changes
+    const handleHitmanSearchChange = (playerId: number, value: string) => {
+        setHitmanSearchValues(prev => ({ ...prev, [playerId]: value }));
+        setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: value.length > 0 }));
+
+        // If the value exactly matches a player name, update immediately
+        const exactMatch = players.find(p =>
+            p.id !== playerId &&
+            p.player_name.toLowerCase() === value.toLowerCase()
+        );
+
+        if (exactMatch) {
+            updatePlayer(playerId, 'hitman_name', exactMatch.player_name);
+        } else if (value === '') {
+            // Clear hitman if input is empty
+            updatePlayer(playerId, 'hitman_name', null);
+        }
+    };
+
+    // Clear hitman search values when switching tournaments
+    const clearHitmanSearchState = () => {
+        setHitmanSearchValues({});
+        setHitmanDropdownVisible({});
+    };
+
 
     // Export tournament
     const exportTournament = () => {
@@ -516,14 +622,17 @@ export default function TournamentEntryPage() {
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
+
                                     {tournaments.map((tournament) => (
                                         <div
                                             key={tournament.id}
-                                            onClick={() => selectTournament(tournament)}
-                                            className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors"
+                                            className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
+                                                <div
+                                                    className="flex items-center gap-4 flex-1 cursor-pointer"
+                                                    onClick={() => selectTournament(tournament)}
+                                                >
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
@@ -561,9 +670,20 @@ export default function TournamentEntryPage() {
                                                                 : 'Finalized'
                                                         }
                                                     </div>
-                                                    <div className="text-xs text-gray-400">
-                                                        Updated {new Date(tournament.updated_at).toLocaleDateString()}
-                                                    </div>
+
+                                                    {/* Delete Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Prevent selecting the tournament when clicking delete
+                                                            const tournamentName = `${new Date(tournament.tournament_date).toLocaleDateString()} - ${tournament.venue}`;
+                                                            deleteTournament(tournament.id, tournamentName);
+                                                        }}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs transition-colors"
+                                                        title="Delete Tournament"
+                                                    >
+                                                        <X size={14} />
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -854,7 +974,7 @@ export default function TournamentEntryPage() {
                                                                     }`}
                                                             >
                                                                 <div className={`font-medium ${isAlreadyAdded ? 'line-through' : 'text-gray-900'}`}>
-                                                                    {player.nickname || player.Name}
+                                                                    {player.nickname ? `${player.Name} (${player.nickname})` : player.Name}
                                                                     {isAlreadyAdded && <span className="ml-2 text-xs text-red-600 font-bold">(ALREADY ADDED)</span>}
                                                                 </div>
                                                                 {(player.TotalGames || player.TotalPoints) && (
@@ -915,7 +1035,11 @@ export default function TournamentEntryPage() {
                         {/* Players List */}
                         <div>
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">
+                                <h3
+                                    className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                                    onClick={resetToDefaultSort}
+                                    title="Click to reset to default order (newest players first)"
+                                >
                                     Players ({players.length})
                                 </h3>
                             </div>
@@ -969,29 +1093,72 @@ export default function TournamentEntryPage() {
                                                 <span className="font-medium text-gray-900">
                                                     {player.player_name}
                                                 </span>
-                                                {player.is_new_player && (
+                                                {player.is_new_player ? (
                                                     <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                                                         NEW
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
 
-                                            <div>
-                                                <select
-                                                    value={player.hitman_name || ''}
-                                                    onChange={(e) => updatePlayer(player.id, 'hitman_name', e.target.value || null)}
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    value={hitmanSearchValues[player.id] ?? player.hitman_name ?? ''}
+                                                    onChange={(e) => handleHitmanSearchChange(player.id, e.target.value)}
+                                                    onFocus={() => {
+                                                        const currentValue = hitmanSearchValues[player.id] ?? player.hitman_name ?? '';
+                                                        if (currentValue.length > 0) {
+                                                            setHitmanDropdownVisible(prev => ({ ...prev, [player.id]: true }));
+                                                        }
+                                                    }}
+                                                    onBlur={() => {
+                                                        // Delay hiding dropdown to allow for clicks
+                                                        setTimeout(() => {
+                                                            setHitmanDropdownVisible(prev => ({ ...prev, [player.id]: false }));
+                                                        }, 200);
+                                                    }}
                                                     className="w-full px-2 py-1 border rounded text-black text-sm"
+                                                    placeholder="Type hitman name..."
                                                     disabled={currentDraft?.status === 'integrated'}
-                                                >
-                                                    <option value="">No Hitman</option>
-                                                    {players
-                                                        .filter(p => p.id !== player.id)
-                                                        .map(p => (
-                                                            <option key={`hitman-${p.id}`} value={p.player_name}>
-                                                                {p.player_name}
-                                                            </option>
-                                                        ))}
-                                                </select>
+                                                />
+
+                                                {/* Hitman Dropdown */}
+                                                {hitmanDropdownVisible[player.id] && (
+                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+                                                        {getHitmanCandidates(player.id, hitmanSearchValues[player.id] ?? '').length === 0 ? (
+                                                            <div className="px-3 py-2 text-gray-500 text-sm">
+                                                                No matching players found
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                {getHitmanCandidates(player.id, hitmanSearchValues[player.id] ?? '').map((candidate) => (
+                                                                    <div
+                                                                        key={candidate.id}
+                                                                        onClick={() => selectHitman(player.id, candidate.player_name)}
+                                                                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                                                                    >
+                                                                        <div className="font-medium text-gray-900">
+                                                                            {candidate.player_name}
+
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+
+                                                                {/* Clear hitman option */}
+                                                                {(hitmanSearchValues[player.id] ?? player.hitman_name) && (
+                                                                    <div
+                                                                        onClick={() => selectHitman(player.id, '')}
+                                                                        className="px-3 py-2 hover:bg-red-50 cursor-pointer border-t bg-red-25 text-red-600"
+                                                                    >
+                                                                        <div className="font-medium">
+                                                                            Clear hitman
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div>

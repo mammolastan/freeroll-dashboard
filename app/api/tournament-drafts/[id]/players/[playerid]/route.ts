@@ -1,4 +1,4 @@
-// app/api/tournament-drafts/[id]/players/[playerId]/route.ts
+// app/api/tournament-drafts/[id]/players/[playerid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
@@ -6,14 +6,22 @@ const prisma = new PrismaClient();
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; playerId: string } }
+  { params }: { params: { id: string; playerid: string } }
 ) {
   try {
     const body = await request.json();
-    const playerId = parseInt(params.playerId);
+    const playerId = parseInt(params.playerid);
     const { player_name, hitman_name, ko_position, placement } = body;
 
-    await prisma.$queryRaw`
+    console.log("Updating player:", playerId, "with data:", {
+      player_name,
+      hitman_name,
+      ko_position,
+      placement,
+    });
+
+    // Update the player
+    const updateResult = await prisma.$executeRaw`
       UPDATE tournament_draft_players 
       SET 
         player_name = ${player_name},
@@ -24,15 +32,34 @@ export async function PUT(
       WHERE id = ${playerId}
     `;
 
-    const updatedPlayer = await prisma.$queryRaw`
+    console.log("Update result:", updateResult);
+
+    // Fetch the updated player data
+    const updatedPlayerResult = await prisma.$queryRaw`
       SELECT * FROM tournament_draft_players WHERE id = ${playerId}
     `;
+
+    console.log("Updated player from DB:", updatedPlayerResult);
+
+    const updatedPlayer = Array.isArray(updatedPlayerResult)
+      ? updatedPlayerResult[0]
+      : updatedPlayerResult;
+
+    if (!updatedPlayer) {
+      return NextResponse.json(
+        { error: "Player not found after update" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(updatedPlayer);
   } catch (error) {
     console.error("Error updating draft player:", error);
     return NextResponse.json(
-      { error: "Failed to update player" },
+      {
+        error: "Failed to update player",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   } finally {
@@ -42,10 +69,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; playerId: string } }
+  { params }: { params: { id: string; playerid: string } }
 ) {
   try {
-    const playerId = parseInt(params.playerId);
+    const playerId = parseInt(params.playerid);
 
     await prisma.$queryRaw`
       DELETE FROM tournament_draft_players WHERE id = ${playerId}
