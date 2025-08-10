@@ -104,14 +104,6 @@ export async function DELETE(
 
     const tournament = (existingTournament as any[])[0];
 
-    // Prevent deletion of integrated tournaments (optional - you can remove this if you want to allow deletion of integrated tournaments)
-    if (tournament.status === "integrated") {
-      return NextResponse.json(
-        { error: "Cannot delete integrated tournaments" },
-        { status: 400 }
-      );
-    }
-
     // Use Prisma's transaction functionality
     await prisma.$transaction(async (tx) => {
       // Delete all players first (due to foreign key constraint)

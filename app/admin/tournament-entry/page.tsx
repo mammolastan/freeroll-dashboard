@@ -609,7 +609,7 @@ export default function TournamentEntryPage() {
         }
     };
 
-    // Load tournaments on authentication
+    // Load tournaments and venues on authentication
     useEffect(() => {
         if (isAuthenticated) {
             loadTournaments();
@@ -617,6 +617,7 @@ export default function TournamentEntryPage() {
         }
     }, [isAuthenticated]);
 
+    // Show create modal 
     useEffect(() => {
         if (showCreateModal) {
             setNewTournament(prev => ({
@@ -626,6 +627,7 @@ export default function TournamentEntryPage() {
         }
     }, [showCreateModal]);
 
+    // Pre-Authentication UI
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -979,20 +981,6 @@ export default function TournamentEntryPage() {
                                         {isIntegrating ? 'Integrating...' : 'Integrate to Main System'}
                                     </button>
                                 )}
-
-                                <button
-                                    onClick={() => {
-                                        if (confirm('Are you sure you want to create a new tournament? This will leave the current tournament.')) {
-                                            setCurrentView('welcome');
-                                            setCurrentDraft(null);
-                                            setPlayers([]);
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                >
-                                    <RotateCcw size={16} />
-                                    New Tournament
-                                </button>
                             </div>
                         </CardTitle>
                     </CardHeader>
