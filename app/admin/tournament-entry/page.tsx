@@ -884,7 +884,8 @@ export default function TournamentEntryPage() {
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
-                                                            {new Date(tournament.tournament_date).toLocaleDateString()}
+                                                            {formatGameDate(tournament.tournament_date || '')}
+
                                                         </div>
                                                         <div className="flex items-center gap-2 text-gray-600">
                                                             <MapPin className="w-4 h-4" />
