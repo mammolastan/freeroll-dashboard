@@ -44,6 +44,7 @@ export default function TournamentEntryPage() {
     const [tournaments, setTournaments] = useState<TournamentDraft[]>([]);
     const [currentDraft, setCurrentDraft] = useState<TournamentDraft | null>(null);
     const [loadingTournaments, setLoadingTournaments] = useState(false);
+    const [showIntegrationPreview, setShowIntegrationPreview] = useState(false);
 
     // New tournament modal
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -497,6 +498,8 @@ export default function TournamentEntryPage() {
     };
 
 
+
+
     // Export tournament
     const exportTournament = () => {
         if (!currentDraft || players.length === 0) return;
@@ -539,55 +542,218 @@ export default function TournamentEntryPage() {
     const integrateToMainSystem = async () => {
         if (!currentDraft) return;
 
-        if (!confirm('Are you sure you want to integrate this tournament into the main system? This cannot be undone.')) {
+        // Validate before attempting integration
+        const validation = validateTournamentForIntegration(players);
+        if (!validation.canIntegrate) {
+            alert(`Cannot integrate tournament:\n\n${validation.errors.join('\n')}`);
+            return;
+        }
+
+        if (!confirm(`Ready to integrate tournament with ${players.length} players?\n\nThis will calculate final placements based on KO positions and cannot be undone.`)) {
             return;
         }
 
         setIsIntegrating(true);
 
         try {
-            // First validate
-            const validateResponse = await fetch(`/api/tournament-drafts/${currentDraft.id}/integrate`);
-            const validation = await validateResponse.json();
-
-            if (!validation.isValid) {
-                alert(`Cannot integrate tournament:\n${validation.errors.join('\n')}`);
-                return;
-            }
-
-            if (validation.warnings.length > 0) {
-                const proceed = confirm(`Warnings found:\n${validation.warnings.join('\n')}\n\nContinue with integration?`);
-                if (!proceed) return;
-            }
-
-            // Integrate
             const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/integrate`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
             });
 
-            const result = await response.json();
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Tournament integrated successfully!\n\nFile: ${result.fileName}\nPlayers: ${result.playersIntegrated}\n\nPlacements calculated based on KO positions.`);
 
-            if (response.ok && result.success) {
-                alert(`Tournament successfully integrated!\n\nGame UID: ${result.gameUID}\nFile Name: ${result.fileName}\nPlayers: ${result.playersIntegrated}\nNew Players Created: ${result.newPlayersCreated}`);
-
-                // Update current draft status
-                const updatedDraft = { ...currentDraft, status: 'integrated' as const };
-                setCurrentDraft(updatedDraft);
-
-                // Refresh tournaments list
+                // Refresh tournament data
                 loadTournaments();
+                setCurrentView('welcome');
             } else {
-                // Handle the new error format from the fixed backend
-                const errorMessage = result.error || 'Integration failed';
-                const details = result.details || '';
-                alert(`Integration failed:\n${errorMessage}${details ? `\n${details}` : ''}`);
+                const errorData = await response.json();
+                alert(`Integration failed: ${errorData.details || errorData.error}`);
             }
         } catch (error) {
-            console.error('Error integrating tournament:', error);
-            alert(`Failed to integrate tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error('Integration error:', error);
+            alert('Integration failed due to network error');
         } finally {
             setIsIntegrating(false);
         }
+    };
+
+    // Auto-calculate placement when KO positions change
+    const updatePlayerWithPlacementCalculation = async (playerId: number, field: string, value: string | number | null) => {
+        // Update the player as before
+        await updatePlayer(playerId, field, value);
+
+        // If KO position changed, show validation status update
+        if (field === 'ko_position' || field === 'hitman_name') {
+            // The validation component will automatically re-render and show updated status
+            console.log('KO positions updated, validation status will refresh');
+        }
+    };
+
+    // Validation function for tournament integration readiness
+    const validateTournamentForIntegration = (players: Player[]): { canIntegrate: boolean; validationMessage: string; errors: string[] } => {
+        const errors: string[] = [];
+
+        // Check minimum players
+        if (players.length < 2) {
+            errors.push("Tournament must have at least 2 players");
+        }
+
+        // Check that all players have either a KO position or are the survivor
+        const playersWithKoPosition = players.filter(p => p.ko_position !== null);
+        const survivorPlayers = players.filter(p => p.ko_position === null);
+
+        // Must have exactly one survivor (winner)
+        if (survivorPlayers.length === 0) {
+            errors.push("Tournament must have exactly 1 winner (player with no KO position)");
+        } else if (survivorPlayers.length > 1) {
+            const survivorNames = survivorPlayers.map(p => p.player_name).join(", ");
+            errors.push(`Only 1 player can be the winner (no KO position). Found ${survivorPlayers.length}: ${survivorNames}`);
+        }
+
+        // All other players must have KO positions
+        if (playersWithKoPosition.length !== players.length - 1) {
+            const missingKO = players.filter(p => p.ko_position === null && survivorPlayers.length > 0 && !survivorPlayers.includes(p));
+            if (missingKO.length > 0) {
+                errors.push(`Players missing KO positions: ${missingKO.map(p => p.player_name).join(", ")}`);
+            }
+        }
+
+        // KO positions must be sequential starting from 1
+        if (playersWithKoPosition.length > 0) {
+            const koPositions = playersWithKoPosition.map(p => p.ko_position!).sort((a, b) => a - b);
+            const expectedPositions = Array.from({ length: koPositions.length }, (_, i) => i + 1);
+
+            const missingPositions = expectedPositions.filter(pos => !koPositions.includes(pos));
+            if (missingPositions.length > 0) {
+                errors.push(`Missing KO positions: ${missingPositions.join(", ")}. Must be sequential from 1 to ${koPositions.length}`);
+            }
+        }
+
+        // Check for duplicate KO positions
+        const koPositionCounts = new Map<number, string[]>();
+        playersWithKoPosition.forEach(p => {
+            const playersList = koPositionCounts.get(p.ko_position!) || [];
+            playersList.push(p.player_name);
+            koPositionCounts.set(p.ko_position!, playersList);
+        });
+
+        for (const [position, playerNames] of koPositionCounts) {
+            if (playerNames.length > 1) {
+                errors.push(`Duplicate KO position ${position}: ${playerNames.join(", ")}`);
+            }
+        }
+
+        // Check that players with hitman have KO positions
+        const playersWithHitmanButNoKO = players.filter(p =>
+            p.hitman_name !== null &&
+            p.hitman_name !== '' &&
+            p.ko_position === null
+        );
+        if (playersWithHitmanButNoKO.length > 0) {
+            errors.push(`Players with hitman must have KO positions: ${playersWithHitmanButNoKO.map(p => p.player_name).join(", ")}`);
+        }
+
+        const isValid = errors.length === 0;
+
+        return {
+            canIntegrate: isValid,
+            validationMessage: isValid
+                ? `✅ Tournament ready for integration with ${players.length} players`
+                : `❌ Cannot integrate tournament`,
+            errors
+        };
+    };
+
+    // Preview what placements will be calculated
+    const previewPlacements = (players: Player[]): Array<{ name: string; koPosition: number | null; finalPlacement: number; hitman: string | null }> => {
+        const knockedOutPlayers = players.filter(p => p.ko_position !== null);
+        const survivorPlayers = players.filter(p => p.ko_position === null);
+
+        return players.map(player => {
+            let finalPlacement: number;
+
+            if (player.ko_position === null) {
+                // Survivor = Winner = 1st place
+                finalPlacement = 1;
+            } else {
+                // Convert KO position to final placement
+                // Highest KO position = 2nd place
+                // 2nd highest KO position = 3rd place, etc.
+                finalPlacement = (knockedOutPlayers.length - player.ko_position) + 2;
+            }
+
+            return {
+                name: player.player_name,
+                koPosition: player.ko_position,
+                finalPlacement,
+                hitman: player.hitman_name
+            };
+        }).sort((a, b) => a.finalPlacement - b.finalPlacement);
+    };
+    // Add this component to display validation status
+    const TournamentValidationStatus = ({ players, onIntegrate, isIntegrating }: {
+        players: Player[];
+        onIntegrate: () => void;
+        isIntegrating: boolean;
+    }) => {
+        const validation = validateTournamentForIntegration(players);
+        const placementPreview = validation.canIntegrate ? previewPlacements(players) : [];
+
+        return (
+            <div className="mb-6 p-4 border rounded-lg">
+                <h3 className="font-semibold text-lg mb-3">Integration Status</h3>
+
+                <div className={`p-3 rounded-lg mb-4 ${validation.canIntegrate ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className={`font-medium ${validation.canIntegrate ? 'text-green-800' : 'text-red-800'}`}>
+                        {validation.validationMessage}
+                    </div>
+                    {validation.canIntegrate && (
+                        <button
+                            onClick={onIntegrate}
+                            disabled={isIntegrating}
+                            className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
+                        >
+                            <Trophy className="h-4 w-4" />
+                            {isIntegrating ? 'Integrating...' : 'Integrate Tournament'}
+                        </button>
+                    )}
+                    {!validation.canIntegrate && (
+                        <div className="mt-2 text-sm text-red-700">
+                            <ul className="list-disc list-inside space-y-1">
+                                {validation.errors.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                {validation.canIntegrate && placementPreview.length > 0 && (
+                    <div className="bg-blue-50 border-blue-200 text-black rounded-lg p-3">
+                        <h4 className="font-medium text-blue-800 mb-2">Final Placement Preview:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                            {placementPreview.map((player, index) => (
+                                <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                                    <span className="font-medium">
+                                        {player.finalPlacement === 1 && "🏆 "}
+                                        {player.finalPlacement === 2 && "🥈 "}
+                                        {player.finalPlacement === 3 && "🥉 "}
+                                        {player.name}
+                                    </span>
+                                    <div className="text-right text-xs text-gray-600">
+                                        <div>Place: {player.finalPlacement}</div>
+                                        {player.koPosition && <div>KO: {player.koPosition}</div>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     // Authentication
@@ -971,16 +1137,19 @@ export default function TournamentEntryPage() {
                                     Export
                                 </button>
 
-                                {currentDraft?.status === 'in_progress' && (
-                                    <button
-                                        onClick={integrateToMainSystem}
-                                        disabled={isIntegrating}
-                                        className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm disabled:opacity-50"
-                                    >
-                                        <Check size={16} />
-                                        {isIntegrating ? 'Integrating...' : 'Integrate to Main System'}
-                                    </button>
-                                )}
+
+
+                                <button
+                                    onClick={() => setShowIntegrationPreview(!showIntegrationPreview)}
+                                    disabled={players.length === 0 || currentDraft?.status === 'integrated'}
+                                    className={`px-3 py-1 text-sm flex items-center gap-2 ${players.length > 0 && currentDraft?.status !== 'integrated'
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        }`}
+                                >
+                                    <Trophy className="h-4 w-4" />
+                                    {showIntegrationPreview ? 'Hide Integration Preview' : 'Preview Integration'}
+                                </button>
                             </div>
                         </CardTitle>
                     </CardHeader>
@@ -1178,6 +1347,15 @@ export default function TournamentEntryPage() {
                             </div>
                         )}
 
+                        {showIntegrationPreview && players.length > 0 && (
+                            <TournamentValidationStatus
+                                players={players}
+                                onIntegrate={integrateToMainSystem}
+                                isIntegrating={isIntegrating}
+                            />
+                        )}
+
+
                         {/* Players List */}
                         <div>
                             <div className="flex items-center gap-2">
@@ -1195,7 +1373,7 @@ export default function TournamentEntryPage() {
                                     <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
                                         Insertion Order
                                         <span className="text-xs">
-                                            {sortOrder === 'desc' ? '↓ Newest First' : '↑ Oldest First'}
+                                            {sortOrder === 'desc' ? '↓' : '↑'}
                                         </span>
                                     </span>
                                 )}
@@ -1232,9 +1410,8 @@ export default function TournamentEntryPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        <div>Final Position</div>
-                                        <div>Status</div>
-                                        <div>Actions</div>
+
+
                                     </div>
 
 
@@ -1245,7 +1422,10 @@ export default function TournamentEntryPage() {
                                     ).map((player) => (
                                         <div
                                             key={player.id}
-                                            className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border rounded hover:bg-gray-50"
+                                            className={`grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
+                                                    ? 'bg-red-50 border-red-100'
+                                                    : 'bg-white'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium text-gray-900">
@@ -1330,28 +1510,9 @@ export default function TournamentEntryPage() {
                                                 />
                                             </div>
 
-                                            <div>
-                                                <input
-                                                    type="number"
-                                                    value={player.placement || ''}
-                                                    onChange={(e) => updatePlayer(player.id, 'placement', parseInt(e.target.value) || null)}
-                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
-                                                    placeholder="Final Position"
-                                                    disabled={currentDraft?.status === 'integrated'}
-                                                />
-                                            </div>
 
-                                            <div className="flex items-center gap-2">
-                                                {player.placement === 1 && (
-                                                    <span className="text-yellow-500">👑</span>
-                                                )}
-                                                {player.placement === 2 && (
-                                                    <span className="text-gray-400">🥈</span>
-                                                )}
-                                                {player.placement === 3 && (
-                                                    <span className="text-orange-600">🥉</span>
-                                                )}
-                                            </div>
+
+
 
                                             <div className="flex justify-end">
                                                 {currentDraft?.status !== 'integrated' && (

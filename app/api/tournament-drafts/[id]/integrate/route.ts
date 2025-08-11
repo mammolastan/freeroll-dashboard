@@ -1,4 +1,5 @@
 // app/api/tournament-drafts/[id]/integrate/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
@@ -24,6 +25,105 @@ interface DraftPlayer {
   placement: number | null;
 }
 
+// KO-based placement calculation functions
+function calculatePlacements(players: DraftPlayer[]): DraftPlayer[] {
+  const knockedOutPlayers = players.filter((p) => p.ko_position !== null);
+  const survivorPlayers = players.filter((p) => p.ko_position === null);
+
+  // Validation: There should be exactly one survivor (the winner)
+  if (survivorPlayers.length !== 1) {
+    throw new Error(
+      `Invalid tournament state: Expected exactly 1 survivor (winner), found ${survivorPlayers.length}. All players except the winner must have a KO position.`
+    );
+  }
+
+  // Calculate placements
+  const updatedPlayers = players.map((player) => {
+    if (player.ko_position === null) {
+      // Survivor = Winner = 1st place
+      return { ...player, placement: 1 };
+    } else {
+      // Convert KO position to final placement
+      // Highest KO position = 2nd place
+      // 2nd highest KO position = 3rd place, etc.
+      const finalPlacement = knockedOutPlayers.length - player.ko_position + 2;
+      return { ...player, placement: finalPlacement };
+    }
+  });
+
+  return updatedPlayers;
+}
+
+function validateTournamentForIntegration(players: DraftPlayer[]): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  // Check minimum players
+  if (players.length < 2) {
+    errors.push("Tournament must have at least 2 players");
+  }
+
+  // Check that all players have either a KO position or are the survivor
+  const playersWithKoPosition = players.filter((p) => p.ko_position !== null);
+  const survivorPlayers = players.filter((p) => p.ko_position === null);
+
+  // Must have exactly one survivor
+  if (survivorPlayers.length !== 1) {
+    errors.push(
+      `Must have exactly 1 survivor (winner). Found: ${survivorPlayers.length}`
+    );
+  }
+
+  // All other players must have KO positions
+  if (playersWithKoPosition.length !== players.length - 1) {
+    errors.push(
+      "All players except the winner must have a KO position assigned"
+    );
+  }
+
+  // KO positions must be sequential starting from 1
+  if (playersWithKoPosition.length > 0) {
+    const koPositions = playersWithKoPosition
+      .map((p) => p.ko_position!)
+      .sort((a, b) => a - b);
+    const expectedPositions = Array.from(
+      { length: koPositions.length },
+      (_, i) => i + 1
+    );
+
+    if (!koPositions.every((pos, index) => pos === expectedPositions[index])) {
+      errors.push(
+        `KO positions must be sequential from 1 to ${
+          koPositions.length
+        }. Current positions: ${koPositions.join(", ")}`
+      );
+    }
+  }
+
+  // Check for duplicate KO positions
+  const koPositionCounts = new Map<number, number>();
+  playersWithKoPosition.forEach((p) => {
+    const count = koPositionCounts.get(p.ko_position!) || 0;
+    koPositionCounts.set(p.ko_position!, count + 1);
+  });
+
+  for (const [position, count] of koPositionCounts) {
+    if (count > 1) {
+      errors.push(
+        `Duplicate KO position ${position} found on ${count} players`
+      );
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+// Existing calculation functions
 function calculatePlacementPoints(placement: number): number {
   if (placement === 1) return 10;
   if (placement === 2) return 7;
@@ -50,7 +150,6 @@ export async function POST(
   const draftId = parseInt(params.id);
 
   try {
-    // Use Prisma's $transaction instead of raw SQL transaction commands
     const result = await prisma.$transaction(async (tx) => {
       // 1. Get tournament draft
       const draftResult = await tx.$queryRaw<DraftTournament[]>`
@@ -67,222 +166,117 @@ export async function POST(
       const playersResult = await tx.$queryRaw<DraftPlayer[]>`
         SELECT * FROM tournament_draft_players 
         WHERE tournament_draft_id = ${draftId}
-        ORDER BY CASE WHEN placement IS NULL THEN 1 ELSE 0 END, placement ASC, player_name ASC
+        ORDER BY player_name ASC
       `;
 
       if (playersResult.length === 0) {
         throw new Error("No players found for this tournament");
       }
 
-      // 3. Validation
-      const validationErrors = [];
-
-      // Check for required tournament fields
-      if (!draft.tournament_date || !draft.venue) {
-        validationErrors.push("Missing required tournament information");
+      // 3. VALIDATE TOURNAMENT FOR INTEGRATION
+      const validation = validateTournamentForIntegration(playersResult);
+      if (!validation.isValid) {
+        throw new Error(
+          `Tournament validation failed: ${validation.errors.join("; ")}`
+        );
       }
 
-      // Check for duplicate placements
-      const placements = playersResult
-        .filter((p) => p.placement !== null)
-        .map((p) => p.placement);
-      const uniquePlacements = new Set(placements);
-      if (placements.length !== uniquePlacements.size) {
-        validationErrors.push("Duplicate placement positions found");
-      }
+      // 4. CALCULATE PLACEMENTS BASED ON KO POSITIONS
+      const playersWithPlacements = calculatePlacements(playersResult);
 
-      // Check hitman references
-      const playerNames = playersResult.map((p) => p.player_name);
-      for (const player of playersResult) {
-        if (player.hitman_name && !playerNames.includes(player.hitman_name)) {
-          validationErrors.push(
-            `Hitman '${player.hitman_name}' not found in player list`
-          );
-        }
-      }
+      // 5. Generate unique filename
+      const fileName = generateFileName(draft.tournament_date, draft.venue);
 
-      if (validationErrors.length > 0) {
-        throw new Error(`Validation failed: ${validationErrors.join(", ")}`);
-      }
+      // 6. Create file entry in processed_files table
+      await tx.$queryRaw`
+        INSERT INTO processed_files (file_name, processed_at, tournament_date, venue, director_name)
+        VALUES (${fileName}, NOW(), ${draft.tournament_date}, ${draft.venue}, ${draft.director_name})
+      `;
 
-      // 4. Create UIDs for new players and add to players table
-      const newPlayerUIDs: { [key: string]: string } = {};
-
-      for (const player of playersResult) {
+      // 7. Process each player with calculated placements
+      for (const player of playersWithPlacements) {
+        // Handle new players
         if (player.is_new_player && !player.player_uid) {
           const newUID = uuidv4();
-          newPlayerUIDs[player.player_name] = newUID;
 
           // Insert into players table
-          await tx.$executeRaw`
-            INSERT INTO players (uid, name, created_at, updated_at)
-            VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
+          await tx.$queryRaw`
+            INSERT INTO players (uid, name, nickname, bio, created_at, updated_at)
+            VALUES (${newUID}, ${player.player_name}, ${player.player_name}, '', NOW(), NOW())
           `;
 
-          // Update draft player record with new UID
-          await tx.$executeRaw`
-            UPDATE tournament_draft_players 
-            SET player_uid = ${newUID}, is_new_player = FALSE
-            WHERE id = ${player.id}
-          `;
+          player.player_uid = newUID;
         }
-      }
 
-      // 5. Generate file name and game UID
-      const fileName = generateFileName(draft.tournament_date, draft.venue);
-      const gameUID = uuidv4();
-
-      // 6. Create poker_tournaments records
-      const totalPlayers = playersResult.length;
-      const gameDate = new Date(draft.tournament_date);
-
-      for (const player of playersResult) {
-        const playerUID =
-          player.player_uid || newPlayerUIDs[player.player_name];
-        const placement = player.placement || totalPlayers; // Default to last place if no placement
-        const placementPoints = calculatePlacementPoints(placement);
+        // Calculate points and score
+        const placementPoints = calculatePlacementPoints(player.placement!);
+        const playerScore = calculatePlayerScore(
+          player.placement!,
+          playersWithPlacements.length
+        );
         const totalPoints = draft.start_points + placementPoints;
-        const playerScore = calculatePlayerScore(placement, totalPlayers);
 
-        await tx.$executeRaw`
+        // Insert into poker_tournaments table
+        await tx.$queryRaw`
           INSERT INTO poker_tournaments (
-            Name, UID, Hitman, Placement, Knockouts, Start_Points, 
-            Hit_Points, Placement_Points, Venue, Total_Points, 
-            Player_Score, File_name, game_date, game_uid, Season, created_at
+            Name, UID, Hitman, Placement, Knockouts, StartPoints, 
+            HitPoints, PlacementPoints, Total_Points, Season, 
+            Venue, File_name, game_date, player_score
           ) VALUES (
-            ${player.player_name}, ${playerUID}, ${player.hitman_name}, 
-            ${placement}, 0, ${draft.start_points}, 0, ${placementPoints}, 
-            ${draft.venue}, ${totalPoints}, ${playerScore}, ${fileName}, 
-            ${gameDate}, ${gameUID}, 'Winter 2025', NOW()
+            ${player.player_name},
+            ${player.player_uid},
+            ${player.hitman_name},
+            ${player.placement},
+            0,
+            ${draft.start_points},
+            0,
+            ${placementPoints},
+            ${totalPoints},
+            ${new Date(draft.tournament_date).toLocaleDateString("en-US", {
+              month: "short",
+              year: "2-digit",
+            })},
+            ${draft.venue},
+            ${fileName},
+            ${draft.tournament_date},
+            ${playerScore}
           )
         `;
+
+        console.log(
+          `Integrated player: ${player.player_name}, Placement: ${player.placement}, KO Position: ${player.ko_position}, Points: ${totalPoints}`
+        );
       }
 
-      // 7. Update draft status and add integration info
-      await tx.$executeRaw`
+      // 8. Update draft status to integrated
+      await tx.$queryRaw`
         UPDATE tournament_drafts 
-        SET 
-          status = 'integrated',
-          game_uid = ${gameUID},
-          file_name = ${fileName},
-          updated_at = NOW()
+        SET status = 'integrated', updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
 
       return {
         success: true,
-        message: "Tournament successfully integrated",
-        gameUID,
         fileName,
-        playersIntegrated: totalPlayers,
-        newPlayersCreated: Object.keys(newPlayerUIDs).length,
+        playersIntegrated: playersWithPlacements.length,
+        playersWithPlacements: playersWithPlacements.map((p) => ({
+          name: p.player_name,
+          ko_position: p.ko_position,
+          final_placement: p.placement,
+          hitman: p.hitman_name,
+        })),
       };
     });
 
+    console.log("Tournament integration completed successfully:", result);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error integrating tournament:", error);
+    console.error("Integration error:", error);
     return NextResponse.json(
       {
-        error: "Failed to integrate tournament",
+        error: "Integration failed",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// GET endpoint to validate draft before integration
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const draftId = parseInt(params.id);
-
-    // Get tournament and players
-    const draft = await prisma.$queryRaw<DraftTournament[]>`
-      SELECT * FROM tournament_drafts WHERE id = ${draftId}
-    `;
-
-    const players = await prisma.$queryRaw<DraftPlayer[]>`
-      SELECT * FROM tournament_draft_players WHERE tournament_draft_id = ${draftId}
-    `;
-
-    if (draft.length === 0) {
-      return NextResponse.json(
-        { error: "Tournament not found" },
-        { status: 404 }
-      );
-    }
-
-    // Run validation checks
-    const validation = {
-      isValid: true,
-      errors: [] as string[],
-      warnings: [] as string[],
-      stats: {
-        totalPlayers: players.length,
-        newPlayers: players.filter((p) => p.is_new_player).length,
-        playersWithPlacements: players.filter((p) => p.placement !== null)
-          .length,
-        playersWithHitmen: players.filter((p) => p.hitman_name !== null).length,
-      },
-    };
-
-    // Required fields check
-    if (!draft[0].venue) {
-      validation.errors.push("Missing required tournament information");
-    }
-
-    // Player validations
-    if (players.length === 0) {
-      validation.errors.push("No players in tournament");
-    }
-
-    // Check for duplicate placements
-    const placements = players
-      .filter((p) => p.placement !== null)
-      .map((p) => p.placement);
-    const uniquePlacements = new Set(placements);
-    if (placements.length !== uniquePlacements.size) {
-      validation.errors.push("Duplicate placement positions found");
-    }
-
-    // Check hitman references
-    const playerNames = players.map((p) => p.player_name);
-    for (const player of players) {
-      if (player.hitman_name && !playerNames.includes(player.hitman_name)) {
-        validation.errors.push(
-          `Hitman '${player.hitman_name}' not found in player list`
-        );
-      }
-    }
-
-    // Warnings
-    if (players.some((p) => p.placement === null)) {
-      validation.warnings.push(
-        "Some players don't have final placements assigned"
-      );
-    }
-
-    if (players.filter((p) => p.is_new_player).length > 0) {
-      validation.warnings.push(
-        `${
-          players.filter((p) => p.is_new_player).length
-        } new players will be created`
-      );
-    }
-
-    validation.isValid = validation.errors.length === 0;
-
-    return NextResponse.json(validation);
-  } catch (error) {
-    console.error("Error validating tournament:", error);
-    return NextResponse.json(
-      { error: "Failed to validate tournament" },
       { status: 500 }
     );
   } finally {
