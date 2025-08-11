@@ -1121,7 +1121,7 @@ export default function TournamentEntryPage() {
 
                                 <div>
                                     <div className="text-lg font-semibold">
-                                        {formatDateForDisplay(currentDraft?.tournament_date || '')} - {currentDraft?.venue}
+                                        {formatGameDate(currentDraft?.tournament_date || '')} - {currentDraft?.venue}
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         {currentDraft?.director_name ? `Director: ${currentDraft.director_name}` : 'No director assigned'}
