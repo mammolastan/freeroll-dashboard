@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown } from 'lucide-react';
+import { formatGameDate } from '@/lib/utils';
 
 interface TournamentDraft {
     id: number;
@@ -1120,7 +1121,7 @@ export default function TournamentEntryPage() {
 
                                 <div>
                                     <div className="text-lg font-semibold">
-                                        {new Date(currentDraft?.tournament_date || '').toLocaleDateString()} - {currentDraft?.venue}
+                                        {formatDateForDisplay(currentDraft?.tournament_date || '')} - {currentDraft?.venue}
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         {currentDraft?.director_name ? `Director: ${currentDraft.director_name}` : 'No director assigned'}
@@ -1423,8 +1424,8 @@ export default function TournamentEntryPage() {
                                         <div
                                             key={player.id}
                                             className={`grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
-                                                    ? 'bg-red-50 border-red-100'
-                                                    : 'bg-white'
+                                                ? 'bg-red-50 border-red-100'
+                                                : 'bg-white'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2">
