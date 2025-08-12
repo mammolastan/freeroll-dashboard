@@ -28,6 +28,7 @@ generator client {
     playerScore    Float ? @map("Player_Score")
     fileName       String ? @map("File_name")
     createdAt      DateTime @default (now()) @map("created_at")
+    gameuid       String @map("game_uid")
 
     @@map("poker_tournaments")
 }

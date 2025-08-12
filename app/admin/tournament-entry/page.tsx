@@ -739,9 +739,6 @@ export default function TournamentEntryPage() {
                             {placementPreview.map((player, index) => (
                                 <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
                                     <span className="font-medium">
-                                        {player.finalPlacement === 1 && "🏆 "}
-                                        {player.finalPlacement === 2 && "🥈 "}
-                                        {player.finalPlacement === 3 && "🥉 "}
                                         {player.name}
                                     </span>
                                     <div className="text-right text-xs text-gray-600">

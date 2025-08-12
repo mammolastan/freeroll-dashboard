@@ -135,12 +135,19 @@ function calculatePlayerScore(placement: number, totalPlayers: number): number {
   return Math.log((totalPlayers + 1) / placement);
 }
 
-function generateFileName(date: string, venue: string): string {
+function generateFileName(
+  date: string,
+  venue: string,
+  director_name: string
+): string {
   const gameDate = new Date(date);
   const month = (gameDate.getMonth() + 1).toString().padStart(2, "0");
   const day = gameDate.getDate().toString().padStart(2, "0");
   const cleanVenue = venue.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-  return `${month}${day}_${cleanVenue}`;
+  const cleanDirector = director_name
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_]/g, "");
+  return `SYS-${month}${day}_${cleanVenue}_${cleanDirector}`;
 }
 
 export async function POST(
@@ -184,14 +191,14 @@ export async function POST(
       // 4. CALCULATE PLACEMENTS BASED ON KO POSITIONS
       const playersWithPlacements = calculatePlacements(playersResult);
 
-      // 5. Generate unique filename
-      const fileName = generateFileName(draft.tournament_date, draft.venue);
+      // 5. Generate unique filename & UID for the game
+      const fileName = generateFileName(
+        draft.tournament_date,
+        draft.venue,
+        draft.director_name
+      );
 
-      // 6. Create file entry in processed_files table
-      await tx.$queryRaw`
-        INSERT INTO processed_files (file_name, processed_at, tournament_date, venue, director_name)
-        VALUES (${fileName}, NOW(), ${draft.tournament_date}, ${draft.venue}, ${draft.director_name})
-      `;
+      const gameUID = uuidv4();
 
       // 7. Process each player with calculated placements
       for (const player of playersWithPlacements) {
@@ -201,8 +208,8 @@ export async function POST(
 
           // Insert into players table
           await tx.$queryRaw`
-            INSERT INTO players (uid, name, nickname, bio, created_at, updated_at)
-            VALUES (${newUID}, ${player.player_name}, ${player.player_name}, '', NOW(), NOW())
+            INSERT INTO players (uid, name, created_at, updated_at)
+            VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
           `;
 
           player.player_uid = newUID;
@@ -217,31 +224,31 @@ export async function POST(
         const totalPoints = draft.start_points + placementPoints;
 
         // Insert into poker_tournaments table
-        await tx.$queryRaw`
-          INSERT INTO poker_tournaments (
-            Name, UID, Hitman, Placement, Knockouts, StartPoints, 
-            HitPoints, PlacementPoints, Total_Points, Season, 
-            Venue, File_name, game_date, player_score
-          ) VALUES (
-            ${player.player_name},
-            ${player.player_uid},
-            ${player.hitman_name},
-            ${player.placement},
-            0,
-            ${draft.start_points},
-            0,
-            ${placementPoints},
-            ${totalPoints},
-            ${new Date(draft.tournament_date).toLocaleDateString("en-US", {
-              month: "short",
-              year: "2-digit",
-            })},
-            ${draft.venue},
-            ${fileName},
-            ${draft.tournament_date},
-            ${playerScore}
-          )
-        `;
+        await tx.pokerTournament.create({
+          data: {
+            name: player.player_name,
+            uid: player.player_uid,
+            hitman: player.hitman_name,
+            placement: player.placement,
+            knockouts: 0,
+            startPoints: draft.start_points,
+            hitPoints: 0,
+            placementPoints: placementPoints,
+            totalPoints: totalPoints,
+            season: new Date(draft.tournament_date).toLocaleDateString(
+              "en-US",
+              {
+                month: "long",
+                year: "2-digit",
+              }
+            ),
+            venue: draft.venue,
+            fileName: fileName,
+            gameDate: draft.tournament_date,
+            playerScore: playerScore,
+            gameUid: gameUID,
+          },
+        });
 
         console.log(
           `Integrated player: ${player.player_name}, Placement: ${player.placement}, KO Position: ${player.ko_position}, Points: ${totalPoints}`
@@ -251,7 +258,7 @@ export async function POST(
       // 8. Update draft status to integrated
       await tx.$queryRaw`
         UPDATE tournament_drafts 
-        SET status = 'integrated', updated_at = CURRENT_TIMESTAMP
+        SET status = 'integrated', game_uid = ${gameUID},file_name = ${fileName}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
 
