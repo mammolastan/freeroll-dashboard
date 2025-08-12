@@ -23,6 +23,7 @@ interface DraftPlayer {
   hitman_name: string | null;
   ko_position: number | null;
   placement: number | null;
+  knockouts: number | null;
 }
 
 // KO-based placement calculation functions
@@ -37,18 +38,22 @@ function calculatePlacements(players: DraftPlayer[]): DraftPlayer[] {
     );
   }
 
-  // Calculate placements
+  // Calculate placements and knockouts
   const updatedPlayers = players.map((player) => {
+    // Placement logic (unchanged)
+    let placement: number;
     if (player.ko_position === null) {
-      // Survivor = Winner = 1st place
-      return { ...player, placement: 1 };
+      placement = 1;
     } else {
-      // Convert KO position to final placement
-      // Highest KO position = 2nd place
-      // 2nd highest KO position = 3rd place, etc.
-      const finalPlacement = knockedOutPlayers.length - player.ko_position + 2;
-      return { ...player, placement: finalPlacement };
+      placement = knockedOutPlayers.length - player.ko_position + 2;
     }
+
+    // Knockouts: count how many players have this player's name as their hitman_name
+    const knockouts = players.filter(
+      (p) => p.hitman_name && p.hitman_name === player.player_name
+    ).length;
+
+    return { ...player, placement, knockouts };
   });
 
   return updatedPlayers;
@@ -230,7 +235,7 @@ export async function POST(
             uid: player.player_uid,
             hitman: player.hitman_name,
             placement: player.placement,
-            knockouts: 0,
+            knockouts: player.knockouts || 0,
             startPoints: draft.start_points,
             hitPoints: 0,
             placementPoints: placementPoints,
