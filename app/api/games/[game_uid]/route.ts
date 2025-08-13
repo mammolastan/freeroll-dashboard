@@ -1,7 +1,7 @@
 // app/api/games/[fileName]/route.ts
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { createGameDate } from "@/lib/utils";
+import { formatGameDateET } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -25,6 +25,7 @@ export async function GET(
       Season: string;
       nickname: string;
       file_name: string;
+      game_date: string;
     }[] = await prisma.$queryRaw`
       SELECT 
         p.Name,
@@ -40,7 +41,8 @@ export async function GET(
         p.Season,
         p.game_uid,
         p.file_name,
-        pl.nickname
+        pl.nickname,
+        p.game_date
       FROM poker_tournaments p
       LEFT JOIN players pl ON p.UID = pl.uid
       WHERE p.game_uid = ${params.game_uid}
@@ -78,20 +80,8 @@ export async function GET(
     );
     const averagePoints = totalPoints / totalPlayers;
 
-    // Parse the date from the game ID (format: MMDD_venue_type.tdt)
-    const dateParts = players[0].file_name.split("_")[0];
-    const month = parseInt(dateParts.substring(0, 2)) - 1; // Months are 0-based
-    const day = parseInt(dateParts.substring(2, 4));
-
-    // Get year from season
-    const seasonYear = players[0].Season
-      ? parseInt(
-          players[0].Season.split(" ").pop() ||
-            new Date().getFullYear().toString()
-        )
-      : new Date().getFullYear();
-
-    const gameDate = createGameDate(month, day, seasonYear);
+    // const gameDate = createGameDate(month, day, seasonYear);
+    const gameDate = formatGameDateET(players[0].game_date);
 
     const gameDetails = {
       players: players.map((player) => ({

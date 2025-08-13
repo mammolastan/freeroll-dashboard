@@ -126,6 +126,21 @@ export function formatETDate(date: Date): string {
     day: "2-digit",
   });
 }
+
+export function formatGameDateET(isoDateString: string): string {
+  // Parse the ISO string and adjust for ET timezone
+  const date = new Date(isoDateString);
+  const etDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/New_York",
+  }).format(etDate);
+}
+
 export type DateFormatOptions = "full" | "monthYear";
 
 // Helper function to format a date in ET timezone

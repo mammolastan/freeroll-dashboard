@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
+import { formatGameDateET } from "@/lib/utils";
 
 interface TopPlayer {
     name: string
@@ -38,20 +39,6 @@ function formatFetchTimestamp(isoString: string | null): string {
         second: '2-digit',
         hour12: true
     });
-}
-
-function formatGameDateET(isoDateString: string): string {
-    // Parse the ISO string and adjust for ET timezone
-    const date = new Date(isoDateString);
-    const etDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
-
-    return new Intl.DateTimeFormat('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'America/New_York'
-    }).format(etDate);
 }
 
 export default function GamesPage() {
