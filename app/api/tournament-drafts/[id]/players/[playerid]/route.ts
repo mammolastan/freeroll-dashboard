@@ -20,39 +20,45 @@ export async function PUT(
       placement,
     });
 
-    // Update the player
+    // Use the same update query that's working
     const updateResult = await prisma.$executeRaw`
       UPDATE tournament_draft_players 
       SET 
-        player_name = ${player_name},
-        hitman_name = ${hitman_name},
-        ko_position = ${ko_position},
-        placement = ${placement},
-        updated_at = CURRENT_TIMESTAMP
+        player_name = ${player_name || ""},
+        hitman_name = ${hitman_name || null},
+        ko_position = ${ko_position || null},
+        placement = ${placement || null},
+        updated_at = NOW()
       WHERE id = ${playerId}
     `;
 
     console.log("Update result:", updateResult);
 
-    // Fetch the updated player data
-    const updatedPlayerResult = await prisma.$queryRaw`
-      SELECT * FROM tournament_draft_players WHERE id = ${playerId}
-    `;
+    // Instead of $queryRaw, let's construct the response from the input data
+    // since we know the update succeeded and we have all the data
+    if (updateResult === 1) {
+      // Return the updated data based on what we just set
+      const updatedPlayer = {
+        id: playerId,
+        tournament_draft_id: parseInt(params.id),
+        player_name: player_name,
+        player_uid: body.player_uid || null, // Include if provided
+        is_new_player: body.is_new_player || false,
+        hitman_name: hitman_name || null,
+        ko_position: ko_position || null,
+        placement: placement || null,
+        created_at: body.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    console.log("Updated player from DB:", updatedPlayerResult);
-
-    const updatedPlayer = Array.isArray(updatedPlayerResult)
-      ? updatedPlayerResult[0]
-      : updatedPlayerResult;
-
-    if (!updatedPlayer) {
+      console.log("Returning constructed player data:", updatedPlayer);
+      return NextResponse.json(updatedPlayer);
+    } else {
       return NextResponse.json(
-        { error: "Player not found after update" },
+        { error: "Player not found or update failed" },
         { status: 404 }
       );
     }
-
-    return NextResponse.json(updatedPlayer);
   } catch (error) {
     console.error("Error updating draft player:", error);
     return NextResponse.json(
@@ -74,11 +80,15 @@ export async function DELETE(
   try {
     const playerId = parseInt(params.playerid);
 
-    await prisma.$queryRaw`
+    const deleteResult = await prisma.$executeRaw`
       DELETE FROM tournament_draft_players WHERE id = ${playerId}
     `;
 
-    return NextResponse.json({ success: true });
+    if (deleteResult === 1) {
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
   } catch (error) {
     console.error("Error deleting draft player:", error);
     return NextResponse.json(

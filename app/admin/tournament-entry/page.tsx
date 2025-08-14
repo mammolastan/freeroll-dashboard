@@ -68,6 +68,7 @@ export default function TournamentEntryPage() {
 
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
+    const [selectedPlayerForKnockout, setSelectedPlayerForKnockout] = useState<number | null>(null);
 
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
@@ -468,17 +469,22 @@ export default function TournamentEntryPage() {
 
     // Handle hitman selection
     const selectHitman = (playerId: number, hitmanName: string) => {
-        updatePlayer(playerId, 'hitman_name', hitmanName || null);
-        setHitmanSearchValues(prev => ({ ...prev, [playerId]: hitmanName }));
+        const finalHitmanName = hitmanName === 'unknown' ? 'unknown' : hitmanName;
+        updatePlayer(playerId, 'hitman_name', finalHitmanName || null);
+        setHitmanSearchValues(prev => ({ ...prev, [playerId]: finalHitmanName }));
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
+
+        // Clear the selected player for knockout state
+        setSelectedPlayerForKnockout(null);
     };
 
-    // Handle hitman search input changes
+    // Handle hitman search input changes    
     const handleHitmanSearchChange = (playerId: number, value: string) => {
         setHitmanSearchValues(prev => ({ ...prev, [playerId]: value }));
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: value.length > 0 }));
 
-        // If the value exactly matches a player name, update immediately
+        // Only auto-update for exact player name matches during typing
+        // Let the blur handler deal with "unknown" and other values
         const exactMatch = players.find(p =>
             p.id !== playerId &&
             p.player_name.toLowerCase() === value.toLowerCase()
@@ -486,10 +492,80 @@ export default function TournamentEntryPage() {
 
         if (exactMatch) {
             updatePlayer(playerId, 'hitman_name', exactMatch.player_name);
-        } else if (value === '') {
-            // Clear hitman if input is empty
-            updatePlayer(playerId, 'hitman_name', null);
         }
+    };
+    // Add this function to handle knockout button clicks:
+    const handleKnockoutClick = (playerId: number) => {
+        setSelectedPlayerForKnockout(playerId);
+
+        // Set hitman input to "unknown" and highlight it
+        setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
+
+        // Focus the hitman input and select the text
+        setTimeout(() => {
+            const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
+            if (hitmanInput) {
+                hitmanInput.focus();
+                hitmanInput.select(); // This will highlight the "unknown" text
+            }
+        }, 50);
+    };
+
+    // Updated hitman input focus handler:
+    const handleHitmanFocus = (playerId: number) => {
+        const player = players.find(p => p.id === playerId);
+        if (!player) return;
+
+        const currentValue = hitmanSearchValues[playerId] ?? player.hitman_name ?? '';
+
+        // If this is a fresh knockout (selected via button), the value should already be "unknown"
+        // If user manually clicks the input, set to "unknown" if empty
+        if (currentValue === '') {
+            setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
+            setTimeout(() => {
+                const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
+                if (hitmanInput) {
+                    hitmanInput.select();
+                }
+            }, 50);
+        }
+
+        setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: currentValue.length > 0 }));
+    };
+
+    // Add hitman input blur handler:
+    const handleHitmanBlur = (playerId: number) => {
+        // Hide dropdown when losing focus
+        setTimeout(() => {
+            setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
+        }, 150); // Small delay to allow dropdown clicks to register
+
+        const currentValue = hitmanSearchValues[playerId] ?? '';
+
+        // Process the final value when user leaves the input
+        if (currentValue.toLowerCase() === 'unknown' || currentValue === 'unknown') {
+            // Treat "unknown" as a valid hitman and trigger KO position assignment
+            updatePlayer(playerId, 'hitman_name', 'unknown');
+        } else if (currentValue === '') {
+            // Clear hitman if empty
+            updatePlayer(playerId, 'hitman_name', null);
+        } else {
+            // Check if it matches an exact player name
+            const exactMatch = players.find(p =>
+                p.id !== playerId &&
+                p.player_name.toLowerCase() === currentValue.toLowerCase()
+            );
+
+            if (exactMatch) {
+                updatePlayer(playerId, 'hitman_name', exactMatch.player_name);
+            } else {
+                // If it doesn't match any player, treat it as a custom hitman name
+                updatePlayer(playerId, 'hitman_name', currentValue);
+            }
+        }
+
+        // Clear the selected player for knockout state
+        setSelectedPlayerForKnockout(null);
     };
 
     // Clear hitman search values when switching tournaments
@@ -1161,7 +1237,7 @@ export default function TournamentEntryPage() {
                                         Status: {currentDraft.status.charAt(0).toUpperCase() + currentDraft.status.slice(1)}
                                     </span>
                                     <span className="text-sm text-blue-700">
-                                        Last updated: {new Date(currentDraft.updated_at).toLocaleString()}
+                                        Last updated: {new Date(currentDraft.updated_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
                                     </span>
                                 </div>
                                 {currentDraft.status === 'integrated' && (
@@ -1416,7 +1492,7 @@ export default function TournamentEntryPage() {
 
                                     {/* Show players in insertion order when sortBy is 'insertion', otherwise use sortPlayers */}
                                     {(sortBy === 'insertion' ?
-                                        (sortOrder === 'desc' ? players : [...players].reverse()) : // desc = newest first, asc = oldest first
+                                        (sortOrder === 'desc' ? players : [...players].reverse()) :
                                         sortPlayers(players)
                                     ).map((player) => (
                                         <div
@@ -1426,78 +1502,91 @@ export default function TournamentEntryPage() {
                                                 : 'bg-white'
                                                 }`}
                                         >
+                                            {/* Player Name Column with Knockout Button */}
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900">
-                                                    {player.player_name}
-                                                </span>
-                                                {player.is_new_player ? (
-                                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                                                        NEW
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <span className="font-medium text-gray-900">
+                                                        {player.player_name}
                                                     </span>
-                                                ) : null}
+                                                    {player.is_new_player ? (
+                                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                                            NEW
+                                                        </span>
+                                                    ) : ''}
+                                                </div>
+                                                {/* Knockout Button */}
+                                                {currentDraft?.status !== 'integrated' ? (
+                                                    <button
+                                                        onClick={() => handleKnockoutClick(player.id)}
+                                                        className="ml-2 p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                                                        title={`Knockout ${player.player_name}`}
+                                                    >
+                                                        <svg
+                                                            width="18"
+                                                            height="18"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        >
+                                                            {/* Crosshair with Extended Lines and Solid Center Dot */}
+                                                            <circle cx="12" cy="12" r="10" />
+                                                            <line x1="12" y1="0" x2="12" y2="8" />   {/* Top line: extends beyond circle */}
+                                                            <line x1="12" y1="16" x2="12" y2="24" /> {/* Bottom line */}
+                                                            <line x1="0" y1="12" x2="8" y2="12" />   {/* Left line */}
+                                                            <line x1="16" y1="12" x2="24" y2="12" /> {/* Right line */}
+                                                            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                                                        </svg>
+
+
+                                                    </button>
+                                                ) : ''}
                                             </div>
 
+                                            {/* Hitman Input Column */}
                                             <div className="relative">
                                                 <input
+                                                    id={`hitman-input-${player.id}`}
                                                     type="text"
                                                     value={hitmanSearchValues[player.id] ?? player.hitman_name ?? ''}
                                                     onChange={(e) => handleHitmanSearchChange(player.id, e.target.value)}
-                                                    onFocus={() => {
-                                                        const currentValue = hitmanSearchValues[player.id] ?? player.hitman_name ?? '';
-                                                        if (currentValue.length > 0) {
-                                                            setHitmanDropdownVisible(prev => ({ ...prev, [player.id]: true }));
-                                                        }
-                                                    }}
-                                                    onBlur={() => {
-                                                        // Delay hiding dropdown to allow for clicks
-                                                        setTimeout(() => {
-                                                            setHitmanDropdownVisible(prev => ({ ...prev, [player.id]: false }));
-                                                        }, 200);
-                                                    }}
-                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
-                                                    placeholder="Type hitman name..."
+                                                    onFocus={() => handleHitmanFocus(player.id)}
+                                                    onBlur={() => handleHitmanBlur(player.id)}
+                                                    className={`w-full px-2 py-1 border rounded text-black text-sm ${currentDraft?.status === 'integrated' ? 'bg-gray-100' : ''
+                                                        }`}
+                                                    placeholder="Enter hitman name or leave as 'unknown'"
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
 
-                                                {/* Hitman Dropdown */}
-                                                {hitmanDropdownVisible[player.id] && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
-                                                        {getHitmanCandidates(player.id, hitmanSearchValues[player.id] ?? '').length === 0 ? (
-                                                            <div className="px-3 py-2 text-gray-500 text-sm">
-                                                                No matching players found
+                                                {/* Hitman dropdown */}
+                                                {hitmanDropdownVisible[player.id] && currentDraft?.status !== 'integrated' && (
+                                                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-md shadow-lg z-10 max-h-32 overflow-y-auto">
+                                                        {getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '').map((candidate) => (
+                                                            <div
+                                                                key={candidate.id}
+                                                                onClick={() => selectHitman(player.id, candidate.player_name)}
+                                                                className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-black text-sm"
+                                                            >
+                                                                {candidate.player_name}
                                                             </div>
-                                                        ) : (
-                                                            <>
-                                                                {getHitmanCandidates(player.id, hitmanSearchValues[player.id] ?? '').map((candidate) => (
-                                                                    <div
-                                                                        key={candidate.id}
-                                                                        onClick={() => selectHitman(player.id, candidate.player_name)}
-                                                                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
-                                                                    >
-                                                                        <div className="font-medium text-gray-900">
-                                                                            {candidate.player_name}
-
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-
-                                                                {/* Clear hitman option */}
-                                                                {(hitmanSearchValues[player.id] ?? player.hitman_name) && (
-                                                                    <div
-                                                                        onClick={() => selectHitman(player.id, '')}
-                                                                        className="px-3 py-2 hover:bg-red-50 cursor-pointer border-t bg-red-25 text-red-600"
-                                                                    >
-                                                                        <div className="font-medium">
-                                                                            Clear hitman
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </>
-                                                        )}
+                                                        ))}
+                                                        {/* Add "unknown" option if user is typing */}
+                                                        {hitmanSearchValues[player.id] &&
+                                                            hitmanSearchValues[player.id].toLowerCase().includes('unknown') && (
+                                                                <div
+                                                                    onClick={() => selectHitman(player.id, 'unknown')}
+                                                                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-black text-sm border-t"
+                                                                >
+                                                                    <em>unknown hitman</em>
+                                                                </div>
+                                                            )}
                                                     </div>
                                                 )}
                                             </div>
 
+                                            {/* KO Position Column */}
                                             <div>
                                                 <input
                                                     type="number"
@@ -1508,11 +1597,14 @@ export default function TournamentEntryPage() {
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
                                             </div>
+                                            <div>
+                                                {/* Placement or other column content */}
+                                            </div>
 
-
-
-
-
+                                            <div>
+                                                {/* Another column content */}
+                                            </div>
+                                            {/* Remove Button Column */}
                                             <div className="flex justify-end">
                                                 {currentDraft?.status !== 'integrated' && (
                                                     <button
