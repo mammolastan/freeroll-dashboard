@@ -65,7 +65,7 @@ export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: Qu
 
     return (
         <div className={`playerCardContainer ${player.isQualified ? 'qualified' : ''}`}>
-            {/* Ranking Badge - now clickable for favorites */}
+            {/* Ranking Badge -  clickable for 'favorites' toggle */}
             <div
                 className={`ranking ${isFavorite ? 'favorited' : ''}`}
                 onClick={handleRankingClick}

@@ -1,3 +1,5 @@
+// app/badges/BadgeModal.tsx
+
 import React from 'react'
 
 interface Badge {

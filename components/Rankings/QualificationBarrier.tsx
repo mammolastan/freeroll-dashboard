@@ -54,7 +54,7 @@ export function QualificationBarrier({ qualifiedCount, totalPlayers }: Qualifica
                 <p>
                     {nonQualifiedCount > 0 ? (
                         <>
-                            <strong>{nonQualifiedCount} players</strong> fell short of the quarterly tournament.
+                            <strong>{nonQualifiedCount} players</strong> are short of the quarterly tournament.
                             Keep playing to secure your chance to win a trip to Vegas!
                         </>
                     ) : (
