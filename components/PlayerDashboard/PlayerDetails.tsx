@@ -53,6 +53,7 @@ interface PlayerStats {
         points: number;
         knockouts: number;
         fileName: string;
+        game_uid: string;
     }>;
     earliestGameDate: string | null;
 }
@@ -448,7 +449,7 @@ Math: log(total_players + 1 / Placement)`}
                                 {stats.recentGames.slice(0, 5).map((game, index) => (
                                     <Link
                                         key={index}
-                                        href={`/games/${encodeURIComponent(game.fileName)}`}
+                                        href={`/games/${encodeURIComponent(game.game_uid)}`}
                                         className="block border-b border-gray-100 last:border-0 pb-3 last:pb-0 hover:bg-gray-50 transition-colors rounded-lg"
                                     >
                                         <div className="font-medium text-gray-800">{game.venue}</div>

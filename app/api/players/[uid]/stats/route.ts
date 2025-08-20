@@ -147,7 +147,8 @@ export async function GET(
     p1.Placement as placement,
     p1.Total_Points as points,
     p1.Knockouts as knockouts,
-    p1.File_name as fileName
+    p1.File_name as fileName,
+    p1.game_uid as game_uid
   FROM poker_tournaments p1
   WHERE p1.UID = ${playerUID}
   ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
