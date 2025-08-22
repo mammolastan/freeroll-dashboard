@@ -46,6 +46,9 @@ export default function TournamentEntryPage() {
     const [currentDraft, setCurrentDraft] = useState<TournamentDraft | null>(null);
     const [loadingTournaments, setLoadingTournaments] = useState(false);
     const [showIntegrationPreview, setShowIntegrationPreview] = useState(false);
+    const [displayCount, setDisplayCount] = useState(8);
+    const [showLoadMore, setShowLoadMore] = useState(false);
+    const [isReverting, setIsReverting] = useState(false);
 
     // New tournament modal
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -87,6 +90,7 @@ export default function TournamentEntryPage() {
 
             const data = await response.json();
             setTournaments(data);
+            resetDisplayCount(); // Add this line
         } catch (error) {
             console.error('Error loading tournaments:', error);
             alert('Failed to load tournaments');
@@ -189,6 +193,16 @@ export default function TournamentEntryPage() {
             console.error('Error deleting tournament:', error);
             alert(`Failed to delete tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    };
+
+    // Load more tournaments handler
+    const handleLoadMore = () => {
+        setDisplayCount(prev => prev + 8);
+    };
+
+    // Reset display count when tournaments change
+    const resetDisplayCount = () => {
+        setDisplayCount(8);
     };
 
     // Format today's date for input field (YYYY-MM-DD)
@@ -530,7 +544,7 @@ export default function TournamentEntryPage() {
             }, 50);
         }
 
-        setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: currentValue.length > 0 }));
+        setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: true }));
     };
 
     // Add hitman input blur handler:
@@ -574,22 +588,21 @@ export default function TournamentEntryPage() {
         setHitmanDropdownVisible({});
     };
 
-
-
-
     // Export tournament
     const exportTournament = () => {
         if (!currentDraft || players.length === 0) return;
-
+        console.log("players")
+        console.log(players)
         const sortedPlayers = [...players].sort((a, b) => {
-            if (a.placement !== null && b.placement !== null) {
-                return a.placement - b.placement;
+            if (a.ko_position !== null && b.ko_position !== null) {
+                return a.ko_position - b.ko_position;
             }
-            if (a.placement !== null) return -1;
-            if (b.placement !== null) return 1;
+            if (a.ko_position !== null) return -1;
+            if (b.ko_position !== null) return 1;
             return a.player_name.localeCompare(b.player_name);
         });
-
+        console.log("sortedPlayers")
+        console.log(sortedPlayers)
         let output = `Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}\n`;
         output += `Director: ${currentDraft.director_name}\n`;
         output += `Players: ${players.length}\n`;
@@ -790,7 +803,7 @@ export default function TournamentEntryPage() {
                     {validation.canIntegrate && (
                         <button
                             onClick={onIntegrate}
-                            disabled={isIntegrating}
+                            disabled={isIntegrating || currentDraft?.status === 'integrated'}
                             className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
                         >
                             <Trophy className="h-4 w-4" />
@@ -830,6 +843,71 @@ export default function TournamentEntryPage() {
         );
     };
 
+    const revertIntegration = async () => {
+        if (!currentDraft || currentDraft.status !== 'integrated') {
+            alert('Cannot revert: Tournament is not integrated');
+            return;
+        }
+
+        const confirmMessage = `⚠️ REVERT INTEGRATION ⚠️
+
+This will:
+• Delete all entries from the main database for this tournament
+• Remove any new players that were created (if they don't appear in other tournaments)
+• Restore the tournament to draft status for editing
+• Allow you to make changes and re-integrate
+
+This action affects the main tournament database. Are you sure you want to proceed?
+
+Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}
+Players: ${players.length}`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        setIsReverting(true);
+
+        try {
+            const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/revert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                alert(`Integration reverted successfully!
+
+Deleted ${result.entriesDeleted} main database entries
+Removed ${result.newPlayersRemoved} new players
+Tournament restored to draft status
+
+You can now edit the tournament and re-integrate when ready.`);
+
+                // Refresh tournament data
+                await loadTournaments();
+
+                // Reload the current tournament to get updated status
+                const updatedDraft = tournaments.find(t => t.id === currentDraft.id);
+                if (updatedDraft) {
+                    setCurrentDraft({ ...updatedDraft, status: 'in_progress' });
+                }
+
+                // Stay on the current tournament page but refresh
+                setCurrentView('entry');
+            } else {
+                const errorData = await response.json();
+                alert(`Revert failed: ${errorData.details || errorData.error}`);
+            }
+        } catch (error) {
+            console.error('Revert error:', error);
+            alert('Revert failed due to network error');
+        } finally {
+            setIsReverting(false);
+        }
+    };
+
     // Authentication
     const handleLogin = async (e: any) => {
         if (e.key === 'Enter' || e.type === 'click') {
@@ -856,6 +934,11 @@ export default function TournamentEntryPage() {
             loadVenues();
         }
     }, [isAuthenticated]);
+
+    // manage load more button visibility
+    useEffect(() => {
+        setShowLoadMore(tournaments.length > displayCount);
+    }, [tournaments.length, displayCount]);
 
     // Show create modal 
     useEffect(() => {
@@ -943,8 +1026,7 @@ export default function TournamentEntryPage() {
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
-
-                                    {tournaments.map((tournament) => (
+                                    {tournaments.slice(0, displayCount).map((tournament) => (
                                         <div
                                             key={tournament.id}
                                             className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
@@ -958,7 +1040,6 @@ export default function TournamentEntryPage() {
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
                                                             {formatGameDate(tournament.tournament_date || '')}
-
                                                         </div>
                                                         <div className="flex items-center gap-2 text-gray-600">
                                                             <MapPin className="w-4 h-4" />
@@ -1010,6 +1091,18 @@ export default function TournamentEntryPage() {
                                             </div>
                                         </div>
                                     ))}
+                                    {/* Load More Button */}
+                                    {showLoadMore && (
+                                        <div className="flex justify-center mt-6">
+                                            <button
+                                                onClick={handleLoadMore}
+                                                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                                Load More Tournaments ({tournaments.length - displayCount} remaining)
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
@@ -1223,7 +1316,12 @@ export default function TournamentEntryPage() {
                                         }`}
                                 >
                                     <Trophy className="h-4 w-4" />
-                                    {showIntegrationPreview ? 'Hide Integration Preview' : 'Preview Integration'}
+                                    {currentDraft?.status === 'integrated'
+                                        ? 'Already Integrated'
+                                        : showIntegrationPreview
+                                            ? 'Hide Integration Preview'
+                                            : 'Preview Integration'
+                                    }
                                 </button>
                             </div>
                         </CardTitle>
@@ -1240,9 +1338,45 @@ export default function TournamentEntryPage() {
                                         Last updated: {new Date(currentDraft.updated_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
                                     </span>
                                 </div>
+
                                 {currentDraft.status === 'integrated' && (
+                                    <div className="mt-3 space-y-2">
+                                        <div className="text-sm text-blue-700">
+                                            ✅ This tournament has been integrated into the main system.
+
+                                        </div>
+
+                                        <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
+                                            <button
+                                                onClick={revertIntegration}
+                                                disabled={isReverting}
+                                                className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
+                                            >
+                                                {isReverting ? (
+                                                    <>
+                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                        Reverting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                                                        </svg>
+                                                        Revert to Draft
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <span className="text-xs text-orange-700">
+                                                ⚠️ This will delete main database entries and restore draft status
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currentDraft.status === 'in_progress' && (
                                     <div className="mt-2 text-sm text-blue-700">
-                                        This tournament has been integrated into the main system.
+                                        📝 Draft mode - You can add/edit players and then integrate when ready.
                                     </div>
                                 )}
                             </div>
@@ -1422,7 +1556,7 @@ export default function TournamentEntryPage() {
                             </div>
                         )}
 
-                        {showIntegrationPreview && players.length > 0 && (
+                        {showIntegrationPreview && players.length > 0 && currentDraft?.status !== 'integrated' && (
                             <TournamentValidationStatus
                                 players={players}
                                 onIntegrate={integrateToMainSystem}

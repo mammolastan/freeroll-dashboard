@@ -218,6 +218,19 @@ export async function POST(
           `;
 
           player.player_uid = newUID;
+
+          // *** FIX: UPDATE THE DRAFT TABLE WITH THE NEW UID ***
+          await tx.$queryRaw`
+              UPDATE tournament_draft_players 
+              SET player_uid = ${newUID}
+              WHERE tournament_draft_id = ${draftId} 
+              AND player_name = ${player.player_name}
+              AND is_new_player = true
+            `;
+
+          console.log(
+            `Created new player: ${player.player_name} with UID: ${newUID}`
+          );
         }
 
         // Calculate points and score
