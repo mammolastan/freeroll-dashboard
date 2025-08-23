@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown } from 'lucide-react';
+import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
 import { formatGameDate } from '@/lib/utils';
+import QRCode from 'qrcode';
 
 interface TournamentDraft {
     id: number;
@@ -33,6 +34,18 @@ interface PlayerSearchResult {
     nickname: string | null;
     TotalGames?: number;
     TotalPoints?: number;
+}
+
+interface Player {
+    id: number;
+    player_name: string;
+    player_uid: string | null;
+    is_new_player: boolean;
+    hitman_name: string | null;
+    ko_position: number | null;
+    placement: number | null;
+    added_by?: 'admin' | 'self_checkin';  // New field
+    checked_in_at?: string;               // New field
 }
 
 export default function TournamentEntryPage() {
@@ -79,6 +92,12 @@ export default function TournamentEntryPage() {
     const [isAddingNewVenue, setIsAddingNewVenue] = useState(false);
     const [newVenueInput, setNewVenueInput] = useState('');
     const [loadingVenues, setLoadingVenues] = useState(false);
+
+    // checkin    
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+    const [checkInUrl, setCheckInUrl] = useState<string>('');
+    const [showQRCode, setShowQRCode] = useState(false);
+    const [generatingQR, setGeneratingQR] = useState(false);
 
 
     // Load tournaments list
@@ -147,7 +166,7 @@ export default function TournamentEntryPage() {
 
         // Load players for this tournament
         try {
-            console.log('Loading players for tournament:', tournament.id);
+            console.log('Loading players for tournament #', tournament.id);
             const response = await fetch(`/api/tournament-drafts/${tournament.id}/players`);
 
             if (!response.ok) {
@@ -157,13 +176,13 @@ export default function TournamentEntryPage() {
             }
 
             const playersData = await response.json();
-            console.log('Loaded players data:', playersData);
+            console.log('Loaded players data:');
 
             // Ensure the data structure is correct
             const formattedPlayers = Array.isArray(playersData) ? playersData : [];
             setPlayers(formattedPlayers);
 
-            console.log('Players state set to:', formattedPlayers);
+            console.log('Players state set');
         } catch (error) {
             console.error('Error loading players:', error);
             setPlayers([]);
@@ -682,6 +701,77 @@ export default function TournamentEntryPage() {
         }
     };
 
+    // Update the loadPlayersForTournament function to track last updated
+    const loadPlayersForTournament = async (tournamentId: number) => {
+        try {
+            console.log('Loading players for tournament #', tournamentId);
+            const response = await fetch(`/api/tournament-drafts/${tournamentId}/players`);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to load players:', response.status, errorText);
+                throw new Error(`Failed to load players: ${errorText}`);
+            }
+
+            const playersData = await response.json();
+            console.log('Loaded players data');
+
+            const formattedPlayers = Array.isArray(playersData) ? playersData : [];
+            setPlayers(formattedPlayers);
+            setLastUpdated(new Date());  // Track when data was last refreshed
+
+            console.log('Players state set');
+        } catch (error) {
+            console.error('Error loading players:', error);
+            setPlayers([]);
+            alert(`Failed to load players: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    // Generate QR code function
+    const generateCheckInQR = async () => {
+        if (!currentDraft) return;
+
+        setGeneratingQR(true);
+        try {
+            const response = await fetch(`/api/tournaments/${currentDraft.id}/checkin-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate check-in link');
+            }
+
+            const data = await response.json();
+            setCheckInUrl(data.checkin_url);
+            setShowQRCode(true);
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            alert('Failed to generate check-in link');
+        } finally {
+            setGeneratingQR(false);
+        }
+    };
+
+    // Function to copy check-in URL
+    const copyCheckInUrl = () => {
+        navigator.clipboard.writeText(checkInUrl);
+        alert('Check-in URL copied to clipboard!');
+    };
+
+    //render player indicators
+    const renderPlayerIndicator = (player: Player) => {
+        if (player.added_by === 'self_checkin') {
+            return (
+                <span
+                    className="inline-block w-2 h-2 bg-blue-500 rounded-full ml-2"
+                    title={`Self checked-in at ${player.checked_in_at ? new Date(player.checked_in_at).toLocaleTimeString() : 'unknown time'}`}
+                ></span>
+            );
+        }
+        return null;
+    };
     // Validation function for tournament integration readiness
     const validateTournamentForIntegration = (players: Player[]): { canIntegrate: boolean; validationMessage: string; errors: string[] } => {
         const errors: string[] = [];
@@ -843,6 +933,88 @@ export default function TournamentEntryPage() {
         );
     };
 
+    // QR Code Modal Component
+    const QRCodeModal = () => {
+        const canvasRef = useRef<HTMLCanvasElement>(null);
+
+        // Generate QR code when modal opens and checkInUrl is available
+        useEffect(() => {
+            if (canvasRef.current && checkInUrl && showQRCode) {
+                QRCode.toCanvas(canvasRef.current, checkInUrl, {
+                    width: 192,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, (error) => {
+                    if (error) {
+                        console.error('QR Code generation error:', error);
+                    }
+                });
+            }
+        }, [checkInUrl, showQRCode]);
+
+        if (!showQRCode) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg text-black font-semibold">Player Check-In</h3>
+                        <button
+                            onClick={() => setShowQRCode(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="text-center space-y-4">
+                        {/* Real QR Code */}
+                        <div className="flex justify-center">
+                            <canvas
+                                ref={canvasRef}
+                                className="border border-gray-200 rounded shadow-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <p className="text-sm text-gray-600 mb-2">
+                                Players can scan this QR code or visit:
+                            </p>
+                            <div className="bg-gray-50 p-2 rounded border text-xs font-mono break-all text-black">
+                                {checkInUrl}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={copyCheckInUrl}
+                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                            >
+                                Copy Link
+                            </button>
+                            <button
+                                onClick={() => window.open(checkInUrl, '_blank')}
+                                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                            >
+                                Test Link
+                            </button>
+                        </div>
+
+                        <div className="text-xs text-gray-500 text-left space-y-1">
+                            <p>• Players will enter their name to check in</p>
+                            <p>• System will suggest existing players or create new ones</p>
+                            <p>• Check-ins will appear automatically with a blue dot indicator</p>
+                            <p>• Page refreshes every 15 seconds when active</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const revertIntegration = async () => {
         if (!currentDraft || currentDraft.status !== 'integrated') {
             alert('Cannot revert: Tournament is not integrated');
@@ -851,16 +1023,16 @@ export default function TournamentEntryPage() {
 
         const confirmMessage = `⚠️ REVERT INTEGRATION ⚠️
 
-This will:
-• Delete all entries from the main database for this tournament
-• Remove any new players that were created (if they don't appear in other tournaments)
-• Restore the tournament to draft status for editing
-• Allow you to make changes and re-integrate
+                    This will:
+                    • Delete all entries from the main database for this tournament
+                    • Remove any new players that were created (if they don't appear in other tournaments)
+                    • Restore the tournament to draft status for editing
+                    • Allow you to make changes and re-integrate
 
-This action affects the main tournament database. Are you sure you want to proceed?
+                    This action affects the main tournament database. Are you sure you want to proceed?
 
-Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}
-Players: ${players.length}`;
+                    Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}
+                    Players: ${players.length}`;
 
         if (!confirm(confirmMessage)) {
             return;
@@ -879,11 +1051,11 @@ Players: ${players.length}`;
 
                 alert(`Integration reverted successfully!
 
-Deleted ${result.entriesDeleted} main database entries
-Removed ${result.newPlayersRemoved} new players
-Tournament restored to draft status
+                    Deleted ${result.entriesDeleted} main database entries
+                    Removed ${result.newPlayersRemoved} new players
+                    Tournament restored to draft status
 
-You can now edit the tournament and re-integrate when ready.`);
+                    You can now edit the tournament and re-integrate when ready.`);
 
                 // Refresh tournament data
                 await loadTournaments();
@@ -949,6 +1121,36 @@ You can now edit the tournament and re-integrate when ready.`);
             }));
         }
     }, [showCreateModal]);
+
+    // smart polling functionality
+    useEffect(() => {
+        if (!currentDraft || currentDraft.status !== 'in_progress') return;
+
+        // Refresh when tab becomes active
+        const handleVisibilityChange = () => {
+            if (!document.hidden && currentDraft) {
+                console.log('Tab became active, refreshing player data');
+                loadPlayersForTournament(currentDraft.id);
+            }
+        };
+
+        // Poll every 15 seconds when tab is active
+        const interval = setInterval(() => {
+            if (!document.hidden && currentDraft) {
+                console.log('Auto-refreshing player data');
+                loadPlayersForTournament(currentDraft.id);
+            }
+        }, 15000);
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            clearInterval(interval);
+        };
+    }, [currentDraft]);
+
+
 
     // Pre-Authentication UI
     if (!isAuthenticated) {
@@ -1276,112 +1478,117 @@ You can now edit the tournament and re-integrate when ready.`);
             <div className="max-w-6xl mx-auto">
                 <Card className="mb-6">
                     <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setCurrentView('welcome')}
-                                    className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
-                                >
-                                    <ArrowLeft size={16} />
-                                    Back to Tournaments
-                                </button>
 
-                                <div>
-                                    <div className="text-lg font-semibold">
-                                        {formatGameDate(currentDraft?.tournament_date || '')} - {currentDraft?.venue}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        {currentDraft?.director_name ? `Director: ${currentDraft.director_name}` : 'No director assigned'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={exportTournament}
-                                    className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                                >
-                                    <Upload size={16} />
-                                    Export
-                                </button>
-
-
-
-                                <button
-                                    onClick={() => setShowIntegrationPreview(!showIntegrationPreview)}
-                                    disabled={players.length === 0 || currentDraft?.status === 'integrated'}
-                                    className={`px-3 py-1 text-sm flex items-center gap-2 ${players.length > 0 && currentDraft?.status !== 'integrated'
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                        }`}
-                                >
-                                    <Trophy className="h-4 w-4" />
-                                    {currentDraft?.status === 'integrated'
-                                        ? 'Already Integrated'
-                                        : showIntegrationPreview
-                                            ? 'Hide Integration Preview'
-                                            : 'Preview Integration'
-                                    }
-                                </button>
-                            </div>
-                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         {/* Tournament Status */}
                         {currentDraft && (
-                            <div className="mb-4 p-3 bg-blue-50 rounded">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-medium text-blue-900">
-                                        Status: {currentDraft.status.charAt(0).toUpperCase() + currentDraft.status.slice(1)}
-                                    </span>
-                                    <span className="text-sm text-blue-700">
-                                        Last updated: {new Date(currentDraft.updated_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
-                                    </span>
+                            <div className="mb-6">
+                                {/* // Action Buttons */}
+                                <div className='flex flex-row gap-2'>
+                                    <button
+                                        onClick={() => setCurrentView('welcome')}
+                                        className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                                    >
+                                        <ArrowLeft size={16} />
+                                        Back to Tournaments
+                                    </button>
+
+                                    <button
+                                        onClick={exportTournament}
+                                        className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                    >
+                                        <Download size={16} />
+                                        Export
+                                    </button>
+
+                                    {/* QR Code */}
+                                    {currentDraft?.status === 'in_progress' && (
+                                        <button
+                                            onClick={generateCheckInQR}
+                                            disabled={generatingQR}
+                                            className="flex items-center gap-2  px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            <QrCode className="h-4 w-4" />
+                                            {generatingQR ? 'Generating...' : 'QR'}
+                                        </button>
+                                    )}
                                 </div>
 
-                                {currentDraft.status === 'integrated' && (
-                                    <div className="mt-3 space-y-2">
-                                        <div className="text-sm text-blue-700">
-                                            ✅ This tournament has been integrated into the main system.
+                                {/* Tournament Info Header */}
+                                <div className="flex items-center justify-between my-5">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900">
+                                            {currentDraft?.venue} - {formatGameDate(currentDraft?.tournament_date || '')}
+                                        </h2>
+                                        <p className="text-gray-600">
+                                            Director: {currentDraft?.director_name} | Players: {players.length}
+                                        </p>
+                                    </div>
 
+                                    {/* Buttons and info */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-sm text-gray-500">
+                                            <div>Last updated: {lastUpdated.toLocaleTimeString()}</div>
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                                Auto-refreshing
+                                            </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
-                                            <button
-                                                onClick={revertIntegration}
-                                                disabled={isReverting}
-                                                className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
-                                            >
-                                                {isReverting ? (
-                                                    <>
-                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                        Reverting...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                                                        </svg>
-                                                        Revert to Draft
-                                                    </>
-                                                )}
-                                            </button>
 
-                                            <span className="text-xs text-orange-700">
-                                                ⚠️ This will delete main database entries and restore draft status
+                                    </div>
+
+
+                                </div>
+
+                                {/* Status Banner */}
+                                {currentDraft && (
+                                    <div className={`p-3 flex flex-row justify-between gap-11 rounded-lg mb-4 ${currentDraft.status === 'integrated'
+                                        ? 'bg-green-50 border border-green-200'
+                                        : 'bg-blue-50 border border-blue-200'
+                                        }`}>
+                                        <div>
+                                            <span className={`font-medium ${currentDraft.status === 'integrated' ? 'text-green-900' : 'text-blue-900'
+                                                }`}>
+                                                Status: {currentDraft.status.charAt(0).toUpperCase() + currentDraft.status.slice(1)}
                                             </span>
                                         </div>
-                                    </div>
-                                )}
-
-                                {currentDraft.status === 'in_progress' && (
-                                    <div className="mt-2 text-sm text-blue-700">
-                                        📝 Draft mode - You can add/edit players and then integrate when ready.
+                                        <div>
+                                            <span className={`text-sm ${currentDraft.status === 'integrated' ? 'text-green-700' : 'text-blue-700'
+                                                }`}>
+                                                {currentDraft.status === 'integrated'
+                                                    ? '✅ Tournament completed and integrated'
+                                                    : '🔄 Tournament in progress - players can check in'
+                                                }
+                                            </span>
+                                        </div>
+                                        {/* Integration Preview */}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setShowIntegrationPreview(!showIntegrationPreview)}
+                                                disabled={players.length === 0 || currentDraft?.status === 'integrated'}
+                                                className={`px-3 py-1 text-sm flex items-center gap-2 ${players.length > 0 && currentDraft?.status !== 'integrated'
+                                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                <Trophy className="h-4 w-4" />
+                                                {currentDraft?.status === 'integrated'
+                                                    ? 'Already Integrated'
+                                                    : showIntegrationPreview
+                                                        ? 'Hide Integration Preview'
+                                                        : 'Preview Integration'
+                                                }
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         )}
-
+                        {showQRCode && (
+                            <QRCodeModal ></QRCodeModal>
+                        )}
                         {/* Tournament Metadata */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div>
@@ -1556,6 +1763,10 @@ You can now edit the tournament and re-integrate when ready.`);
                             </div>
                         )}
 
+
+
+
+
                         {showIntegrationPreview && players.length > 0 && currentDraft?.status !== 'integrated' && (
                             <TournamentValidationStatus
                                 players={players}
@@ -1597,7 +1808,7 @@ You can now edit the tournament and re-integrate when ready.`);
                                     {/* Column Headers */}
                                     <div className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
                                         <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 col-span-2"
                                             onClick={() => handleSort('name')}
                                         >
                                             Player Name
@@ -1637,11 +1848,10 @@ You can now edit the tournament and re-integrate when ready.`);
                                                 }`}
                                         >
                                             {/* Player Name Column with Knockout Button */}
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 col-span-2">
                                                 <div className="flex items-center gap-2 flex-1">
-                                                    <span className="font-medium text-gray-900">
-                                                        {player.player_name}
-                                                    </span>
+                                                    <span className="font-medium text-gray-900">{player.player_name}</span>
+                                                    {renderPlayerIndicator(player)}
                                                     {player.is_new_player ? (
                                                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                                                             NEW
@@ -1727,13 +1937,11 @@ You can now edit the tournament and re-integrate when ready.`);
                                                     value={player.ko_position || ''}
                                                     onChange={(e) => updatePlayer(player.id, 'ko_position', parseInt(e.target.value) || null)}
                                                     className="w-full px-2 py-1 border rounded text-black text-sm"
-                                                    placeholder="KO Position"
+                                                    placeholder="KO #"
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
                                             </div>
-                                            <div>
-                                                {/* Placement or other column content */}
-                                            </div>
+
 
                                             <div>
                                                 {/* Another column content */}
