@@ -109,7 +109,7 @@ export default function TournamentEntryPage() {
 
             const data = await response.json();
             setTournaments(data);
-            resetDisplayCount(); // Add this line
+            resetDisplayCount();
         } catch (error) {
             console.error('Error loading tournaments:', error);
             alert('Failed to load tournaments');
@@ -958,7 +958,7 @@ export default function TournamentEntryPage() {
         if (!showQRCode) return null;
 
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowQRCode(false)}>
                 <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg text-black font-semibold">Player Check-In</h3>
@@ -1562,6 +1562,48 @@ export default function TournamentEntryPage() {
                                                     : '🔄 Tournament in progress - players can check in'
                                                 }
                                             </span>
+                                            {currentDraft.status === 'integrated' &&
+                                                (
+                                                    <div className="mt-3 space-y-2">
+                                                        <div className="text-sm text-blue-700">
+                                                            ✅ This tournament has been integrated into the main system.
+                                                        </div>
+                                                        <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
+                                                            <button
+                                                                onClick={revertIntegration}
+                                                                disabled={isReverting}
+                                                                className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
+                                                            >
+                                                                {isReverting ? (
+                                                                    <>
+                                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                                        Reverting...
+                                                                    </>) :
+                                                                    (
+                                                                        <>
+                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                                                                            </svg>
+                                                                            Revert to Draft
+                                                                        </>
+                                                                    )
+                                                                }
+                                                            </button>
+                                                            <span className="text-xs text-orange-700">
+                                                                ⚠️ This will delete main database entries and restore draft status
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+                                            {currentDraft.status === 'in_progress' &&
+                                                (
+                                                    <div className="mt-2 text-sm text-blue-700">
+                                                        📝 Draft mode - You can add/edit players and then integrate when ready.
+                                                    </div>
+                                                )
+                                            }
+
                                         </div>
                                         {/* Integration Preview */}
                                         <div className="flex items-center gap-2">
