@@ -425,20 +425,13 @@ export default function TournamentEntryPage() {
 
             // Auto-assign KO position when hitman is selected
             if (field === 'hitman_name' && value) {
-                // Find the next available KO position
+                // Find the maximum KO position and add 1
                 const usedKoPositions = players
                     .filter(p => p.ko_position !== null && p.id !== playerId)
-                    .map(p => p.ko_position)
-                    .sort((a, b) => (a || 0) - (b || 0));
+                    .map(p => p.ko_position!);
 
-                let nextKoPosition = 1;
-                for (const pos of usedKoPositions) {
-                    if (pos === nextKoPosition) {
-                        nextKoPosition++;
-                    } else {
-                        break;
-                    }
-                }
+                const maxKoPosition = usedKoPositions.length > 0 ? Math.max(...usedKoPositions) : 0;
+                const nextKoPosition = maxKoPosition + 1;
 
                 updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
             }
@@ -472,6 +465,61 @@ export default function TournamentEntryPage() {
         } catch (error) {
             console.error('Error updating player:', error);
             alert(`Error updating player: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    // Auto-calculate KO positions to fix duplicates and gaps
+    const autoCalculateKOPositions = async () => {
+        if (!currentDraft) return;
+
+        // Get all players with KO positions (knocked out players)
+        const playersWithKO = players.filter(p => p.ko_position !== null);
+
+        if (playersWithKO.length === 0) {
+            alert('No players with KO positions found to fix.');
+            return;
+        }
+
+        // Confirm the action
+        if (!confirm(`This will automatically reassign KO positions for ${playersWithKO.length} players to fix duplicates and gaps. Continue?`)) {
+            return;
+        }
+
+        try {
+            // Sort players by current KO position, then alphabetically by name for consistency
+            // This ensures a deterministic order when there are duplicates
+            const sortedPlayers = [...playersWithKO].sort((a, b) => {
+                if (a.ko_position === b.ko_position) {
+                    // If KO positions are the same, sort alphabetically
+                    return a.player_name.localeCompare(b.player_name);
+                }
+                return (a.ko_position || 0) - (b.ko_position || 0);
+            });
+
+            // Reassign KO positions sequentially starting from 1
+            const updatePromises = sortedPlayers.map((player, index) => {
+                const newKOPosition = index + 1;
+
+                // Only update if the position actually changed
+                if (player.ko_position !== newKOPosition) {
+                    return updatePlayer(player.id, 'ko_position', newKOPosition);
+                }
+                return Promise.resolve();
+            });
+
+            // Wait for all updates to complete
+            await Promise.all(updatePromises);
+
+            alert(`Successfully reassigned KO positions for ${sortedPlayers.length} players.\nPositions are now sequential from 1 to ${sortedPlayers.length}.`);
+
+            // Refresh the player data to ensure consistency
+            if (currentDraft) {
+                await loadPlayersForTournament(currentDraft.id);
+            }
+
+        } catch (error) {
+            console.error('Error auto-calculating KO positions:', error);
+            alert('Failed to auto-calculate KO positions. Please try again.');
         }
     };
 
@@ -566,7 +614,7 @@ export default function TournamentEntryPage() {
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: true }));
     };
 
-    // Add hitman input blur handler:
+    // hitman input blur handler:
     const handleHitmanBlur = (playerId: number) => {
         // Hide dropdown when losing focus
         setTimeout(() => {
@@ -599,12 +647,6 @@ export default function TournamentEntryPage() {
 
         // Clear the selected player for knockout state
         setSelectedPlayerForKnockout(null);
-    };
-
-    // Clear hitman search values when switching tournaments
-    const clearHitmanSearchState = () => {
-        setHitmanSearchValues({});
-        setHitmanDropdownVisible({});
     };
 
     // Export tournament
@@ -882,6 +924,13 @@ export default function TournamentEntryPage() {
         const validation = validateTournamentForIntegration(players);
         const placementPreview = validation.canIntegrate ? previewPlacements(players) : [];
 
+        // Check if there are KO position issues that can be auto-fixed
+        const playersWithKO = players.filter(p => p.ko_position !== null);
+        const hasKOPositionIssues = validation.errors.some(error =>
+            error.includes('Duplicate KO position') ||
+            error.includes('Must be sequential from 1 to')
+        );
+
         return (
             <div className="mb-6 p-4 border rounded-lg">
                 <h3 className="font-semibold text-lg mb-3">Integration Status</h3>
@@ -890,6 +939,21 @@ export default function TournamentEntryPage() {
                     <div className={`font-medium ${validation.canIntegrate ? 'text-green-800' : 'text-red-800'}`}>
                         {validation.validationMessage}
                     </div>
+
+                    {/* Auto-calculate button for KO position issues */}
+                    {!validation.canIntegrate && hasKOPositionIssues && playersWithKO.length > 0 && (
+                        <button
+                            onClick={autoCalculateKOPositions}
+                            disabled={currentDraft?.status === 'integrated'}
+                            className="mt-3 mr-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            Auto-Calculate KO #s
+                        </button>
+                    )}
+
                     {validation.canIntegrate && (
                         <button
                             onClick={onIntegrate}
@@ -900,6 +964,7 @@ export default function TournamentEntryPage() {
                             {isIntegrating ? 'Integrating...' : 'Integrate Tournament'}
                         </button>
                     )}
+
                     {!validation.canIntegrate && (
                         <div className="mt-2 text-sm text-red-700">
                             <ul className="list-disc list-inside space-y-1">
@@ -922,7 +987,7 @@ export default function TournamentEntryPage() {
                                     </span>
                                     <div className="text-right text-xs text-gray-600">
                                         <div>Place: {player.finalPlacement}</div>
-                                        {player.koPosition && <div>KO: {player.koPosition}</div>}
+                                        {player.koPosition && <div>KO #{player.koPosition}</div>}
                                     </div>
                                 </div>
                             ))}
