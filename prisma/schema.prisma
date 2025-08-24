@@ -171,16 +171,18 @@ model TournamentDraft {
 }
 
 model TournamentDraftPlayer {
-  id                  Int      @id @default(autoincrement())
+  id                  Int       @id @default(autoincrement())
   tournament_draft_id Int
-  player_name         String   @db.VarChar(255)
-  player_uid          String?  @db.VarChar(255)
-  is_new_player       Boolean  @default(false)
-  hitman_name         String?  @db.VarChar(255)
+  player_name         String    @db.VarChar(255)
+  player_uid          String?   @db.VarChar(255)
+  is_new_player       Boolean   @default(false)
+  hitman_name         String?   @db.VarChar(255)
   ko_position         Int?
   placement           Int?
-  created_at          DateTime @default(now()) @db.Timestamp(0)
-  updated_at          DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  added_by            String?   @db.VarChar(255)
+  checked_in_at       DateTime? @db.Timestamp(0)
+  created_at          DateTime  @default(now()) @db.Timestamp(0)
+  updated_at          DateTime  @default(now()) @updatedAt @db.Timestamp(0)
 
   // Relations
   tournament_draft TournamentDraft @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade)

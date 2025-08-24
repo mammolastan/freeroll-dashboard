@@ -174,7 +174,7 @@ export async function POST(
     await prisma.$queryRaw`
       INSERT INTO tournament_draft_players 
       (tournament_draft_id, player_name, player_uid, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${is_new_player}, 'self_checkin', NOW())
+      VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
     const newPlayer = await prisma.$queryRaw`
@@ -268,7 +268,7 @@ export async function PUT(
     await prisma.$queryRaw`
       INSERT INTO tournament_draft_players 
       (tournament_draft_id, player_name, player_uid, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${is_new_player}, 'self_checkin', NOW())
+      VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
     const newPlayer = await prisma.$queryRaw`

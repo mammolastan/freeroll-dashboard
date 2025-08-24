@@ -53,11 +53,11 @@ export async function POST(
 
     await prisma.$queryRaw`
       INSERT INTO tournament_draft_players 
-      (tournament_draft_id, player_name, player_uid, is_new_player)
-      VALUES (${draftId}, ${player_name}, ${player_uid}, ${
+      (tournament_draft_id, player_name, player_uid, is_new_player, added_by, checked_in_at)
+          VALUES (${draftId}, ${player_name}, ${player_uid}, ${
       is_new_player || false
-    })
-    `;
+    }, 'admin', UTC_TIMESTAMP())
+      `;
 
     const newPlayer = await prisma.$queryRaw`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
