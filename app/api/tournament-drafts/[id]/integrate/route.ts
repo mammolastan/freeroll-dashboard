@@ -162,65 +162,66 @@ export async function POST(
   const draftId = parseInt(params.id);
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Get tournament draft
-      const draftResult = await tx.$queryRaw<DraftTournament[]>`
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // 1. Get tournament draft
+        const draftResult = await tx.$queryRaw<DraftTournament[]>`
         SELECT * FROM tournament_drafts WHERE id = ${draftId} AND status = 'in_progress'
       `;
 
-      if (draftResult.length === 0) {
-        throw new Error("Tournament draft not found or not in progress");
-      }
+        if (draftResult.length === 0) {
+          throw new Error("Tournament draft not found or not in progress");
+        }
 
-      const draft = draftResult[0];
+        const draft = draftResult[0];
 
-      // 2. Get all players for this draft
-      const playersResult = await tx.$queryRaw<DraftPlayer[]>`
+        // 2. Get all players for this draft
+        const playersResult = await tx.$queryRaw<DraftPlayer[]>`
         SELECT * FROM tournament_draft_players 
         WHERE tournament_draft_id = ${draftId}
         ORDER BY player_name ASC
       `;
 
-      if (playersResult.length === 0) {
-        throw new Error("No players found for this tournament");
-      }
+        if (playersResult.length === 0) {
+          throw new Error("No players found for this tournament");
+        }
 
-      // 3. VALIDATE TOURNAMENT FOR INTEGRATION
-      const validation = validateTournamentForIntegration(playersResult);
-      if (!validation.isValid) {
-        throw new Error(
-          `Tournament validation failed: ${validation.errors.join("; ")}`
+        // 3. VALIDATE TOURNAMENT FOR INTEGRATION
+        const validation = validateTournamentForIntegration(playersResult);
+        if (!validation.isValid) {
+          throw new Error(
+            `Tournament validation failed: ${validation.errors.join("; ")}`
+          );
+        }
+
+        // 4. CALCULATE PLACEMENTS BASED ON KO POSITIONS
+        const playersWithPlacements = calculatePlacements(playersResult);
+
+        // 5. Generate unique filename & UID for the game
+        const fileName = generateFileName(
+          draft.tournament_date,
+          draft.venue,
+          draft.director_name
         );
-      }
 
-      // 4. CALCULATE PLACEMENTS BASED ON KO POSITIONS
-      const playersWithPlacements = calculatePlacements(playersResult);
+        const gameUID = uuidv4();
 
-      // 5. Generate unique filename & UID for the game
-      const fileName = generateFileName(
-        draft.tournament_date,
-        draft.venue,
-        draft.director_name
-      );
+        // 7. Process each player with calculated placements
+        for (const player of playersWithPlacements) {
+          // Handle new players
+          if (player.is_new_player && !player.player_uid) {
+            const newUID = uuidv4();
 
-      const gameUID = uuidv4();
-
-      // 7. Process each player with calculated placements
-      for (const player of playersWithPlacements) {
-        // Handle new players
-        if (player.is_new_player && !player.player_uid) {
-          const newUID = uuidv4();
-
-          // Insert into players table
-          await tx.$queryRaw`
+            // Insert into players table
+            await tx.$queryRaw`
             INSERT INTO players (uid, name, created_at, updated_at)
             VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
           `;
 
-          player.player_uid = newUID;
+            player.player_uid = newUID;
 
-          // *** FIX: UPDATE THE DRAFT TABLE WITH THE NEW UID ***
-          await tx.$queryRaw`
+            // UPDATE THE DRAFT TABLE WITH THE NEW UID
+            await tx.$queryRaw`
               UPDATE tournament_draft_players 
               SET player_uid = ${newUID}
               WHERE tournament_draft_id = ${draftId} 
@@ -228,70 +229,75 @@ export async function POST(
               AND is_new_player = true
             `;
 
+            console.log(
+              `Created new player: ${player.player_name} with UID: ${newUID}`
+            );
+          }
+
+          // Calculate points and score
+          const placementPoints = calculatePlacementPoints(player.placement!);
+          const playerScore = calculatePlayerScore(
+            player.placement!,
+            playersWithPlacements.length
+          );
+          const totalPoints = draft.start_points + placementPoints;
+
+          // Insert into poker_tournaments table
+          await tx.pokerTournament.create({
+            data: {
+              name: player.player_name,
+              uid: player.player_uid,
+              hitman: player.hitman_name,
+              placement: player.placement,
+              knockouts: player.knockouts || 0,
+              startPoints: draft.start_points,
+              hitPoints: 0,
+              placementPoints: placementPoints,
+              totalPoints: totalPoints,
+              season: new Date(draft.tournament_date).toLocaleDateString(
+                "en-US",
+                {
+                  month: "long",
+                  year: "2-digit",
+                }
+              ),
+              venue: draft.venue,
+              fileName: fileName,
+              gameDate: draft.tournament_date,
+              playerScore: playerScore,
+              gameUid: gameUID,
+            },
+          });
+
           console.log(
-            `Created new player: ${player.player_name} with UID: ${newUID}`
+            `Integrated player: ${player.player_name}, Placement: ${player.placement}, KO Position: ${player.ko_position}, Points: ${totalPoints}`
           );
         }
 
-        // Calculate points and score
-        const placementPoints = calculatePlacementPoints(player.placement!);
-        const playerScore = calculatePlayerScore(
-          player.placement!,
-          playersWithPlacements.length
-        );
-        const totalPoints = draft.start_points + placementPoints;
-
-        // Insert into poker_tournaments table
-        await tx.pokerTournament.create({
-          data: {
-            name: player.player_name,
-            uid: player.player_uid,
-            hitman: player.hitman_name,
-            placement: player.placement,
-            knockouts: player.knockouts || 0,
-            startPoints: draft.start_points,
-            hitPoints: 0,
-            placementPoints: placementPoints,
-            totalPoints: totalPoints,
-            season: new Date(draft.tournament_date).toLocaleDateString(
-              "en-US",
-              {
-                month: "long",
-                year: "2-digit",
-              }
-            ),
-            venue: draft.venue,
-            fileName: fileName,
-            gameDate: draft.tournament_date,
-            playerScore: playerScore,
-            gameUid: gameUID,
-          },
-        });
-
-        console.log(
-          `Integrated player: ${player.player_name}, Placement: ${player.placement}, KO Position: ${player.ko_position}, Points: ${totalPoints}`
-        );
-      }
-
-      // 8. Update draft status to integrated
-      await tx.$queryRaw`
+        // 8. Update draft status to integrated
+        await tx.$queryRaw`
         UPDATE tournament_drafts 
         SET status = 'integrated', game_uid = ${gameUID},file_name = ${fileName}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
 
-      return {
-        success: true,
-        fileName,
-        playersIntegrated: playersWithPlacements.length,
-        playersWithPlacements: playersWithPlacements.map((p) => ({
-          name: p.player_name,
-          ko_position: p.ko_position,
-          final_placement: p.placement,
-          hitman: p.hitman_name,
-        })),
-      };
-    });
+        return {
+          success: true,
+          fileName,
+          playersIntegrated: playersWithPlacements.length,
+          playersWithPlacements: playersWithPlacements.map((p) => ({
+            name: p.player_name,
+            ko_position: p.ko_position,
+            final_placement: p.placement,
+            hitman: p.hitman_name,
+          })),
+        };
+      },
+      {
+        timeout: 30000,
+        maxWait: 35000,
+      }
+    );
 
     console.log("Tournament integration completed successfully:", result);
     return NextResponse.json(result);
