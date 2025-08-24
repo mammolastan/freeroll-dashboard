@@ -4,7 +4,57 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Get list of checked-in players for a tournament
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { token: string } }
+) {
+  try {
+    const { token } = params;
+
+    // Get tournament by token
+    const tournament = await prisma.$queryRaw`
+      SELECT id FROM tournament_drafts 
+      WHERE check_in_token = ${token} AND status = 'in_progress'
+    `;
+
+    if (!(tournament as any[]).length) {
+      return NextResponse.json(
+        { error: "Tournament not found or check-in not available" },
+        { status: 404 }
+      );
+    }
+
+    const tournamentId = (tournament as any[])[0].id;
+
+    // Get all checked-in players, sorted by most recent first
+    const players = await prisma.$queryRaw`
+      SELECT 
+        id,
+        player_name,
+        player_uid,
+        is_new_player,
+        added_by,
+        checked_in_at
+      FROM tournament_draft_players 
+      WHERE tournament_draft_id = ${tournamentId}
+      ORDER BY checked_in_at DESC
+    `;
+
+    return NextResponse.json(players);
+  } catch (error) {
+    console.error("Error fetching checked-in players:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch checked-in players" },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 // Player self check-in
+// app/api/checkin/[token]/players/route.ts - Fixed POST method
 export async function POST(
   request: NextRequest,
   { params }: { params: { token: string } }
@@ -45,7 +95,6 @@ export async function POST(
     `;
 
     if ((existingPlayer as any[]).length > 0) {
-      // Use status 200 and a custom type for client-side handling
       return NextResponse.json(
         {
           type: "error",
@@ -55,24 +104,51 @@ export async function POST(
       );
     }
 
-    // Search for existing player in main database
+    // FIXED: Search for existing player in main database by BOTH Name AND nickname
+    // First get potential matches
+    const likePattern = `%${cleanPlayerName}%`;
     const existingPlayers = await prisma.$queryRaw`
       SELECT Name, UID, nickname FROM players 
-      WHERE Name LIKE ${`%${cleanPlayerName}%`}
-      ORDER BY 
-        CASE WHEN Name = ${cleanPlayerName} THEN 0 ELSE 1 END,
-        Name ASC
-      LIMIT 5
+      WHERE Name LIKE ${likePattern}
+         OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
+      LIMIT 10
     `;
+
+    // Sort the results in JavaScript to avoid parameter duplication in SQL
+    const sortedPlayers = (existingPlayers as any[])
+      .sort((a, b) => {
+        // Exact name match gets highest priority (0)
+        if (a.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
+        if (b.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return 1;
+
+        // Exact nickname match gets second priority (1)
+        if (
+          a.nickname &&
+          a.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
+        )
+          return -1;
+        if (
+          b.nickname &&
+          b.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
+        )
+          return 1;
+
+        // Alphabetical order for fuzzy matches
+        return a.Name.localeCompare(b.Name);
+      })
+      .slice(0, 5);
 
     let player_uid = null;
     let is_new_player = true;
     let suggested_players = [];
 
-    if ((existingPlayers as any[]).length > 0) {
-      // Check for exact match first
-      const exactMatch = (existingPlayers as any[]).find(
-        (p: any) => p.Name.toLowerCase() === cleanPlayerName.toLowerCase()
+    if (sortedPlayers.length > 0) {
+      // FIXED: Check for exact match in BOTH Name AND nickname fields
+      const exactMatch = sortedPlayers.find(
+        (p: any) =>
+          p.Name.toLowerCase() === cleanPlayerName.toLowerCase() ||
+          (p.nickname &&
+            p.nickname.toLowerCase() === cleanPlayerName.toLowerCase())
       );
 
       if (exactMatch) {
@@ -80,13 +156,11 @@ export async function POST(
         is_new_player = false;
       } else {
         // Return suggestions for fuzzy matches
-        suggested_players = (existingPlayers as any[])
-          .slice(0, 3)
-          .map((p: any) => ({
-            name: p.Name,
-            uid: p.UID,
-            nickname: p.nickname,
-          }));
+        suggested_players = sortedPlayers.slice(0, 3).map((p: any) => ({
+          name: p.Name,
+          uid: p.UID,
+          nickname: p.nickname,
+        }));
 
         return NextResponse.json({
           type: "suggestions",

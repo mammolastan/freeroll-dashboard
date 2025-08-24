@@ -127,10 +127,23 @@ export function formatETDate(date: Date): string {
   });
 }
 
-export function formatGameDateET(isoDateString: string): string {
+export function formatGameDateET(
+  isoDateString: string,
+  length: string = "long"
+): string {
   // Parse the ISO string and adjust for ET timezone
   const date = new Date(isoDateString);
   const etDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+
+  if (length == "short") {
+    // Return only the time string in ET, e.g., "9:41"
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "America/New_York",
+    }).format(etDate);
+  }
 
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -216,3 +229,10 @@ export function formatDateRangeText(
 
   return `Stats from ${formatGameDate(startDate.toISOString())}`;
 }
+
+// In TypeScript:
+// - The colon after a parameter (e.g., isoString: string) specifies the type of that parameter.
+//   Example: isoString: string  // isoString must be a string
+// - The colon after the parameter list (e.g., ): string) specifies the return type of the function.
+//   Example: function formatGameDate(isoString: string): string { ... }
+//   // This function returns a string

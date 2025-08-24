@@ -1,9 +1,10 @@
 // app/checkin/[token]/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Users, User, Check, AlertCircle } from 'lucide-react';
+import { formatGameDateET } from '@/lib/utils';
 
 interface Tournament {
     id: number;
@@ -36,6 +37,15 @@ interface Player {
     TotalGames?: number;
 }
 
+interface CheckedInPlayer {
+    id: number;
+    player_name: string;
+    player_uid: string | null;
+    is_new_player: boolean;
+    added_by: string;
+    checked_in_at: string;
+}
+
 export default function CheckInPage({ params }: { params: { token: string } }) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [playerName, setPlayerName] = useState('');
@@ -52,8 +62,21 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
     const [showDropdown, setShowDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
 
+    // Checked-in players list
+    const [checkedInPlayers, setCheckedInPlayers] = useState<CheckedInPlayer[]>([]);
+    const [loadingPlayers, setLoadingPlayers] = useState(false);
+
+    // Use ref to track user selection to prevent dropdown reopening
+    const userSelectedPlayer = useRef(false);
+
     // Player search functionality
     useEffect(() => {
+        // If user just selected a player, don't trigger search
+        if (userSelectedPlayer.current) {
+            userSelectedPlayer.current = false;
+            return;
+        }
+
         if (!playerName || playerName.length < 2) {
             setSearchResults([]);
             setShowDropdown(false);
@@ -79,11 +102,35 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
     }, [playerName]);
 
     const handlePlayerSelect = (player: Player) => {
+        userSelectedPlayer.current = true;
         setPlayerName(player.nickname || player.Name);
         setShowDropdown(false);
-
-
     };
+
+    // Load checked-in players
+    const loadCheckedInPlayers = async () => {
+        if (!tournament) return;
+
+        setLoadingPlayers(true);
+        try {
+            const response = await fetch(`/api/checkin/${params.token}/players`);
+            if (response.ok) {
+                const data = await response.json();
+                setCheckedInPlayers(data);
+            }
+        } catch (error) {
+            console.error('Failed to load checked-in players:', error);
+        } finally {
+            setLoadingPlayers(false);
+        }
+    };
+
+    // Load checked-in players when tournament loads or after successful check-in
+    useEffect(() => {
+        if (tournament) {
+            loadCheckedInPlayers();
+        }
+    }, [tournament]);
 
     const handleDirectCheckIn = async (selectedPlayer: Player) => {
         setSubmitting(true);
@@ -107,6 +154,9 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
 
             setSuccess(data.message || 'Successfully checked in!');
             setStep('success');
+
+            // Refresh the checked-in players list
+            loadCheckedInPlayers();
 
         } catch (error) {
             console.error('Direct check-in error:', error);
@@ -155,7 +205,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
 
             const data: CheckInResponse = await response.json();
 
-            // --- CHANGED: Accept error from type: "error" responses (even if status 200) ---
             if (data.type === 'error') {
                 setError(data.error || 'Check-in failed');
                 return;
@@ -172,6 +221,8 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
             } else if (data.type === 'success') {
                 setSuccess(data.message || 'Successfully checked in!');
                 setStep('success');
+                // Refresh the checked-in players list
+                loadCheckedInPlayers();
             }
 
         } catch (error) {
@@ -205,6 +256,9 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
             setSuccess(data.message || 'Successfully checked in!');
             setStep('success');
 
+            // Refresh the checked-in players list
+            loadCheckedInPlayers();
+
         } catch (error) {
             console.error('Player selection error:', error);
             setError(error instanceof Error ? error.message : 'Check-in failed');
@@ -219,6 +273,14 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
+        });
+    };
+
+    const formatCheckInTime = (dateString: string) => {
+        return new Date(dateString).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
         });
     };
 
@@ -254,37 +316,38 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4">
-            <div className="max-w-md mx-auto">
+            <div className="max-w-2xl mx-auto space-y-6">
                 {/* Tournament Info Card */}
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle className="text-center text-xl font-bold text-black">
-                            Tournament Check-In
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {tournament && (
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <Calendar className="h-5 w-5 text-blue-600" />
-                                    <span className="font-medium text-black">{formatDate(tournament.tournament_date)}</span>
+                {tournament && (
+                    <Card>
+                        <CardHeader className="bg-blue-600 text-white">
+                            <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5" />
+                                Tournament Check-In
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-blue-600" />
+                                    <span className="text-black">{formatDate(tournament.tournament_date)}</span>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="h-5 w-5 text-blue-600" />
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-blue-600" />
                                     <span className="text-black">{tournament.venue}</span>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <User className="h-5 w-5 text-blue-600" />
+                                <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-blue-600" />
                                     <span className="text-black">Director: {tournament.director_name}</span>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <Users className="h-5 w-5 text-blue-600" />
-                                    <span className="text-black">{tournament.player_count} players registered</span>
+                                <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-blue-600" />
+                                    <span className="text-black">{checkedInPlayers.length} players registered</span>
                                 </div>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Main Check-In Card */}
                 <Card>
@@ -299,14 +362,17 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                         <input
                                             type="text"
                                             value={playerName}
-                                            onChange={(e) => setPlayerName(e.target.value)}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setPlayerName(value);
+                                                userSelectedPlayer.current = false; // Reset flag when user types manually
+                                            }}
                                             onFocus={() => {
                                                 if (playerName.length >= 2) {
                                                     setShowDropdown(true);
                                                 }
                                             }}
                                             onBlur={() => {
-                                                // Small delay to allow dropdown clicks to register
                                                 setTimeout(() => setShowDropdown(false), 150);
                                             }}
                                             placeholder="Your full name"
@@ -344,7 +410,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                     </div>
 
                                     {error && (
-                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
                                             <p className="text-red-700 text-sm">{error}</p>
                                         </div>
                                     )}
@@ -353,7 +419,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                         id="checkin-button"
                                         type="submit"
                                         disabled={submitting || !playerName.trim()}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors mt-10"
+                                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                                     >
                                         {submitting ? 'Checking in...' : 'Check In'}
                                     </button>
@@ -413,14 +479,72 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                 <h3 className="text-xl font-semibold text-black mb-2">
                                     Successfully Checked In!
                                 </h3>
-                                <p className="text-black mb-4">{success}</p>
-                                <p className="text-sm text-black">
-                                    You're all set! Good luck in the tournament.
+                                <p className="text-green-600 mb-4">{success}</p>
+                                <p className="text-black text-sm">
+                                    You're all set for the tournament. Good luck!
                                 </p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Checked-In Players List */}
+                {tournament && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Registered Players ({checkedInPlayers.length})
+                                </span>
+                                <button
+                                    onClick={loadCheckedInPlayers}
+                                    disabled={loadingPlayers}
+                                    className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                >
+                                    {loadingPlayers ? 'Refreshing...' : 'Refresh'}
+                                </button>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingPlayers ? (
+                                <div className="text-center py-4">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    <p className="text-gray-600 text-sm">Loading players...</p>
+                                </div>
+                            ) : checkedInPlayers.length === 0 ? (
+                                <p className="text-gray-600 text-center py-4">No players have checked in yet.</p>
+                            ) : (
+                                <div className="space-y-2 max-h-80 overflow-y-auto">
+                                    {checkedInPlayers.map((player, index) => (
+                                        <div
+                                            key={player.id}
+                                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                        >
+                                            <div className="flex items-center gap-3">
+
+                                                <div>
+                                                    <div className="font-medium text-black flex items-center gap-2">
+                                                        {player.player_name}
+
+                                                        {!!player.is_new_player && (
+                                                            <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">
+                                                                New
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-sm text-gray-500">
+                                                {formatGameDateET(player.checked_in_at, "short")}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );
