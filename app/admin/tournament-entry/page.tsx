@@ -1061,10 +1061,12 @@ export default function TournamentEntryPage() {
     // QR Code Modal Component
     const QRCodeModal = () => {
         const canvasRef = useRef<HTMLCanvasElement>(null);
+        const compositeCanvasRef = useRef<HTMLCanvasElement>(null);
 
-        // Generate QR code when modal opens and checkInUrl is available
+        // Generate QR code and composite image when modal opens
         useEffect(() => {
-            if (canvasRef.current && checkInUrl && showQRCode) {
+            if (canvasRef.current && compositeCanvasRef.current && checkInUrl && showQRCode && currentDraft) {
+                // First generate the QR code on the hidden canvas
                 QRCode.toCanvas(canvasRef.current, checkInUrl, {
                     width: 192,
                     margin: 2,
@@ -1075,10 +1077,82 @@ export default function TournamentEntryPage() {
                 }, (error) => {
                     if (error) {
                         console.error('QR Code generation error:', error);
+                        return;
                     }
+
+                    // create the composite image with tournament info
+                    createCompositeQRImage();
                 });
             }
-        }, [checkInUrl, showQRCode]);
+        }, [checkInUrl, showQRCode, currentDraft]);
+
+        const createCompositeQRImage = () => {
+            if (!canvasRef.current || !compositeCanvasRef.current || !currentDraft) return;
+
+            const qrCanvas = canvasRef.current;
+            const compositeCanvas = compositeCanvasRef.current;
+            const ctx = compositeCanvas.getContext('2d');
+            if (!ctx) return;
+
+            // Set composite canvas dimensions
+            const padding = 40;
+            const headerHeight = 40;
+            const footerHeight = 0;
+            const qrSize = 192;
+            const totalWidth = qrSize + (padding * 2);
+            const totalHeight = qrSize + headerHeight + footerHeight + (padding * 2);
+
+            compositeCanvas.width = totalWidth;
+            compositeCanvas.height = totalHeight;
+
+            // Fill background with white
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+            // Add border
+            ctx.strokeStyle = '#E5E7EB';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, totalWidth - 2, totalHeight - 2);
+
+            // Format tournament date
+            const tournamentDate = new Date(currentDraft.tournament_date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Header text - Tournament info
+            ctx.fillStyle = '#1F2937';
+            ctx.font = 'bold 18px Arial, sans-serif';
+            ctx.textAlign = 'center';
+
+            ctx.font = '14px Arial, sans-serif';
+            ctx.fillStyle = '#374151';
+            ctx.fillText(tournamentDate, totalWidth / 2, padding + 10);
+            ctx.fillText(currentDraft.venue, totalWidth / 2, padding + 30);
+
+            // Draw the QR code in the center
+            const qrX = (totalWidth - qrSize) / 2;
+            const qrY = padding + headerHeight;
+            ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+
+        };
+
+        const downloadQRCode = () => {
+            if (!compositeCanvasRef.current || !currentDraft) return;
+
+            const link = document.createElement('a');
+            const dateString = new Date(currentDraft.tournament_date).toISOString().split('T')[0];
+            const venueSlug = currentDraft.venue.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            link.download = `tournament-qr-${dateString}-${venueSlug}.png`;
+            link.href = compositeCanvasRef.current.toDataURL('image/png');
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
 
         if (!showQRCode) return null;
 
@@ -1096,11 +1170,18 @@ export default function TournamentEntryPage() {
                     </div>
 
                     <div className="text-center space-y-4">
-                        {/* Real QR Code */}
+                        {/* Hidden QR Code Canvas */}
+                        <canvas
+                            ref={canvasRef}
+                            style={{ display: 'none' }}
+                        />
+
+                        {/* Composite QR Code with Tournament Info */}
                         <div className="flex justify-center">
                             <canvas
-                                ref={canvasRef}
-                                className="border border-gray-200 rounded shadow-sm"
+                                ref={compositeCanvasRef}
+                                className="border border-gray-200 rounded shadow-sm max-w-full"
+                                style={{ maxWidth: '100%', height: 'auto' }}
                             />
                         </div>
 
@@ -1126,13 +1207,14 @@ export default function TournamentEntryPage() {
                             >
                                 Test Link
                             </button>
-                        </div>
-
-                        <div className="text-xs text-gray-500 text-left space-y-1">
-                            <p>• Players will enter their name to check in</p>
-                            <p>• System will suggest existing players or create new ones</p>
-                            <p>• Check-ins will appear automatically with a blue dot indicator</p>
-                            <p>• Page refreshes every 15 seconds when active</p>
+                            <button
+                                onClick={downloadQRCode}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center gap-2"
+                                title="Download QR Code with Tournament Info"
+                            >
+                                <Download className="h-4 w-4" />
+                                Download
+                            </button>
                         </div>
                     </div>
                 </div>
