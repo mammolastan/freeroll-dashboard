@@ -81,7 +81,7 @@ export default function TournamentEntryPage() {
     const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [isIntegrating, setIsIntegrating] = useState(false);
-    const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion'>('insertion');
+    const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion' | 'checked_in_at'>('insertion');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // desc means newest first for insertion
 
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
@@ -324,13 +324,21 @@ export default function TournamentEntryPage() {
                 if (a.ko_position === null) return sortOrder === 'asc' ? 1 : -1;
                 if (b.ko_position === null) return sortOrder === 'asc' ? -1 : 1;
                 return sortOrder === 'asc' ? a.ko_position - b.ko_position : b.ko_position - a.ko_position;
+            } else if (sortBy === 'checked_in_at') {
+                // Handle null values for checked_in_at
+                if (!a.checked_in_at && !b.checked_in_at) return 0;
+                if (!a.checked_in_at) return sortOrder === 'asc' ? 1 : -1;
+                if (!b.checked_in_at) return sortOrder === 'asc' ? -1 : 1;
+                const dateA = new Date(a.checked_in_at).getTime();
+                const dateB = new Date(b.checked_in_at).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
             }
             return 0;
         });
     };
 
     // Handle column header click for sorting
-    const handleSort = (column: 'name' | 'ko_position') => {
+    const handleSort = (column: 'name' | 'ko_position' | 'checked_in_at') => {
         if (sortBy === column) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -1915,13 +1923,24 @@ export default function TournamentEntryPage() {
                             ) : (
                                 <div className="space-y-2">
                                     {/* Column Headers */}
-                                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
+                                    <div className="grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
                                         <div
-                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 col-span-2"
+                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                                             onClick={() => handleSort('name')}
                                         >
                                             Player Name
                                             {sortBy === 'name' && (
+                                                <span className="text-xs">
+                                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div
+                                            className='cursor-pointer'
+                                            onClick={() => handleSort('checked_in_at')}
+                                        >
+                                            Check-in
+                                            {sortBy === 'checked_in_at' && (
                                                 <span className="text-xs">
                                                     {sortOrder === 'asc' ? '↑' : '↓'}
                                                 </span>
@@ -1939,25 +1958,26 @@ export default function TournamentEntryPage() {
                                                 </span>
                                             )}
                                         </div>
+                                        <div>Actions</div>
 
 
                                     </div>
 
 
-                                    {/* Show players in insertion order when sortBy is 'insertion', otherwise use sortPlayers */}
+                                    {/* Map Through Players. Show players in insertion order when sortBy is 'insertion', otherwise use sortPlayers */}
                                     {(sortBy === 'insertion' ?
                                         (sortOrder === 'desc' ? players : [...players].reverse()) :
                                         sortPlayers(players)
                                     ).map((player) => (
                                         <div
                                             key={player.id}
-                                            className={`grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
+                                            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
                                                 ? 'bg-red-50 border-red-100'
                                                 : 'bg-white'
                                                 }`}
                                         >
-                                            {/* Player Name Column with Knockout Button */}
-                                            <div className="flex items-center gap-2 col-span-2">
+                                            {/* Player Name Column */}
+                                            <div className="flex items-center gap-2 ">
                                                 <div className="flex items-center gap-2 flex-1">
                                                     <span className="font-medium text-gray-900">{player.player_name}</span>
                                                     {renderPlayerIndicator(player)}
@@ -1967,6 +1987,16 @@ export default function TournamentEntryPage() {
                                                         </span>
                                                     ) : ''}
                                                 </div>
+
+                                            </div>
+                                            {/* Checkintime Column */}
+                                            <div>
+                                                <div>
+                                                    <p className='text-black text-sm'>{player.checked_in_at ? new Date(player.checked_in_at).toLocaleTimeString() : ''} </p>
+                                                </div>
+                                            </div>
+                                            {/* Hitman Input Column */}
+                                            <div className="relative flex">
                                                 {/* Knockout Button */}
                                                 {currentDraft?.status !== 'integrated' ? (
                                                     <button
@@ -1996,10 +2026,6 @@ export default function TournamentEntryPage() {
 
                                                     </button>
                                                 ) : ''}
-                                            </div>
-
-                                            {/* Hitman Input Column */}
-                                            <div className="relative">
                                                 <input
                                                     id={`hitman-input-${player.id}`}
                                                     type="text"
@@ -2051,10 +2077,6 @@ export default function TournamentEntryPage() {
                                                 />
                                             </div>
 
-
-                                            <div>
-                                                {/* Another column content */}
-                                            </div>
                                             {/* Remove Button Column */}
                                             <div className="flex justify-end">
                                                 {currentDraft?.status !== 'integrated' && (
