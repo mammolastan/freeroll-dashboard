@@ -132,40 +132,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         }
     }, [tournament]);
 
-    const handleDirectCheckIn = async (selectedPlayer: Player) => {
-        setSubmitting(true);
-        setError('');
-
-        try {
-            const response = await fetch(`/api/checkin/${params.token}/players`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    selected_player_uid: selectedPlayer.UID,
-                    entered_name: selectedPlayer.Name
-                })
-            });
-
-            const data: CheckInResponse = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Check-in failed');
-            }
-
-            setSuccess(data.message || 'Successfully checked in!');
-            setStep('success');
-
-            // Refresh the checked-in players list
-            loadCheckedInPlayers();
-
-        } catch (error) {
-            console.error('Direct check-in error:', error);
-            setError(error instanceof Error ? error.message : 'Check-in failed');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
     // Load tournament info
     useEffect(() => {
         const loadTournament = async () => {
@@ -273,14 +239,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
-        });
-    };
-
-    const formatCheckInTime = (dateString: string) => {
-        return new Date(dateString).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
         });
     };
 
@@ -536,7 +494,11 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                                 </div>
                                             </div>
                                             <div className="text-sm text-gray-500">
-                                                {formatGameDateET(player.checked_in_at, "short")}
+                                                {new Date(player.checked_in_at).toLocaleTimeString([], {
+                                                    hour: 'numeric',
+                                                    minute: '2-digit',
+                                                    hour12: true
+                                                }).replace(/\s?(AM|PM)$/i, '')}
                                             </div>
                                         </div>
                                     ))}

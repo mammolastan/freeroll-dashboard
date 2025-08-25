@@ -86,7 +86,8 @@ export default function TournamentEntryPage() {
 
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
-    const [selectedPlayerForKnockout, setSelectedPlayerForKnockout] = useState<number | null>(null);
+    const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<Record<number, number>>({});
+
 
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
@@ -565,14 +566,13 @@ export default function TournamentEntryPage() {
         setHitmanSearchValues(prev => ({ ...prev, [playerId]: finalHitmanName }));
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
 
-        // Clear the selected player for knockout state
-        setSelectedPlayerForKnockout(null);
     };
 
     // Handle hitman search input changes    
     const handleHitmanSearchChange = (playerId: number, value: string) => {
         setHitmanSearchValues(prev => ({ ...prev, [playerId]: value }));
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: value.length > 0 }));
+        setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: -1 }));
 
         // Only auto-update for exact player name matches during typing
         // Let the blur handler deal with "unknown" and other values
@@ -594,7 +594,6 @@ export default function TournamentEntryPage() {
         if (player.hitman_name && player.ko_position !== null) {
             clearPlayerKnockout(playerId);
         } else {
-            setSelectedPlayerForKnockout(playerId);
             setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
 
             setTimeout(() => {
@@ -652,7 +651,60 @@ export default function TournamentEntryPage() {
         }
     };
 
-    // Updated hitman input focus handler:
+    const handleHitmanKeyDown = (playerId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        const candidates = getHitmanCandidates(playerId, hitmanSearchValues[playerId] || '');
+        const unknownOption = hitmanSearchValues[playerId] &&
+            hitmanSearchValues[playerId].toLowerCase().includes('unknown');
+
+        // Create full options list (candidates + unknown if applicable)
+        const allOptions = [...candidates];
+        if (unknownOption) {
+            allOptions.push({ id: -1, player_name: 'unknown' } as any);
+        }
+
+        const currentHighlight = hitmanHighlightedIndex[playerId] ?? -1;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (hitmanDropdownVisible[playerId] && allOptions.length > 0) {
+                    const nextIndex = currentHighlight < allOptions.length - 1 ? currentHighlight + 1 : 0;
+                    setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: nextIndex }));
+                }
+                break;
+
+            case 'ArrowUp':
+                e.preventDefault();
+                if (hitmanDropdownVisible[playerId] && allOptions.length > 0) {
+                    const prevIndex = currentHighlight > 0 ? currentHighlight - 1 : allOptions.length - 1;
+                    setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: prevIndex }));
+                }
+                break;
+
+            case 'Enter':
+                e.preventDefault();
+                if (hitmanDropdownVisible[playerId] && allOptions.length > 0 && currentHighlight >= 0) {
+                    // Select the highlighted option
+                    const selectedOption = allOptions[currentHighlight];
+                    selectHitman(playerId, selectedOption.player_name);
+                } else {
+                    // No dropdown or no selection, just blur to trigger existing logic
+                    const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
+                    if (hitmanInput) {
+                        hitmanInput.blur();
+                    }
+                }
+                break;
+
+            case 'Escape':
+                e.preventDefault();
+                setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
+                setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: -1 }));
+                break;
+        }
+    };
+
+    // Hitman input focus handler:
     const handleHitmanFocus = (playerId: number) => {
         const player = players.find(p => p.id === playerId);
         if (!player) return;
@@ -672,6 +724,7 @@ export default function TournamentEntryPage() {
         }
 
         setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: true }));
+        setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: -1 }));
     };
 
     // hitman input blur handler:
@@ -704,9 +757,6 @@ export default function TournamentEntryPage() {
                 updatePlayer(playerId, 'hitman_name', currentValue);
             }
         }
-
-        // Clear the selected player for knockout state
-        setSelectedPlayerForKnockout(null);
     };
 
     // Export tournament
@@ -2169,6 +2219,7 @@ export default function TournamentEntryPage() {
                                                     onChange={(e) => handleHitmanSearchChange(player.id, e.target.value)}
                                                     onFocus={() => handleHitmanFocus(player.id)}
                                                     onBlur={() => handleHitmanBlur(player.id)}
+                                                    onKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
                                                     className={`w-full px-2 py-1 border rounded text-black text-sm ${currentDraft?.status === 'integrated' ? 'bg-gray-100' : ''
                                                         }`}
                                                     placeholder="Enter hitman name or leave as 'unknown'"
@@ -2176,27 +2227,48 @@ export default function TournamentEntryPage() {
                                                 />
 
                                                 {/* Hitman dropdown */}
+                                                {/* Hitman dropdown */}
                                                 {hitmanDropdownVisible[player.id] && currentDraft?.status !== 'integrated' && (
                                                     <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-md shadow-lg z-10 max-h-32 overflow-y-auto">
-                                                        {getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '').map((candidate) => (
-                                                            <div
-                                                                key={candidate.id}
-                                                                onClick={() => selectHitman(player.id, candidate.player_name)}
-                                                                className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-black text-sm"
-                                                            >
-                                                                {candidate.player_name}
-                                                            </div>
-                                                        ))}
-                                                        {/* Add "unknown" option if user is typing */}
-                                                        {hitmanSearchValues[player.id] &&
-                                                            hitmanSearchValues[player.id].toLowerCase().includes('unknown') && (
-                                                                <div
-                                                                    onClick={() => selectHitman(player.id, 'unknown')}
-                                                                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-black text-sm border-t"
-                                                                >
-                                                                    <em>unknown hitman</em>
-                                                                </div>
-                                                            )}
+                                                        {(() => {
+                                                            const candidates = getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '');
+                                                            const unknownOption = hitmanSearchValues[player.id] &&
+                                                                hitmanSearchValues[player.id].toLowerCase().includes('unknown');
+                                                            const allOptions = [...candidates];
+                                                            if (unknownOption) {
+                                                                allOptions.push({ id: -1, player_name: 'unknown' } as any);
+                                                            }
+                                                            const highlightedIndex = hitmanHighlightedIndex[player.id] ?? -1;
+
+                                                            return (
+                                                                <>
+                                                                    {candidates.map((candidate, index) => (
+                                                                        <div
+                                                                            key={candidate.id}
+                                                                            onClick={() => selectHitman(player.id, candidate.player_name)}
+                                                                            className={`px-2 py-1 cursor-pointer text-black text-sm ${index === highlightedIndex
+                                                                                    ? 'bg-blue-200 text-blue-900'
+                                                                                    : 'hover:bg-blue-100'
+                                                                                }`}
+                                                                        >
+                                                                            {candidate.player_name}
+                                                                        </div>
+                                                                    ))}
+                                                                    {/* Add "unknown" option if user is typing */}
+                                                                    {unknownOption && (
+                                                                        <div
+                                                                            onClick={() => selectHitman(player.id, 'unknown')}
+                                                                            className={`px-2 py-1 cursor-pointer text-black text-sm border-t ${candidates.length === highlightedIndex
+                                                                                    ? 'bg-blue-200 text-blue-900'
+                                                                                    : 'hover:bg-blue-100'
+                                                                                }`}
+                                                                        >
+                                                                            <em>unknown hitman</em>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 )}
                                             </div>
