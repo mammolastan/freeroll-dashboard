@@ -585,21 +585,71 @@ export default function TournamentEntryPage() {
             updatePlayer(playerId, 'hitman_name', exactMatch.player_name);
         }
     };
-    // Add this function to handle knockout button clicks:
-    const handleKnockoutClick = (playerId: number) => {
-        setSelectedPlayerForKnockout(playerId);
 
-        // Set hitman input to "unknown" and highlight it
-        setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
+    const handleCrosshairClick = (playerId: number) => {
+        const player = players.find(p => p.id === playerId);
+        if (!player) return;
 
-        // Focus the hitman input and select the text
-        setTimeout(() => {
-            const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
-            if (hitmanInput) {
-                hitmanInput.focus();
-                hitmanInput.select(); // This will highlight the "unknown" text
+        // If player has both hitman and KO position, clear both
+        if (player.hitman_name && player.ko_position !== null) {
+            clearPlayerKnockout(playerId);
+        } else {
+            setSelectedPlayerForKnockout(playerId);
+            setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
+
+            setTimeout(() => {
+                const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
+                if (hitmanInput) {
+                    hitmanInput.focus();
+                    hitmanInput.select();
+                }
+            }, 50);
+        }
+    };
+
+    const clearPlayerKnockout = async (playerId: number) => {
+        try {
+            const player = players.find(p => p.id === playerId);
+            if (!player) {
+                console.error('Player not found:', playerId);
+                return;
             }
-        }, 50);
+
+            // Prepare the cleared data
+            const clearedPlayer = {
+                ...player,
+                hitman_name: null,
+                ko_position: null
+            };
+
+            console.log('Clearing knockout data for player:', playerId);
+
+            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clearedPlayer)
+            });
+
+            if (response.ok) {
+                const serverUpdatedPlayer = await response.json();
+                console.log('Server returned cleared player:', serverUpdatedPlayer);
+
+                // Update local state with server response to ensure consistency
+                setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
+
+                // Clear the search value
+                setHitmanSearchValues(prev => ({ ...prev, [playerId]: '' }));
+
+                console.log('Knockout data cleared successfully');
+            } else {
+                const errorText = await response.text();
+                console.error('Failed to clear player knockout data:', response.status, errorText);
+                alert(`Failed to clear knockout data: ${errorText}`);
+            }
+        } catch (error) {
+            console.error('Error clearing player knockout data:', error);
+            alert(`Error clearing knockout data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     };
 
     // Updated hitman input focus handler:
@@ -1939,7 +1989,7 @@ export default function TournamentEntryPage() {
                                             className='cursor-pointer'
                                             onClick={() => handleSort('checked_in_at')}
                                         >
-                                            Check-in
+                                            Time
                                             {sortBy === 'checked_in_at' && (
                                                 <span className="text-xs">
                                                     {sortOrder === 'asc' ? '↑' : '↓'}
@@ -1951,7 +2001,7 @@ export default function TournamentEntryPage() {
                                             className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                                             onClick={() => handleSort('ko_position')}
                                         >
-                                            KO Position
+                                            KO #
                                             {sortBy === 'ko_position' && (
                                                 <span className="text-xs">
                                                     {sortOrder === 'asc' ? '↑' : '↓'}
@@ -1997,12 +2047,19 @@ export default function TournamentEntryPage() {
                                             </div>
                                             {/* Hitman Input Column */}
                                             <div className="relative flex">
-                                                {/* Knockout Button */}
+                                                {/* Knockout/Clear Button */}
                                                 {currentDraft?.status !== 'integrated' ? (
                                                     <button
-                                                        onClick={() => handleKnockoutClick(player.id)}
-                                                        className="ml-2 p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
-                                                        title={`Knockout ${player.player_name}`}
+                                                        onClick={() => handleCrosshairClick(player.id)}
+                                                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && player.ko_position !== null
+                                                            ? 'text-green-600 hover:text-green-800 hover:bg-green-50' // Green when both assigned
+                                                            : 'text-red-600 hover:text-red-800 hover:bg-red-50'       // Red when not assigned
+                                                            }`}
+                                                        title={
+                                                            player.hitman_name && player.ko_position !== null
+                                                                ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${player.ko_position})`
+                                                                : `Knockout ${player.player_name}`
+                                                        }
                                                     >
                                                         <svg
                                                             width="18"
@@ -2014,16 +2071,13 @@ export default function TournamentEntryPage() {
                                                             strokeLinecap="round"
                                                             strokeLinejoin="round"
                                                         >
-                                                            {/* Crosshair with Extended Lines and Solid Center Dot */}
                                                             <circle cx="12" cy="12" r="10" />
-                                                            <line x1="12" y1="0" x2="12" y2="8" />   {/* Top line: extends beyond circle */}
-                                                            <line x1="12" y1="16" x2="12" y2="24" /> {/* Bottom line */}
-                                                            <line x1="0" y1="12" x2="8" y2="12" />   {/* Left line */}
-                                                            <line x1="16" y1="12" x2="24" y2="12" /> {/* Right line */}
+                                                            <line x1="12" y1="0" x2="12" y2="8" />
+                                                            <line x1="12" y1="16" x2="12" y2="24" />
+                                                            <line x1="0" y1="12" x2="8" y2="12" />
+                                                            <line x1="16" y1="12" x2="24" y2="12" />
                                                             <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
                                                         </svg>
-
-
                                                     </button>
                                                 ) : ''}
                                                 <input

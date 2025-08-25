@@ -20,7 +20,6 @@ export async function PUT(
       placement,
     });
 
-    // Use the same update query that's working
     const updateResult = await prisma.$executeRaw`
       UPDATE tournament_draft_players 
       SET 
@@ -34,25 +33,13 @@ export async function PUT(
 
     console.log("Update result:", updateResult);
 
-    // Instead of $queryRaw, let's construct the response from the input data
-    // since we know the update succeeded and we have all the data
     if (updateResult === 1) {
-      // Return the updated data based on what we just set
-      const updatedPlayer = {
-        id: playerId,
-        tournament_draft_id: parseInt(params.id),
-        player_name: player_name,
-        player_uid: body.player_uid || null, // Include if provided
-        is_new_player: body.is_new_player || false,
-        hitman_name: hitman_name || null,
-        ko_position: ko_position || null,
-        placement: placement || null,
-        created_at: body.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // Fetch the complete updated record
+      const updatedPlayerResult = await prisma.$queryRaw`
+        SELECT * FROM tournament_draft_players WHERE id = ${playerId}
+      `;
 
-      console.log("Returning constructed player data:", updatedPlayer);
-      return NextResponse.json(updatedPlayer);
+      return NextResponse.json((updatedPlayerResult as any[])[0]);
     } else {
       return NextResponse.json(
         { error: "Player not found or update failed" },
