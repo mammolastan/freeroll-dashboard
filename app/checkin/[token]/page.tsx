@@ -1,9 +1,8 @@
-// app/checkin/[token]/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Calendar, MapPin, Users, User, Check, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, User, Check, AlertCircle, RefreshCw, Skull } from 'lucide-react';
 import { formatGameDateET } from '@/lib/utils';
 
 interface Tournament {
@@ -44,6 +43,8 @@ interface CheckedInPlayer {
     is_new_player: boolean;
     added_by: string;
     checked_in_at: string;
+    hitman_name: string | null;
+    ko_position: number | null;
 }
 
 export default function CheckInPage({ params }: { params: { token: string } }) {
@@ -68,86 +69,24 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
     const [checkedInPlayers, setCheckedInPlayers] = useState<CheckedInPlayer[]>([]);
     const [loadingPlayers, setLoadingPlayers] = useState(false);
 
-    // Use ref to track user selection to prevent dropdown reopening
-    const userSelectedPlayer = useRef(false);
+    // Use ref to track debounce timeout
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Search for players as user types
-    const searchPlayers = async (searchTerm: string) => {
-
-
-        if (searchTerm.length < 2 || userSelectedPlayer.current) {
-            setSearchResults([]);
-            setShowDropdown(false);
-            return;
-        }
-
-        setIsSearching(true);
-        try {
-            const response = await fetch(`/api/players/search?q=${encodeURIComponent(searchTerm)}&name=true&limit=5`);
-            if (response.ok) {
-                const players = await response.json();
-
-                setSearchResults(players);
-                if (!userSelectedPlayer.current && searchTerm.length >= 1 && players.length > 0) {
-
-                    setShowDropdown(true);
-                } else if (players.length === 0) {
-
-                    setShowDropdown(false);
-                }
-            }
-        } catch (error) {
-            console.error('Player search error:', error);
-            setSearchResults([]);
-            setShowDropdown(false);
-        } finally {
-            setIsSearching(false);
-        }
-    };
-
-    // Debounce search
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (playerName.length >= 1) {
-                searchPlayers(playerName);
-            } else {
-                setSearchResults([]);
-                setShowDropdown(false);
-            }
-        }, 300);
-        return () => clearTimeout(timeoutId);
-    }, [playerName]);
-
-    const loadCheckedInPlayers = async () => {
-        try {
-            setLoadingPlayers(true);
-            const response = await fetch(`/api/checkin/${params.token}/players`);
-            if (response.ok) {
-                const players = await response.json();
-                setCheckedInPlayers(players);
-            }
-        } catch (error) {
-            console.error('Error loading checked-in players:', error);
-        } finally {
-            setLoadingPlayers(false);
-        }
-    };
-
+    // Load tournament info
     useEffect(() => {
         const loadTournament = async () => {
             try {
                 const response = await fetch(`/api/checkin/${params.token}`);
-                const data = await response.json();
-
                 if (response.ok) {
+                    const data = await response.json();
                     setTournament(data);
-                    await loadCheckedInPlayers();
                 } else {
-                    setError(data.error || 'Failed to load tournament');
+                    const errorData = await response.json();
+                    setError(errorData.error || 'Tournament not found');
                 }
             } catch (error) {
                 console.error('Error loading tournament:', error);
-                setError(error instanceof Error ? error.message : 'Failed to load tournament');
+                setError('Failed to load tournament');
             } finally {
                 setLoading(false);
             }
@@ -156,74 +95,130 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         loadTournament();
     }, [params.token]);
 
-    // Handle selecting a player from dropdown
-    const handlePlayerSelect = (player: Player) => {
-        setPlayerName(player.Name);
-        setSelectedExistingPlayer(player);
-        setIsNewPlayer(false); // Auto-select "No" when existing player is selected
-        setShowDropdown(false);
-        userSelectedPlayer.current = true;
-    };
+    // Load checked-in players when tournament loads
+    useEffect(() => {
+        if (tournament) {
+            loadCheckedInPlayers();
+        }
+    }, [tournament]);
 
-    // Handle new player radio button change
-    const handleNewPlayerChange = (newPlayerValue: boolean) => {
-        setIsNewPlayer(newPlayerValue);
-        if (newPlayerValue) {
-            // If selecting "Yes, I'm a new player", clear any selected existing player
-            setSelectedExistingPlayer(null);
+    const loadCheckedInPlayers = async () => {
+        setLoadingPlayers(true);
+        try {
+            const response = await fetch(`/api/checkin/${params.token}/players`);
+            if (response.ok) {
+                const data = await response.json();
+                setCheckedInPlayers(data);
+            } else {
+                console.error('Failed to load checked-in players');
+            }
+        } catch (error) {
+            console.error('Error loading checked-in players:', error);
+        } finally {
+            setLoadingPlayers(false);
         }
     };
 
-    // Handle name input change
-    const handleNameChange = (value: string) => {
+    // Search for players
+    const searchPlayers = async (query: string) => {
+        if (query.trim().length < 2) {
+            setSearchResults([]);
+            setShowDropdown(false);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+
+            const response = await fetch(`/api/players/search?q=${encodeURIComponent(query)}&name=true&limit=10`);
+            if (response.ok) {
+                const data = await response.json();
+
+                setSearchResults(data);
+                setShowDropdown(data.length > 0);
+            } else {
+                console.error('Search request failed:', response.status);
+                setSearchResults([]);
+                setShowDropdown(false);
+            }
+        } catch (error) {
+            console.error('Error searching players:', error);
+            setSearchResults([]);
+            setShowDropdown(false);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // Debounced search handler
+    const handleSearchInput = (value: string) => {
         setPlayerName(value);
-        userSelectedPlayer.current = false; // Reset flag when user types manually
 
-        // If user starts typing after selecting an existing player, clear the selection
-        if (selectedExistingPlayer && value !== selectedExistingPlayer.Name) {
+        // Reset existing player selection when typing
+        if (selectedExistingPlayer) {
             setSelectedExistingPlayer(null);
-            setIsNewPlayer(null); // Reset new player selection
+            setIsNewPlayer(null);
         }
 
-        // Show dropdown if typing and we have results
-        if (value.length >= 1 && searchResults.length > 0 && !userSelectedPlayer.current) {
-            setShowDropdown(true);
+        // Clear previous timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
         }
+
+        // Set new timeout
+        searchTimeoutRef.current = setTimeout(() => {
+            searchPlayers(value);
+        }, 300);
     };
 
-    // Check if check-in button should be enabled
-    const isCheckInEnabled = () => {
-        if (!playerName.trim()) return false;
-
-        if (isNewPlayer === true) {
-            // New player: just need a name typed in
-            return playerName.trim().length > 0;
-        } else if (isNewPlayer === false) {
-            // Existing player: need to have selected from dropdown
-            return selectedExistingPlayer !== null;
-        }
-
-        return false; // Neither option selected
-    };
-
-    // Get the display name for the check-in button
-    const getCheckInButtonText = () => {
-        if (!playerName.trim()) return 'Check In';
-
-        if (isNewPlayer === true) {
-            return `Check-in as ${playerName.trim()}`;
-        } else if (selectedExistingPlayer) {
-            return `Check-in as ${selectedExistingPlayer.Name}`;
-        }
-
-        return 'Check In';
-    };
-
-    const handleCheckIn = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!isCheckInEnabled()) return;
-
+    // Handle player selection
+    const selectPlayer = (player: Player) => {
+        setSelectedExistingPlayer(player);
+        setPlayerName(player.Name);
         setShowDropdown(false);
+        setIsNewPlayer(false);
+    };
+
+    // Reset states when switching between new/existing player
+    const resetStates = () => {
+        setSelectedExistingPlayer(null);
+        setError('');
+        setSearchResults([]);
+        setShowDropdown(false);
+    };
+
+    // Handle clicking outside dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Element;
+            if (!target.closest('.dropdown-container')) {
+                setShowDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Check if check-in is enabled
+    const isCheckInEnabled = () => {
+        const hasName = playerName.trim().length > 0;
+        return hasName && (isNewPlayer === true || selectedExistingPlayer !== null);
+    };
+
+    // Get check-in button text
+    const getCheckInButtonText = () => {
+        if (!playerName.trim()) return 'Enter player name';
+        if (isNewPlayer === null) return 'Choose new or existing player';
+        if (isNewPlayer === false && !selectedExistingPlayer) return 'Select player from dropdown';
+        return `Check in ${isNewPlayer ? '(new player)' : '(existing player)'}`;
+    };
+
+    // Handle form submission
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isCheckInEnabled() || submitting) return;
+
         setSubmitting(true);
         setError('');
 
@@ -273,6 +268,15 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         }
     };
 
+    // Calculate tournament stats
+    const getTournamentStats = () => {
+        const totalRegistered = checkedInPlayers.length;
+        const knockedOut = checkedInPlayers.filter(player => player.ko_position !== null).length;
+        const remaining = totalRegistered - knockedOut;
+
+        return { totalRegistered, knockedOut, remaining };
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center">
@@ -298,150 +302,147 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         );
     }
 
+    const { totalRegistered, knockedOut, remaining } = getTournamentStats();
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 py-8 px-4">
-            <div className="max-w-2xl mx-auto space-y-6">
-                {/* Tournament Info Card */}
-                <Card>
-                    <CardHeader className="text-center">
-                        <CardTitle className="text-black text-2xl">Tournament Check-In</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                                <span className="text-black font-medium">
-                                    {formatGameDateET(tournament.tournament_date)}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <MapPin className="h-5 w-5 text-blue-600" />
-                                <span className="text-black">{tournament.venue}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <User className="h-5 w-5 text-blue-600" />
-                                <span className="text-black">Director: {tournament.director_name}</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Checked-in Players Count */}
-                {checkedInPlayers.length > 0 && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                    <Users className="h-5 w-5 text-blue-600" />
-                                    <span className="text-black">{checkedInPlayers.length} players registered</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Main Check-In Card */}
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 py-8">
+            <div className="max-w-2xl mx-auto px-4 space-y-6">
+                {/* Tournament Info Header */}
                 <Card>
                     <CardContent className="pt-6">
+                        <div className="text-center mb-6">
+                            <h1 className="text-2xl font-bold text-black mb-2">Tournament Info</h1>
+                            <div className="space-y-2 text-gray-600">
+                                <div className="flex items-center justify-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{formatGameDateET(tournament.tournament_date)}</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>{tournament.venue}</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    <span>Director: {tournament.director_name}</span>
+                                </div>
+                                {/* Tournament Stats */}
+                                <div className="flex items-center justify-center gap-4 mt-4 text-sm font-medium">
+                                    <div className="text-blue-600">
+                                        {totalRegistered} players registered
+                                    </div>
+                                    {totalRegistered > 0 && (
+                                        <>
+                                            <span className="text-gray-400">|</span>
+                                            <div className="text-green-600">
+                                                {remaining} players remaining
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Check-in Form */}
                         {step === 'enter_name' && (
                             <div>
-                                <h3 className="text-lg font-semibold text-black mb-6 text-center">
-                                    Player Check-In
-                                </h3>
-
-                                <form onSubmit={handleCheckIn}>
-                                    {/* Name Input with Dropdown */}
-                                    <div className="relative mb-6">
-                                        <label className="block text-sm font-medium text-black mb-2">
-                                            Your Name
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    {/* Player Name Input */}
+                                    <div className="space-y-2">
+                                        <h2 className='text-black'>Check-in</h2>
+                                        <label className="block text-sm font-medium text-black">
+                                            Player Name
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={playerName}
-                                            onChange={(e) => handleNameChange(e.target.value)}
-                                            onFocus={() => {
-                                                if (playerName.length >= 1 && searchResults.length > 0 && !selectedExistingPlayer) {
-                                                    setShowDropdown(true);
-                                                }
-                                            }}
-                                            onBlur={() => {
-                                                setTimeout(() => setShowDropdown(false), 150);
-                                            }}
-                                            placeholder="Enter your full name"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                                            disabled={submitting}
-                                        />
+                                        <div className="relative dropdown-container">
+                                            <input
+                                                type="text"
+                                                value={playerName}
+                                                onChange={(e) => handleSearchInput(e.target.value)}
+                                                onFocus={() => {
+                                                    if (searchResults.length > 0) setShowDropdown(true);
+                                                }}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                                placeholder="Enter your name"
+                                                autoComplete="off"
+                                            />
 
-                                        {/* Search Results Dropdown */}
-                                        {showDropdown && searchResults.length > 0 && !selectedExistingPlayer && !userSelectedPlayer.current && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                                {searchResults.map((player) => (
-                                                    <button
-                                                        key={player.UID}
-                                                        type="button"
-                                                        onClick={() => handlePlayerSelect(player)}
-                                                        className="w-full px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 focus:bg-blue-50 focus:outline-none"
-                                                    >
-                                                        <div className="font-medium text-black">{player.Name}</div>
-                                                        {player.nickname && (
-                                                            <div className="text-sm text-gray-600">"{player.nickname}"</div>
-                                                        )}
-                                                        {player.TotalGames && (
-                                                            <div className="text-xs text-gray-500">{player.TotalGames > 100 ? '+100' : player.TotalGames} games played</div>
-                                                        )}
+                                            {isSearching && (
+                                                <div className="absolute right-3 top-2.5">
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                </div>
+                                            )}
 
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                                            {/* Search Results Dropdown */}
+                                            {showDropdown && searchResults.length > 0 && (
+                                                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                                    {searchResults.map((player) => (
+                                                        <button
+                                                            key={player.UID}
+                                                            type="button"
+                                                            onClick={() => selectPlayer(player)}
+                                                            className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 text-black"
+                                                        >
+                                                            <div className="font-medium">{player.Name}</div>
+                                                            {player.nickname && (
+                                                                <div className="text-sm text-gray-500">"{player.nickname}"</div>
+                                                            )}
+                                                            {player.TotalGames && (
+                                                                <div className="text-xs text-gray-400">{player.TotalGames > 100 ? '+100' : player.TotalGames} games played</div>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
 
-                                    {/* New Player Selection */}
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-black mb-3">
-                                            Are you new to this league?
-                                        </label>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="radio"
-                                                    id="existing-player"
-                                                    name="newPlayer"
-                                                    checked={isNewPlayer === false}
-                                                    onChange={() => handleNewPlayerChange(false)}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                                    disabled={submitting}
-                                                />
-                                                <label htmlFor="existing-player" className="ml-2 text-black">
-                                                    No
-                                                    {selectedExistingPlayer && (
-                                                        <span className="text-green-600 font-medium"> ✓ ({selectedExistingPlayer.Name})</span>
-                                                    )}
-                                                </label>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="radio"
-                                                    id="new-player"
-                                                    name="newPlayer"
-                                                    checked={isNewPlayer === true}
-                                                    onChange={() => handleNewPlayerChange(true)}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                                    disabled={submitting}
-                                                />
-                                                <label htmlFor="new-player" className="ml-2 text-black">
-                                                    Yes, I am new to this league
-                                                </label>
-                                            </div>
+
                                         </div>
-
-                                        {/* Helper text */}
-                                        {isNewPlayer === false && !selectedExistingPlayer && playerName.trim() && (
-                                            <p className="text-sm text-amber-600 mt-2">
-                                                Please select your name from the dropdown above
-                                            </p>
-                                        )}
                                     </div>
+
+                                    {/* New vs Existing Player Selection */}
+                                    {playerName.trim() && (
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-gray-600">Is this you?</p>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsNewPlayer(true);
+                                                        resetStates();
+                                                    }}
+                                                    className={`flex-1 py-2 px-3 rounded-lg border transition-colors ${isNewPlayer === true
+                                                        ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    New Player
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsNewPlayer(false);
+                                                        resetStates();
+                                                        if (searchResults.length === 0 && playerName.trim()) {
+                                                            searchPlayers(playerName);
+                                                        } else {
+                                                            setShowDropdown(searchResults.length > 0);
+                                                        }
+                                                    }}
+                                                    className={`flex-1 py-2 px-3 rounded-lg border transition-colors ${isNewPlayer === false
+                                                        ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    Existing Player
+                                                </button>
+                                            </div>
+
+                                            {/* Helper text */}
+                                            {isNewPlayer === false && !selectedExistingPlayer && playerName.trim() && (
+                                                <p className="text-sm text-amber-600 mt-2">
+                                                    Please select your name from the dropdown above
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Error Display */}
                                     {error && (
@@ -464,8 +465,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                 </form>
                             </div>
                         )}
-
-
 
                         {step === 'success' && (
                             <div className="text-center">
@@ -497,9 +496,19 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                 {step !== 'success' && checkedInPlayers.length > 0 && (
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-black text-lg flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Registered Players ({checkedInPlayers.length})
+                            <CardTitle className="text-black text-lg flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Registered Players ({totalRegistered})
+                                </div>
+                                <button
+                                    onClick={loadCheckedInPlayers}
+                                    disabled={loadingPlayers}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                    title="Refresh player list"
+                                >
+                                    <RefreshCw className={`h-4 w-4 text-gray-600 ${loadingPlayers ? 'animate-spin' : ''}`} />
+                                </button>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -508,28 +517,43 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                                 </div>
                             ) : (
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {checkedInPlayers.map((player, index) => (
-                                        <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="space-y-2">
+                                    {checkedInPlayers.map((player, index) => {
+                                        const isKnockedOut = player.ko_position !== null;
 
+                                        return (
+                                            <div
+                                                key={player.id}
+                                                className={`flex items-center justify-between p-3 rounded-lg ${isKnockedOut ? 'bg-red-50 border border-red-200' : 'bg-gray-50'
+                                                    }`}
+                                            >
+                                                <div className="font-medium text-black flex items-center gap-2">
+                                                    <span className={isKnockedOut ? 'line-through text-red-600' : ''}>
+                                                        {player.player_name}
+                                                    </span>
 
+                                                    {/* Knockout info */}
+                                                    {isKnockedOut && player.hitman_name && (
+                                                        <div className="flex items-center gap-1 text-red-600 text-sm">
+                                                            <Skull className="h-4 w-4" />
+                                                            <span>{player.hitman_name}</span>
+                                                        </div>
+                                                    )}
 
-                                            <div className="font-medium text-black flex items-center gap-2">
-                                                {player.player_name}
-                                                {player.is_new_player ? (
-                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">New</span>
-                                                ) : ''}
+                                                    {player.is_new_player ? (
+                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">New</span>
+                                                    ) : ''}
+                                                </div>
+
+                                                <div className="text-xs text-gray-500">
+                                                    {new Date(player.checked_in_at).toLocaleTimeString('en-US', {
+                                                        hour: 'numeric',
+                                                        minute: '2-digit'
+                                                    }).replace(/\s?(AM|PM)/i, '')}
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-gray-500">
-                                                {new Date(player.checked_in_at).toLocaleTimeString('en-US', {
-                                                    hour: 'numeric',
-                                                    minute: '2-digit'
-                                                }).replace(/\s?(AM|PM)/i, '')}
-                                            </div>
-
-
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>

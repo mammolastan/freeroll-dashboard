@@ -35,7 +35,9 @@ export async function GET(
         player_uid,
         is_new_player,
         added_by,
-        checked_in_at
+        checked_in_at,
+        hitman_name,
+        ko_position
       FROM tournament_draft_players 
       WHERE tournament_draft_id = ${tournamentId}
       ORDER BY checked_in_at DESC
