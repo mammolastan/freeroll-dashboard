@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Calendar, MapPin, Users, User, Check, AlertCircle, RefreshCw, Skull } from 'lucide-react';
+import { Calendar, MapPin, Users, User, Check, AlertCircle, RefreshCw, Skull, QrCode } from 'lucide-react';
 import { formatGameDateET } from '@/lib/utils';
+import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 
 interface Tournament {
     id: number;
@@ -69,6 +70,11 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
     const [checkedInPlayers, setCheckedInPlayers] = useState<CheckedInPlayer[]>([]);
     const [loadingPlayers, setLoadingPlayers] = useState(false);
 
+    // QR Code Modal states
+    const [checkInUrl, setCheckInUrl] = useState<string>('');
+    const [showQRCode, setShowQRCode] = useState(false);
+    const [currentDraft, setCurrentDraft] = useState<{ tournament_date: string; venue: string }>({ tournament_date: '', venue: '' });
+
     // Use ref to track debounce timeout
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -100,6 +106,15 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         if (tournament) {
             loadCheckedInPlayers();
         }
+
+        setCurrentDraft(
+            {
+                tournament_date: tournament?.tournament_date || '',
+                venue: tournament?.venue || ''
+            });
+        setCheckInUrl(`${window.location.origin}/checkin/${params.token}`);
+        console.log("currentDraft")
+        console.log(currentDraft)
     }, [tournament]);
 
     const loadCheckedInPlayers = async () => {
@@ -274,6 +289,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         const knockedOut = checkedInPlayers.filter(player => player.ko_position !== null).length;
         const remaining = totalRegistered - knockedOut;
 
+
         return { totalRegistered, knockedOut, remaining };
     };
 
@@ -325,6 +341,18 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                     <User className="h-4 w-4" />
                                     <span>Director: {tournament.director_name}</span>
                                 </div>
+                                <div className="flex items-center justify-center gap-2">
+                                    <button
+                                        onClick={() => setShowQRCode(true)}
+                                        className="flex items-center gap-2  px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        <QrCode className="h-4 w-4" /> Share
+
+                                    </button>
+                                </div>
+                                {showQRCode && (
+                                    <QRCodeModal checkInUrl={checkInUrl} showQRCode={showQRCode} setShowQRCode={setShowQRCode} currentDraft={currentDraft} />
+                                )}
                                 {/* Tournament Stats */}
                                 <div className="flex items-center justify-center gap-4 mt-4 text-sm font-medium">
                                     <div className="text-blue-600">
@@ -474,26 +502,14 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                 </h3>
                                 <p className="text-black mb-6">{success}</p>
 
-                                <button
-                                    onClick={() => {
-                                        setStep('enter_name');
-                                        setPlayerName('');
-                                        setIsNewPlayer(null);
-                                        setSelectedExistingPlayer(null);
-                                        setSuccess('');
-                                        setError('');
-                                    }}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
-                                >
-                                    Check In Another Player
-                                </button>
+
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
                 {/* Checked-in Players List */}
-                {step !== 'success' && checkedInPlayers.length > 0 && (
+                {checkedInPlayers.length > 0 && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-black text-lg flex items-center justify-between">
