@@ -288,7 +288,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4 text-blue-600" />
-                                    <span className="text-black">{formatDate(tournament.tournament_date)}</span>
+                                    <span className="text-black">{formatGameDateET(tournament.tournament_date)}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-blue-600" />
