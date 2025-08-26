@@ -113,8 +113,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                 venue: tournament?.venue || ''
             });
         setCheckInUrl(`${window.location.origin}/checkin/${params.token}`);
-        console.log("currentDraft")
-        console.log(currentDraft)
     }, [tournament]);
 
     const loadCheckedInPlayers = async () => {
@@ -549,12 +547,13 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                                     </span>
 
                                                     {/* Knockout info */}
-                                                    {isKnockedOut && player.hitman_name && (
+                                                    {isKnockedOut && player.hitman_name && player.hitman_name !== 'unknown' && (
                                                         <div className="flex items-center gap-1 text-red-600 text-sm">
-                                                            <Skull className="h-4 w-4" />
+                                                            🥊
                                                             <span>{player.hitman_name}</span>
                                                         </div>
                                                     )}
+
 
                                                     {player.is_new_player ? (
                                                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">New</span>
