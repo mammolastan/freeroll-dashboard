@@ -164,13 +164,13 @@ export default function TournamentEntryPage() {
 
     // Select existing tournament
     const selectTournament = async (tournament: TournamentDraft) => {
-        console.log('Selecting tournament:', tournament.id);
+
         setCurrentDraft(tournament);
         setCurrentView('entry');
 
         // Load players for this tournament
         try {
-            console.log('Loading players for tournament #', tournament.id);
+
             const response = await fetch(`/api/tournament-drafts/${tournament.id}/players`);
 
             if (!response.ok) {
@@ -180,13 +180,13 @@ export default function TournamentEntryPage() {
             }
 
             const playersData = await response.json();
-            console.log('Loaded players data:');
+
 
             // Ensure the data structure is correct
             const formattedPlayers = Array.isArray(playersData) ? playersData : [];
             setPlayers(formattedPlayers);
 
-            console.log('Players state set');
+
         } catch (error) {
             console.error('Error loading players:', error);
             setPlayers([]);
@@ -453,8 +453,6 @@ export default function TournamentEntryPage() {
                 updatedPlayer = { ...updatedPlayer, ko_position: null };
             }
 
-            console.log('Sending update request for player:', playerId, 'with data:', updatedPlayer);
-
             const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -463,12 +461,9 @@ export default function TournamentEntryPage() {
 
             if (response.ok) {
                 const serverUpdatedPlayer = await response.json();
-                console.log('Server returned updated player:', serverUpdatedPlayer);
 
                 // Update local state with server response to ensure consistency
                 setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
-
-                console.log('Local state updated successfully');
             } else {
                 const errorText = await response.text();
                 console.error('Failed to update player:', response.status, errorText);
@@ -622,8 +617,6 @@ export default function TournamentEntryPage() {
                 ko_position: null
             };
 
-            console.log('Clearing knockout data for player:', playerId);
-
             const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -632,15 +625,11 @@ export default function TournamentEntryPage() {
 
             if (response.ok) {
                 const serverUpdatedPlayer = await response.json();
-                console.log('Server returned cleared player:', serverUpdatedPlayer);
-
                 // Update local state with server response to ensure consistency
                 setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
 
                 // Clear the search value
                 setHitmanSearchValues(prev => ({ ...prev, [playerId]: '' }));
-
-                console.log('Knockout data cleared successfully');
             } else {
                 const errorText = await response.text();
                 console.error('Failed to clear player knockout data:', response.status, errorText);
@@ -763,8 +752,6 @@ export default function TournamentEntryPage() {
     // Export tournament
     const exportTournament = () => {
         if (!currentDraft || players.length === 0) return;
-        console.log("players")
-        console.log(players)
         const sortedPlayers = [...players].sort((a, b) => {
             if (a.ko_position !== null && b.ko_position !== null) {
                 return a.ko_position - b.ko_position;
@@ -773,8 +760,6 @@ export default function TournamentEntryPage() {
             if (b.ko_position !== null) return 1;
             return a.player_name.localeCompare(b.player_name);
         });
-        console.log("sortedPlayers")
-        console.log(sortedPlayers)
         let output = `Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}\n`;
         output += `Director: ${currentDraft.director_name}\n`;
         output += `Players: ${players.length}\n`;
@@ -857,7 +842,6 @@ export default function TournamentEntryPage() {
     // Update the loadPlayersForTournament function to track last updated
     const loadPlayersForTournament = async (tournamentId: number) => {
         try {
-            console.log('Loading players for tournament #', tournamentId);
             const response = await fetch(`/api/tournament-drafts/${tournamentId}/players`);
 
             if (!response.ok) {
@@ -867,13 +851,11 @@ export default function TournamentEntryPage() {
             }
 
             const playersData = await response.json();
-            console.log('Loaded players data');
 
             const formattedPlayers = Array.isArray(playersData) ? playersData : [];
             setPlayers(formattedPlayers);
             setLastUpdated(new Date());  // Track when data was last refreshed
 
-            console.log('Players state set');
         } catch (error) {
             console.error('Error loading players:', error);
             setPlayers([]);
@@ -1219,7 +1201,6 @@ export default function TournamentEntryPage() {
         // Refresh when tab becomes active
         const handleVisibilityChange = () => {
             if (!document.hidden && currentDraft) {
-                console.log('Tab became active, refreshing player data');
                 loadPlayersForTournament(currentDraft.id);
             }
         };
