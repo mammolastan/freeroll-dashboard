@@ -84,6 +84,9 @@ export default function TournamentEntryPage() {
     const [isIntegrating, setIsIntegrating] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion' | 'checked_in_at'>('insertion');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // desc means newest first for insertion
+    const [playerFilter, setPlayerFilter] = useState('');
+    const [showPlayerFilter, setShowPlayerFilter] = useState(false);
+    const [isPlayerFilterFocused, setIsPlayerFilterFocused] = useState(false);
 
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
@@ -165,6 +168,7 @@ export default function TournamentEntryPage() {
     // Select existing tournament
     const selectTournament = async (tournament: TournamentDraft) => {
 
+        clearTournamentState();
         setCurrentDraft(tournament);
         setCurrentView('entry');
 
@@ -339,6 +343,53 @@ export default function TournamentEntryPage() {
         });
     };
 
+    const getFilteredAndSortedPlayers = () => {
+        // First, apply the filter
+        let filteredPlayers = players;
+        if (playerFilter) {
+            filteredPlayers = players.filter(player =>
+                player.player_name.toLowerCase().includes(playerFilter.toLowerCase())
+            );
+        }
+
+        // Then, apply the sorting (use your existing sorting logic)
+        return filteredPlayers.sort((a, b) => {
+            if (sortBy === 'name') {
+                const nameA = a.player_name.toLowerCase();
+                const nameB = b.player_name.toLowerCase();
+                return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            }
+
+            if (sortBy === 'ko_position') {
+                const koA = a.ko_position;
+                const koB = b.ko_position;
+
+                // Handle null values - when sorting desc (high to low), nulls go to top
+                if (koA === null && koB === null) return 0;
+                if (koA === null) return sortOrder === 'desc' ? -1 : 1;  // nulls first when desc
+                if (koB === null) return sortOrder === 'desc' ? 1 : -1;   // nulls first when desc
+
+                return sortOrder === 'asc' ? koA - koB : koB - koA;
+            }
+
+            if (sortBy === 'checked_in_at') {
+                if (!a.checked_in_at && !b.checked_in_at) return 0;
+                if (!a.checked_in_at) return sortOrder === 'asc' ? 1 : -1;
+                if (!b.checked_in_at) return sortOrder === 'asc' ? -1 : 1;
+                const dateA = new Date(a.checked_in_at).getTime();
+                const dateB = new Date(b.checked_in_at).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+
+            if (sortBy === 'insertion') {
+                // Assuming higher ID means more recent (inserted later)
+                return sortOrder === 'asc' ? a.id - b.id : b.id - a.id;
+            }
+
+            return 0;
+        });
+    };
+
     // Handle column header click for sorting
     const handleSort = (column: 'name' | 'ko_position' | 'checked_in_at') => {
         if (sortBy === column) {
@@ -346,6 +397,14 @@ export default function TournamentEntryPage() {
         } else {
             setSortBy(column);
             setSortOrder('asc');
+        }
+    };
+
+    const handleFilterKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            setShowPlayerFilter(false);
+            setPlayerFilter('');
+            setIsPlayerFilterFocused(false);
         }
     };
 
@@ -359,6 +418,93 @@ export default function TournamentEntryPage() {
             setSortOrder('desc'); // desc means newest first
         }
     };
+
+    const clearTournamentState = () => {
+        // Clear tournament data
+        setCurrentDraft(null);
+        setPlayers([]);
+
+        // Clear player input/search states
+        setNewPlayerName('');
+        setPlayerSearchResults([]);
+        setShowPlayerDropdown(false);
+        setIsSearching(false);
+
+        // Clear player filter states
+        setPlayerFilter('');
+        setShowPlayerFilter(false);
+        setIsPlayerFilterFocused(false);
+
+        // Clear sorting states
+        setSortBy('insertion');
+        setSortOrder('desc');
+
+        // Clear hitman search states
+        setHitmanSearchValues({});
+        setHitmanDropdownVisible({});
+        setHitmanHighlightedIndex({});
+
+        // Clear integration/UI states
+        setShowIntegrationPreview(false);
+        setIsIntegrating(false);
+        setIsReverting(false);
+
+        // Clear check-in related states
+        setLastUpdated(new Date());
+        setCheckInUrl('');
+        setShowQRCode(false);
+        setGeneratingQR(false);
+
+        console.log('Tournament state cleared');
+    };
+
+    useEffect(() => {
+        const handleGlobalKeyPress = (e: KeyboardEvent) => {
+            // Only activate if we're in the entry view and no other inputs are focused
+            if (currentView !== 'entry' || !currentDraft) return;
+
+            // Check if any input/textarea/select is currently focused
+            const activeElement = document.activeElement;
+            const isInputActive = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.tagName === 'SELECT' ||
+                activeElement.getAttribute('contenteditable') === 'true'
+            );
+
+            // If an input is active, don't intercept
+            if (isInputActive) return;
+
+            // Only handle letter keys and common symbols
+            const isValidKey = /^[a-zA-Z0-9\s]$/.test(e.key);
+            if (!isValidKey) return;
+
+            // Prevent default behavior for the initial key
+            e.preventDefault();
+
+            // Show the filter and set initial value
+            setShowPlayerFilter(true);
+            setPlayerFilter(e.key);
+            setIsPlayerFilterFocused(true);
+
+            // Focus the filter input after a brief delay
+            setTimeout(() => {
+                const filterInput = document.getElementById('player-filter-input');
+                if (filterInput) {
+                    (filterInput as HTMLInputElement).focus();
+                }
+            }, 10);
+        };
+
+        // Add event listener
+        document.addEventListener('keypress', handleGlobalKeyPress);
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('keypress', handleGlobalKeyPress);
+        };
+    }, [currentView, currentDraft]);
+
 
     // Player search effect
     useEffect(() => {
@@ -1558,7 +1704,11 @@ export default function TournamentEntryPage() {
                                 {/* // Action Buttons */}
                                 <div className='flex flex-row gap-2'>
                                     <button
-                                        onClick={() => setCurrentView('welcome')}
+                                        onClick={() => {
+                                            clearTournamentState();
+                                            setCurrentView('welcome')
+                                        }
+                                        }
                                         className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
                                     >
                                         <ArrowLeft size={16} />
@@ -1891,30 +2041,76 @@ export default function TournamentEntryPage() {
 
                         {/* Players List */}
                         <div>
-                            <div className="flex items-center gap-2">
-                                <h3
-                                    className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                                    onClick={resetToDefaultSort}
-                                    title={sortBy === 'insertion' ?
-                                        `Click to sort ${sortOrder === 'desc' ? 'oldest first' : 'newest first'}` :
-                                        'Click to sort by insertion order (newest first)'
-                                    }
-                                >
-                                    Players ({players.length})
-                                </h3>
-                                {sortBy === 'insertion' && (
-                                    <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
-                                        Insertion Order
-                                        <span className="text-xs">
-                                            {sortOrder === 'desc' ? '↓' : '↑'}
+                            <div className="flex items-center justify-between gap-2 mb-4">
+                                <div className="flex items-center gap-2">
+                                    <h3
+                                        className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                                        onClick={resetToDefaultSort}
+                                        title={sortBy === 'insertion' ?
+                                            `Click to sort ${sortOrder === 'desc' ? 'oldest first' : 'newest first'}` :
+                                            'Click to sort by insertion order (newest first)'
+                                        }
+                                    >
+                                        Players ({getFilteredAndSortedPlayers().length}{playerFilter ? ` of ${players.length}` : ''})
+                                    </h3>
+                                    {sortBy === 'insertion' && (
+                                        <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                                            Insertion Order
+                                            <span className="text-xs">
+                                                {sortOrder === 'desc' ? '↓' : '↑'}
+                                            </span>
                                         </span>
-                                    </span>
+                                    )}
+                                </div>
+
+                                {/* Player Filter Box */}
+                                {showPlayerFilter && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative">
+                                            <input
+                                                id="player-filter-input"
+                                                type="text"
+                                                value={playerFilter}
+                                                onChange={(e) => setPlayerFilter(e.target.value)}
+                                                onKeyDown={handleFilterKeyDown}
+                                                onFocus={() => setIsPlayerFilterFocused(true)}
+                                                onBlur={() => {
+                                                    setIsPlayerFilterFocused(false);
+                                                    // Hide filter if empty after losing focus
+                                                    if (!playerFilter) {
+                                                        setShowPlayerFilter(false);
+                                                    }
+                                                }}
+                                                className="px-3 py-1 pr-8 border border-blue-300 rounded text-sm bg-blue-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                                placeholder="Filter players..."
+                                                autoComplete="off"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setShowPlayerFilter(false);
+                                                    setPlayerFilter('');
+                                                    setIsPlayerFilterFocused(false);
+                                                }}
+                                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                        {playerFilter && (
+                                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                                ESC to clear
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
-                            {players.length === 0 ? (
+                            {getFilteredAndSortedPlayers().length === 0 ? (
                                 <div className="text-center py-8 text-gray-500">
-                                    No players added yet. Start typing a name above to add players.
+                                    {playerFilter ?
+                                        `No players found matching "${playerFilter}"` :
+                                        "No players added yet. Start typing a name above to add players."
+                                    }
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -1932,7 +2128,7 @@ export default function TournamentEntryPage() {
                                             )}
                                         </div>
                                         <div
-                                            className='cursor-pointer'
+                                            className='cursor-pointer hover:text-blue-600'
                                             onClick={() => handleSort('checked_in_at')}
                                         >
                                             Time
@@ -1954,17 +2150,11 @@ export default function TournamentEntryPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        <div>Actions</div>
-
-
+                                        <div className="text-center">Actions</div>
                                     </div>
 
-
-                                    {/* Map Through Players. Show players in insertion order when sortBy is 'insertion', otherwise use sortPlayers */}
-                                    {(sortBy === 'insertion' ?
-                                        (sortOrder === 'desc' ? players : [...players].reverse()) :
-                                        sortPlayers(players)
-                                    ).map((player) => (
+                                    {/* Player Rows - Now using getFilteredAndSortedPlayers() */}
+                                    {getFilteredAndSortedPlayers().map((player) => (
                                         <div
                                             key={player.id}
                                             className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
