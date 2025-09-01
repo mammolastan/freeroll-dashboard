@@ -91,7 +91,6 @@ export async function GET(request: Request) {
       ORDER BY totalGames DESC
     `;
 
-    // Get top players for each venue
     const venuesWithPlayers = await Promise.all(
       (venues as any[]).map(async (venue) => {
         const topPlayers = await prisma.$queryRaw`
@@ -101,13 +100,14 @@ export async function GET(request: Request) {
             SUM(p.Total_Points) as totalPoints,
             SUM(p.Knockouts) as knockouts,
             COUNT(*) as gamesPlayed,
+            AVG(p.Player_Score) as avgScore,
             pl.nickname
           FROM poker_tournaments p
           LEFT JOIN players pl ON p.UID = pl.uid
           WHERE Venue = ${venue.name}
           AND ${dateConditionP}
           GROUP BY name, uid, pl.nickname
-          ORDER BY totalPoints DESC
+          ORDER BY totalPoints DESC, avgScore DESC
           LIMIT 5
         `;
 
