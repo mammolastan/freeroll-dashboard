@@ -97,6 +97,13 @@ export default function TournamentEntryPage() {
     const pendingUpdatesRef = useRef<{ [key: number]: Partial<Player> }>({});
     const hasPendingChanges = Object.keys(pendingUpdatesRef.current).length > 0;
 
+    // UI state for editing KO positions
+    const [editingKOPlayers, setEditingKOPlayers] = useState(new Set());
+    const [pendingSortUpdate, setPendingSortUpdate] = useState(false);
+
+    const [skipNextAutoRefresh, setSkipNextAutoRefresh] = useState(false);
+    const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
     const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -348,15 +355,21 @@ export default function TournamentEntryPage() {
     };
 
     const getFilteredAndSortedPlayers = () => {
-        // First, apply the filter
         let filteredPlayers = players;
+
         if (playerFilter) {
             filteredPlayers = players.filter(player =>
                 player.player_name.toLowerCase().includes(playerFilter.toLowerCase())
             );
         }
 
-        // Then, apply the sorting (use your existing sorting logic)
+        // If we're in KO edit mode and there are players being edited, don't sort
+        if (sortBy === 'ko_position' && editingKOPlayers.size > 0) {
+            // Keep current order but still filter
+            return filteredPlayers;
+        }
+
+        // Apply normal sorting
         return filteredPlayers.sort((a, b) => {
             if (sortBy === 'name') {
                 const nameA = a.player_name.toLowerCase();
@@ -368,10 +381,9 @@ export default function TournamentEntryPage() {
                 const koA = a.ko_position;
                 const koB = b.ko_position;
 
-                // Handle null values - when sorting desc (high to low), nulls go to top
                 if (koA === null && koB === null) return 0;
-                if (koA === null) return sortOrder === 'desc' ? -1 : 1;  // nulls first when desc
-                if (koB === null) return sortOrder === 'desc' ? 1 : -1;   // nulls first when desc
+                if (koA === null) return sortOrder === 'desc' ? -1 : 1;
+                if (koB === null) return sortOrder === 'desc' ? 1 : -1;
 
                 return sortOrder === 'asc' ? koA - koB : koB - koA;
             }
@@ -386,13 +398,36 @@ export default function TournamentEntryPage() {
             }
 
             if (sortBy === 'insertion') {
-                // Assuming higher ID means more recent (inserted later)
                 return sortOrder === 'asc' ? a.id - b.id : b.id - a.id;
             }
 
             return 0;
         });
     };
+
+    // Handlers for KO input focus/blur
+    const handleKOInputFocus = (playerId: number) => {
+        if (sortBy === 'ko_position') {
+            setEditingKOPlayers(prev => new Set([...prev, playerId]));
+        }
+    };
+
+    const handleKOInputBlur = (playerId: number) => {
+        setEditingKOPlayers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(playerId);
+            return newSet;
+        });
+
+        // If no more players being edited, trigger a sort update
+        if (editingKOPlayers.size === 1 && sortBy === 'ko_position') { // size will be 1 before deletion
+            setPendingSortUpdate(true);
+            setTimeout(() => {
+                setPendingSortUpdate(false);
+            }, 100);
+        }
+    };
+
 
     // Handle column header click for sorting
     const handleSort = (column: 'name' | 'ko_position' | 'checked_in_at') => {
@@ -642,6 +677,9 @@ export default function TournamentEntryPage() {
                     if (response.ok) {
                         const result = await response.json();
 
+                        // Disable auto-refresh temporarily after successful batch update
+                        temporarilyDisableAutoRefresh();
+
                         // Update local state with all server responses
                         setPlayers(prevPlayers => {
                             const newPlayers = [...prevPlayers];
@@ -696,6 +734,11 @@ export default function TournamentEntryPage() {
             }
             globalUpdateTimeoutRef.current = null;
             pendingUpdatesRef.current = {};
+
+            // Clear auto-refresh skip timeout
+            if (skipAutoRefreshTimeoutRef.current) {
+                clearTimeout(skipAutoRefreshTimeoutRef.current);
+            }
         };
     }, []);
 
@@ -908,19 +951,31 @@ export default function TournamentEntryPage() {
                 return;
             }
 
-            // Use the debounced updatePlayer function for both fields
-            // This will go through the same batching logic
+            console.log(`Clearing knockout for player ${playerId}`);
+
+            // Disable auto-refresh temporarily
+            temporarilyDisableAutoRefresh();
+
+            // Clear ALL related UI state for this player IMMEDIATELY
+            setHitmanSearchValues(prev => {
+                const newState = { ...prev };
+                delete newState[playerId];
+                return newState;
+            });
+
+            setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
+            setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: -1 }));
+
+            // THEN use the debounced updatePlayer function for both fields
             await updatePlayer(playerId, 'hitman_name', null);
             await updatePlayer(playerId, 'ko_position', null);
-
-            // Clear the search value in UI
-            setHitmanSearchValues(prev => ({ ...prev, [playerId]: '' }));
 
         } catch (error) {
             console.error('Error clearing player knockout data:', error);
             alert(`Error clearing knockout data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
+
     const handleHitmanKeyDown = (playerId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         const candidates = getHitmanCandidates(playerId, hitmanSearchValues[playerId] || '');
         const unknownOption = hitmanSearchValues[playerId] &&
@@ -1480,26 +1535,44 @@ export default function TournamentEntryPage() {
 
         // Refresh when tab becomes active
         const handleVisibilityChange = () => {
-            if (!document.hidden && currentDraft) {
+            if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
                 loadPlayersForTournament(currentDraft.id);
             }
         };
 
         // Poll every 15 seconds when tab is active
         const interval = setInterval(() => {
-            if (!document.hidden && currentDraft) {
+            if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
                 console.log('Auto-refreshing player data');
                 loadPlayersForTournament(currentDraft.id);
+            } else if (skipNextAutoRefresh) {
+                console.log('Skipping auto-refresh due to recent update');
             }
         }, 15000);
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
             clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [currentDraft]);
+    }, [currentDraft, skipNextAutoRefresh]);
+
+    // Helper function to temporarily disable auto-refresh after updates
+    const temporarilyDisableAutoRefresh = () => {
+        setSkipNextAutoRefresh(true);
+
+        // Clear any existing timeout
+        if (skipAutoRefreshTimeoutRef.current) {
+            clearTimeout(skipAutoRefreshTimeoutRef.current);
+        }
+
+        // Re-enable auto-refresh after 5 seconds (enough time for updates to complete)
+        skipAutoRefreshTimeoutRef.current = setTimeout(() => {
+            setSkipNextAutoRefresh(false);
+            console.log('Re-enabled auto-refresh after update');
+        }, 5000);
+    };
 
 
 
@@ -1829,6 +1902,14 @@ export default function TournamentEntryPage() {
             {hasPendingChanges && (
                 <div className="text-yellow-600 fixed text-sm">
                     ⏳ Saving changes...
+                </div>
+            )}
+            {editingKOPlayers.size > 0 && sortBy === 'ko_position' && (
+                <div className="mb-2 p-2 bg-amber-50 border border-amber-200 fixed rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700">
+                        <span className="text-sm">✏️ Edit Mode:</span>
+                        <span className="text-sm">List sorting paused while editing KO positions</span>
+                    </div>
                 </div>
             )}
             <div className="max-w-6xl mx-auto">
@@ -2370,7 +2451,7 @@ export default function TournamentEntryPage() {
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
 
-                                                {/* Hitman dropdown */}
+
                                                 {/* Hitman dropdown */}
                                                 {hitmanDropdownVisible[player.id] && currentDraft?.status !== 'integrated' && (
                                                     <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-md shadow-lg z-10 max-h-32 overflow-y-auto">
@@ -2423,8 +2504,11 @@ export default function TournamentEntryPage() {
                                                     type="number"
                                                     value={player.ko_position || ''}
                                                     onChange={(e) => updatePlayer(player.id, 'ko_position', parseInt(e.target.value) || null)}
+                                                    onFocus={() => handleKOInputFocus(player.id)}
+                                                    onBlur={() => handleKOInputBlur(player.id)}
                                                     className="w-full px-2 py-1 border rounded text-black text-sm"
                                                     placeholder="KO #"
+                                                    min={0}
                                                     disabled={currentDraft?.status === 'integrated'}
                                                 />
                                             </div>
