@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
 import { formatGameDate } from '@/lib/utils';
@@ -92,6 +92,10 @@ export default function TournamentEntryPage() {
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
     const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<Record<number, number>>({});
 
+    // Debounce refs for player updates
+    const globalUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const pendingUpdatesRef = useRef<{ [key: number]: Partial<Player> }>({});
+    const hasPendingChanges = Object.keys(pendingUpdatesRef.current).length > 0;
 
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
@@ -570,8 +574,8 @@ export default function TournamentEntryPage() {
         }
     };
 
-    // Update player
-    const updatePlayer = async (playerId: number, field: string, value: string | number | null) => {
+    //  updatePlayer with debounce and batching
+    const updatePlayer = useCallback(async (playerId: number, field: string, value: string | number | null) => {
         try {
             const player = players.find(p => p.id === playerId);
             if (!player) {
@@ -579,18 +583,17 @@ export default function TournamentEntryPage() {
                 return;
             }
 
+            // Create updated player object
             let updatedPlayer = { ...player, [field]: value };
 
-            // Auto-assign KO position when hitman is selected
+            // Auto-assign KO position when hitman is selected (same logic as before)
             if (field === 'hitman_name' && value) {
-                // Find the maximum KO position and add 1
                 const usedKoPositions = players
                     .filter(p => p.ko_position !== null && p.id !== playerId)
                     .map(p => p.ko_position!);
 
                 const maxKoPosition = usedKoPositions.length > 0 ? Math.max(...usedKoPositions) : 0;
                 const nextKoPosition = maxKoPosition + 1;
-
                 updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
             }
 
@@ -599,27 +602,176 @@ export default function TournamentEntryPage() {
                 updatedPlayer = { ...updatedPlayer, ko_position: null };
             }
 
-            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedPlayer)
-            });
+            // Update local state immediately for responsive UI
+            setPlayers(prevPlayers =>
+                prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+            );
 
-            if (response.ok) {
-                const serverUpdatedPlayer = await response.json();
+            // Store pending updates for this player
+            pendingUpdatesRef.current[playerId] = updatedPlayer;
 
-                // Update local state with server response to ensure consistency
-                setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
-            } else {
-                const errorText = await response.text();
-                console.error('Failed to update player:', response.status, errorText);
-                alert(`Failed to update player: ${errorText}`);
+            // Clear existing global timeout
+            if (globalUpdateTimeoutRef.current) {
+                clearTimeout(globalUpdateTimeoutRef.current);
             }
+
+            // Set new global timeout to batch ALL pending updates
+            globalUpdateTimeoutRef.current = setTimeout(async () => {
+                const playersToUpdate = { ...pendingUpdatesRef.current };
+
+                if (Object.keys(playersToUpdate).length === 0) return;
+
+                console.log(`Batching updates for ${Object.keys(playersToUpdate).length} players`);
+
+                try {
+                    // Convert pending updates to array format for batch API
+                    const updateArray = Object.entries(playersToUpdate).map(([playerIdStr, updatedData]) => ({
+                        id: parseInt(playerIdStr),
+                        ...updatedData
+                    }));
+
+                    // Send single batch request
+                    const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/batch`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            players: updateArray
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+
+                        // Update local state with all server responses
+                        setPlayers(prevPlayers => {
+                            const newPlayers = [...prevPlayers];
+                            result.updatedPlayers.forEach((serverPlayer: Player) => {
+                                const index = newPlayers.findIndex(p => p.id === serverPlayer.id);
+                                if (index !== -1) {
+                                    newPlayers[index] = serverPlayer;
+                                }
+                            });
+                            return newPlayers;
+                        });
+
+                        console.log(`✅ Successfully batch updated ${result.updateCount} players`);
+                    } else {
+                        const errorData = await response.json();
+                        console.error('Batch update failed:', errorData);
+
+                        // Show user-friendly error
+                        alert(`Failed to save changes: ${errorData.details || errorData.error}`);
+
+                        // Optionally reload the players to get current server state
+                        if (currentDraft) {
+                            loadPlayersForTournament(currentDraft.id);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Batch update error:', error);
+                    alert(`Error saving changes: ${error instanceof Error ? error.message : 'Network error'}`);
+
+                    // Reload players to get current server state
+                    if (currentDraft) {
+                        loadPlayersForTournament(currentDraft.id);
+                    }
+                } finally {
+                    // Clean up
+                    pendingUpdatesRef.current = {};
+                    globalUpdateTimeoutRef.current = null;
+                }
+            }, 1500); // 1.5 seconds to allow for more batching
+
         } catch (error) {
-            console.error('Error updating player:', error);
-            alert(`Error updating player: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error('Error in updatePlayer:', error);
         }
-    };
+    }, [players, currentDraft]);
+
+    // cleanup on component unmount
+    useEffect(() => {
+        return () => {
+            // Clear pending timeout on unmount
+            if (globalUpdateTimeoutRef.current) {
+                clearTimeout(globalUpdateTimeoutRef.current);
+            }
+            globalUpdateTimeoutRef.current = null;
+            pendingUpdatesRef.current = {};
+        };
+    }, []);
+
+    // force immediate save
+    const saveAllPendingUpdates = useCallback(async () => {
+        if (globalUpdateTimeoutRef.current) {
+            clearTimeout(globalUpdateTimeoutRef.current);
+            globalUpdateTimeoutRef.current = null;
+
+            const playersToUpdate = { ...pendingUpdatesRef.current };
+
+            if (Object.keys(playersToUpdate).length === 0) {
+                return { success: true, updatedCount: 0 };
+            }
+
+            console.log(`Force saving ${Object.keys(playersToUpdate).length} pending updates`);
+
+            try {
+                const updatePromises = Object.entries(playersToUpdate).map(async ([playerIdStr, updatedData]) => {
+                    const playerId = parseInt(playerIdStr);
+
+                    const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedData)
+                    });
+
+                    if (response.ok) {
+                        const serverUpdatedPlayer = await response.json();
+                        return { success: true, playerId, data: serverUpdatedPlayer };
+                    } else {
+                        const errorText = await response.text();
+                        return { success: false, playerId, error: errorText };
+                    }
+                });
+
+                const results = await Promise.allSettled(updatePromises);
+                const successCount = results.filter(r =>
+                    r.status === 'fulfilled' && r.value.success
+                ).length;
+
+                // Update UI with successful results
+                const successfulUpdates = results
+                    .filter((r): r is PromiseFulfilledResult<any> =>
+                        r.status === 'fulfilled' && r.value.success
+                    )
+                    .map(r => r.value);
+
+                if (successfulUpdates.length > 0) {
+                    setPlayers(prevPlayers => {
+                        const newPlayers = [...prevPlayers];
+                        successfulUpdates.forEach(update => {
+                            const index = newPlayers.findIndex(p => p.id === update.playerId);
+                            if (index !== -1) {
+                                newPlayers[index] = update.data;
+                            }
+                        });
+                        return newPlayers;
+                    });
+                }
+
+                pendingUpdatesRef.current = {};
+
+                return {
+                    success: true,
+                    updatedCount: successCount,
+                    totalAttempted: Object.keys(playersToUpdate).length
+                };
+            } catch (error) {
+                console.error('Error in force save:', error);
+                return { success: false, error };
+            }
+        }
+
+        return { success: true, updatedCount: 0 };
+    }, [currentDraft, players]);
 
     // Auto-calculate KO positions to fix duplicates and gaps
     const autoCalculateKOPositions = async () => {
@@ -756,37 +908,19 @@ export default function TournamentEntryPage() {
                 return;
             }
 
-            // Prepare the cleared data
-            const clearedPlayer = {
-                ...player,
-                hitman_name: null,
-                ko_position: null
-            };
+            // Use the debounced updatePlayer function for both fields
+            // This will go through the same batching logic
+            await updatePlayer(playerId, 'hitman_name', null);
+            await updatePlayer(playerId, 'ko_position', null);
 
-            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clearedPlayer)
-            });
+            // Clear the search value in UI
+            setHitmanSearchValues(prev => ({ ...prev, [playerId]: '' }));
 
-            if (response.ok) {
-                const serverUpdatedPlayer = await response.json();
-                // Update local state with server response to ensure consistency
-                setPlayers(players.map(p => p.id === playerId ? serverUpdatedPlayer : p));
-
-                // Clear the search value
-                setHitmanSearchValues(prev => ({ ...prev, [playerId]: '' }));
-            } else {
-                const errorText = await response.text();
-                console.error('Failed to clear player knockout data:', response.status, errorText);
-                alert(`Failed to clear knockout data: ${errorText}`);
-            }
         } catch (error) {
             console.error('Error clearing player knockout data:', error);
             alert(`Error clearing knockout data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
-
     const handleHitmanKeyDown = (playerId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         const candidates = getHitmanCandidates(playerId, hitmanSearchValues[playerId] || '');
         const unknownOption = hitmanSearchValues[playerId] &&
@@ -1692,6 +1826,11 @@ export default function TournamentEntryPage() {
     // Tournament Entry Interface
     return (
         <div className="min-h-screen bg-gray-100 p-4">
+            {hasPendingChanges && (
+                <div className="text-yellow-600 fixed text-sm">
+                    ⏳ Saving changes...
+                </div>
+            )}
             <div className="max-w-6xl mx-auto">
                 <Card className="mb-6">
                     <CardHeader>
@@ -1750,6 +1889,7 @@ export default function TournamentEntryPage() {
                                     {/* Buttons and info */}
                                     <div className="flex items-center gap-3">
                                         <div className="text-sm text-gray-500">
+
                                             <div>Last updated: {lastUpdated.toLocaleTimeString()}</div>
                                             <div className="flex items-center gap-1 mt-1">
                                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
