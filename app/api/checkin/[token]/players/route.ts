@@ -32,6 +32,7 @@ export async function GET(
       SELECT 
         id,
         player_name,
+        player_nickname,
         player_uid,
         is_new_player,
         added_by,
@@ -56,7 +57,7 @@ export async function GET(
 }
 
 // Player self check-in
-// app/api/checkin/[token]/players/route.ts - Fixed POST method
+// POST method
 export async function POST(
   request: NextRequest,
   { params }: { params: { token: string } }
@@ -106,7 +107,7 @@ export async function POST(
       );
     }
 
-    // FIXED: Search for existing player in main database by BOTH Name AND nickname
+    // Search for existing player in main database by BOTH Name AND nickname
     // First get potential matches
     const likePattern = `%${cleanPlayerName}%`;
     const existingPlayers = await prisma.$queryRaw`
@@ -145,7 +146,7 @@ export async function POST(
     let suggested_players = [];
 
     if (sortedPlayers.length > 0) {
-      // FIXED: Check for exact match in BOTH Name AND nickname fields
+      //Check for exact match in BOTH Name AND nickname fields
       const exactMatch = sortedPlayers.find(
         (p: any) =>
           p.Name.toLowerCase() === cleanPlayerName.toLowerCase() ||

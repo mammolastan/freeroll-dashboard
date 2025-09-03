@@ -40,6 +40,7 @@ interface Player {
 interface CheckedInPlayer {
     id: number;
     player_name: string;
+    player_nickname: string;
     player_uid: string | null;
     is_new_player: boolean;
     added_by: string;
@@ -513,7 +514,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                             <CardTitle className="text-black text-lg flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Users className="h-5 w-5" />
-                                    Registered Players ({totalRegistered})
+                                    {totalRegistered} Players  | <span className="text-green-600">{remaining} remaining</span>
                                 </div>
                                 <button
                                     onClick={loadCheckedInPlayers}
@@ -543,7 +544,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                             >
                                                 <div className="font-medium text-black flex items-center gap-2">
                                                     <span className={isKnockedOut ? 'line-through text-red-600' : ''}>
-                                                        {player.player_name}
+                                                        {player.player_nickname || player.player_name}
                                                     </span>
 
                                                     {/* Knockout info */}

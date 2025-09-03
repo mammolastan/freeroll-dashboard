@@ -21,16 +21,6 @@ interface TournamentDraft {
     player_count: number;
 }
 
-interface Player {
-    id: number;
-    player_name: string;
-    player_uid: string | null;
-    is_new_player: boolean;
-    hitman_name: string | null;
-    ko_position: number | null;
-    placement: number | null;
-}
-
 interface PlayerSearchResult {
     Name: string;
     UID: string;
@@ -47,8 +37,9 @@ interface Player {
     hitman_name: string | null;
     ko_position: number | null;
     placement: number | null;
-    added_by?: 'admin' | 'self_checkin';  // New field
-    checked_in_at?: string;               // New field
+    added_by?: 'admin' | 'self_checkin';
+    checked_in_at?: string;
+    player_nickname?: string | null; // Optional field for nickname
 }
 
 export default function TournamentEntryPage() {
@@ -328,31 +319,6 @@ export default function TournamentEntryPage() {
         return isoDate.split('T')[0];
     };
 
-    // Sort players
-    const sortPlayers = (playersToSort: Player[]) => {
-        return [...playersToSort].sort((a, b) => {
-            if (sortBy === 'name') {
-                const nameA = a.player_name.toLowerCase();
-                const nameB = b.player_name.toLowerCase();
-                return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-            } else if (sortBy === 'ko_position') {
-                // Handle null values for KO position
-                if (a.ko_position === null && b.ko_position === null) return 0;
-                if (a.ko_position === null) return sortOrder === 'asc' ? 1 : -1;
-                if (b.ko_position === null) return sortOrder === 'asc' ? -1 : 1;
-                return sortOrder === 'asc' ? a.ko_position - b.ko_position : b.ko_position - a.ko_position;
-            } else if (sortBy === 'checked_in_at') {
-                // Handle null values for checked_in_at
-                if (!a.checked_in_at && !b.checked_in_at) return 0;
-                if (!a.checked_in_at) return sortOrder === 'asc' ? 1 : -1;
-                if (!b.checked_in_at) return sortOrder === 'asc' ? -1 : 1;
-                const dateA = new Date(a.checked_in_at).getTime();
-                const dateB = new Date(b.checked_in_at).getTime();
-                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-            }
-            return 0;
-        });
-    };
 
     const getFilteredAndSortedPlayers = () => {
         let filteredPlayers = players;
@@ -369,7 +335,7 @@ export default function TournamentEntryPage() {
             return filteredPlayers;
         }
 
-        // Apply normal sorting
+        // Apply sorting
         return filteredPlayers.sort((a, b) => {
             if (sortBy === 'name') {
                 const nameA = a.player_name.toLowerCase();
@@ -474,10 +440,6 @@ export default function TournamentEntryPage() {
         setShowPlayerFilter(false);
         setIsPlayerFilterFocused(false);
 
-        // Clear sorting states
-        setSortBy('insertion');
-        setSortOrder('desc');
-
         // Clear hitman search states
         setHitmanSearchValues({});
         setHitmanDropdownVisible({});
@@ -573,7 +535,7 @@ export default function TournamentEntryPage() {
     }, [newPlayerName]);
 
     // Add player
-    const addPlayer = async (playerData: { name: string; uid?: string; isNew?: boolean }) => {
+    const addPlayer = async (playerData: { name: string; nickname?: string; uid?: string; isNew?: boolean }) => {
         if (!currentDraft) return;
 
         try {
@@ -582,6 +544,7 @@ export default function TournamentEntryPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     player_name: playerData.name,
+                    player_nickname: playerData.nickname || null,
                     player_uid: playerData.uid || null,
                     is_new_player: playerData.isNew || false
                 })
@@ -927,10 +890,16 @@ export default function TournamentEntryPage() {
         const player = players.find(p => p.id === playerId);
         if (!player) return;
 
-        // If player has both hitman and KO position, clear both
+        // If player is already knocked out, clear knockout
         if (player.hitman_name && player.ko_position !== null) {
+            const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
+            if (hitmanInput) {
+                hitmanInput.value = '';
+                console.log(`Directly set input field to empty for player ${playerId}`);
+            }
             clearPlayerKnockout(playerId);
         } else {
+            // if player is NOT knocked out, set hitman to "unknown" and trigger KO assignment
             setHitmanSearchValues(prev => ({ ...prev, [playerId]: 'unknown' }));
 
             setTimeout(() => {
@@ -2178,7 +2147,7 @@ export default function TournamentEntryPage() {
                                                                 key={player.UID}
                                                                 onClick={() => {
                                                                     if (!isAlreadyAdded) {
-                                                                        addPlayer({ name: player.Name, uid: player.UID });
+                                                                        addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID });
                                                                     } else {
                                                                         alert('This player is already in the tournament!');
                                                                     }
@@ -2374,7 +2343,7 @@ export default function TournamentEntryPage() {
                                         <div className="text-center">Actions</div>
                                     </div>
 
-                                    {/* Player Rows - Now using getFilteredAndSortedPlayers() */}
+                                    {/* Player Rows */}
                                     {getFilteredAndSortedPlayers().map((player) => (
                                         <div
                                             key={player.id}
@@ -2386,7 +2355,7 @@ export default function TournamentEntryPage() {
                                             {/* Player Name Column */}
                                             <div className="flex items-center gap-2 ">
                                                 <div className="flex items-center gap-2 flex-1">
-                                                    <span className="font-medium text-gray-900">{player.player_name}</span>
+                                                    <span className="font-medium text-gray-900">{player.player_name} {player.player_nickname ? `(${player.player_nickname})` : ''}</span>
                                                     {renderPlayerIndicator(player)}
                                                     {player.is_new_player ? (
                                                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
