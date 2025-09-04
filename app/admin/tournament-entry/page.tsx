@@ -926,11 +926,10 @@ export default function TournamentEntryPage() {
             temporarilyDisableAutoRefresh();
 
             // Clear ALL related UI state for this player IMMEDIATELY
-            setHitmanSearchValues(prev => {
-                const newState = { ...prev };
-                delete newState[playerId];
-                return newState;
-            });
+            setHitmanSearchValues(prev => ({
+                ...prev,
+                [playerId]: ''
+            }));
 
             setHitmanDropdownVisible(prev => ({ ...prev, [playerId]: false }));
             setHitmanHighlightedIndex(prev => ({ ...prev, [playerId]: -1 }));
