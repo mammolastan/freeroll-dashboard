@@ -8,6 +8,7 @@ import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLe
 import { formatGameDate } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { QRCodeModal } from './QRCodeModal';
+import PlayerName from '@/components/Text/PlayerName';
 
 interface TournamentDraft {
     id: number;
@@ -2354,7 +2355,10 @@ export default function TournamentEntryPage() {
                                             {/* Player Name Column */}
                                             <div className="flex items-center gap-2 ">
                                                 <div className="flex items-center gap-2 flex-1">
-                                                    <span className="font-medium text-gray-900">{player.player_name} {player.player_nickname ? `(${player.player_nickname})` : ''}</span>
+
+                                                    <span className="font-medium text-gray-900">
+                                                        {player.player_name} {player.player_nickname ? `(${player.player_nickname})` : ''}
+                                                    </span>
                                                     {renderPlayerIndicator(player)}
                                                     {player.is_new_player ? (
                                                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">

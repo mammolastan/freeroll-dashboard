@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
+import { revalidatePlayersCache } from "@/lib/players-cache";
 
 const prisma = new PrismaClient();
 
@@ -217,7 +218,7 @@ export async function POST(
             INSERT INTO players (uid, name, created_at, updated_at)
             VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
           `;
-
+            revalidatePlayersCache();
             player.player_uid = newUID;
 
             // UPDATE THE DRAFT TABLE WITH THE NEW UID
