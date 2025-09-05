@@ -204,13 +204,13 @@ export async function POST(
           draft.director_name
         );
 
-        const gameUID = uuidv4();
+        const gameUID = "SYS-G-" + uuidv4();
 
         // 7. Process each player with calculated placements
         for (const player of playersWithPlacements) {
           // Handle new players
           if (player.is_new_player && !player.player_uid) {
-            const newUID = uuidv4();
+            const newUID = "SYS-P-" + uuidv4();
 
             // Insert into players table
             await tx.$queryRaw`
