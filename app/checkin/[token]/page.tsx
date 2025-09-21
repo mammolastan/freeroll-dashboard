@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Users, User, Check, AlertCircle, RefreshCw, Skull, QrCode } from 'lucide-react';
 import { formatGameDateET } from '@/lib/utils';
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
+import { socket } from '@/lib/socketClient';
 
 interface Tournament {
     id: number;
@@ -201,16 +202,24 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
         setShowDropdown(false);
     };
 
-    // Handle clicking outside dropdown
     useEffect(() => {
+
+        socket.on("connect", () => {
+            console.log("Connected to server with ID:", socket.id);
+        });
+        console.log("Emitting joinRoom with token:", params.token);
+        socket.emit("joinRoom", params.token);
+
+        // Handle clicking outside dropdown
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Element;
             if (!target.closest('.dropdown-container')) {
                 setShowDropdown(false);
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
+
+
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
