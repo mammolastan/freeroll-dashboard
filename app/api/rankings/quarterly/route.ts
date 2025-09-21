@@ -93,17 +93,14 @@ export async function GET(request: Request) {
         p.Name as name,
         p.UID as uid,
         pl.nickname,
-        COUNT(DISTINCT p.File_name) as gamesPlayed,
+        COUNT(DISTINCT CASE WHEN p.Venue != 'bonus' THEN p.File_name END) as gamesPlayed,
         CAST(SUM(p.Total_Points) AS SIGNED) as totalPoints,
-        CAST(SUM(p.Knockouts) AS SIGNED) as totalKnockouts,
-        CAST(SUM(CASE WHEN p.Placement <= 8 THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
-        CAST(AVG(p.Player_Score) AS DECIMAL(10,2)) as avgScore
+        CAST(SUM(CASE WHEN p.Venue != 'bonus' THEN p.Knockouts ELSE 0 END) AS SIGNED) as totalKnockouts,
+        CAST(SUM(CASE WHEN p.Placement <= 8 AND p.Venue != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
+        CAST(AVG(CASE WHEN p.Venue != 'bonus' THEN p.Player_Score END) AS DECIMAL(10,2)) as avgScore
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
-        WHERE ${dateConditionP}
-        AND p.Venue != 'bonus'
-        AND p.game_date IS NOT NULL
-        AND p.Placement IS NOT NULL
+        WHERE ${dateConditionP}        
         GROUP BY p.Name, p.UID, pl.nickname
         HAVING gamesPlayed >= 1
         ORDER BY totalPoints DESC
