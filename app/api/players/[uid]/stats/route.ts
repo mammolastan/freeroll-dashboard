@@ -38,6 +38,7 @@ export async function GET(
     SELECT DISTINCT Venue 
     FROM poker_tournaments
     WHERE UID = ${playerUID}
+    AND venue != 'bonus'
     ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
     ORDER BY Venue
   `;
@@ -62,8 +63,8 @@ export async function GET(
       finalTablePercentage: number;
     }[] = await prisma.$queryRaw`
     SELECT 
-      COUNT(*) as gamesPlayed,
-      COALESCE(SUM(p1.Total_Points), 0) as totalPoints,
+      COUNT(CASE WHEN p1.Venue != 'bonus' THEN 1 END) as gamesPlayed,  -- Exclude bonus from games count
+      COALESCE(SUM(p1.Total_Points), 0) as totalPoints,                -- Include bonus in total points
       COALESCE(SUM(p1.Knockouts), 0) as knockouts,
       COALESCE(SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
       COALESCE(CAST(AVG(p1.Player_Score) AS DECIMAL(10,2)), 0) as avgScore,

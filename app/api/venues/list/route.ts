@@ -87,6 +87,7 @@ export async function GET(request: Request) {
         COUNT(DISTINCT File_name) as totalGames
       FROM poker_tournaments
       WHERE ${dateCondition}
+      AND Venue != 'bonus'
       GROUP BY Venue
       ORDER BY totalGames DESC
     `;

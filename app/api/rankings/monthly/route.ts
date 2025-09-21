@@ -82,6 +82,9 @@ export async function GET(request: Request) {
           AVG(Player_Score) as avgScore
         FROM poker_tournaments
         WHERE ${dateCondition}
+        AND game_date IS NOT NULL
+        AND Placement IS NOT NULL
+        AND Venue != 'bonus'
         GROUP BY Name, UID
         ORDER BY totalPoints DESC, avgScore DESC
       ) p

@@ -101,6 +101,9 @@ export async function GET(request: Request) {
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE ${dateConditionP}
+        AND p.Venue != 'bonus'
+        AND p.game_date IS NOT NULL
+        AND p.Placement IS NOT NULL
         GROUP BY p.Name, p.UID, pl.nickname
         HAVING gamesPlayed >= 1
         ORDER BY totalPoints DESC

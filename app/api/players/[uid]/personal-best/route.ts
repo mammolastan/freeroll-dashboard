@@ -92,6 +92,7 @@ export async function GET(
             AND YEAR(game_date) = ${playerQuarter.year}
             AND game_date IS NOT NULL
             AND Placement IS NOT NULL
+            AND Venue != 'bonus'
           GROUP BY UID
           HAVING COUNT(*) >= 1
           ORDER BY totalPoints DESC, avgScore DESC
