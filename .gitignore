@@ -43,3 +43,5 @@ yarn-error.log*
 next-env.d.ts
 
 ssh-*
+_notes
+CLAUDE.md
