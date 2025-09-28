@@ -125,7 +125,7 @@ export function QRCodeModal({ checkInUrl, showQRCode, setShowQRCode, currentDraf
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowQRCode(false)}>
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg text-black font-semibold">Player Check-In</h3>
+                    <h3 className="text-lg text-black font-semibold">Game viewer</h3>
                     <button
                         onClick={() => setShowQRCode(false)}
                         className="text-gray-400 hover:text-gray-600"

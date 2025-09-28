@@ -42,8 +42,12 @@ jobs:
             npm ci --production=false
             
             # Build the application
-            echo "Building application..."
+            echo "Building Next.js application..."
             npm run build
+
+            # Build the Socket.IO server
+            echo "Building Socket.IO server..."
+            npm run build:server
             
             # Restart the application with PM2
             echo "Restarting application..."

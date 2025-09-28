@@ -280,7 +280,7 @@ export function PersonalBestCard({ playerUID, playerName }: PersonalBestCardProp
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600 text-center">
                         <strong>Note:</strong> Personal bests are calculated from completed past quarters with at least 3 games played.
-                        The current quarter is excluded until it's finished. FTP = Final Table Percentage (reaching top 8 positions).
+                        The current quarter is excluded until it&apos;s finished. FTP = Final Table Percentage (reaching top 8 positions).
                     </p>
                 </div>
             </div>

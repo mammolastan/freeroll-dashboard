@@ -65,7 +65,7 @@ export async function POST(
   try {
     const { token } = params;
     const body = await request.json();
-    const { player_name } = body;
+    const { player_name, force_new_player } = body;
 
     if (!player_name || player_name.trim().length === 0) {
       return NextResponse.json(
@@ -107,69 +107,76 @@ export async function POST(
       );
     }
 
-    // Search for existing player in main database by BOTH Name AND nickname
-    // First get potential matches
-    const likePattern = `%${cleanPlayerName}%`;
-    const existingPlayers = await prisma.$queryRaw`
-      SELECT Name, UID, nickname FROM players 
-      WHERE Name LIKE ${likePattern}
-         OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
-      LIMIT 10
-    `;
-
-    // Sort the results in JavaScript to avoid parameter duplication in SQL
-    const sortedPlayers = (existingPlayers as any[])
-      .sort((a, b) => {
-        // Exact name match gets highest priority (0)
-        if (a.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
-        if (b.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return 1;
-
-        // Exact nickname match gets second priority (1)
-        if (
-          a.nickname &&
-          a.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
-        )
-          return -1;
-        if (
-          b.nickname &&
-          b.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
-        )
-          return 1;
-
-        // Alphabetical order for fuzzy matches
-        return a.Name.localeCompare(b.Name);
-      })
-      .slice(0, 5);
-
     let player_uid = null;
     let is_new_player = true;
-    let suggested_players = [];
 
-    if (sortedPlayers.length > 0) {
-      //Check for exact match in BOTH Name AND nickname fields
-      const exactMatch = sortedPlayers.find(
-        (p: any) =>
-          p.Name.toLowerCase() === cleanPlayerName.toLowerCase() ||
-          (p.nickname &&
-            p.nickname.toLowerCase() === cleanPlayerName.toLowerCase())
-      );
+    // If force_new_player is true, skip all existing player logic
+    if (force_new_player) {
+      player_uid = null;
+      is_new_player = true;
+    } else {
+      // Search for existing player in main database by BOTH Name AND nickname
+      // First get potential matches
+      const likePattern = `%${cleanPlayerName}%`;
+      const existingPlayers = await prisma.$queryRaw`
+        SELECT Name, UID, nickname FROM players
+        WHERE Name LIKE ${likePattern}
+           OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
+        LIMIT 10
+      `;
 
-      if (exactMatch) {
-        player_uid = exactMatch.UID;
-        is_new_player = false;
-      } else {
-        // Return suggestions for fuzzy matches
-        suggested_players = sortedPlayers.slice(0, 3).map((p: any) => ({
-          name: p.Name,
-          uid: p.UID,
-          nickname: p.nickname,
-        }));
+      // Sort the results in JavaScript to avoid parameter duplication in SQL
+      const sortedPlayers = (existingPlayers as any[])
+        .sort((a, b) => {
+          // Exact name match gets highest priority (0)
+          if (a.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
+          if (b.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return 1;
 
-        return NextResponse.json({
-          type: "suggestions",
-          suggestions: suggested_players,
-          entered_name: cleanPlayerName,
-        });
+          // Exact nickname match gets second priority (1)
+          if (
+            a.nickname &&
+            a.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
+          )
+            return -1;
+          if (
+            b.nickname &&
+            b.nickname.toLowerCase() === cleanPlayerName.toLowerCase()
+          )
+            return 1;
+
+          // Alphabetical order for fuzzy matches
+          return a.Name.localeCompare(b.Name);
+        })
+        .slice(0, 5);
+
+      let suggested_players = [];
+
+      if (sortedPlayers.length > 0) {
+        //Check for exact match in BOTH Name AND nickname fields
+        const exactMatch = sortedPlayers.find(
+          (p: any) =>
+            p.Name.toLowerCase() === cleanPlayerName.toLowerCase() ||
+            (p.nickname &&
+              p.nickname.toLowerCase() === cleanPlayerName.toLowerCase())
+        );
+
+        if (exactMatch) {
+          player_uid = exactMatch.UID;
+          is_new_player = false;
+        } else {
+          // Return suggestions for fuzzy matches
+          suggested_players = sortedPlayers.slice(0, 3).map((p: any) => ({
+            name: p.Name,
+            uid: p.UID,
+            nickname: p.nickname,
+          }));
+
+          return NextResponse.json({
+            type: "suggestions",
+            suggestions: suggested_players,
+            entered_name: cleanPlayerName,
+          });
+        }
       }
     }
 
@@ -183,6 +190,18 @@ export async function POST(
     const newPlayer = await prisma.$queryRaw`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
+
+    // Trigger real-time update for all connected clients
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/trigger-player-update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentDraftId: tournamentId })
+      });
+    } catch (error) {
+      console.error('Failed to trigger real-time update:', error);
+      // Don't fail the check-in if real-time update fails
+    }
 
     return NextResponse.json({
       type: "success",
@@ -277,6 +296,18 @@ export async function PUT(
     const newPlayer = await prisma.$queryRaw`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
+
+    // Trigger real-time update for all connected clients
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/trigger-player-update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentDraftId: tournamentId })
+      });
+    } catch (error) {
+      console.error('Failed to trigger real-time update:', error);
+      // Don't fail the check-in if real-time update fails
+    }
 
     return NextResponse.json({
       type: "success",

@@ -148,18 +148,23 @@ enum processed_files_test_status {
 }
 
 model TournamentDraft {
-  id              Int                   @id @default(autoincrement())
-  tournament_name String                @db.VarChar(255)
-  tournament_date DateTime              @db.Date
-  director_name   String                @db.VarChar(255)
-  venue           String                @db.VarChar(255)
-  start_points    Int                   @default(0)
-  status          TournamentDraftStatus @default(in_progress)
-  created_by      String?               @db.VarChar(255)
-  created_at      DateTime              @default(now()) @db.Timestamp(0)
-  updated_at      DateTime              @default(now()) @updatedAt @db.Timestamp(0)
-  game_uid        String?               @db.VarChar(100)
-  file_name       String?               @db.VarChar(255)
+  id                        Int                   @id @default(autoincrement())
+  tournament_date           DateTime              @db.Date
+  director_name             String                @db.VarChar(255)
+  venue                     String                @db.VarChar(255)
+  start_points              Int                   @default(0)
+  status                    TournamentDraftStatus @default(in_progress)
+  created_by                String?               @db.VarChar(255)
+  created_at                DateTime              @default(now()) @db.Timestamp(0)
+  updated_at                DateTime              @default(now()) @updatedAt @db.Timestamp(0)
+  game_uid                  String?               @db.VarChar(100)
+  file_name                 String?               @db.VarChar(255)
+  blind_schedule            String?               @default("standard") @db.VarChar(50)
+  timer_current_level       Int?                  @default(1)
+  timer_remaining_seconds   Int?
+  timer_is_running          Boolean?              @default(false)
+  timer_is_paused           Boolean?              @default(false)
+  timer_last_updated        DateTime?             @db.Timestamp(0)
 
   // Relations
   players TournamentDraftPlayer[]

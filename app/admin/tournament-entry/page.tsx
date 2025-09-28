@@ -9,6 +9,22 @@ import { formatGameDate } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { QRCodeModal } from './QRCodeModal';
 import PlayerName from '@/components/Text/PlayerName';
+import { GameTimer } from '@/components/Timer/GameTimer';
+import { socket } from '@/lib/socketClient';
+
+// Blind schedule definitions
+const BLIND_SCHEDULES = {
+    standard: {
+        id: 'standard',
+        name: 'Standard Speed',
+        description: '20-minute levels'
+    },
+    turbo: {
+        id: 'turbo',
+        name: 'Turbo Speed',
+        description: '10-minute levels'
+    }
+};
 
 interface TournamentDraft {
     id: number;
@@ -20,6 +36,7 @@ interface TournamentDraft {
     created_at: string;
     updated_at: string;
     player_count: number;
+    blind_schedule?: string;
 }
 
 interface PlayerSearchResult {
@@ -98,6 +115,21 @@ export default function TournamentEntryPage() {
 
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
+
+    // Socket.IO connection for real-time updates
+    useEffect(() => {
+        if (currentDraft) {
+            console.log(`Joining room ${currentDraft.id} for admin page`);
+            socket.emit('joinRoom', currentDraft.id.toString());
+        }
+
+        return () => {
+            if (currentDraft) {
+                socket.off('updatePlayers');
+                socket.off('tournament:updated');
+            }
+        };
+    }, [currentDraft]);
     const [showVenueDropdown, setShowVenueDropdown] = useState(false);
     const [isAddingNewVenue, setIsAddingNewVenue] = useState(false);
     const [newVenueInput, setNewVenueInput] = useState('');
@@ -1172,25 +1204,11 @@ export default function TournamentEntryPage() {
         if (!currentDraft) return;
 
         setGeneratingQR(true);
-        try {
-            const response = await fetch(`/api/tournaments/${currentDraft.id}/checkin-token`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to generate check-in link');
-            }
-
-            const data = await response.json();
-            setCheckInUrl(data.checkin_url);
-            setShowQRCode(true);
-        } catch (error) {
-            console.error('Error generating QR code:', error);
-            alert('Failed to generate check-in link');
-        } finally {
-            setGeneratingQR(false);
-        }
+        const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        const newCheckInUrl = `${baseURL}/gameview/${currentDraft.id}`;
+        setCheckInUrl(newCheckInUrl);
+        setShowQRCode(true);
+        setGeneratingQR(false);
     };
 
     //render player indicators
@@ -1617,7 +1635,7 @@ export default function TournamentEntryPage() {
                                 <div className="text-center py-8">
                                     <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                     <p className="text-gray-600">No tournament drafts found.</p>
-                                    <p className="text-gray-500 text-sm">Click "Create New Tournament" to get started.</p>
+                                    <p className="text-gray-500 text-sm">Click &quot;Create New Tournament&quot; to get started.</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
@@ -2176,7 +2194,7 @@ export default function TournamentEntryPage() {
                                                             className="px-3 py-2 hover:bg-green-50 cursor-pointer border-t bg-green-25"
                                                         >
                                                             <div className="font-medium text-green-700">
-                                                                Add "{newPlayerName.trim()}" as new player
+                                                                Add &quot;{newPlayerName.trim()}&quot; as new player
                                                             </div>
                                                             <div className="text-sm text-green-600">
                                                                 This will create a new player record
@@ -2228,6 +2246,64 @@ export default function TournamentEntryPage() {
                             />
                         )}
 
+
+                        {/* Blind Schedule Selector & Game Timer */}
+                        {currentDraft && (
+                            <div className="mb-6">
+                                {/* Blind Schedule Selector */}
+                                <Card className="mb-4">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Blind Schedule</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-4">
+                                            <label className="text-sm font-medium text-gray-700">
+                                                Schedule Type:
+                                            </label>
+                                            <select
+                                                value={currentDraft.blind_schedule || 'standard'}
+                                                onChange={async (e) => {
+                                                    const newSchedule = e.target.value;
+                                                    try {
+                                                        const response = await fetch(`/api/tournament-drafts/${currentDraft.id}`, {
+                                                            method: 'PATCH',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ blind_schedule: newSchedule })
+                                                        });
+
+                                                        if (response.ok) {
+                                                            setCurrentDraft(prev => prev ? { ...prev, blind_schedule: newSchedule } : null);
+                                                            // Reset timer when schedule changes
+                                                            socket.emit('timer:reset', { tournamentId: currentDraft.id });
+                                                        } else {
+                                                            console.error('Failed to update blind schedule');
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error updating blind schedule:', error);
+                                                    }
+                                                }}
+                                                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                disabled={currentDraft.status === 'integrated'}
+                                            >
+                                                {Object.values(BLIND_SCHEDULES).map(schedule => (
+                                                    <option key={schedule.id} value={schedule.id}>
+                                                        {schedule.name} - {schedule.description}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {currentDraft.status === 'integrated' && (
+                                                <span className="text-sm text-gray-500">
+                                                    Cannot change schedule for integrated tournaments
+                                                </span>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Game Timer */}
+                                <GameTimer tournamentId={currentDraft.id} isAdmin={true} />
+                            </div>
+                        )}
 
                         {/* Players List */}
                         <div>

@@ -1,6 +1,7 @@
 // app/api/tournament-drafts/[id]/players/[playerid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { emitPlayerJoined } from "@/lib/socketServer";
 
 const prisma = new PrismaClient();
 
@@ -39,6 +40,10 @@ export async function PUT(
         SELECT * FROM tournament_draft_players WHERE id = ${playerId}
       `;
 
+      // Emit Socket.IO event for real-time updates
+      const draftId = parseInt(params.id);
+      emitPlayerJoined(draftId, (updatedPlayerResult as any[])[0]);
+      
       return NextResponse.json((updatedPlayerResult as any[])[0]);
     } else {
       return NextResponse.json(
@@ -72,6 +77,10 @@ export async function DELETE(
     `;
 
     if (deleteResult === 1) {
+      // Emit Socket.IO event for real-time updates
+      const draftId = parseInt(params.id);
+      emitPlayerJoined(draftId, { deleted: true, playerId });
+      
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });

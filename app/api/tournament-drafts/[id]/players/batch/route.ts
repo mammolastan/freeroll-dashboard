@@ -1,6 +1,7 @@
 // Create: app/api/tournament-drafts/[id]/players/batch/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { emitPlayerJoined } from "@/lib/socketServer";
 
 const prisma = new PrismaClient();
 
@@ -60,6 +61,11 @@ export async function PUT(
     });
 
     console.log(`Successfully batch updated ${results.length} players`);
+
+    // Emit Socket.IO event for real-time updates
+    if (results.length > 0) {
+      emitPlayerJoined(draftId, { batchUpdate: true, updatedPlayers: results });
+    }
 
     return NextResponse.json({
       success: true,
