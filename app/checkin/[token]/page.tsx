@@ -1,3 +1,5 @@
+// app/checkin/[token]/page.tsx
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -347,7 +349,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                     <User className="h-4 w-4" />
-                                    <span>Director: {tournament.director_name}</span>
+                                    <span>TD: {tournament.director_name}</span>
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                     <button
@@ -419,7 +421,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                                         >
                                                             <div className="font-medium">{player.Name}</div>
                                                             {player.nickname && (
-                                                                <div className="text-sm text-gray-500">"{player.nickname}"</div>
+                                                                <div className="text-sm text-gray-500">&quot;{player.nickname}&quot;</div>
                                                             )}
                                                             {player.TotalGames && (
                                                                 <div className="text-xs text-gray-400">{player.TotalGames > 100 ? '+100' : player.TotalGames} games played</div>
@@ -436,7 +438,7 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                                     {/* New vs Existing Player Selection */}
                                     {playerName.trim() && (
                                         <div className="space-y-3">
-                                            <p className="text-sm text-gray-600">Is this you?</p>
+
                                             <div className="flex gap-3">
                                                 <button
                                                     type="button"
@@ -516,74 +518,6 @@ export default function CheckInPage({ params }: { params: { token: string } }) {
                     </CardContent>
                 </Card>
 
-                {/* Checked-in Players List */}
-                {checkedInPlayers.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-black text-lg flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Users className="h-5 w-5" />
-                                    {totalRegistered} Players  | <span className="text-green-600">{remaining} remaining</span>
-                                </div>
-                                <button
-                                    onClick={loadCheckedInPlayers}
-                                    disabled={loadingPlayers}
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                                    title="Refresh player list"
-                                >
-                                    <RefreshCw className={`h-4 w-4 text-gray-600 ${loadingPlayers ? 'animate-spin' : ''}`} />
-                                </button>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {loadingPlayers ? (
-                                <div className="text-center py-4">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {checkedInPlayers.map((player, index) => {
-                                        const isKnockedOut = player.ko_position !== null;
-
-                                        return (
-                                            <div
-                                                key={player.id}
-                                                className={`flex items-center justify-between p-3 rounded-lg ${isKnockedOut ? 'bg-red-50 border border-red-200' : 'bg-gray-50'
-                                                    }`}
-                                            >
-                                                <div className="font-medium text-black flex items-center gap-2">
-                                                    <span className={isKnockedOut ? 'line-through text-red-600' : ''}>
-                                                        {player.player_nickname || player.player_name}
-                                                    </span>
-
-                                                    {/* Knockout info */}
-                                                    {isKnockedOut && player.hitman_name && player.hitman_name !== 'unknown' && (
-                                                        <div className="flex items-center gap-1 text-red-600 text-sm">
-                                                            🥊
-                                                            <span>{player.hitman_name}</span>
-                                                        </div>
-                                                    )}
-
-
-                                                    {player.is_new_player ? (
-                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">New</span>
-                                                    ) : ''}
-                                                </div>
-
-                                                <div className="text-xs text-gray-500">
-                                                    {new Date(player.checked_in_at).toLocaleTimeString('en-US', {
-                                                        hour: 'numeric',
-                                                        minute: '2-digit'
-                                                    }).replace(/\s?(AM|PM)/i, '')}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
             </div>
         </div>
     );

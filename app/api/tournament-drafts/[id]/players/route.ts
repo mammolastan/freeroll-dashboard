@@ -1,6 +1,7 @@
 // app/api/tournament-drafts/[id]/players/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { RealtimeAPI } from "@/lib/realtime";
 
 const prisma = new PrismaClient();
 
@@ -62,6 +63,11 @@ export async function POST(
     const newPlayer = await prisma.$queryRaw`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
+
+    // Emit Socket.IO event for real-time updates
+    if (Array.isArray(newPlayer) && newPlayer.length > 0) {
+      await RealtimeAPI.playerAdded(draftId, (newPlayer[0] as any).id);
+    }
 
     return NextResponse.json(newPlayer);
   } catch (error) {

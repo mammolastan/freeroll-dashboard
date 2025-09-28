@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:socket": "node --loader ts-node/esm server.mts",
+    "dev:socket": "node --import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"ts-node/esm\", pathToFileURL(\"./\"));' server.mts",
     "build": "next build",
     "build:server": "tsc -p tsconfig.server.json",
     "start:server": "node dist/server.js",

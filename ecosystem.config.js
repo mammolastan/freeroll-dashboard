@@ -2,8 +2,7 @@ module.exports = {
   apps: [
     {
       name: "freeroll-dashboard",
-      script: "node_modules/next/dist/bin/next",
-      args: "start",
+      script: "dist/server.mjs",
       cwd: "/var/www/freeroll-dashboard",
       instances: 1,
       autorestart: true,
@@ -12,6 +11,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3000,
+        HOSTNAME: "localhost",
       },
     },
   ],

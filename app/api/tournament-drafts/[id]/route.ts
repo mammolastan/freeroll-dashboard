@@ -12,7 +12,7 @@ export async function GET(
     const draftId = parseInt(params.id);
 
     const draft = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         td.*,
         COUNT(tdp.id) as player_count
       FROM tournament_drafts td
@@ -56,6 +56,47 @@ export async function PUT(
         director_name = ${director_name},
         venue = ${venue},
         start_points = ${start_points || 0},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${draftId}
+    `;
+
+    const updatedDraft = await prisma.$queryRaw`
+      SELECT * FROM tournament_drafts WHERE id = ${draftId}
+    `;
+
+    return NextResponse.json(updatedDraft);
+  } catch (error) {
+    console.error("Error updating tournament draft:", error);
+    return NextResponse.json(
+      { error: "Failed to update tournament draft" },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    const draftId = parseInt(params.id);
+    const { blind_schedule } = body;
+
+    // Validate blind_schedule value
+    if (blind_schedule && !['standard', 'turbo'].includes(blind_schedule)) {
+      return NextResponse.json(
+        { error: "Invalid blind schedule. Must be 'standard' or 'turbo'" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.$queryRaw`
+      UPDATE tournament_drafts
+      SET
+        blind_schedule = ${blind_schedule},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${draftId}
     `;
