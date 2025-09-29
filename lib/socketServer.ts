@@ -42,7 +42,8 @@ export function emitPlayerJoined(tournamentDraftId: number, newPlayer: any) {
     console.log(`Triggering player update for tournament ${tournamentDraftId}:`, newPlayer);
     
     // Make a simple HTTP request to the server to trigger an update
-    fetch(`http://localhost:3000/api/trigger-player-update`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    fetch(`${baseUrl}/api/trigger-player-update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tournamentDraftId })
