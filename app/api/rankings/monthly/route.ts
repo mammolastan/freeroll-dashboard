@@ -56,6 +56,7 @@ export async function GET(request: Request) {
      SELECT DISTINCT Venue as name
      FROM poker_tournaments
      WHERE ${dateCondition}
+     AND Venue != 'bonus'
    `;
 
     // Get overall rankings (top 50)
