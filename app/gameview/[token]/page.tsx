@@ -8,7 +8,9 @@ import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
 import { Player } from '@/lib/realtime/types';
 import { GameTimer } from '@/components/Timer/GameTimer';
 import { CheckInModal } from '@/components/CheckInModal';
-import { UserPlus } from 'lucide-react';
+import { QrCode, UserPlus } from 'lucide-react';
+import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
+import { formatGameDate } from '@/lib/utils';
 
 function PlayerCard({ player }: { player: Player }) {
   return (
@@ -64,23 +66,12 @@ function TournamentHeader({ tournament, stats }: {
   tournament: any,
   stats: any
 }) {
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(date));
-  };
-
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{tournament.title}</h1>
-          <p className="text-gray-600 mt-1">{formatDate(tournament.date)}</p>
+          <p className="text-gray-600 mt-1">{formatGameDate(tournament.date.toString())}</p>
           {tournament.venue && (
             <p className="text-gray-600">
               📍 {tournament.venue}
@@ -102,6 +93,14 @@ export default function GameViewPage() {
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [checkInToken, setCheckInToken] = useState<string | null>(null);
   const [gettingToken, setGettingToken] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [checkInUrl, setCheckInUrl] = useState<string>(`/gameview/${token}`);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCheckInUrl(`${window.location.origin}/gameview/${token}`);
+    }
+  }, [token]);
 
   const handleCheckInClick = async () => {
     if (checkInToken) {
@@ -185,6 +184,27 @@ export default function GameViewPage() {
             <UserPlus size={20} />
             {gettingToken ? 'Getting Ready...' : 'Check In'}
           </button>
+
+          {/* Share Button */}
+          <button
+            onClick={() => setShowQRCode(true)}
+            className="flex items-center gap-2  px-4 mx-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            <QrCode className="h-4 w-4" /> Share
+
+          </button>
+          {showQRCode && gameData && (
+            <QRCodeModal
+              checkInUrl={checkInUrl}
+              showQRCode={showQRCode}
+              setShowQRCode={setShowQRCode}
+              currentDraft={{
+                tournament_date: formatGameDate(gameData.tournament.date.toString()),
+                venue: gameData.tournament.venue || ''
+              }}
+            />
+          )}
+
         </div>
 
 
