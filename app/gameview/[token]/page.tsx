@@ -13,6 +13,7 @@ import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate } from '@/lib/utils';
 
 function PlayerCard({ player }: { player: Player }) {
+  console.log('Rendering PlayerCard for:', player);
   return (
     <div className={`p-4 border rounded-lg ${player.is_active
       ? 'bg-green-50 border-green-200'
@@ -21,10 +22,9 @@ function PlayerCard({ player }: { player: Player }) {
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-semibold text-black">
-            {player.name}
-            {player.nickname && (
-              <span className="text-gray-600 ml-2">&quot;{player.nickname}&quot;</span>
-            )}
+            {player.nickname ? (
+              <span className="text-gray-600 ml-2">{player.nickname}</span>
+            ) : player.name}
           </h3>
           {player.is_new_player ? (
             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
@@ -71,7 +71,7 @@ function TournamentHeader({ tournament, stats }: {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{tournament.title}</h1>
-          <p className="text-gray-600 mt-1">{formatGameDate(tournament.date.toString())}</p>
+          <p className="text-gray-600 mt-1">{formatGameDate(typeof tournament.date === 'string' ? tournament.date : tournament.date.toISOString())}</p>
           {tournament.venue && (
             <p className="text-gray-600">
               📍 {tournament.venue}
@@ -199,7 +199,7 @@ export default function GameViewPage() {
               showQRCode={showQRCode}
               setShowQRCode={setShowQRCode}
               currentDraft={{
-                tournament_date: formatGameDate(gameData.tournament.date.toString()),
+                tournament_date: formatGameDate(typeof gameData.tournament.date === 'string' ? gameData.tournament.date : gameData.tournament.date.toISOString()),
                 venue: gameData.tournament.venue || ''
               }}
             />

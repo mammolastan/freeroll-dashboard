@@ -25,9 +25,13 @@ async function getCheckedInPlayers(
 ): Promise<CheckedInPlayer[]> {
   try {
     const players = await prisma.$queryRaw`
-      SELECT * FROM tournament_draft_players
-      WHERE tournament_draft_id = ${tournamentDraftId}
-      ORDER BY created_at ASC
+      SELECT
+        tdp.*,
+        p.nickname as player_nickname
+      FROM tournament_draft_players tdp
+      LEFT JOIN players p ON tdp.player_uid = p.uid
+      WHERE tdp.tournament_draft_id = ${tournamentDraftId}
+      ORDER BY tdp.created_at ASC
     `;
 
     return (players as any[]).map(p => ({
