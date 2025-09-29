@@ -13,7 +13,6 @@ import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate } from '@/lib/utils';
 
 function PlayerCard({ player }: { player: Player }) {
-  console.log('Rendering PlayerCard for:', player);
   return (
     <div className={`p-4 border rounded-lg ${player.is_active
       ? 'bg-green-50 border-green-200'
