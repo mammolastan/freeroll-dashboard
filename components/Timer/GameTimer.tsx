@@ -4,7 +4,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { socket } from '@/lib/socketClient';
 
 interface BlindLevel {
@@ -238,19 +237,19 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
   if (!timerState) {
     return (
-      <Card className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-cyan-300">
+      <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] shadow rounded-lg border">
+        <div className="p-6">
+          <h3 className="text-2xl font-semibold flex items-center gap-2 text-cyan-300">
             <Clock size={20} className="text-cyan-400" />
             Game Timer
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div className="p-6 pt-0">
           <div className="text-center text-gray-400">
             Loading timer...
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -298,9 +297,9 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   }
 
   return (
-    <Card className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)]">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-cyan-300">
+    <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] shadow rounded-lg border">
+      <div className="p-6">
+        <h3 className="text-2xl font-semibold flex items-center justify-between text-cyan-300">
           <div className="flex items-center gap-2">
             <Clock size={20} className="text-cyan-400" />
             <span className="text-cyan-700 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Game Timer</span>
@@ -323,9 +322,9 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
               </button>
             )}
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </h3>
+      </div>
+      <div className="p-6 pt-0 space-y-4">
         {/* Timer Display */}
         <div className="text-center">
           {isEditingTime && isAdmin && timerState.isPaused ? (
@@ -519,7 +518,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
             </button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
