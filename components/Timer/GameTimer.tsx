@@ -354,7 +354,8 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   if (isMinMode && timerState) {
     return (
       <div
-        className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center cursor-pointer"
+        className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center cursor-pointer w-screen h-screen overflow-hidden"
+        style={{ width: '100vw', height: '100vh', margin: 0, padding: 0 }}
         onClick={() => setIsMinMode(false)}
       >
         {/* Time Remaining */}
