@@ -43,6 +43,42 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
 
+  // Handle fullscreen when entering/exiting min mode
+  useEffect(() => {
+    const enterFullscreen = () => {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        }
+      } catch (error) {
+        console.log('Fullscreen request failed:', error);
+      }
+    };
+
+    const exitFullscreen = () => {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      } catch (error) {
+        console.log('Exit fullscreen failed:', error);
+      }
+    };
+
+    if (isMinMode) {
+      enterFullscreen();
+    } else {
+      exitFullscreen();
+    }
+
+    // Cleanup: exit fullscreen when component unmounts
+    return () => {
+      if (document.fullscreenElement) {
+        exitFullscreen();
+      }
+    };
+  }, [isMinMode]);
+
   useEffect(() => {
     if (!tournamentId) return;
 
