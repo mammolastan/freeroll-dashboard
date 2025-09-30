@@ -171,10 +171,17 @@ async function updateTimer(tournamentId: number): Promise<TimerState> {
       timer.timeRemaining === 0 &&
       timer.currentLevel < timer.blindLevels.length
     ) {
+      const currentLevel = timer.blindLevels[timer.currentLevel - 1];
       timer.currentLevel++;
       const nextLevel = timer.blindLevels[timer.currentLevel - 1];
       if (nextLevel) {
         timer.timeRemaining = nextLevel.duration * 60;
+
+        // If current level is a break, pause the timer after advancing to next level
+        if (currentLevel?.isbreak) {
+          timer.isPaused = true;
+          console.log(`Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`);
+        }
       }
       stateChanged = true;
     }

@@ -71,22 +71,11 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   // Audio notification functions
   const playOneMinuteWarning = () => {
     try {
-      // Create audio context and generate a warning beep
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
+      const audio = new Audio('/audio/OneMinuteRemaining-RedAlert.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(error => {
+        console.log('Audio playback failed:', error);
+      });
     } catch (error) {
       console.log('Audio not available');
     }
@@ -94,29 +83,11 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
   const playLevelChangeSound = () => {
     try {
-      // Create audio context and generate a level change chime
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator1 = audioContext.createOscillator();
-      const oscillator2 = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator1.connect(gainNode);
-      oscillator2.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      // Two-tone chime
-      oscillator1.frequency.setValueAtTime(523, audioContext.currentTime); // C5
-      oscillator2.frequency.setValueAtTime(659, audioContext.currentTime); // E5
-      oscillator1.type = 'sine';
-      oscillator2.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
-
-      oscillator1.start(audioContext.currentTime);
-      oscillator2.start(audioContext.currentTime);
-      oscillator1.stop(audioContext.currentTime + 0.8);
-      oscillator2.stop(audioContext.currentTime + 0.8);
+      const audio = new Audio('/audio/up-and-over.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(error => {
+        console.log('Audio playback failed:', error);
+      });
     } catch (error) {
       console.log('Audio not available');
     }
