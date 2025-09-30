@@ -387,15 +387,19 @@ async function getTournamentData(tournamentDraftId: number) {
 async function getCheckedInPlayers(tournamentDraftId: number) {
   try {
     const players = await prisma.$queryRaw`
-      SELECT * FROM tournament_draft_players
-      WHERE tournament_draft_id = ${tournamentDraftId}
-      ORDER BY created_at ASC
+      SELECT
+        tdp.*,
+        COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname
+      FROM tournament_draft_players tdp
+      LEFT JOIN players p ON tdp.player_uid = p.UID
+      WHERE tdp.tournament_draft_id = ${tournamentDraftId}
+      ORDER BY tdp.created_at ASC
     `;
 
     return (players as any[]).map((p) => ({
       id: p.id,
       name: p.player_name,
-      nickname: p.player_nickname,
+      nickname: p.resolved_nickname,
       uid: p.player_uid,
       is_new_player: p.is_new_player,
       checked_in_at: p.checked_in_at,

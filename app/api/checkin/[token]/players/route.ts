@@ -108,11 +108,13 @@ export async function POST(
     }
 
     let player_uid = null;
+    let player_nickname = null;
     let is_new_player = true;
 
     // If force_new_player is true, skip all existing player logic
     if (force_new_player) {
       player_uid = null;
+      player_nickname = null;
       is_new_player = true;
     } else {
       // Search for existing player in main database by BOTH Name AND nickname
@@ -162,6 +164,7 @@ export async function POST(
 
         if (exactMatch) {
           player_uid = exactMatch.UID;
+          player_nickname = exactMatch.nickname;
           is_new_player = false;
         } else {
           // Return suggestions for fuzzy matches
@@ -182,9 +185,9 @@ export async function POST(
 
     // Add player to tournament
     await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players 
-      (tournament_draft_id, player_name, player_uid, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
+      INSERT INTO tournament_draft_players
+      (tournament_draft_id, player_name, player_uid, player_nickname, is_new_player, added_by, checked_in_at)
+      VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
     const newPlayer = await prisma.$queryRaw`
@@ -246,17 +249,18 @@ export async function PUT(
 
     const tournamentId = (tournament as any[])[0].id;
 
-    let player_name, player_uid, is_new_player;
+    let player_name, player_uid, player_nickname, is_new_player;
 
     if (selected_player_uid === "new_player") {
       // User chose to register as new player
       player_name = entered_name;
       player_uid = null;
+      player_nickname = null;
       is_new_player = true;
     } else {
       // User selected existing player
       const selectedPlayer = await prisma.$queryRaw`
-        SELECT Name, UID FROM players WHERE UID = ${selected_player_uid}
+        SELECT Name, UID, nickname FROM players WHERE UID = ${selected_player_uid}
       `;
 
       if (!(selectedPlayer as any[]).length) {
@@ -269,6 +273,7 @@ export async function PUT(
       const playerData = (selectedPlayer as any[])[0];
       player_name = playerData.Name;
       player_uid = playerData.UID;
+      player_nickname = playerData.nickname;
       is_new_player = false;
     }
 
@@ -288,9 +293,9 @@ export async function PUT(
 
     // Add player to tournament
     await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players 
-      (tournament_draft_id, player_name, player_uid, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
+      INSERT INTO tournament_draft_players
+      (tournament_draft_id, player_name, player_uid, player_nickname, is_new_player, added_by, checked_in_at)
+      VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
     const newPlayer = await prisma.$queryRaw`

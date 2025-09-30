@@ -180,6 +180,7 @@ model TournamentDraftPlayer {
   tournament_draft_id Int
   player_name         String    @db.VarChar(255)
   player_uid          String?   @db.VarChar(255)
+  player_nickname     String?   @db.VarChar(255)
   is_new_player       Boolean   @default(false)
   hitman_name         String?   @db.VarChar(255)
   ko_position         Int?

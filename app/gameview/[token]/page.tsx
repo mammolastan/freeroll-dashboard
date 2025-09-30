@@ -13,6 +13,7 @@ import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate } from '@/lib/utils';
 
 function PlayerCard({ player }: { player: Player }) {
+  console.log('Rendering PlayerCard for:', player);
   return (
     <div className={`p-4 border rounded-lg ${player.is_active
       ? 'bg-green-50 border-green-200'
@@ -22,7 +23,7 @@ function PlayerCard({ player }: { player: Player }) {
         <div>
           <h3 className="font-semibold text-black">
             {player.nickname ? (
-              <span className="text-gray-600 ml-2">{player.nickname}</span>
+              <span>{player.nickname}</span>
             ) : player.name}
           </h3>
           {player.is_new_player ? (
@@ -212,6 +213,8 @@ export default function GameViewPage() {
         <div className="mb-6">
           <GameTimer tournamentId={parseInt(token as string)} isAdmin={false} />
         </div>
+
+        {/* Players summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-3 bg-blue-50 rounded">
             <div className="text-2xl font-bold text-blue-600">{computedStats.totalPlayers}</div>
@@ -233,8 +236,8 @@ export default function GameViewPage() {
           )}
         </div>
 
+        {/* Active Players */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Active Players */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Active Players ({activePlayers.length})

@@ -13,9 +13,13 @@ export async function GET(
     const draftId = parseInt(params.id);
 
     const players = await prisma.$queryRaw`
-      SELECT * FROM tournament_draft_players 
-      WHERE tournament_draft_id = ${draftId}
-      ORDER BY created_at ASC
+      SELECT
+        tdp.*,
+        COALESCE(tdp.player_nickname, p.nickname) as player_nickname
+      FROM tournament_draft_players tdp
+      LEFT JOIN players p ON tdp.player_uid = p.UID
+      WHERE tdp.tournament_draft_id = ${draftId}
+      ORDER BY tdp.created_at ASC
     `;
 
     return NextResponse.json(players);

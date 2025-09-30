@@ -1,3 +1,5 @@
+// components/Timer/GameTimer.tsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -292,10 +294,9 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
             </div>
           ) : (
             <div className="flex items-center justify-center gap-2">
-              <div className={`text-4xl font-mono font-bold ${
-                timerState.timeRemaining < 60 ? 'text-red-600' :
-                timerState.timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
-              }`}>
+              <div className={`text-4xl font-mono font-bold ${timerState.timeRemaining < 60 ? 'text-red-600' :
+                  timerState.timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
+                }`}>
                 {formatTime(timerState.timeRemaining || 0)}
               </div>
               {isAdmin && timerState.isPaused && (
@@ -311,7 +312,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
           )}
           <div className="text-sm text-gray-600 mt-1">
             {timerState.isRunning && !timerState.isPaused ? 'Running' :
-             timerState.isPaused ? 'Paused' : 'Stopped'}
+              timerState.isPaused ? 'Paused' : 'Stopped'}
           </div>
         </div>
 
