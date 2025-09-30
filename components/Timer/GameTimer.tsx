@@ -38,6 +38,9 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   const [editSeconds, setEditSeconds] = useState('');
   const [lastLevel, setLastLevel] = useState<number | null>(null);
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
+  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/up-and-over.mp3') : null);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -68,12 +71,28 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
     };
   }, [tournamentId]);
 
+  // Enable audio on first user interaction (required for mobile browsers)
+  const enableAudio = () => {
+    if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
+      oneMinuteAudio.volume = 0.7;
+      levelChangeAudio.volume = 0.7;
+
+      // Preload audio files
+      oneMinuteAudio.load();
+      levelChangeAudio.load();
+
+      setAudioEnabled(true);
+      console.log('Audio enabled for mobile browsers');
+    }
+  };
+
   // Audio notification functions
   const playOneMinuteWarning = () => {
+    if (!audioEnabled || !oneMinuteAudio) return;
+
     try {
-      const audio = new Audio('/audio/OneMinuteRemaining-RedAlert.mp3');
-      audio.volume = 0.5;
-      audio.play().catch(error => {
+      oneMinuteAudio.currentTime = 0;
+      oneMinuteAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
     } catch (error) {
@@ -82,10 +101,11 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   };
 
   const playLevelChangeSound = () => {
+    if (!audioEnabled || !levelChangeAudio) return;
+
     try {
-      const audio = new Audio('/audio/up-and-over.mp3');
-      audio.volume = 0.5;
-      audio.play().catch(error => {
+      levelChangeAudio.currentTime = 0;
+      levelChangeAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
     } catch (error) {
@@ -130,6 +150,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   };
 
   const handleStart = () => {
+    enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit('timer:start', { tournamentId });
     }
@@ -142,6 +163,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   };
 
   const handleResume = () => {
+    enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit('timer:resume', { tournamentId });
     }
@@ -215,9 +237,20 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock size={20} />
-          Game Timer
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock size={20} />
+            Game Timer
+          </div>
+          {!audioEnabled && (
+            <button
+              onClick={enableAudio}
+              className="text-xs px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-full transition-colors"
+              title="Enable sound notifications"
+            >
+              🔇 Enable Sound
+            </button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
