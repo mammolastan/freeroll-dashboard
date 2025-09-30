@@ -41,6 +41,8 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
   const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/up-and-over.mp3') : null);
+  const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
+  const [isMinMode, setIsMinMode] = useState(false);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -213,17 +215,38 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
     setEditSeconds('');
   };
 
+  const increaseFontSize = () => {
+    setFontSize(prev => Math.min(prev + 1, 9)); // Max text-9xl
+  };
+
+  const decreaseFontSize = () => {
+    setFontSize(prev => Math.max(prev - 1, 3)); // Min text-3xl
+  };
+
+  const getFontSizeClass = () => {
+    const sizeMap: { [key: number]: string } = {
+      3: 'text-3xl',
+      4: 'text-4xl',
+      5: 'text-5xl',
+      6: 'text-6xl',
+      7: 'text-7xl',
+      8: 'text-8xl',
+      9: 'text-9xl',
+    };
+    return sizeMap[fontSize] || 'text-5xl';
+  };
+
   if (!timerState) {
     return (
-      <Card>
+      <Card className="bg-gray-900/80 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock size={20} />
+          <CardTitle className="flex items-center gap-2 text-cyan-300">
+            <Clock size={20} className="text-cyan-400" />
             Game Timer
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500">
+          <div className="text-center text-gray-400">
             Loading timer...
           </div>
         </CardContent>
@@ -234,23 +257,72 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   const currentBlind = timerState.blindLevels?.[timerState.currentLevel - 1];
   const nextBlind = timerState.blindLevels?.[timerState.currentLevel];
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock size={20} />
-            Game Timer
+  // Min Mode Fullscreen Component
+  if (isMinMode && timerState) {
+    return (
+      <div
+        className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center cursor-pointer"
+        onClick={() => setIsMinMode(false)}
+      >
+        {/* Time Remaining */}
+        <div className={`text-9xl font-mono font-bold mb-8 transition-all duration-300 ${timerState.timeRemaining < 60
+          ? `text-red-400 drop-shadow-[0_0_30px_rgba(239,68,68,0.9)] ${timerState.isPaused ? 'animate-pulse' : ''}`
+          : timerState.timeRemaining < 300
+            ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(234,179,8,0.7)]`
+            : `text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]`
+          }`}>
+          {formatTime(timerState.timeRemaining || 0)}
+        </div>
+
+        {/* Blind Levels */}
+        {currentBlind && (
+          <div>
+            {currentBlind.isbreak ? (
+              <div className="text-8xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
+                🔥 BREAK
+              </div>
+            ) : (
+              <div className="text-8xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
+                {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
+              </div>
+            )}
           </div>
-          {!audioEnabled && (
+        )}
+
+        {/* Exit hint */}
+        <div className="absolute bottom-8 text-gray-600 text-sm">
+          Tap anywhere to exit
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="bg-gray-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)]">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between text-cyan-300">
+          <div className="flex items-center gap-2">
+            <Clock size={20} className="text-cyan-400" />
+            <span className="text-cyan-700 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Game Timer</span>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={enableAudio}
-              className="text-xs px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-full transition-colors"
-              title="Enable sound notifications"
+              onClick={() => setIsMinMode(true)}
+              className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-full transition-all border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+              title="Minimal fullscreen mode"
             >
-              🔇 Enable Sound
+              📺 Min Mode
             </button>
-          )}
+            {!audioEnabled && (
+              <button
+                onClick={enableAudio}
+                className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)]"
+                title="Enable sound notifications"
+              >
+                🔇 Enable Sound
+              </button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -263,17 +335,17 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
                   type="number"
                   value={editMinutes}
                   onChange={(e) => setEditMinutes(e.target.value)}
-                  className="w-16 px-2 py-1 text-2xl font-mono text-center border rounded"
+                  className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   placeholder="MM"
                   min="0"
                   max="99"
                 />
-                <span className="text-2xl font-mono font-bold">:</span>
+                <span className="text-2xl font-mono font-bold text-cyan-400">:</span>
                 <input
                   type="number"
                   value={editSeconds}
                   onChange={(e) => setEditSeconds(e.target.value)}
-                  className="w-16 px-2 py-1 text-2xl font-mono text-center border rounded"
+                  className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   placeholder="SS"
                   min="0"
                   max="59"
@@ -282,14 +354,14 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={handleSaveEdit}
-                  className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                  className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-500 text-sm transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
                 >
                   <Check size={14} />
                   Save
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="flex items-center gap-1 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                  className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm transition-all border border-gray-600"
                 >
                   <X size={14} />
                   Cancel
@@ -297,48 +369,79 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-2">
-              <div className={`text-4xl font-mono font-bold ${timerState.timeRemaining < 60 ? 'text-red-600' :
-                  timerState.timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                {formatTime(timerState.timeRemaining || 0)}
+            <div>
+              <div className="flex items-center justify-center gap-2">
+                <div className={`${getFontSizeClass()} font-mono font-bold transition-all duration-300 ${timerState.timeRemaining < 60
+                  ? `text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] ${timerState.isPaused ? 'animate-pulse' : ''}`
+                  : timerState.timeRemaining < 300
+                    ? `text-yellow-400 drop-shadow-[0_0_12px_rgba(234,179,8,0.6)] ${timerState.isPaused ? 'animate-pulse' : ''}`
+                    : `text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)] ${timerState.isPaused ? 'animate-pulse' : ''}`
+                  }`}>
+                  {formatTime(timerState.timeRemaining || 0)}
+                </div>
+                {isAdmin && timerState.isPaused && (
+                  <button
+                    onClick={handleStartEdit}
+                    className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                    title="Edit time"
+                  >
+                    <Edit3 size={20} />
+                  </button>
+                )}
               </div>
-              {isAdmin && timerState.isPaused && (
-                <button
-                  onClick={handleStartEdit}
-                  className="ml-2 p-1 text-gray-600 hover:text-blue-600"
-                  title="Edit time"
-                >
-                  <Edit3 size={20} />
-                </button>
+              {isAdmin && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <button
+                    onClick={decreaseFontSize}
+                    disabled={fontSize <= 3}
+                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+                    title="Decrease size"
+                  >
+                    <span className="text-lg font-bold">−</span>
+                  </button>
+                  <span className="text-xs text-gray-500">Size</span>
+                  <button
+                    onClick={increaseFontSize}
+                    disabled={fontSize >= 9}
+                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+                    title="Increase size"
+                  >
+                    <span className="text-lg font-bold">+</span>
+                  </button>
+                </div>
               )}
             </div>
           )}
-          <div className="text-sm text-gray-600 mt-1">
-            {timerState.isRunning && !timerState.isPaused ? 'Running' :
-              timerState.isPaused ? 'Paused' : 'Stopped'}
+          <div className="text-sm text-gray-400 mt-2">
+            {timerState.isRunning && !timerState.isPaused ? (
+              <span className="text-green-400">● Running</span>
+            ) : timerState.isPaused ? (
+              <span className="text-yellow-400">⏸ Paused</span>
+            ) : (
+              <span className="text-gray-500">⏹ Stopped</span>
+            )}
           </div>
         </div>
 
         {/* Current Blind Level */}
-        <div className="text-center bg-blue-50 p-3 rounded-lg">
+        <div className="text-center bg-gray-800/60 p-4 rounded-lg border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
           <div className="flex items-center justify-center gap-2">
             {isAdmin && timerState.isPaused && timerState.currentLevel > 1 && (
               <button
                 onClick={handlePrevLevel}
-                className="p-1 text-blue-600 hover:text-blue-800"
+                className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
                 title="Previous level"
               >
                 <ChevronLeft size={20} />
               </button>
             )}
-            <div className="text-lg font-semibold text-blue-900">
+            <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
               Level {timerState.currentLevel}
             </div>
             {isAdmin && timerState.isPaused && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
               <button
                 onClick={handleNextLevel}
-                className="p-1 text-blue-600 hover:text-blue-800"
+                className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
                 title="Next level"
               >
                 <ChevronRight size={20} />
@@ -346,14 +449,17 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
             )}
           </div>
           {currentBlind && (
-            <div className="text-sm text-blue-700">
+            <div className="text-sm text-gray-300 mt-2">
               {currentBlind.isbreak ? (
-                <span className="font-medium text-orange-600">BREAK</span>
+                <span className={`${getFontSizeClass()} font-bold text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]`}>🔥 BREAK</span>
               ) : (
-                <>
-                  Blinds: {currentBlind.smallBlind}/{currentBlind.bigBlind}
-                  {currentBlind.ante && ` (Ante: ${currentBlind.ante})`}
-                </>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-sm text-gray-400">Blinds:</span>
+                  <span className={`${getFontSizeClass()} font-mono font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]`}>
+                    {currentBlind.smallBlind}/{currentBlind.bigBlind}
+                  </span>
+                  {currentBlind.ante && <span className="text-sm text-gray-400">Ante: <span className="text-purple-400 font-semibold">{currentBlind.ante}</span></span>}
+                </div>
               )}
             </div>
           )}
@@ -361,14 +467,14 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
         {/* Next Blind Level */}
         {nextBlind && (
-          <div className="text-center bg-gray-50 p-2 rounded">
-            <div className="text-sm text-gray-600">
+          <div className="text-center bg-gray-800/40 p-3 rounded border border-gray-700/50">
+            <div className="text-sm text-gray-400">
               {nextBlind.isbreak ? (
-                <span>Next: <span className="font-medium text-orange-600">BREAK</span></span>
+                <span>Next: <span className="font-medium text-orange-400">BREAK</span></span>
               ) : (
                 <>
-                  Next Level: {nextBlind.smallBlind}/{nextBlind.bigBlind}
-                  {nextBlind.ante && ` (Ante: ${nextBlind.ante})`}
+                  <span className="text-gray-500">Next Level:</span> <span className="text-cyan-400">{nextBlind.smallBlind}/{nextBlind.bigBlind}</span>
+                  {nextBlind.ante && <span className="text-gray-500"> (Ante: <span className="text-purple-400">{nextBlind.ante}</span>)</span>}
                 </>
               )}
             </div>
@@ -377,11 +483,11 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
         {/* Admin Controls */}
         {isAdmin && (
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-3 justify-center pt-2">
             {!timerState.isRunning ? (
               <button
                 onClick={handleStart}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)] border border-green-500/50 font-medium"
               >
                 <Play size={16} />
                 Start
@@ -389,7 +495,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
             ) : timerState.isPaused ? (
               <button
                 onClick={handleResume}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)] border border-green-500/50 font-medium"
               >
                 <Play size={16} />
                 Resume
@@ -397,7 +503,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
             ) : (
               <button
                 onClick={handlePause}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                className="flex items-center gap-2 px-5 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-500 transition-all shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_25px_rgba(234,179,8,0.5)] border border-yellow-500/50 font-medium"
               >
                 <Pause size={16} />
                 Pause
@@ -406,7 +512,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
             <button
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_25px_rgba(239,68,68,0.5)] border border-red-500/50 font-medium"
             >
               <RotateCcw size={16} />
               Reset

@@ -15,19 +15,19 @@ import { formatGameDate } from '@/lib/utils';
 function PlayerCard({ player }: { player: Player }) {
   console.log('Rendering PlayerCard for:', player);
   return (
-    <div className={`p-4 border rounded-lg ${player.is_active
-      ? 'bg-green-50 border-green-200'
-      : 'bg-red-50 border-red-200'
+    <div className={`p-4 border rounded-lg backdrop-blur-sm transition-all duration-300 ${player.is_active
+      ? 'bg-gray-900/80 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+      : 'bg-gray-900/60 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
       }`}>
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="font-semibold text-black">
+          <h3 className={`font-semibold ${player.is_active ? 'text-cyan-300' : 'text-gray-400'}`}>
             {player.nickname ? (
               <span>{player.nickname}</span>
             ) : player.name}
           </h3>
           {player.is_new_player ? (
-            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-1 rounded-full border border-purple-500/50">
               New Player
             </span>
           ) : ''}
@@ -37,20 +37,20 @@ function PlayerCard({ player }: { player: Player }) {
           {player.is_active ? (
             ''
           ) : (
-            <div className="text-red-600">
+            <div className="text-red-400">
               <div className="font-medium">Eliminated</div>
               {player.elimination_position && (
-                <div className="text-sm">
+                <div className="text-sm text-gray-500">
                   KO order: {player.elimination_position}
                 </div>
               )}
               {player.placement && (
-                <div className="text-sm">
+                <div className="text-sm text-gray-500">
                   Final Placement: {player.placement}
                 </div>
               )}
               {player.hitman && (
-                <div className="text-sm">
+                <div className="text-sm text-gray-500">
                   Eliminated by: {player.hitman.name}
                 </div>
               )}
@@ -67,14 +67,14 @@ function TournamentHeader({ tournament, stats }: {
   stats: any
 }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
+    <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.2)] border border-cyan-500/30 p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{tournament.title}</h1>
-          <p className="text-gray-600 mt-1">{formatGameDate(typeof tournament.date === 'string' ? tournament.date : tournament.date.toISOString())}</p>
+          <h1 className="text-3xl font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">{tournament.title}</h1>
+          <p className="text-gray-400 mt-1">{formatGameDate(typeof tournament.date === 'string' ? tournament.date : tournament.date.toISOString())}</p>
           {tournament.venue && (
-            <p className="text-gray-600">
-              📍 {tournament.venue}
+            <p className="text-cyan-400 flex items-center gap-2">
+              <span className="text-cyan-500">📍</span> {tournament.venue}
             </p>
           )}
         </div>
@@ -133,10 +133,10 @@ export default function GameViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading tournament data...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500 mx-auto shadow-[0_0_20px_rgba(6,182,212,0.5)]"></div>
+          <p className="mt-4 text-cyan-300">Loading tournament data...</p>
         </div>
       </div>
     );
@@ -144,10 +144,10 @@ export default function GameViewPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">⚠️ Error</div>
-          <p className="text-gray-600">{error}</p>
+          <div className="text-red-500 text-xl mb-4">⚠️ Error</div>
+          <p className="text-gray-400">{error}</p>
         </div>
       </div>
     );
@@ -155,9 +155,9 @@ export default function GameViewPage() {
 
   if (!gameData || !computedStats) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">No tournament data available</p>
+          <p className="text-gray-400">No tournament data available</p>
         </div>
       </div>
     );
@@ -167,7 +167,7 @@ export default function GameViewPage() {
   const eliminatedPlayers = gameData.players.filter(p => !p.is_active);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-black py-8">
       <div className="max-w-6xl mx-auto px-4">
         <TournamentHeader
           tournament={gameData.tournament}
@@ -175,11 +175,11 @@ export default function GameViewPage() {
         />
 
         {/* Check In Button */}
-        <div className="mb-6 flex justify-center">
+        <div className="mb-6 flex justify-center gap-4">
           <button
             onClick={handleCheckInClick}
             disabled={gettingToken}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+            className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-900 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-500/50"
           >
             <UserPlus size={20} />
             {gettingToken ? 'Getting Ready...' : 'Check In'}
@@ -188,7 +188,7 @@ export default function GameViewPage() {
           {/* Share Button */}
           <button
             onClick={() => setShowQRCode(true)}
-            className="flex items-center gap-2  px-4 mx-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] border border-purple-500/50 disabled:opacity-50"
           >
             <QrCode className="h-4 w-4" /> Share
 
@@ -215,23 +215,23 @@ export default function GameViewPage() {
         </div>
 
         {/* Players summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded">
-            <div className="text-2xl font-bold text-blue-600">{computedStats.totalPlayers}</div>
-            <div className="text-sm text-gray-600">Total Players</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="text-center p-4 bg-gray-900/80 border border-cyan-500/30 rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+            <div className="text-3xl font-bold text-cyan-400">{computedStats.totalPlayers}</div>
+            <div className="text-sm text-gray-400 mt-1">Total Players</div>
           </div>
-          <div className="text-center p-3 bg-green-50 rounded">
-            <div className="text-2xl font-bold text-green-600">{computedStats.playersRemaining}</div>
-            <div className="text-sm text-gray-600">Remaining</div>
+          <div className="text-center p-4 bg-gray-900/80 border border-green-500/30 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+            <div className="text-3xl font-bold text-green-400">{computedStats.playersRemaining}</div>
+            <div className="text-sm text-gray-400 mt-1">Remaining</div>
           </div>
-          <div className="text-center p-3 bg-red-50 rounded">
-            <div className="text-2xl font-bold text-red-600">{computedStats.eliminatedPlayers}</div>
-            <div className="text-sm text-gray-600">Eliminated</div>
+          <div className="text-center p-4 bg-gray-900/80 border border-red-500/30 rounded-lg shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+            <div className="text-3xl font-bold text-red-400">{computedStats.eliminatedPlayers}</div>
+            <div className="text-sm text-gray-400 mt-1">Eliminated</div>
           </div>
           {gameData.tournament.max_players && (
-            <div className="text-center p-3 bg-gray-50 rounded">
-              <div className="text-2xl font-bold text-gray-600">{gameData.tournament.max_players}</div>
-              <div className="text-sm text-gray-600">Max Players</div>
+            <div className="text-center p-4 bg-gray-900/80 border border-purple-500/30 rounded-lg shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+              <div className="text-3xl font-bold text-purple-400">{gameData.tournament.max_players}</div>
+              <div className="text-sm text-gray-400 mt-1">Max Players</div>
             </div>
           )}
         </div>
@@ -239,7 +239,7 @@ export default function GameViewPage() {
         {/* Active Players */}
         <div className="grid md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-cyan-300 mb-4 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
               Active Players ({activePlayers.length})
             </h2>
             <div className="space-y-3">
@@ -250,7 +250,7 @@ export default function GameViewPage() {
                     <PlayerCard key={player.id} player={player} />
                   ))
               ) : (
-                <p className="text-gray-500 text-center py-8">
+                <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">
                   No active players
                 </p>
               )}
@@ -259,7 +259,7 @@ export default function GameViewPage() {
 
           {/* Eliminated Players */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-red-400 mb-4 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]">
               Eliminated Players ({eliminatedPlayers.length})
             </h2>
             <div className="space-y-3">
@@ -270,7 +270,7 @@ export default function GameViewPage() {
                     <PlayerCard key={player.id} player={player} />
                   ))
               ) : (
-                <p className="text-gray-500 text-center py-8">
+                <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">
                   No eliminations yet
                 </p>
               )}
@@ -279,7 +279,7 @@ export default function GameViewPage() {
         </div>
 
         {/* Real-time indicator */}
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm">
+        <div className="fixed bottom-4 right-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400/50 animate-pulse">
           🔴 Live
         </div>
 
