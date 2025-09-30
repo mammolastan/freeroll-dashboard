@@ -238,7 +238,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
   if (!timerState) {
     return (
-      <Card className="bg-gray-900/80 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+      <Card className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-cyan-300">
             <Clock size={20} className="text-cyan-400" />
@@ -298,7 +298,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   }
 
   return (
-    <Card className="bg-gray-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)]">
+    <Card className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)]">
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-cyan-300">
           <div className="flex items-center gap-2">
