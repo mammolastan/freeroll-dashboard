@@ -42,8 +42,9 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/up-and-over.mp3') : null);
   const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
+  const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
 
-  // Handle fullscreen when entering/exiting min mode
+  // Handle fullscreen and wake lock when entering/exiting min mode
   useEffect(() => {
     const enterFullscreen = () => {
       try {
@@ -65,19 +66,76 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
       }
     };
 
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          const lock = await navigator.wakeLock.request('screen');
+          setWakeLock(lock);
+          console.log('Wake lock acquired - screen will stay awake');
+
+          // Listen for wake lock release
+          lock.addEventListener('release', () => {
+            console.log('Wake lock released');
+          });
+        }
+      } catch (error) {
+        console.log('Wake lock request failed:', error);
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      try {
+        if (wakeLock) {
+          await wakeLock.release();
+          setWakeLock(null);
+          console.log('Wake lock released manually');
+        }
+      } catch (error) {
+        console.log('Wake lock release failed:', error);
+      }
+    };
+
     if (isMinMode) {
       enterFullscreen();
+      requestWakeLock();
     } else {
       exitFullscreen();
+      releaseWakeLock();
     }
 
-    // Cleanup: exit fullscreen when component unmounts
+    // Cleanup: exit fullscreen and release wake lock when component unmounts
     return () => {
       if (document.fullscreenElement) {
         exitFullscreen();
       }
+      if (wakeLock) {
+        releaseWakeLock();
+      }
     };
   }, [isMinMode]);
+
+  // Re-acquire wake lock when page becomes visible again (if in min mode)
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (isMinMode && document.visibilityState === 'visible' && !wakeLock) {
+        try {
+          if ('wakeLock' in navigator) {
+            const lock = await navigator.wakeLock.request('screen');
+            setWakeLock(lock);
+            console.log('Wake lock re-acquired after tab became visible');
+          }
+        } catch (error) {
+          console.log('Wake lock re-acquisition failed:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isMinMode, wakeLock]);
 
   useEffect(() => {
     if (!tournamentId) return;
