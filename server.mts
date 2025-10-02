@@ -2,14 +2,12 @@ console.log("Server.mts is running");
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "./lib/prisma";
 
 // Global type declaration for Socket.IO instance
 declare global {
   var socketIoInstance: any;
 }
-
-const prisma = new PrismaClient();
 
 // Timer state management
 interface TimerState {
@@ -50,35 +48,71 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
   { level: 8, duration: 20, smallBlind: 2000, bigBlind: 4000, isbreak: false },
   { level: 9, duration: 20, smallBlind: 3000, bigBlind: 6000, isbreak: false },
   { level: 10, duration: 20, smallBlind: 4000, bigBlind: 8000, isbreak: false },
-  { level: 11, duration: 20, smallBlind: 5000, bigBlind: 10000, isbreak: false },
+  {
+    level: 11,
+    duration: 20,
+    smallBlind: 5000,
+    bigBlind: 10000,
+    isbreak: false,
+  },
   { level: 12, duration: 10, smallBlind: 0, bigBlind: 0, isbreak: true }, // 10 minute break
-  { level: 13, duration: 20, smallBlind: 6000, bigBlind: 12000, isbreak: false },
-  { level: 14, duration: 20, smallBlind: 8000, bigBlind: 16000, isbreak: false },
-  { level: 15, duration: 20, smallBlind: 10000, bigBlind: 20000, isbreak: false },
-  { level: 16, duration: 20, smallBlind: 12000, bigBlind: 24000, isbreak: false },
-  { level: 17, duration: 20, smallBlind: 15000, bigBlind: 30000, isbreak: false },
+  {
+    level: 13,
+    duration: 20,
+    smallBlind: 6000,
+    bigBlind: 12000,
+    isbreak: false,
+  },
+  {
+    level: 14,
+    duration: 20,
+    smallBlind: 8000,
+    bigBlind: 16000,
+    isbreak: false,
+  },
+  {
+    level: 15,
+    duration: 20,
+    smallBlind: 10000,
+    bigBlind: 20000,
+    isbreak: false,
+  },
+  {
+    level: 16,
+    duration: 20,
+    smallBlind: 12000,
+    bigBlind: 24000,
+    isbreak: false,
+  },
+  {
+    level: 17,
+    duration: 20,
+    smallBlind: 15000,
+    bigBlind: 30000,
+    isbreak: false,
+  },
 ];
 
 // Turbo Speed - 10 minute levels (same blind structure)
-const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map(level => ({
+const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map((level) => ({
   ...level,
-  duration: level.isbreak ? 10 : 10 // 10 minutes for both levels and breaks in turbo
+  duration: level.isbreak ? 10 : 10, // 10 minutes for both levels and breaks in turbo
 }));
 
 // Blind schedule definitions
 const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
   standard: {
-    id: 'standard',
-    name: 'Standard Speed',
-    description: '20-minute levels',
-    levels: STANDARD_SPEED_LEVELS
+    id: "standard",
+    name: "Standard Speed",
+    description: "20-minute levels",
+    levels: STANDARD_SPEED_LEVELS,
   },
   turbo: {
-    id: 'turbo',
-    name: 'Turbo Speed',
-    description: '10-minute levels',
-    levels: TURBO_SPEED_LEVELS
-  }
+    id: "turbo",
+    name: "Turbo Speed",
+    description: "10-minute levels",
+    levels: TURBO_SPEED_LEVELS,
+  },
 };
 
 // Helper function to get blind schedule
@@ -94,14 +128,18 @@ const DEFAULT_BLIND_LEVELS: BlindLevel[] = BLIND_SCHEDULES.standard.levels;
 const timerStates = new Map<number, TimerState>();
 
 // Timer helper functions
-async function getOrCreateTimerState(tournamentId: number): Promise<TimerState> {
+async function getOrCreateTimerState(
+  tournamentId: number
+): Promise<TimerState> {
   if (!timerStates.has(tournamentId)) {
     console.log(`Initializing timer state for tournament ${tournamentId}`);
 
     // First try to load existing timer state from database
     const existingState = await loadTimerStateFromDB(tournamentId);
     if (existingState) {
-      console.log(`Loaded existing timer state from database for tournament ${tournamentId}`);
+      console.log(
+        `Loaded existing timer state from database for tournament ${tournamentId}`
+      );
       timerStates.set(tournamentId, existingState);
       return existingState;
     }
@@ -114,25 +152,34 @@ async function getOrCreateTimerState(tournamentId: number): Promise<TimerState> 
     try {
       const tournament = await prisma.tournamentDraft.findUnique({
         where: { id: tournamentId },
-        select: { blind_schedule: true }
+        select: { blind_schedule: true },
       });
 
-      console.log(`Tournament ${tournamentId} blind_schedule:`, tournament?.blind_schedule);
+      console.log(
+        `Tournament ${tournamentId} blind_schedule:`,
+        tournament?.blind_schedule
+      );
 
       if (tournament?.blind_schedule) {
         blindLevels = getBlindSchedule(tournament.blind_schedule);
-        console.log(`Using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`);
+        console.log(
+          `Using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
+        );
       } else {
         console.log(`Using default schedule with ${blindLevels.length} levels`);
       }
     } catch (error) {
-      console.error('Error fetching tournament blind schedule:', error);
+      console.error("Error fetching tournament blind schedule:", error);
       // Fall back to default schedule
     }
 
     const currentLevel = 1;
     const currentBlindLevel = blindLevels[0];
-    console.log(`Creating timer state: level ${currentLevel}, time ${currentBlindLevel.duration * 60}s`);
+    console.log(
+      `Creating timer state: level ${currentLevel}, time ${
+        currentBlindLevel.duration * 60
+      }s`
+    );
 
     const newTimerState: TimerState = {
       tournamentId,
@@ -180,7 +227,9 @@ async function updateTimer(tournamentId: number): Promise<TimerState> {
         // If current level is a break, pause the timer after advancing to next level
         if (currentLevel?.isbreak) {
           timer.isPaused = true;
-          console.log(`Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`);
+          console.log(
+            `Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`
+          );
         }
       }
       stateChanged = true;
@@ -247,15 +296,12 @@ async function resetTimer(tournamentId: number): Promise<TimerState> {
 // Server startup recovery function
 async function recoverActiveTimers(): Promise<void> {
   try {
-    console.log('Recovering active timers from database...');
+    console.log("Recovering active timers from database...");
 
     // Find all tournaments with active timer states
     const activeTimers = await prisma.tournamentDraft.findMany({
       where: {
-        OR: [
-          { timer_is_running: true },
-          { timer_is_paused: true }
-        ]
+        OR: [{ timer_is_running: true }, { timer_is_paused: true }],
       },
       select: {
         id: true,
@@ -264,8 +310,8 @@ async function recoverActiveTimers(): Promise<void> {
         timer_is_running: true,
         timer_is_paused: true,
         timer_last_updated: true,
-        blind_schedule: true
-      }
+        blind_schedule: true,
+      },
     });
 
     console.log(`Found ${activeTimers.length} active timers to recover`);
@@ -277,21 +323,29 @@ async function recoverActiveTimers(): Promise<void> {
 
         if (recoveredTimer) {
           timerStates.set(tournament.id, recoveredTimer);
-          console.log(`Recovered timer for tournament ${tournament.id}: level ${recoveredTimer.currentLevel}, time ${recoveredTimer.timeRemaining}s, running: ${recoveredTimer.isRunning}, paused: ${recoveredTimer.isPaused}`);
+          console.log(
+            `Recovered timer for tournament ${tournament.id}: level ${recoveredTimer.currentLevel}, time ${recoveredTimer.timeRemaining}s, running: ${recoveredTimer.isRunning}, paused: ${recoveredTimer.isPaused}`
+          );
         }
       } catch (error) {
-        console.error(`Failed to recover timer for tournament ${tournament.id}:`, error);
+        console.error(
+          `Failed to recover timer for tournament ${tournament.id}:`,
+          error
+        );
       }
     }
 
-    console.log('Timer recovery completed');
+    console.log("Timer recovery completed");
   } catch (error) {
-    console.error('Error during timer recovery:', error);
+    console.error("Error during timer recovery:", error);
   }
 }
 
 // Database persistence functions
-async function saveTimerStateToDB(tournamentId: number, timerState: TimerState): Promise<void> {
+async function saveTimerStateToDB(
+  tournamentId: number,
+  timerState: TimerState
+): Promise<void> {
   try {
     await prisma.tournamentDraft.update({
       where: { id: tournamentId },
@@ -300,16 +354,18 @@ async function saveTimerStateToDB(tournamentId: number, timerState: TimerState):
         timer_remaining_seconds: timerState.timeRemaining,
         timer_is_running: timerState.isRunning,
         timer_is_paused: timerState.isPaused,
-        timer_last_updated: new Date()
-      }
+        timer_last_updated: new Date(),
+      },
     });
     console.log(`Timer state saved to DB for tournament ${tournamentId}`);
   } catch (error) {
-    console.error('Error saving timer state to database:', error);
+    console.error("Error saving timer state to database:", error);
   }
 }
 
-async function loadTimerStateFromDB(tournamentId: number): Promise<TimerState | null> {
+async function loadTimerStateFromDB(
+  tournamentId: number
+): Promise<TimerState | null> {
   try {
     const tournament = await prisma.tournamentDraft.findUnique({
       where: { id: tournamentId },
@@ -319,8 +375,8 @@ async function loadTimerStateFromDB(tournamentId: number): Promise<TimerState | 
         timer_remaining_seconds: true,
         timer_is_running: true,
         timer_is_paused: true,
-        timer_last_updated: true
-      }
+        timer_last_updated: true,
+      },
     });
 
     if (!tournament) return null;
@@ -334,13 +390,22 @@ async function loadTimerStateFromDB(tournamentId: number): Promise<TimerState | 
       // If timer was running, calculate elapsed time since last update
       if (tournament.timer_is_running && !tournament.timer_is_paused) {
         const now = new Date();
-        const elapsedSeconds = Math.floor((now.getTime() - tournament.timer_last_updated.getTime()) / 1000);
-        adjustedTimeRemaining = Math.max(0, adjustedTimeRemaining - elapsedSeconds);
-        console.log(`Timer was running, adjusted time: ${adjustedTimeRemaining}s (elapsed: ${elapsedSeconds}s)`);
+        const elapsedSeconds = Math.floor(
+          (now.getTime() - tournament.timer_last_updated.getTime()) / 1000
+        );
+        adjustedTimeRemaining = Math.max(
+          0,
+          adjustedTimeRemaining - elapsedSeconds
+        );
+        console.log(
+          `Timer was running, adjusted time: ${adjustedTimeRemaining}s (elapsed: ${elapsedSeconds}s)`
+        );
       }
 
       // Get blind levels for the schedule
-      const blindLevels = getBlindSchedule(tournament.blind_schedule || 'standard');
+      const blindLevels = getBlindSchedule(
+        tournament.blind_schedule || "standard"
+      );
 
       return {
         tournamentId,
@@ -349,13 +414,13 @@ async function loadTimerStateFromDB(tournamentId: number): Promise<TimerState | 
         isRunning: tournament.timer_is_running || false,
         isPaused: tournament.timer_is_paused || false,
         blindLevels,
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
       };
     }
 
     return null;
   } catch (error) {
-    console.error('Error loading timer state from database:', error);
+    console.error("Error loading timer state from database:", error);
     return null;
   }
 }
@@ -455,10 +520,17 @@ app.prepare().then(async () => {
           const updatedTimer = await updateTimer(tournamentId);
 
           // Validate timer state before sending
-          if (updatedTimer && typeof updatedTimer.timeRemaining === 'number' && updatedTimer.blindLevels) {
+          if (
+            updatedTimer &&
+            typeof updatedTimer.timeRemaining === "number" &&
+            updatedTimer.blindLevels
+          ) {
             io.to(tournamentId.toString()).emit("timer:update", updatedTimer);
           } else {
-            console.error(`Invalid timer update for tournament ${tournamentId}:`, updatedTimer);
+            console.error(
+              `Invalid timer update for tournament ${tournamentId}:`,
+              updatedTimer
+            );
           }
         }
       }
@@ -471,7 +543,10 @@ app.prepare().then(async () => {
           await saveTimerStateToDB(tournamentId, timer);
           console.log(`Periodic sync completed for tournament ${tournamentId}`);
         } catch (error) {
-          console.error(`Periodic sync failed for tournament ${tournamentId}:`, error);
+          console.error(
+            `Periodic sync failed for tournament ${tournamentId}:`,
+            error
+          );
         }
       }
     }, 30000); // 30 seconds
@@ -508,10 +583,17 @@ app.prepare().then(async () => {
             const timerState = await updateTimer(tournamentDraftId);
 
             // Validate timer state before sending
-            if (timerState && typeof timerState.timeRemaining === 'number' && timerState.blindLevels) {
+            if (
+              timerState &&
+              typeof timerState.timeRemaining === "number" &&
+              timerState.blindLevels
+            ) {
               socket.emit("timer:sync", timerState);
             } else {
-              console.error(`Invalid timer sync state for tournament ${tournamentDraftId}:`, timerState);
+              console.error(
+                `Invalid timer sync state for tournament ${tournamentDraftId}:`,
+                timerState
+              );
             }
           }
         } catch (err) {
@@ -544,14 +626,25 @@ app.prepare().then(async () => {
       socket.on("timer:start", async ({ tournamentId }) => {
         console.log(`Timer start requested for tournament ${tournamentId}`);
         const timerState = await startTimer(tournamentId);
-        console.log(`Emitting timer update:`, { level: timerState.currentLevel, time: timerState.timeRemaining, isRunning: timerState.isRunning });
+        console.log(`Emitting timer update:`, {
+          level: timerState.currentLevel,
+          time: timerState.timeRemaining,
+          isRunning: timerState.isRunning,
+        });
 
         // Validate timer state before sending
-        if (timerState && typeof timerState.timeRemaining === 'number' && timerState.blindLevels) {
+        if (
+          timerState &&
+          typeof timerState.timeRemaining === "number" &&
+          timerState.blindLevels
+        ) {
           io.to(tournamentId.toString()).emit("timer:update", timerState);
           console.log(`Timer started for tournament ${tournamentId}`);
         } else {
-          console.error(`Invalid timer state for tournament ${tournamentId}:`, timerState);
+          console.error(
+            `Invalid timer state for tournament ${tournamentId}:`,
+            timerState
+          );
         }
       });
 
@@ -576,13 +669,23 @@ app.prepare().then(async () => {
       socket.on("timer:requestSync", async ({ tournamentId }) => {
         console.log(`Timer sync requested for tournament ${tournamentId}`);
         const timerState = await getOrCreateTimerState(tournamentId);
-        console.log(`Sending timer sync:`, { level: timerState.currentLevel, time: timerState.timeRemaining });
+        console.log(`Sending timer sync:`, {
+          level: timerState.currentLevel,
+          time: timerState.timeRemaining,
+        });
 
         // Validate timer state before sending
-        if (timerState && typeof timerState.timeRemaining === 'number' && timerState.blindLevels) {
+        if (
+          timerState &&
+          typeof timerState.timeRemaining === "number" &&
+          timerState.blindLevels
+        ) {
           socket.emit("timer:sync", timerState);
         } else {
-          console.error(`Invalid timer sync state for tournament ${tournamentId}:`, timerState);
+          console.error(
+            `Invalid timer sync state for tournament ${tournamentId}:`,
+            timerState
+          );
         }
       });
 
@@ -600,7 +703,9 @@ app.prepare().then(async () => {
           await saveTimerStateToDB(tournamentId, timer);
 
           io.to(tournamentId.toString()).emit("timer:update", timer);
-          console.log(`Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId}`);
+          console.log(
+            `Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId}`
+          );
         }
       });
 
@@ -618,7 +723,9 @@ app.prepare().then(async () => {
           await saveTimerStateToDB(tournamentId, timer);
 
           io.to(tournamentId.toString()).emit("timer:update", timer);
-          console.log(`Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId}`);
+          console.log(
+            `Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId}`
+          );
         }
       });
 
@@ -631,7 +738,9 @@ app.prepare().then(async () => {
         await saveTimerStateToDB(tournamentId, timer);
 
         io.to(tournamentId.toString()).emit("timer:update", timer);
-        console.log(`Timer set to ${timeInSeconds} seconds for tournament ${tournamentId}`);
+        console.log(
+          `Timer set to ${timeInSeconds} seconds for tournament ${tournamentId}`
+        );
       });
 
       socket.on("timer:setSchedule", async ({ tournamentId, scheduleId }) => {
@@ -643,7 +752,9 @@ app.prepare().then(async () => {
 
         // Only allow schedule changes when timer is stopped
         if (timer.isRunning && !timer.isPaused) {
-          socket.emit("timer:error", { message: "Cannot change schedule while timer is running" });
+          socket.emit("timer:error", {
+            message: "Cannot change schedule while timer is running",
+          });
           return;
         }
 
@@ -656,7 +767,9 @@ app.prepare().then(async () => {
           timer.lastUpdate = Date.now();
 
           io.to(tournamentId.toString()).emit("timer:update", timer);
-          console.log(`Timer schedule changed to ${scheduleId} for tournament ${tournamentId}`);
+          console.log(
+            `Timer schedule changed to ${scheduleId} for tournament ${tournamentId}`
+          );
         } catch (error) {
           console.error("Error changing timer schedule:", error);
           socket.emit("timer:error", { message: "Failed to change schedule" });

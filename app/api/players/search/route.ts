@@ -1,9 +1,7 @@
 // app/api/players/search/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 function serializeResults(results: any[]) {
   return results.map((record) => {
@@ -96,7 +94,5 @@ export async function GET(request: NextRequest) {
       { error: "Failed to search players" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

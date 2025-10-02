@@ -1,9 +1,9 @@
 // app/api/players/[uid]/stats/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
 import { getDateCondition } from "@/lib/utils";
 
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -217,7 +217,5 @@ export async function GET(
       { error: "Failed to fetch player stats" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

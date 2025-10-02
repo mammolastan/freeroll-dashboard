@@ -1,10 +1,8 @@
 // app/api/tournaments/[id]/checkin-token/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Generate or get existing check-in token
 export async function POST(
@@ -59,7 +57,5 @@ export async function POST(
       { error: "Failed to generate check-in token" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

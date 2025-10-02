@@ -1,9 +1,7 @@
 // lib/realtime/services/tournamentService.ts
 
-import { PrismaClient } from "@prisma/client";
 import { Tournament } from "../types";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export class TournamentService {
   async getTournamentData(tournamentId: number): Promise<Tournament | null> {
@@ -29,17 +27,18 @@ export class TournamentService {
         date: data.tournament_date,
         venue: data.venue,
         status: data.status,
-        max_players: null
+        max_players: null,
       };
     } catch (error) {
       console.error("Error fetching tournament data:", error);
       return null;
-    } finally {
-      await prisma.$disconnect();
     }
   }
 
-  async updateTournament(tournamentId: number, updates: Partial<Tournament>): Promise<Tournament | null> {
+  async updateTournament(
+    tournamentId: number,
+    updates: Partial<Tournament>
+  ): Promise<Tournament | null> {
     try {
       // Perform update
       await prisma.$executeRaw`

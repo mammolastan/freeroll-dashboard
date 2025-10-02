@@ -1,9 +1,8 @@
 // app/api/players/[uid]/knockouts/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
 import { getDateCondition } from "@/lib/utils";
-
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -210,7 +209,5 @@ export async function GET(
       { error: "Failed to fetch knockout stats" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

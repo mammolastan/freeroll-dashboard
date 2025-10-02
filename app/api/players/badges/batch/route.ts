@@ -1,8 +1,7 @@
 // app/api/players/badges/batch/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 // Set cache control
 export const revalidate = 604800; // 7 days in seconds
@@ -65,7 +64,5 @@ export async function POST(request: Request) {
       { error: "Failed to fetch batch badges" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function getCheckedInPlayers(tournamentDraftId: number) {
   try {
@@ -30,7 +28,5 @@ export async function getCheckedInPlayers(tournamentDraftId: number) {
   } catch (error) {
     console.error("Error fetching checked-in players:", error);
     return [];
-  } finally {
-    await prisma.$disconnect();
   }
 }

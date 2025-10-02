@@ -1,13 +1,11 @@
 // app/api/rankings/monthly/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import {
   getCurrentETDate,
   getMonthDateRange,
   getDateCondition,
 } from "@/lib/utils";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -182,7 +180,5 @@ export async function GET(request: Request) {
       { error: "Failed to fetch monthly rankings" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

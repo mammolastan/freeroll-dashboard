@@ -1,8 +1,6 @@
 // app/api/tournament-drafts/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // GET - List all tournament drafts
 export async function GET() {
@@ -32,8 +30,6 @@ export async function GET() {
       { error: "Failed to fetch tournament drafts" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -105,7 +101,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

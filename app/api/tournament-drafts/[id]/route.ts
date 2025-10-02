@@ -1,8 +1,6 @@
 // app/api/tournament-drafts/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -35,8 +33,6 @@ export async function GET(
       { error: "Failed to fetch tournament draft" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -71,8 +67,6 @@ export async function PUT(
       { error: "Failed to update tournament draft" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -86,7 +80,7 @@ export async function PATCH(
     const { blind_schedule } = body;
 
     // Validate blind_schedule value
-    if (blind_schedule && !['standard', 'turbo'].includes(blind_schedule)) {
+    if (blind_schedule && !["standard", "turbo"].includes(blind_schedule)) {
       return NextResponse.json(
         { error: "Invalid blind schedule. Must be 'standard' or 'turbo'" },
         { status: 400 }
@@ -112,8 +106,6 @@ export async function PATCH(
       { error: "Failed to update tournament draft" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -173,7 +165,5 @@ export async function DELETE(
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

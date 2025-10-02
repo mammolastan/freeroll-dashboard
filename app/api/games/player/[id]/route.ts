@@ -1,9 +1,7 @@
 // app/api/games/player/[id]/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   request: NextRequest,
@@ -41,7 +39,5 @@ export async function PUT(
       { error: "Failed to update player" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

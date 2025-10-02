@@ -1,8 +1,6 @@
 // app/api/checkin/[token]/players/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -51,8 +49,6 @@ export async function GET(
       { error: "Failed to fetch checked-in players" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -196,13 +192,18 @@ export async function POST(
 
     // Trigger real-time update for all connected clients
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/trigger-player-update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentDraftId: tournamentId })
-      });
+      await fetch(
+        `${
+          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+        }/api/trigger-player-update`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tournamentDraftId: tournamentId }),
+        }
+      );
     } catch (error) {
-      console.error('Failed to trigger real-time update:', error);
+      console.error("Failed to trigger real-time update:", error);
       // Don't fail the check-in if real-time update fails
     }
 
@@ -219,8 +220,6 @@ export async function POST(
       { error: "Failed to check in player" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -304,13 +303,18 @@ export async function PUT(
 
     // Trigger real-time update for all connected clients
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/trigger-player-update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentDraftId: tournamentId })
-      });
+      await fetch(
+        `${
+          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+        }/api/trigger-player-update`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tournamentDraftId: tournamentId }),
+        }
+      );
     } catch (error) {
-      console.error('Failed to trigger real-time update:', error);
+      console.error("Failed to trigger real-time update:", error);
       // Don't fail the check-in if real-time update fails
     }
 
@@ -327,7 +331,5 @@ export async function PUT(
       { error: "Failed to confirm check-in" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

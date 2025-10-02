@@ -1,8 +1,6 @@
 // app/api/players/[uid]/badges/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -39,7 +37,5 @@ export async function GET(
       { error: "Failed to fetch player badges" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,9 +1,7 @@
 // lib/realtime/services/playersService.ts
 
-import { PrismaClient } from "@prisma/client";
 import { Player } from "../types";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export class PlayersService {
   async getTournamentPlayers(tournamentId: number): Promise<Player[]> {
@@ -14,7 +12,7 @@ export class PlayersService {
         ORDER BY created_at ASC
       `;
 
-      return players.map(p => ({
+      return players.map((p) => ({
         id: p.id,
         name: p.player_name,
         nickname: p.player_nickname,
@@ -27,17 +25,17 @@ export class PlayersService {
         eliminated_by_player_id: null,
         elimination_position: p.ko_position,
         placement: p.placement,
-        hitman: p.hitman_name ? {
-          id: null,
-          name: p.hitman_name,
-          nickname: null
-        } : undefined
+        hitman: p.hitman_name
+          ? {
+              id: null,
+              name: p.hitman_name,
+              nickname: null,
+            }
+          : undefined,
       }));
     } catch (error) {
       console.error("Error fetching tournament players:", error);
       return [];
-    } finally {
-      await prisma.$disconnect();
     }
   }
 
@@ -60,14 +58,17 @@ export class PlayersService {
 
       // Get the updated player
       const players = await this.getTournamentPlayers(tournamentId);
-      return players.find(p => p.id === playerId) || null;
+      return players.find((p) => p.id === playerId) || null;
     } catch (error) {
       console.error("Error eliminating player:", error);
       return null;
     }
   }
 
-  async addPlayer(tournamentId: number, playerData: Partial<Player>): Promise<Player | null> {
+  async addPlayer(
+    tournamentId: number,
+    playerData: Partial<Player>
+  ): Promise<Player | null> {
     try {
       const result = await prisma.$queryRaw<any[]>`
         INSERT INTO tournament_draft_players

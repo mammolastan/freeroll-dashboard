@@ -1,8 +1,6 @@
 // lib/players-cache.ts
-import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface Player {
   uid: string;

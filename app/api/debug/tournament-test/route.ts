@@ -2,9 +2,7 @@
 // Create this temporary route to test database connectivity
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -49,8 +47,6 @@ export async function GET() {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -88,7 +84,5 @@ export async function POST(request: NextRequest) {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }

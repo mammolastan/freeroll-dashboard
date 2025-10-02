@@ -1,9 +1,7 @@
 // app/api/venues/[venue]/stats/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getCurrentETDate, getDateCondition } from "@/lib/utils";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 function serializeResults(results: any[]) {
   return results.map((record) => {

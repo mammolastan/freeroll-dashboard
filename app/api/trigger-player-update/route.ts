@@ -1,6 +1,5 @@
 // app/api/trigger-player-update/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 
 // Add type declaration for global.socketIoInstance
 declare global {
@@ -8,7 +7,7 @@ declare global {
   var socketIoInstance: any | undefined;
 }
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 type CheckedInPlayer = {
   id: number;
@@ -34,7 +33,7 @@ async function getCheckedInPlayers(
       ORDER BY tdp.created_at ASC
     `;
 
-    return (players as any[]).map(p => ({
+    return (players as any[]).map((p) => ({
       id: p.id,
       name: p.player_name,
       nickname: p.player_nickname,
@@ -47,17 +46,17 @@ async function getCheckedInPlayers(
       eliminated_by_player_id: null,
       elimination_position: p.ko_position,
       placement: p.placement,
-      hitman: p.hitman_name ? {
-        id: null,
-        name: p.hitman_name,
-        nickname: null
-      } : undefined
+      hitman: p.hitman_name
+        ? {
+            id: null,
+            name: p.hitman_name,
+            nickname: null,
+          }
+        : undefined,
     }));
   } catch (error) {
     console.error("Error fetching checked-in players:", error);
     return [];
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

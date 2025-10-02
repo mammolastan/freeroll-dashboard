@@ -1,8 +1,6 @@
 // app/api/checkin/[token]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Get tournament info by check-in token
 export async function GET(
@@ -50,7 +48,5 @@ export async function GET(
       { error: "Failed to fetch tournament information" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

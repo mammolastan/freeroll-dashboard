@@ -1,8 +1,6 @@
 // app/api/admin/recent-badges/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // This ensures the route always runs dynamically
 
@@ -44,7 +42,5 @@ export async function GET() {
       { error: "Failed to fetch recent badges" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

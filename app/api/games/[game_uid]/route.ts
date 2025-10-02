@@ -1,9 +1,7 @@
 // app/api/games/[fileName]/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { formatGameDateET } from "@/lib/utils";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -110,7 +108,5 @@ export async function GET(
       { error: "Failed to fetch game details" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

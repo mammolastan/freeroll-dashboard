@@ -1,11 +1,9 @@
 // app/api/tournament-drafts/[id]/integrate/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 interface DraftTournament {
   id: number;
@@ -311,7 +309,5 @@ export async function POST(
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
