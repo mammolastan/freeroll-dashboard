@@ -72,10 +72,24 @@ export async function PUT(
     });
   } catch (error) {
     console.error("Error in batch update:", error);
+
+    // Return a proper JSON error response with detailed information
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const isConnectionError =
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("ECONNREFUSED");
+
     return NextResponse.json(
       {
-        error: "Failed to batch update players",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: isConnectionError
+          ? "Database connection error. Please try again."
+          : "Failed to save changes. Please try again.",
+        details: errorMessage,
+        userMessage: isConnectionError
+          ? "Unable to connect to the database. Please check your connection and try again."
+          : "An error occurred while saving. Your changes may not have been saved.",
       },
       { status: 500 }
     );

@@ -649,7 +649,6 @@ export default function TournamentEntryPage() {
             // Set new global timeout to batch ALL pending updates
             globalUpdateTimeoutRef.current = setTimeout(async () => {
                 const playersToUpdate = { ...pendingUpdatesRef.current };
-
                 if (Object.keys(playersToUpdate).length === 0) return;
 
                 console.log(`Batching updates for ${Object.keys(playersToUpdate).length} players`);
@@ -670,42 +669,48 @@ export default function TournamentEntryPage() {
                         })
                     });
 
-                    if (response.ok) {
-                        const result = await response.json();
+                    // ✅ NEW ERROR HANDLING
+                    if (!response.ok) {
+                        let errorMessage = "Failed to save changes";
 
-                        // Disable auto-refresh temporarily after successful batch update
-                        temporarilyDisableAutoRefresh();
-
-                        // Update local state with all server responses
-                        setPlayers(prevPlayers => {
-                            const newPlayers = [...prevPlayers];
-                            result.updatedPlayers.forEach((serverPlayer: Player) => {
-                                const index = newPlayers.findIndex(p => p.id === serverPlayer.id);
-                                if (index !== -1) {
-                                    newPlayers[index] = serverPlayer;
-                                }
-                            });
-                            return newPlayers;
-                        });
-
-                        console.log(`✅ Successfully batch updated ${result.updateCount} players`);
-                    } else {
-                        const errorData = await response.json();
-                        console.error('Batch update failed:', errorData);
-
-                        // Show user-friendly error
-                        alert(`Failed to save changes: ${errorData.details || errorData.error}`);
-
-                        // Optionally reload the players to get current server state
-                        if (currentDraft) {
-                            loadPlayersForTournament(currentDraft.id);
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.userMessage || errorData.error || errorMessage;
+                        } catch (jsonError) {
+                            errorMessage = "Server error - Unable to save changes. Please refresh the page and try again.";
                         }
+
+                        alert(`⚠️ Error Saving Changes\n\n${errorMessage}\n\nPlease try again. If the problem persists, contact support.`);
+
+                        if (currentDraft) {
+                            await loadPlayersForTournament(currentDraft.id);
+                        }
+
+                        console.error("Save failed:", response.status, errorMessage);
+                        return;
                     }
+
+                    // ✅ SUCCESS PATH
+                    const result = await response.json();
+                    temporarilyDisableAutoRefresh();
+
+                    setPlayers(prevPlayers => {
+                        const newPlayers = [...prevPlayers];
+                        result.updatedPlayers.forEach((serverPlayer: Player) => {
+                            const index = newPlayers.findIndex(p => p.id === serverPlayer.id);
+                            if (index !== -1) {
+                                newPlayers[index] = serverPlayer;
+                            }
+                        });
+                        return newPlayers;
+                    });
+
+                    console.log(`✅ Successfully batch updated ${result.updateCount} players`);
+
                 } catch (error) {
                     console.error('Batch update error:', error);
-                    alert(`Error saving changes: ${error instanceof Error ? error.message : 'Network error'}`);
+                    alert(`⚠️ Network Error\n\nUnable to save changes. Please check your connection and try again.\n\nIf the problem persists, contact support.`);
 
-                    // Reload players to get current server state
                     if (currentDraft) {
                         loadPlayersForTournament(currentDraft.id);
                     }
@@ -714,7 +719,7 @@ export default function TournamentEntryPage() {
                     pendingUpdatesRef.current = {};
                     globalUpdateTimeoutRef.current = null;
                 }
-            }, 1500); // 1.5 seconds to allow for more batching
+            }, 1500);
 
         } catch (error) {
             console.error('Error in updatePlayer:', error);
