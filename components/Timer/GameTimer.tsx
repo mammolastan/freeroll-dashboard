@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X, Users } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
 
 interface BlindLevel {
@@ -28,9 +28,10 @@ interface TimerState {
 interface GameTimerProps {
   tournamentId?: number;
   isAdmin?: boolean;
+  playersRemaining?: number;
 }
 
-export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
+export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: GameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editMinutes, setEditMinutes] = useState('');
@@ -360,7 +361,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
   if (!timerState) {
     return (
-      <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] shadow rounded-lg border">
+      <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] rounded-lg border">
         <div className="p-6">
           <h3 className="text-2xl font-semibold flex items-center gap-2 text-cyan-300">
             <Clock size={20} className="text-cyan-400" />
@@ -412,6 +413,14 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
           </div>
         )}
 
+        {/* Players Remaining  */}
+        {playersRemaining !== undefined && (
+          <div className="flex items-center gap-4 text-4xl font-bold text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] mt-4">
+            <Users size={30} className="text-purple-400" />
+            <span>{playersRemaining}</span>
+          </div>
+        )}
+
         {/* Exit hint */}
         <div className="absolute bottom-8 text-gray-600 text-sm">
           Tap anywhere to exit
@@ -421,7 +430,7 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
   }
 
   return (
-    <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] shadow rounded-lg border">
+    <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] rounded-lg border">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center justify-between text-cyan-300">
           <div className="flex items-center gap-2">

@@ -4,12 +4,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Upload, Users, Trophy, RotateCcw, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
+import { Users, Trophy, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
 import { formatGameDate } from '@/lib/utils';
-import QRCode from 'qrcode';
 import { QRCodeModal } from './QRCodeModal';
-import PlayerName from '@/components/Text/PlayerName';
 import { GameTimer } from '@/components/Timer/GameTimer';
+import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
 import { socket } from '@/lib/socketClient';
 
 // Blind schedule definitions
@@ -74,6 +73,10 @@ export default function TournamentEntryPage() {
     const [displayCount, setDisplayCount] = useState(8);
     const [showLoadMore, setShowLoadMore] = useState(false);
     const [isReverting, setIsReverting] = useState(false);
+    const { gameData, computedStats, loading: realtimeLoading, error: realtimeError } =
+        useRealtimeGameData(currentDraft?.id || 0);
+
+
 
     // New tournament modal
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -2306,7 +2309,7 @@ export default function TournamentEntryPage() {
                                 </Card>
 
                                 {/* Game Timer */}
-                                <GameTimer tournamentId={currentDraft.id} isAdmin={true} />
+                                <GameTimer tournamentId={currentDraft.id} playersRemaining={computedStats?.playersRemaining} isAdmin={true} />
                             </div>
                         )}
 

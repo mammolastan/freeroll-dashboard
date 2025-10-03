@@ -211,7 +211,7 @@ export default function GameViewPage() {
 
         {/* Game Timer */}
         <div className="mb-6">
-          <GameTimer tournamentId={parseInt(token as string)} isAdmin={false} />
+          <GameTimer tournamentId={parseInt(token as string)} playersRemaining={computedStats.playersRemaining} isAdmin={false} />
         </div>
 
         {/* Players summary */}
