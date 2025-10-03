@@ -142,8 +142,14 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
 
     console.log('GameTimer: Setting up for tournament', tournamentId);
 
-    // Request initial timer sync
-    socket.emit('timer:requestSync', { tournamentId });
+    // Setup function to join room and request sync
+    const setupTimer = () => {
+      socket.emit('joinRoom', tournamentId.toString());
+      socket.emit('timer:requestSync', { tournamentId });
+    };
+
+    // Initial setup
+    setupTimer();
 
     // Listen for timer updates
     const handleTimerUpdate = (newState: TimerState) => {
@@ -156,13 +162,36 @@ export function GameTimer({ tournamentId, isAdmin = false }: GameTimerProps) {
       setTimerState(newState);
     };
 
+    // Handle reconnection - rejoin room when socket reconnects
+    const handleReconnect = () => {
+      console.log('Socket reconnected, rejoining timer room...');
+      setupTimer();
+    };
+
     socket.on('timer:update', handleTimerUpdate);
     socket.on('timer:sync', handleTimerSync);
+    socket.on('connect', handleReconnect);
+
+    // Connection health monitoring
+    const ensureConnection = () => {
+      if (!socket.connected) {
+        console.log('Socket disconnected, attempting reconnection...');
+        socket.connect();
+      } else if (socket.connected) {
+        // If connected but not receiving updates, rejoin room
+        socket.emit('timer:requestSync', { tournamentId });
+      }
+    };
+
+    // Check connection health every 5 seconds
+    const syncInterval = setInterval(ensureConnection, 5000);
 
     return () => {
       console.log('GameTimer: Cleaning up for tournament', tournamentId);
       socket.off('timer:update', handleTimerUpdate);
       socket.off('timer:sync', handleTimerSync);
+      socket.off('connect', handleReconnect);
+      clearInterval(syncInterval);
     };
   }, [tournamentId]);
 

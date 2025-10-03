@@ -2,7 +2,16 @@ console.log("Server.mts is running");
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
-import { prisma } from "./lib/prisma";
+import { PrismaClient } from "@prisma/client";
+
+// Initialize Prisma Client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // Global type declaration for Socket.IO instance
 declare global {
