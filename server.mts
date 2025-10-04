@@ -57,47 +57,47 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
   { level: 8, duration: 20, smallBlind: 2000, bigBlind: 4000, isbreak: false },
   { level: 9, duration: 20, smallBlind: 3000, bigBlind: 6000, isbreak: false },
   { level: 10, duration: 20, smallBlind: 4000, bigBlind: 8000, isbreak: false },
+  { level: 11, duration: 5, smallBlind: 0, bigBlind: 0, isbreak: true }, // 5 minute break (color up 1,000s)
   {
-    level: 11,
+    level: 12,
     duration: 20,
     smallBlind: 5000,
     bigBlind: 10000,
     isbreak: false,
   },
-  { level: 12, duration: 10, smallBlind: 0, bigBlind: 0, isbreak: true }, // 10 minute break
   {
     level: 13,
-    duration: 20,
-    smallBlind: 6000,
-    bigBlind: 12000,
-    isbreak: false,
-  },
-  {
-    level: 14,
-    duration: 20,
-    smallBlind: 8000,
-    bigBlind: 16000,
-    isbreak: false,
-  },
-  {
-    level: 15,
     duration: 20,
     smallBlind: 10000,
     bigBlind: 20000,
     isbreak: false,
   },
   {
+    level: 14,
+    duration: 20,
+    smallBlind: 15000,
+    bigBlind: 30000,
+    isbreak: false,
+  },
+  {
+    level: 15,
+    duration: 20,
+    smallBlind: 20000,
+    bigBlind: 40000,
+    isbreak: false,
+  },
+  {
     level: 16,
     duration: 20,
-    smallBlind: 12000,
-    bigBlind: 24000,
+    smallBlind: 25000,
+    bigBlind: 50000,
     isbreak: false,
   },
   {
     level: 17,
     duration: 20,
-    smallBlind: 15000,
-    bigBlind: 30000,
+    smallBlind: 50000,
+    bigBlind: 100000,
     isbreak: false,
   },
 ];
@@ -105,7 +105,7 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
 // Turbo Speed - 10 minute levels (same blind structure)
 const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map((level) => ({
   ...level,
-  duration: level.isbreak ? 10 : 10, // 10 minutes for both levels and breaks in turbo
+  duration: level.isbreak ? level.duration : 10,
 }));
 
 // Blind schedule definitions
