@@ -290,6 +290,26 @@ async function resumeTimer(tournamentId: number): Promise<TimerState> {
 
 async function resetTimer(tournamentId: number): Promise<TimerState> {
   const timer = await getOrCreateTimerState(tournamentId);
+
+  // Reload blind schedule from database in case it changed
+  let blindLevels = DEFAULT_BLIND_LEVELS;
+  try {
+    const tournament = await prisma.tournamentDraft.findUnique({
+      where: { id: tournamentId },
+      select: { blind_schedule: true },
+    });
+
+    if (tournament?.blind_schedule) {
+      blindLevels = getBlindSchedule(tournament.blind_schedule);
+      console.log(
+        `Reset timer: using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
+      );
+    }
+  } catch (error) {
+    console.error("Error fetching tournament blind schedule during reset:", error);
+  }
+
+  timer.blindLevels = blindLevels;
   timer.currentLevel = 1;
   timer.timeRemaining = timer.blindLevels[0].duration * 60;
   timer.isRunning = false;
