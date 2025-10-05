@@ -52,19 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if tournament with same date and venue already exists
-    const existingTournament = await prisma.$queryRaw`
-      SELECT id FROM tournament_drafts 
-      WHERE tournament_date = ${tournament_date} AND venue = ${venue}
-    `;
-
-    if ((existingTournament as any[]).length > 0) {
-      return NextResponse.json(
-        { error: "A tournament for this date and venue already exists" },
-        { status: 400 }
-      );
-    }
-
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
       INSERT INTO tournament_drafts 
