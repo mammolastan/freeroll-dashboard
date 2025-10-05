@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, AlertCircle } from 'lucide-react';
+import { PlayerSearchDropdown, PlayerSearchResult, CheckedInPlayer } from './PlayerSearchDropdown';
 
 interface PlayerSuggestion {
     name: string;
@@ -16,13 +17,6 @@ interface CheckInResponse {
     entered_name?: string;
     message?: string;
     error?: string;
-}
-
-interface Player {
-    Name: string;
-    UID: string;
-    nickname: string | null;
-    TotalGames?: number;
 }
 
 interface CheckInModalProps {
@@ -41,17 +35,20 @@ export function CheckInModal({ isOpen, onClose, token, onSuccess }: CheckInModal
 
     // New player selection state
     const [isNewPlayer, setIsNewPlayer] = useState<boolean | null>(null);
-    const [selectedExistingPlayer, setSelectedExistingPlayer] = useState<Player | null>(null);
+    const [selectedExistingPlayer, setSelectedExistingPlayer] = useState<PlayerSearchResult | null>(null);
 
     // Player search dropdown states
-    const [searchResults, setSearchResults] = useState<Player[]>([]);
+    const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Checked-in players state
+    const [checkedInPlayers, setCheckedInPlayers] = useState<CheckedInPlayer[]>([]);
 
     // Use ref to track debounce timeout
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Reset form when modal opens/closes
+    // Fetch checked-in players when modal opens
     useEffect(() => {
         if (isOpen) {
             setPlayerName('');
@@ -62,8 +59,24 @@ export function CheckInModal({ isOpen, onClose, token, onSuccess }: CheckInModal
             setSelectedExistingPlayer(null);
             setSearchResults([]);
             setShowDropdown(false);
+
+            // Fetch checked-in players
+            const fetchCheckedInPlayers = async () => {
+                try {
+                    const response = await fetch(`/api/checkin/${token}/players`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        // The API returns an array directly, not an object with a players property
+                        setCheckedInPlayers(Array.isArray(data) ? data : []);
+                    }
+                } catch (error) {
+                    console.error('Error fetching checked-in players:', error);
+                }
+            };
+
+            fetchCheckedInPlayers();
         }
-    }, [isOpen]);
+    }, [isOpen, token]);
 
     // Search for players
     const searchPlayers = async (query: string) => {
@@ -116,7 +129,7 @@ export function CheckInModal({ isOpen, onClose, token, onSuccess }: CheckInModal
     };
 
     // Handle player selection
-    const selectPlayer = (player: Player) => {
+    const selectPlayer = (player: PlayerSearchResult) => {
         setSelectedExistingPlayer(player);
         setPlayerName(player.Name);
         setShowDropdown(false);
@@ -265,24 +278,13 @@ export function CheckInModal({ isOpen, onClose, token, onSuccess }: CheckInModal
 
                                     {/* Search Results Dropdown */}
                                     {showDropdown && searchResults.length > 0 && (
-                                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                            {searchResults.map((player) => (
-                                                <button
-                                                    key={player.UID}
-                                                    type="button"
-                                                    onClick={() => selectPlayer(player)}
-                                                    className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 text-gray-900"
-                                                >
-                                                    <div className="font-medium">{player.Name}</div>
-                                                    {player.nickname && (
-                                                        <div className="text-sm text-gray-500">&quot;{player.nickname}&quot;</div>
-                                                    )}
-                                                    {player.TotalGames && (
-                                                        <div className="text-xs text-gray-400">{player.TotalGames > 100 ? '+100' : player.TotalGames} games played</div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <PlayerSearchDropdown
+                                            searchResults={searchResults}
+                                            isSearching={isSearching}
+                                            checkedInPlayers={checkedInPlayers}
+                                            onSelectPlayer={selectPlayer}
+                                            showAddNewOption={false}
+                                        />
                                     )}
                                 </div>
                             </div>

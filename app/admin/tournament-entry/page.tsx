@@ -10,6 +10,7 @@ import { QRCodeModal } from './QRCodeModal';
 import { GameTimer } from '@/components/Timer/GameTimer';
 import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
 import { socket } from '@/lib/socketClient';
+import { PlayerSearchDropdown } from '@/components/PlayerSearchDropdown';
 
 // Blind schedule definitions
 const BLIND_SCHEDULES = {
@@ -2155,63 +2156,18 @@ export default function TournamentEntryPage() {
                                     )}
 
                                     {showPlayerDropdown && (
-                                        <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                                            {isSearching ? (
-                                                <div className="px-3 py-2 text-gray-500">Searching...</div>
-                                            ) : (
-                                                <>
-                                                    {playerSearchResults.map((player) => {
-                                                        const isAlreadyAdded = players.some(p => {
-                                                            const uidMatch = p.player_uid === player.UID;
-                                                            const nameMatch = p.player_name.toLowerCase() === player.Name.toLowerCase();
-                                                            const nicknameMatch = p.player_name.toLowerCase() === (player.nickname || '').toLowerCase();
-                                                            return uidMatch || nameMatch || nicknameMatch;
-                                                        });
-
-                                                        return (
-                                                            <div
-                                                                key={player.UID}
-                                                                onClick={() => {
-                                                                    if (!isAlreadyAdded) {
-                                                                        addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID });
-                                                                    } else {
-                                                                        alert('This player is already in the tournament!');
-                                                                    }
-                                                                }}
-                                                                className={`px-3 py-2 border-b last:border-b-0 ${isAlreadyAdded
-                                                                    ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-75'
-                                                                    : 'hover:bg-blue-50 cursor-pointer'
-                                                                    }`}
-                                                            >
-                                                                <div className={`font-medium ${isAlreadyAdded ? 'line-through' : 'text-gray-900'}`}>
-                                                                    {player.nickname ? `${player.Name} (${player.nickname})` : player.Name}
-                                                                    {isAlreadyAdded && <span className="ml-2 text-xs text-red-600 font-bold">(ALREADY ADDED)</span>}
-                                                                </div>
-                                                                {(player.TotalGames || player.TotalPoints) && (
-                                                                    <div className="text-sm text-gray-600">
-                                                                        {player.TotalGames || 0} games, {player.TotalPoints || 0} points
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-
-                                                    {newPlayerName.trim() && (
-                                                        <div
-                                                            onClick={() => addPlayer({ name: newPlayerName.trim(), isNew: true })}
-                                                            className="px-3 py-2 hover:bg-green-50 cursor-pointer border-t bg-green-25"
-                                                        >
-                                                            <div className="font-medium text-green-700">
-                                                                Add &quot;{newPlayerName.trim()}&quot; as new player
-                                                            </div>
-                                                            <div className="text-sm text-green-600">
-                                                                This will create a new player record
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
+                                        <PlayerSearchDropdown
+                                            searchResults={playerSearchResults}
+                                            isSearching={isSearching}
+                                            checkedInPlayers={players.map(p => ({
+                                                player_uid: p.player_uid,
+                                                player_name: p.player_name
+                                            }))}
+                                            onSelectPlayer={(player) => addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID })}
+                                            onAddNewPlayer={(name) => addPlayer({ name, isNew: true })}
+                                            showAddNewOption={true}
+                                            newPlayerName={newPlayerName}
+                                        />
                                     )}
                                 </div>
                             </div>
