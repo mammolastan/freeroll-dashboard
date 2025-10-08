@@ -389,7 +389,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         onClick={() => setIsMinMode(false)}
       >
         {/* Time Remaining */}
-        <div className={`text-9xl font-mono font-bold mb-8 transition-all duration-300 ${timerState.timeRemaining < 60
+        <div className={`text-9xl lg:text-[16rem] font-mono font-bold mb-8 transition-all duration-300 ${timerState.timeRemaining < 60
           ? `text-red-400 drop-shadow-[0_0_30px_rgba(239,68,68,0.9)] ${timerState.isPaused ? 'animate-pulse' : ''}`
           : timerState.timeRemaining < 300
             ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(234,179,8,0.7)]`
@@ -402,11 +402,11 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         {currentBlind && (
           <div>
             {currentBlind.isbreak ? (
-              <div className="text-8xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
+              <div className="text-8xl landscape:text-5xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
                 🔥 BREAK
               </div>
             ) : (
-              <div className="text-8xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
+              <div className="text-8xl landscape:text-5xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
                 {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
               </div>
             )}
