@@ -2183,16 +2183,20 @@ export default function TournamentEntryPage() {
                                         <span className="ml-2 text-black font-medium">{players.length}</span>
                                     </div>
                                     <div>
+                                        <span className="text-black">Players Remaining:</span>
+                                        <span className="ml-2 text-black font-medium">{players.length - players.filter(p => p.hitman_name !== null).length}</span>
+                                    </div>
+                                    <div>
                                         <span className="text-black">New Players:</span>
                                         <span className="ml-2 font-medium text-black ">{players.filter(p => p.is_new_player).length}</span>
                                     </div>
                                     <div>
-                                        <span className="text-black">With Placements:</span>
-                                        <span className="ml-2 font-medium text-black ">{players.filter(p => p.placement !== null).length}</span>
-                                    </div>
-                                    <div>
                                         <span className="text-black">With Hitmen:</span>
                                         <span className="ml-2 font-medium text-black ">{players.filter(p => p.hitman_name !== null).length}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-black">With Placements:</span>
+                                        <span className="ml-2 font-medium text-black ">{players.filter(p => p.placement !== null).length}</span>
                                     </div>
                                 </div>
                             </div>
