@@ -511,7 +511,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
                   }`}>
                   {formatTime(timerState.timeRemaining || 0)}
                 </div>
-                {isAdmin && !timerState.isRunning && (
+                {isAdmin && timerState.isPaused && (
                   <button
                     onClick={handleStartEdit}
                     className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
@@ -558,7 +558,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         {/* Current Blind Level */}
         <div className="text-center bg-gray-800/60 p-4 rounded-lg border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
           <div className="flex items-center justify-center gap-2">
-            {isAdmin && !timerState.isRunning && timerState.currentLevel > 1 && (
+            {isAdmin && timerState.isPaused && timerState.currentLevel > 1 && (
               <button
                 onClick={handlePrevLevel}
                 className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
@@ -570,7 +570,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
             <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
               Level {timerState.currentLevel}
             </div>
-            {isAdmin && !timerState.isRunning && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
+            {isAdmin && timerState.isPaused && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
               <button
                 onClick={handleNextLevel}
                 className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
