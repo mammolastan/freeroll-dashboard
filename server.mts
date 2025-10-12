@@ -215,37 +215,43 @@ async function updateTimer(tournamentId: number): Promise<TimerState> {
   if (timer.isRunning && !timer.isPaused) {
     const now = Date.now();
     const elapsed = Math.floor((now - timer.lastUpdate) / 1000);
-    const newTimeRemaining = Math.max(0, timer.timeRemaining - elapsed);
 
-    if (newTimeRemaining !== timer.timeRemaining) {
-      timer.timeRemaining = newTimeRemaining;
-      stateChanged = true;
-    }
+    // Only update if at least 1 second has actually elapsed
+    if (elapsed > 0) {
+      const newTimeRemaining = Math.max(0, timer.timeRemaining - elapsed);
 
-    // Auto-advance to next level if time expires
-    if (
-      timer.timeRemaining === 0 &&
-      timer.currentLevel < timer.blindLevels.length
-    ) {
-      const currentLevel = timer.blindLevels[timer.currentLevel - 1];
-      timer.currentLevel++;
-      const nextLevel = timer.blindLevels[timer.currentLevel - 1];
-      if (nextLevel) {
-        timer.timeRemaining = nextLevel.duration * 60;
-
-        // If current level is a break, pause the timer after advancing to next level
-        if (currentLevel?.isbreak) {
-          timer.isPaused = true;
-          console.log(
-            `Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`
-          );
-        }
+      if (newTimeRemaining !== timer.timeRemaining) {
+        timer.timeRemaining = newTimeRemaining;
+        stateChanged = true;
       }
-      stateChanged = true;
+
+      // CRITICAL FIX: Only update lastUpdate when we actually deduct time
+      // This prevents drift from processing overhead
+      timer.lastUpdate = timer.lastUpdate + elapsed * 1000;
+
+      // Auto-advance to next level if time expires
+      if (
+        timer.timeRemaining === 0 &&
+        timer.currentLevel < timer.blindLevels.length
+      ) {
+        const currentLevel = timer.blindLevels[timer.currentLevel - 1];
+        timer.currentLevel++;
+        const nextLevel = timer.blindLevels[timer.currentLevel - 1];
+        if (nextLevel) {
+          timer.timeRemaining = nextLevel.duration * 60;
+
+          // If current level is a break, pause the timer after advancing to next level
+          if (currentLevel?.isbreak) {
+            timer.isPaused = true;
+            console.log(
+              `Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`
+            );
+          }
+        }
+        stateChanged = true;
+      }
     }
   }
-
-  timer.lastUpdate = Date.now();
 
   // Save to database if significant state change occurred
   if (stateChanged) {
@@ -306,7 +312,10 @@ async function resetTimer(tournamentId: number): Promise<TimerState> {
       );
     }
   } catch (error) {
-    console.error("Error fetching tournament blind schedule during reset:", error);
+    console.error(
+      "Error fetching tournament blind schedule during reset:",
+      error
+    );
   }
 
   timer.blindLevels = blindLevels;
