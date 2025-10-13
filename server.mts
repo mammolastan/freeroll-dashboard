@@ -419,6 +419,13 @@ async function loadTimerStateFromDB(
 
     if (!tournament) return null;
 
+    // Only load timer state if the timer is actually active (running or paused)
+    // If both are false, the timer is stopped and should not be recovered
+    if (!tournament.timer_is_running && !tournament.timer_is_paused) {
+      console.log(`Timer for tournament ${tournamentId} is stopped, not loading state`);
+      return null;
+    }
+
     // If timer data exists and was recently updated
     if (tournament.timer_last_updated && tournament.timer_current_level) {
       console.log(`Loading timer state from DB for tournament ${tournamentId}`);

@@ -1653,12 +1653,16 @@ export default function TournamentEntryPage() {
                                             key={tournament.id}
                                             className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                         >
+                                            <div className='text-black text-sm'>
+                                                {tournament.id}
+                                            </div>
                                             <div className="flex items-center justify-between">
                                                 <div
                                                     className="flex items-center gap-4 flex-1 cursor-pointer"
                                                     onClick={() => selectTournament(tournament)}
                                                 >
                                                     <div className="flex flex-col">
+
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
                                                             {formatGameDate(tournament.tournament_date || '')}
