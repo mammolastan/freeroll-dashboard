@@ -211,6 +211,17 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     }
   };
 
+  // Vibration function
+  const vibrateDevice = (pattern: number | number[]) => {
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        console.log('Vibration not supported or failed:', error);
+      }
+    }
+  };
+
   // Audio notification functions
   const playOneMinuteWarning = () => {
     if (!audioEnabled || !oneMinuteAudio) return;
@@ -220,6 +231,9 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       oneMinuteAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
+      // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
+      // 200ms vibrate, 100ms pause, 200ms vibrate, 100ms pause, 400ms vibrate
+      vibrateDevice([200, 100, 200, 100, 400]);
     } catch (error) {
       console.log('Audio not available');
     }
@@ -233,6 +247,9 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       levelChangeAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
+      // Vibrate with a quick double pulse
+      // 150ms vibrate, 50ms pause, 150ms vibrate
+      vibrateDevice([150, 50, 150]);
     } catch (error) {
       console.log('Audio not available');
     }
