@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Edit3, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
 
@@ -40,6 +40,7 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
   const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
+  const minutesInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -249,6 +250,14 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
     }
   };
 
+  // Auto-focus minutes input when entering edit mode
+  useEffect(() => {
+    if (isEditingTime && minutesInputRef.current) {
+      minutesInputRef.current.focus();
+      minutesInputRef.current.select();
+    }
+  }, [isEditingTime]);
+
   const handleSaveEdit = () => {
     if (tournamentId && editMinutes && editSeconds) {
       const totalSeconds = parseInt(editMinutes) * 60 + parseInt(editSeconds);
@@ -263,6 +272,16 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
     setIsEditingTime(false);
     setEditMinutes('');
     setEditSeconds('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit();
+    }
   };
 
   if (!timerState) {
@@ -284,9 +303,11 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
         {isEditingTime && timerState.isPaused ? (
           <div className="flex items-center gap-4">
             <input
+              ref={minutesInputRef}
               type="number"
               value={editMinutes}
               onChange={(e) => setEditMinutes(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-32 px-4 py-2 text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="MM"
               min="0"
@@ -297,6 +318,7 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
               type="number"
               value={editSeconds}
               onChange={(e) => setEditSeconds(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-32 px-4 py-2 text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="SS"
               min="0"
