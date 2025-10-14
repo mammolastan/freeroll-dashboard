@@ -41,6 +41,41 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
   const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
   const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
   const minutesInputRef = useRef<HTMLInputElement>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Wake Lock management - keep screen awake while on this screen
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock acquired - screen will stay awake');
+
+          // Handle wake lock release (e.g., when tab becomes inactive)
+          wakeLockRef.current.addEventListener('release', () => {
+            console.log('Wake Lock released');
+          });
+        }
+      } catch (err) {
+        console.error('Wake Lock request failed:', err);
+      }
+    };
+
+    // Request wake lock when component mounts
+    requestWakeLock();
+
+    // Cleanup - release wake lock when component unmounts
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().then(() => {
+          console.log('Wake Lock released - screen can sleep');
+          wakeLockRef.current = null;
+        }).catch((err) => {
+          console.error('Wake Lock release failed:', err);
+        });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!tournamentId) return;
