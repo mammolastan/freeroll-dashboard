@@ -232,8 +232,8 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         console.log('Audio playback failed:', error);
       });
       // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
-      // 200ms vibrate, 100ms pause, 200ms vibrate, 100ms pause, 400ms vibrate
-      vibrateDevice([200, 100, 200, 100, 400]);
+      // 
+      vibrateDevice([400, 100, 400, 100, 50, 50, 50, 50, 50]);
     } catch (error) {
       console.log('Audio not available');
     }
@@ -248,8 +248,8 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         console.log('Audio playback failed:', error);
       });
       // Vibrate with a quick double pulse
-      // 150ms vibrate, 50ms pause, 150ms vibrate
-      vibrateDevice([150, 50, 150]);
+      // 150ms vibrate, 50ms pause, 450ms vibrate
+      vibrateDevice([150, 50, 450]);
     } catch (error) {
       console.log('Audio not available');
     }
