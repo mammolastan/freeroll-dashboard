@@ -233,7 +233,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       });
       // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
       // 
-      vibrateDevice([400, 100, 400, 100, 50, 50, 50, 50, 50]);
+      vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
       console.log('Audio not available');
     }
@@ -249,7 +249,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       });
       // Vibrate with a quick double pulse
       // 150ms vibrate, 50ms pause, 450ms vibrate
-      vibrateDevice([150, 50, 450]);
+      vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
       console.log('Audio not available');
     }
