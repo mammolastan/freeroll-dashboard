@@ -12,8 +12,16 @@ import { QrCode, UserPlus } from 'lucide-react';
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate } from '@/lib/utils';
 
-function PlayerCard({ player }: { player: Player }) {
+// Helper function to calculate dynamic placement based on elimination_position
+function calculatePlacement(player: Player, totalPlayers: number): number | null {
+  if (player.elimination_position === null) return null;
+  return totalPlayers - player.elimination_position + 1;
+}
+
+function PlayerCard({ player, totalPlayers }: { player: Player; totalPlayers: number }) {
   console.log('Rendering PlayerCard for:', player);
+  const dynamicPlacement = calculatePlacement(player, totalPlayers);
+
   return (
     <div className={`p-4 border rounded-lg backdrop-blur-sm transition-all duration-300 ${player.is_active
       ? 'bg-gray-900/80 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
@@ -44,9 +52,9 @@ function PlayerCard({ player }: { player: Player }) {
                   KO order: {player.elimination_position}
                 </div>
               )}
-              {player.placement && (
+              {dynamicPlacement !== null && (
                 <div className="text-sm text-gray-500">
-                  Final Placement: {player.placement}
+                  Final Placement: {dynamicPlacement}
                 </div>
               )}
               {player.hitman && (
@@ -247,7 +255,7 @@ export default function GameViewPage() {
                 activePlayers
                   .sort((a, b) => new Date(b.checked_in_at || 0).getTime() - new Date(a.checked_in_at || 0).getTime())
                   .map((player) => (
-                    <PlayerCard key={player.id} player={player} />
+                    <PlayerCard key={player.id} player={player} totalPlayers={gameData.players.length} />
                   ))
               ) : (
                 <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">
@@ -267,7 +275,7 @@ export default function GameViewPage() {
                 eliminatedPlayers
                   .sort((a, b) => (b.elimination_position || 999) - (a.elimination_position || 999))
                   .map((player) => (
-                    <PlayerCard key={player.id} player={player} />
+                    <PlayerCard key={player.id} player={player} totalPlayers={gameData.players.length} />
                   ))
               ) : (
                 <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">

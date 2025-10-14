@@ -289,11 +289,10 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: Pla
                         key={result.UID}
                         onClick={() => !alreadyCheckedIn && handleCheckIn(result)}
                         disabled={alreadyCheckedIn || isSubmitting}
-                        className={`w-full p-6 text-left transition-all border-b-2 border-gray-700/50 last:border-b-0 ${
-                          alreadyCheckedIn
-                            ? 'bg-gray-900/40 cursor-not-allowed opacity-60'
-                            : 'hover:bg-gray-700/80 cursor-pointer'
-                        }`}
+                        className={`w-full p-6 text-left transition-all border-b-2 border-gray-700/50 last:border-b-0 ${alreadyCheckedIn
+                          ? 'bg-gray-900/40 cursor-not-allowed opacity-60'
+                          : 'hover:bg-gray-700/80 cursor-pointer'
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -307,7 +306,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: Pla
                             )}
                             {result.TotalGames && (
                               <div className="text-sm text-gray-400 mt-2">
-                                {result.TotalGames} games • {Number(result.TotalPoints || 0).toFixed(1)} points
+                                {result.TotalGames > 100 ? '100+' : result.TotalGames} games
                               </div>
                             )}
                           </div>

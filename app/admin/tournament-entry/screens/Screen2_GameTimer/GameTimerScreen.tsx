@@ -37,8 +37,8 @@ interface GameTimerScreenProps {
 }
 
 export function GameTimerScreen({ currentDraft, players }: GameTimerScreenProps) {
-  // Calculate players remaining (those without placement)
-  const playersRemaining = players.filter(p => !p.placement).length;
+  // Calculate players remaining (those without ko_position)
+  const playersRemaining = players.filter(p => p.ko_position === null).length;
 
   if (!currentDraft) {
     return (

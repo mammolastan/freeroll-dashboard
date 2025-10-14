@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Target, Users, Trophy, X } from 'lucide-react';
 
 interface TournamentDraft {
@@ -37,16 +37,153 @@ interface PlayerControlScreenProps {
   onDataChange: () => void;
 }
 
+// Helper function to calculate dynamic placement based on ko_position
+function calculatePlacement(player: Player, totalPlayers: number): number | null {
+  if (player.ko_position === null) return null;
+  return totalPlayers - player.ko_position + 1;
+}
+
 export function PlayerControlScreen({ currentDraft, players, onDataChange }: PlayerControlScreenProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedHitman, setSelectedHitman] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [hitmanSearchText, setHitmanSearchText] = useState('');
+  const [highlightedHitmanIndex, setHighlightedHitmanIndex] = useState<number>(-1);
+  const filterInputRef = useRef<HTMLInputElement>(null);
+  const hitmanInputRef = useRef<HTMLInputElement>(null);
 
   // Players are knocked out when they have a ko_position (not null)
-  const remainingPlayers = players.filter(p => p.ko_position === null);
+  const allRemainingPlayers = players.filter(p => p.ko_position === null);
+
+  // Filter remaining players based on filter text
+  const remainingPlayers = allRemainingPlayers.filter(p => {
+    if (!filterText.trim()) return true;
+    const searchText = filterText.toLowerCase();
+    return (
+      p.player_name.toLowerCase().includes(searchText) ||
+      (p.player_nickname && p.player_nickname.toLowerCase().includes(searchText))
+    );
+  });
+
+  // Filter hitman options based on search text
+  const filteredHitmanOptions = allRemainingPlayers
+    .filter(p => selectedPlayer && p.id !== selectedPlayer.id)
+    .filter(p => {
+      if (!hitmanSearchText.trim()) return true;
+      const searchText = hitmanSearchText.toLowerCase();
+      return p.player_name.toLowerCase().includes(searchText);
+    });
+
   const knockedOutPlayers = players
     .filter(p => p.ko_position !== null)
     .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
+
+  // Reset highlighted index when filter changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [filterText]);
+
+  // Reset hitman search when modal opens/closes
+  useEffect(() => {
+    if (selectedPlayer) {
+      setHitmanSearchText('');
+      setSelectedHitman('');
+      setHighlightedHitmanIndex(-1);
+    }
+  }, [selectedPlayer]);
+
+  // Keyboard navigation for player list and modal
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+
+      // ESC to close modal or blur filter input
+      if (event.key === 'Escape') {
+        if (selectedPlayer) {
+          event.preventDefault();
+          setSelectedPlayer(null);
+          setSelectedHitman('');
+          setHitmanSearchText('');
+          setHighlightedHitmanIndex(-1);
+          return;
+        } else if (target === filterInputRef.current) {
+          event.preventDefault();
+          filterInputRef.current?.blur();
+          return;
+        }
+      }
+
+      // Global shortcut: Press 'x' to focus filter (only when not in an input and modal is closed)
+      if (
+        (event.key === 'x' || event.key === 'X') && !selectedPlayer
+      ) {
+        if (
+          target.tagName !== 'INPUT' &&
+          target.tagName !== 'TEXTAREA' &&
+          target.tagName !== 'SELECT'
+        ) {
+          event.preventDefault();
+          filterInputRef.current?.focus();
+          return;
+        }
+      }
+
+      // Arrow key navigation when filter input is focused
+      if (target === filterInputRef.current) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          setHighlightedIndex(prev =>
+            prev < remainingPlayers.length - 1 ? prev + 1 : prev
+          );
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
+        } else if (event.key === 'Enter' && highlightedIndex >= 0) {
+          event.preventDefault();
+          const player = remainingPlayers[highlightedIndex];
+          if (player) {
+            setSelectedPlayer(player);
+            setHighlightedIndex(-1);
+            // Focus hitman input after a short delay
+            setTimeout(() => hitmanInputRef.current?.focus(), 100);
+          }
+        }
+      }
+
+      // Arrow key navigation and Enter when hitman input is focused
+      if (target === hitmanInputRef.current && selectedPlayer) {
+        if (event.key === 'ArrowDown' && filteredHitmanOptions.length > 0) {
+          event.preventDefault();
+          setHighlightedHitmanIndex(prev =>
+            prev < filteredHitmanOptions.length - 1 ? prev + 1 : 0
+          );
+        } else if (event.key === 'ArrowUp' && filteredHitmanOptions.length > 0) {
+          event.preventDefault();
+          setHighlightedHitmanIndex(prev => (prev > 0 ? prev - 1 : filteredHitmanOptions.length - 1));
+        } else if (event.key === 'Enter') {
+          event.preventDefault();
+          if (highlightedHitmanIndex >= 0 && filteredHitmanOptions[highlightedHitmanIndex]) {
+            // Select highlighted hitman
+            const hitman = filteredHitmanOptions[highlightedHitmanIndex];
+            setSelectedHitman(hitman.player_name);
+            setHitmanSearchText(hitman.player_name);
+            setHighlightedHitmanIndex(-1);
+            // Submit immediately
+            handleKnockout(selectedPlayer, hitman.player_name);
+          } else {
+            // No selection or no filter - use "unknown"
+            const hitmanName = hitmanSearchText.trim() || 'unknown';
+            handleKnockout(selectedPlayer, hitmanName);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [highlightedIndex, remainingPlayers, selectedPlayer, hitmanSearchText, highlightedHitmanIndex, filteredHitmanOptions]);
 
   const handleKnockout = async (player: Player, hitmanName: string) => {
     if (!currentDraft || isSubmitting) return;
@@ -56,8 +193,6 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
       // Calculate next knockout position
       const maxKoPosition = Math.max(0, ...players.map(p => p.ko_position || 0));
       const nextKoPosition = maxKoPosition + 1;
-      const remainingCount = remainingPlayers.length;
-      const placement = remainingCount;
 
       const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
         method: 'PUT',
@@ -66,7 +201,6 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
           player_name: player.player_name,
           hitman_name: hitmanName || null,
           ko_position: nextKoPosition,
-          placement: placement,
         }),
       });
 
@@ -100,7 +234,6 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
           player_name: player.player_name,
           hitman_name: null,
           ko_position: null,
-          placement: null,
         }),
       });
 
@@ -159,28 +292,47 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                 {selectedPlayer.player_name}
               </div>
               <div className="text-lg text-gray-400">
-                Placement: #{remainingPlayers.length}
+                Placement: #{allRemainingPlayers.length}
               </div>
             </div>
 
             <div className="mb-6">
               <label className="block text-gray-300 text-lg mb-3">
-                Who knocked them out? (Optional)
+                Who knocked them out? (Type to search, or press Enter for &quot;unknown&quot;)
               </label>
-              <select
-                value={selectedHitman}
-                onChange={(e) => setSelectedHitman(e.target.value)}
-                className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              >
-                <option value="">Select hitman (optional)</option>
-                {remainingPlayers
-                  .filter(p => p.id !== selectedPlayer.id)
-                  .map(p => (
-                    <option key={p.id} value={p.player_name}>
+              <input
+                ref={hitmanInputRef}
+                type="text"
+                value={hitmanSearchText}
+                onChange={(e) => {
+                  setHitmanSearchText(e.target.value);
+                  setHighlightedHitmanIndex(-1);
+                }}
+                placeholder="Type hitman name or press Enter for 'unknown'..."
+                className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500"
+              />
+              {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
+                <div className="mt-2 max-h-60 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
+                  {filteredHitmanOptions.map((p, index) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHitman(p.player_name);
+                        setHitmanSearchText(p.player_name);
+                        setHighlightedHitmanIndex(-1);
+                      }}
+                      className={`w-full px-4 py-3 text-left text-lg transition-all ${
+                        highlightedHitmanIndex === index
+                          ? 'bg-cyan-500/30 text-cyan-300'
+                          : 'text-white hover:bg-gray-700'
+                      }`}
+                    >
                       {p.player_name}
-                    </option>
+                    </button>
                   ))}
-              </select>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -212,25 +364,41 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
         {/* Remaining Players */}
         <div>
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-3">
             <Users className="text-green-400" size={32} />
             <h2 className="text-3xl font-bold text-green-400">
-              Remaining ({remainingPlayers.length})
+              Remaining ({allRemainingPlayers.length})
             </h2>
+          </div>
+
+          {/* Filter Input */}
+          <div className="mb-3">
+            <input
+              ref={filterInputRef}
+              type="text"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="Filter players... (press 'x')"
+              className="w-full px-3 py-2 text-sm bg-gray-800/60 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500"
+            />
           </div>
 
           <div className="space-y-3">
             {remainingPlayers.length === 0 ? (
               <div className="text-center py-12 text-gray-500 text-xl">
-                No players remaining
+                {filterText.trim() ? 'No players match your filter' : 'No players remaining'}
               </div>
             ) : (
-              remainingPlayers.map((player) => (
+              remainingPlayers.map((player, index) => (
                 <button
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}
                   disabled={isSubmitting}
-                  className="w-full p-6 bg-gray-800/80 border-2 border-green-500/50 rounded-xl hover:border-green-500 hover:bg-gray-700/80 transition-all text-left group"
+                  className={`w-full p-6 border-2 rounded-xl transition-all text-left group ${
+                    highlightedIndex === index
+                      ? 'bg-green-500/20 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]'
+                      : 'bg-gray-800/80 border-green-500/50 hover:border-green-500 hover:bg-gray-700/80'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -294,9 +462,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                           Knocked out by: <span className="text-cyan-400 font-semibold">{player.hitman_name}</span>
                         </div>
                       )}
-                      {player.placement !== null && (
+                      {calculatePlacement(player, players.length) !== null && (
                         <div className="text-gray-500 text-sm ml-16 mt-1">
-                          Final Placement: #{player.placement}
+                          Final Placement: #{calculatePlacement(player, players.length)}
                         </div>
                       )}
                     </div>
@@ -326,7 +494,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
         </div>
         <div className="bg-gray-800/60 border border-green-500/30 rounded-xl p-6 text-center">
           <div className="text-4xl font-bold text-green-400 mb-2">
-            {remainingPlayers.length}
+            {allRemainingPlayers.length}
           </div>
           <div className="text-gray-400">Still In</div>
         </div>

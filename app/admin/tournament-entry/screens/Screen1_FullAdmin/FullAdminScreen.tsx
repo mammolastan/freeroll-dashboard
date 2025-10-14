@@ -112,8 +112,24 @@ export function FullAdminScreen({
     const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [isIntegrating, setIsIntegrating] = useState(false);
-    const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion' | 'checked_in_at'>('insertion');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // desc means newest first for insertion
+    const [sortBy, setSortBy] = useState<'name' | 'ko_position' | 'insertion' | 'checked_in_at'>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('adminSortBy');
+            if (saved && ['name', 'ko_position', 'insertion', 'checked_in_at'].includes(saved)) {
+                return saved as 'name' | 'ko_position' | 'insertion' | 'checked_in_at';
+            }
+        }
+        return 'insertion';
+    });
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('adminSortOrder');
+            if (saved && ['asc', 'desc'].includes(saved)) {
+                return saved as 'asc' | 'desc';
+            }
+        }
+        return 'asc';
+    }); // desc means newest first for insertion
 
     const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
@@ -161,6 +177,15 @@ export function FullAdminScreen({
             }
         };
     }, [currentDraft]);
+
+    // Save sort preferences to localStorage whenever they change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminSortBy', sortBy);
+            localStorage.setItem('adminSortOrder', sortOrder);
+        }
+    }, [sortBy, sortOrder]);
+
     const [showVenueDropdown, setShowVenueDropdown] = useState(false);
     const [isAddingNewVenue, setIsAddingNewVenue] = useState(false);
     const [newVenueInput, setNewVenueInput] = useState('');
@@ -1028,8 +1053,12 @@ export function FullAdminScreen({
             output += `Player: ${player.player_name}`;
             if (player.is_new_player) output += ' (NEW)';
             if (player.hitman_name) output += ` | Hitman: ${player.hitman_name}`;
-            if (player.ko_position !== null) output += ` | KO Position: ${player.ko_position}`;
-            if (player.placement !== null) output += ` | Final Position: ${player.placement}`;
+            if (player.ko_position !== null) {
+                output += ` | KO Position: ${player.ko_position}`;
+                // Calculate dynamic placement based on total players and ko_position
+                const dynamicPlacement = players.length - player.ko_position + 1;
+                output += ` | Final Position: ${dynamicPlacement}`;
+            }
             output += '\n';
         });
 
