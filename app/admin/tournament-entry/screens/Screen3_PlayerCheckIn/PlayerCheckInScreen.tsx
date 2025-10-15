@@ -425,7 +425,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: Pla
                     <div className="flex items-center gap-2">
                       <Check size={16} className="text-green-400 flex-shrink-0" />
                       <div className="text-white font-medium truncate">
-                        {player.player_name}
+                        {player.player_nickname || player.player_name}
                       </div>
                     </div>
                   </div>
