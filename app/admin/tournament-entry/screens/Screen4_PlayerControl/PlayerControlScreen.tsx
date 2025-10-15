@@ -310,6 +310,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                 }}
                 placeholder="Type hitman name or press Enter for 'unknown'..."
                 className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500"
+                autoComplete="off"
               />
               {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
                 <div className="mt-2 max-h-60 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
@@ -322,11 +323,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                         setHitmanSearchText(p.player_name);
                         setHighlightedHitmanIndex(-1);
                       }}
-                      className={`w-full px-4 py-3 text-left text-lg transition-all ${
-                        highlightedHitmanIndex === index
-                          ? 'bg-cyan-500/30 text-cyan-300'
-                          : 'text-white hover:bg-gray-700'
-                      }`}
+                      className={`w-full px-4 py-3 text-left text-lg transition-all ${highlightedHitmanIndex === index
+                        ? 'bg-cyan-500/30 text-cyan-300'
+                        : 'text-white hover:bg-gray-700'
+                        }`}
                     >
                       {p.player_name}
                     </button>
@@ -394,11 +394,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}
                   disabled={isSubmitting}
-                  className={`w-full p-6 border-2 rounded-xl transition-all text-left group ${
-                    highlightedIndex === index
-                      ? 'bg-green-500/20 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]'
-                      : 'bg-gray-800/80 border-green-500/50 hover:border-green-500 hover:bg-gray-700/80'
-                  }`}
+                  className={`w-full p-6 border-2 rounded-xl transition-all text-left group ${highlightedIndex === index
+                    ? 'bg-green-500/20 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]'
+                    : 'bg-gray-800/80 border-green-500/50 hover:border-green-500 hover:bg-gray-700/80'
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>

@@ -379,6 +379,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: Pla
                 placeholder="Enter your full name"
                 className="w-full px-6 py-6 text-2xl bg-gray-900 border-2 border-purple-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 mb-6"
                 autoFocus
+                autoComplete="off"
               />
 
               <div className="flex gap-4">
