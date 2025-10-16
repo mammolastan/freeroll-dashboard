@@ -60,27 +60,37 @@ export default function TournamentEntryPage() {
       if (tournamentsResponse.ok) {
         const tournaments: TournamentDraft[] = await tournamentsResponse.json();
 
-        // Find the most recent in_progress tournament
-        const activeTournament = tournaments.find(t => t.status === 'in_progress');
+        // Only auto-select if no tournament is currently selected
+        if (!currentDraft) {
+          // Find the most recent in_progress tournament
+          const activeTournament = tournaments.find(t => t.status === 'in_progress');
 
-        if (activeTournament) {
-          setCurrentDraft(activeTournament);
+          if (activeTournament) {
+            setCurrentDraft(activeTournament);
 
-          // Load players for this tournament
-          const playersResponse = await fetch(`/api/tournament-drafts/${activeTournament.id}/players`);
+            // Load players for this tournament
+            const playersResponse = await fetch(`/api/tournament-drafts/${activeTournament.id}/players`);
+            if (playersResponse.ok) {
+              const playersData: Player[] = await playersResponse.json();
+              setPlayers(playersData);
+            }
+          } else {
+            setCurrentDraft(null);
+            setPlayers([]);
+          }
+        } else {
+          // If a tournament is already selected, just reload its players
+          const playersResponse = await fetch(`/api/tournament-drafts/${currentDraft.id}/players`);
           if (playersResponse.ok) {
             const playersData: Player[] = await playersResponse.json();
             setPlayers(playersData);
           }
-        } else {
-          setCurrentDraft(null);
-          setPlayers([]);
         }
       }
     } catch (error) {
       console.error('Error loading data:', error);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentDraft]);
 
   // Load data when authenticated or when data version changes
   useEffect(() => {
