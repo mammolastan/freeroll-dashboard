@@ -9,5 +9,9 @@
     "noEmit": false,
     "isolatedModules": false
   },
-  "include": ["server.mts", "app/activeTournament/logic.ts", "lib/socketServer.ts"]
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["server.mts"]
 }
