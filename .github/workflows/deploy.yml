@@ -32,7 +32,12 @@ jobs:
             
             # Navigate to project directory
             cd /var/www/freeroll-dashboard
-            
+
+            # Clean local changes to build artifacts
+            echo "Cleaning build artifacts..."
+            git checkout -- dist/ 2>/dev/null || true
+            git clean -fd dist/ 2>/dev/null || true
+
             # Pull latest changes
             echo "Pulling latest changes..."
             git pull origin main
