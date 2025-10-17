@@ -11,6 +11,10 @@ import { GameTimer } from '@/components/Timer/GameTimer';
 import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
 import { socket } from '@/lib/socketClient';
 import { PlayerSearchDropdown } from '@/components/PlayerSearchDropdown';
+import { PlayerRow } from '../../components/PlayerRow';
+import { TournamentValidationStatus } from '../../components/TournamentValidationStatus';
+import { validateTournamentForIntegration, exportTournamentAsText } from '@/lib/tournamentValidation';
+import { apiGet, apiPost, apiPut, apiDelete, handleApiError } from '@/lib/errorHandler';
 
 // Blind schedule definitions
 const BLIND_SCHEDULES = {
@@ -173,7 +177,6 @@ export function FullAdminScreen({
     // Socket.IO connection for real-time updates
     useEffect(() => {
         if (currentDraft) {
-            console.log(`Joining room ${currentDraft.id} for admin page`);
             socket.emit('joinRoom', currentDraft.id.toString());
         }
 
@@ -507,8 +510,6 @@ export function FullAdminScreen({
         setCheckInUrl('');
         setShowQRCode(false);
         setGeneratingQR(false);
-
-        console.log('Tournament state cleared');
     };
 
 
@@ -633,7 +634,6 @@ export function FullAdminScreen({
                 const playersToUpdate = { ...pendingUpdatesRef.current };
                 if (Object.keys(playersToUpdate).length === 0) return;
 
-                console.log(`Batching updates for ${Object.keys(playersToUpdate).length} players`);
 
                 try {
                     // Convert pending updates to array format for batch API
@@ -679,7 +679,6 @@ export function FullAdminScreen({
                     // Trigger parent to reload all player data
                     onDataChange();
 
-                    console.log(`✅ Successfully batch updated ${result.updateCount} players`);
 
                 } catch (error) {
                     console.error('Batch update error:', error);
@@ -729,7 +728,6 @@ export function FullAdminScreen({
                 return { success: true, updatedCount: 0 };
             }
 
-            console.log(`Force saving ${Object.keys(playersToUpdate).length} pending updates`);
 
             try {
                 const updatePromises = Object.entries(playersToUpdate).map(async ([playerIdStr, updatedData]) => {
@@ -900,7 +898,6 @@ export function FullAdminScreen({
             const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
             if (hitmanInput) {
                 hitmanInput.value = '';
-                console.log(`Directly set input field to empty for player ${playerId}`);
             }
             clearPlayerKnockout(playerId);
         } else {
@@ -925,7 +922,6 @@ export function FullAdminScreen({
                 return;
             }
 
-            console.log(`Clearing knockout for player ${playerId}`);
 
             // Disable auto-refresh temporarily
             temporarilyDisableAutoRefresh();
@@ -1060,41 +1056,7 @@ export function FullAdminScreen({
     // Export tournament
     const exportTournament = () => {
         if (!currentDraft || players.length === 0) return;
-        const sortedPlayers = [...players].sort((a, b) => {
-            if (a.ko_position !== null && b.ko_position !== null) {
-                return a.ko_position - b.ko_position;
-            }
-            if (a.ko_position !== null) return -1;
-            if (b.ko_position !== null) return 1;
-            return a.player_name.localeCompare(b.player_name);
-        });
-        let output = `Tournament: ${currentDraft.venue} - ${currentDraft.tournament_date}\n`;
-        output += `Director: ${currentDraft.director_name}\n`;
-        output += `Players: ${players.length}\n`;
-        output += `Start Points: ${currentDraft.start_points}\n\n`;
-
-        sortedPlayers.forEach(player => {
-            output += `Player: ${player.player_name}`;
-            if (player.is_new_player) output += ' (NEW)';
-            if (player.hitman_name) output += ` | Hitman: ${player.hitman_name}`;
-            if (player.ko_position !== null) {
-                output += ` | KO Position: ${player.ko_position}`;
-                // Calculate dynamic placement based on total players and ko_position
-                const dynamicPlacement = players.length - player.ko_position + 1;
-                output += ` | Final Position: ${dynamicPlacement}`;
-            }
-            output += '\n';
-        });
-
-        const blob = new Blob([output], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tournament_${currentDraft.venue.replace(/\s+/g, '_')}_${currentDraft.tournament_date}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        exportTournamentAsText(currentDraft, players);
     };
 
     // Integrate tournament
@@ -1147,7 +1109,6 @@ export function FullAdminScreen({
         // If KO position changed, show validation status update
         if (field === 'ko_position' || field === 'hitman_name') {
             // The validation component will automatically re-render and show updated status
-            console.log('KO positions updated, validation status will refresh');
         }
     };
 
@@ -1183,188 +1144,6 @@ export function FullAdminScreen({
         return null;
     };
     // Validation function for tournament integration readiness
-    const validateTournamentForIntegration = (players: Player[]): { canIntegrate: boolean; validationMessage: string; errors: string[] } => {
-        const errors: string[] = [];
-
-        // Check minimum players
-        if (players.length < 2) {
-            errors.push("Tournament must have at least 2 players");
-        }
-
-        // Check that all players have either a KO position or are the survivor
-        const playersWithKoPosition = players.filter(p => p.ko_position !== null);
-        const survivorPlayers = players.filter(p => p.ko_position === null);
-
-        // Must have exactly one survivor (winner)
-        if (survivorPlayers.length === 0) {
-            errors.push("Tournament must have exactly 1 winner (player with no KO position)");
-        } else if (survivorPlayers.length > 1) {
-            const survivorNames = survivorPlayers.map(p => p.player_name).join(", ");
-            errors.push(`Only 1 player can be the winner (no KO position). Found ${survivorPlayers.length}: ${survivorNames}`);
-        }
-
-        // All other players must have KO positions
-        if (playersWithKoPosition.length !== players.length - 1) {
-            const missingKO = players.filter(p => p.ko_position === null && survivorPlayers.length > 0 && !survivorPlayers.includes(p));
-            if (missingKO.length > 0) {
-                errors.push(`Players missing KO positions: ${missingKO.map(p => p.player_name).join(", ")}`);
-            }
-        }
-
-        // KO positions must be sequential starting from 1
-        if (playersWithKoPosition.length > 0) {
-            const koPositions = playersWithKoPosition.map(p => p.ko_position!).sort((a, b) => a - b);
-            const expectedPositions = Array.from({ length: koPositions.length }, (_, i) => i + 1);
-
-            const missingPositions = expectedPositions.filter(pos => !koPositions.includes(pos));
-            if (missingPositions.length > 0) {
-                errors.push(`Missing KO positions: ${missingPositions.join(", ")}. Must be sequential from 1 to ${koPositions.length}`);
-            }
-        }
-
-        // Check for duplicate KO positions
-        const koPositionCounts = new Map<number, string[]>();
-        playersWithKoPosition.forEach(p => {
-            const playersList = koPositionCounts.get(p.ko_position!) || [];
-            playersList.push(p.player_name);
-            koPositionCounts.set(p.ko_position!, playersList);
-        });
-
-        for (const [position, playerNames] of koPositionCounts) {
-            if (playerNames.length > 1) {
-                errors.push(`Duplicate KO position ${position}: ${playerNames.join(", ")}`);
-            }
-        }
-
-        // Check that players with hitman have KO positions
-        const playersWithHitmanButNoKO = players.filter(p =>
-            p.hitman_name !== null &&
-            p.hitman_name !== '' &&
-            p.ko_position === null
-        );
-        if (playersWithHitmanButNoKO.length > 0) {
-            errors.push(`Players with hitman must have KO positions: ${playersWithHitmanButNoKO.map(p => p.player_name).join(", ")}`);
-        }
-
-        const isValid = errors.length === 0;
-
-        return {
-            canIntegrate: isValid,
-            validationMessage: isValid
-                ? `✅ Tournament ready for integration with ${players.length} players`
-                : `❌ Cannot integrate tournament`,
-            errors
-        };
-    };
-
-    // Preview what placements will be calculated
-    const previewPlacements = (players: Player[]): Array<{ name: string; koPosition: number | null; finalPlacement: number; hitman: string | null }> => {
-        const knockedOutPlayers = players.filter(p => p.ko_position !== null);
-        const survivorPlayers = players.filter(p => p.ko_position === null);
-
-        return players.map(player => {
-            let finalPlacement: number;
-
-            if (player.ko_position === null) {
-                // Survivor = Winner = 1st place
-                finalPlacement = 1;
-            } else {
-                // Convert KO position to final placement
-                // Highest KO position = 2nd place
-                // 2nd highest KO position = 3rd place, etc.
-                finalPlacement = (knockedOutPlayers.length - player.ko_position) + 2;
-            }
-
-            return {
-                name: player.player_name,
-                koPosition: player.ko_position,
-                finalPlacement,
-                hitman: player.hitman_name
-            };
-        }).sort((a, b) => a.finalPlacement - b.finalPlacement);
-    };
-    // Add this component to display validation status
-    const TournamentValidationStatus = ({ players, onIntegrate, isIntegrating }: {
-        players: Player[];
-        onIntegrate: () => void;
-        isIntegrating: boolean;
-    }) => {
-        const validation = validateTournamentForIntegration(players);
-        const placementPreview = validation.canIntegrate ? previewPlacements(players) : [];
-
-        // Check if there are KO position issues that can be auto-fixed
-        const playersWithKO = players.filter(p => p.ko_position !== null);
-        const hasKOPositionIssues = validation.errors.some(error =>
-            error.includes('Duplicate KO position') ||
-            error.includes('Must be sequential from 1 to')
-        );
-
-        return (
-            <div className="mb-6 p-4 border rounded-lg">
-                <h3 className="font-semibold text-lg mb-3">Integration Status</h3>
-
-                <div className={`p-3 rounded-lg mb-4 ${validation.canIntegrate ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className={`font-medium ${validation.canIntegrate ? 'text-green-800' : 'text-red-800'}`}>
-                        {validation.validationMessage}
-                    </div>
-
-                    {/* Auto-calculate button for KO position issues */}
-                    {!validation.canIntegrate && hasKOPositionIssues && playersWithKO.length > 0 && (
-                        <button
-                            onClick={autoCalculateKOPositions}
-                            disabled={currentDraft?.status === 'integrated'}
-                            className="mt-3 mr-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
-                        >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                            Auto-Calculate KO #s
-                        </button>
-                    )}
-
-                    {validation.canIntegrate && (
-                        <button
-                            onClick={onIntegrate}
-                            disabled={isIntegrating || currentDraft?.status === 'integrated'}
-                            className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
-                        >
-                            <Trophy className="h-4 w-4" />
-                            {isIntegrating ? 'Integrating...' : 'Integrate Tournament'}
-                        </button>
-                    )}
-
-                    {!validation.canIntegrate && (
-                        <div className="mt-2 text-sm text-red-700">
-                            <ul className="list-disc list-inside space-y-1">
-                                {validation.errors.map((error, index) => (
-                                    <li key={index}>{error}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-
-                {validation.canIntegrate && placementPreview.length > 0 && (
-                    <div className="bg-blue-50 border-blue-200 text-black rounded-lg p-3">
-                        <h4 className="font-medium text-blue-800 mb-2">Final Placement Preview:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                            {placementPreview.map((player, index) => (
-                                <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                                    <span className="font-medium">
-                                        {player.name}
-                                    </span>
-                                    <div className="text-right text-xs text-gray-600">
-                                        <div>Place: {player.finalPlacement}</div>
-                                        {player.koPosition && <div>KO #{player.koPosition}</div>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
 
 
 
@@ -1489,10 +1268,7 @@ export function FullAdminScreen({
         // Poll every 15 seconds when tab is active
         const interval = setInterval(() => {
             if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
-                console.log('Auto-refreshing player data');
                 loadPlayersForTournament(currentDraft.id);
-            } else if (skipNextAutoRefresh) {
-                console.log('Skipping auto-refresh due to recent update');
             }
         }, 15000);
 
@@ -1516,7 +1292,6 @@ export function FullAdminScreen({
         // Re-enable auto-refresh after 5 seconds (enough time for updates to complete)
         skipAutoRefreshTimeoutRef.current = setTimeout(() => {
             setSkipNextAutoRefresh(false);
-            console.log('Re-enabled auto-refresh after update');
         }, 5000);
     };
 
@@ -2199,11 +1974,13 @@ export function FullAdminScreen({
 
 
 
-                        {showIntegrationPreview && players.length > 0 && currentDraft?.status !== 'integrated' && (
+                        {showIntegrationPreview && players.length > 0 && currentDraft && currentDraft.status !== 'integrated' && (
                             <TournamentValidationStatus
                                 players={players}
-                                onIntegrate={integrateToMainSystem}
+                                isIntegrated={false}
                                 isIntegrating={isIntegrating}
+                                onIntegrate={integrateToMainSystem}
+                                onAutoCalculateKOPositions={autoCalculateKOPositions}
                             />
                         )}
 
@@ -2340,162 +2117,30 @@ export function FullAdminScreen({
 
                                     {/* Player Rows */}
                                     {getFilteredAndSortedPlayers().map((player) => (
-                                        <div
+                                        <PlayerRow
                                             key={player.id}
-                                            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
-                                                ? 'bg-red-50 border-red-100'
-                                                : 'bg-white'
-                                                }`}
-                                        >
-                                            {/* Player Name Column */}
-                                            <div className="flex items-center gap-2 ">
-                                                <div className="flex items-center gap-2 flex-1">
-
-                                                    <span className="font-medium text-gray-900">
-                                                        {player.player_name} {player.player_nickname ? `(${player.player_nickname})` : ''}
-                                                    </span>
-                                                    {renderPlayerIndicator(player)}
-                                                    {player.is_new_player ? (
-                                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                                                            NEW
-                                                        </span>
-                                                    ) : ''}
-                                                </div>
-
-                                            </div>
-                                            {/* Checkintime Column */}
-                                            <div>
-                                                <div>
-                                                    <p className='text-black text-sm'>{player.checked_in_at ? new Date(player.checked_in_at).toLocaleTimeString() : ''} </p>
-                                                </div>
-                                            </div>
-                                            {/* Hitman Input Column */}
-                                            <div className="relative flex">
-                                                {/* Knockout/Clear Button */}
-                                                {currentDraft?.status !== 'integrated' ? (
-                                                    <button
-                                                        onClick={() => handleCrosshairClick(player.id)}
-                                                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && player.ko_position !== null
-                                                            ? 'text-green-600 hover:text-green-800 hover:bg-green-50' // Green when both assigned
-                                                            : 'text-red-600 hover:text-red-800 hover:bg-red-50'       // Red when not assigned
-                                                            }`}
-                                                        title={
-                                                            player.hitman_name && player.ko_position !== null
-                                                                ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${player.ko_position})`
-                                                                : `Knockout ${player.player_name}`
-                                                        }
-                                                    >
-                                                        <svg
-                                                            width="18"
-                                                            height="18"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2"
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                        >
-                                                            <circle cx="12" cy="12" r="10" />
-                                                            <line x1="12" y1="0" x2="12" y2="8" />
-                                                            <line x1="12" y1="16" x2="12" y2="24" />
-                                                            <line x1="0" y1="12" x2="8" y2="12" />
-                                                            <line x1="16" y1="12" x2="24" y2="12" />
-                                                            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-                                                        </svg>
-                                                    </button>
-                                                ) : ''}
-                                                <input
-                                                    id={`hitman-input-${player.id}`}
-                                                    type="text"
-                                                    value={hitmanSearchValues[player.id] ?? player.hitman_name ?? ''}
-                                                    onChange={(e) => handleHitmanSearchChange(player.id, e.target.value)}
-                                                    onFocus={() => handleHitmanFocus(player.id)}
-                                                    onBlur={() => handleHitmanBlur(player.id)}
-                                                    onKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
-                                                    className={`w-full px-2 py-1 border rounded text-black text-sm ${currentDraft?.status === 'integrated' ? 'bg-gray-100' : ''
-                                                        }`}
-                                                    placeholder="Enter hitman name or leave as 'unknown'"
-                                                    disabled={currentDraft?.status === 'integrated'}
-                                                />
-
-
-                                                {/* Hitman dropdown */}
-                                                {hitmanDropdownVisible[player.id] && currentDraft?.status !== 'integrated' && (
-                                                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-md shadow-lg z-10 max-h-32 overflow-y-auto">
-                                                        {(() => {
-                                                            const candidates = getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '');
-                                                            const unknownOption = hitmanSearchValues[player.id] &&
-                                                                hitmanSearchValues[player.id].toLowerCase().includes('unknown');
-                                                            const allOptions = [...candidates];
-                                                            if (unknownOption) {
-                                                                allOptions.push({ id: -1, player_name: 'unknown' } as any);
-                                                            }
-                                                            const highlightedIndex = hitmanHighlightedIndex[player.id] ?? -1;
-
-                                                            return (
-                                                                <>
-                                                                    {candidates.map((candidate, index) => (
-                                                                        <div
-                                                                            key={candidate.id}
-                                                                            onClick={() => selectHitman(player.id, candidate.player_name)}
-                                                                            className={`px-2 py-1 cursor-pointer text-black text-sm ${index === highlightedIndex
-                                                                                ? 'bg-blue-200 text-blue-900'
-                                                                                : 'hover:bg-blue-100'
-                                                                                }`}
-                                                                        >
-                                                                            {candidate.player_name}
-                                                                        </div>
-                                                                    ))}
-                                                                    {/* Add "unknown" option if user is typing */}
-                                                                    {unknownOption && (
-                                                                        <div
-                                                                            onClick={() => selectHitman(player.id, 'unknown')}
-                                                                            className={`px-2 py-1 cursor-pointer text-black text-sm border-t ${candidates.length === highlightedIndex
-                                                                                ? 'bg-blue-200 text-blue-900'
-                                                                                : 'hover:bg-blue-100'
-                                                                                }`}
-                                                                        >
-                                                                            <em>unknown hitman</em>
-                                                                        </div>
-                                                                    )}
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* KO Position Column */}
-                                            <div>
-                                                <input
-                                                    type="number"
-                                                    value={player.ko_position || ''}
-                                                    onChange={(e) => updatePlayer(player.id, 'ko_position', parseInt(e.target.value) || null)}
-                                                    onFocus={() => handleKOInputFocus(player.id)}
-                                                    onBlur={() => handleKOInputBlur(player.id)}
-                                                    className="w-full px-2 py-1 border rounded text-black text-sm"
-                                                    placeholder="KO #"
-                                                    min={0}
-                                                    disabled={currentDraft?.status === 'integrated'}
-                                                />
-                                            </div>
-
-                                            {/* Remove Button Column */}
-                                            <div className="flex justify-end">
-                                                {currentDraft?.status !== 'integrated' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (confirm(`Remove ${player.player_name} from tournament?`)) {
-                                                                removePlayer(player.id);
-                                                            }
-                                                        }}
-                                                        className="text-red-600 hover:text-red-800 p-1"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
+                                            player={player}
+                                            isIntegrated={currentDraft?.status === 'integrated'}
+                                            hitmanSearchValue={hitmanSearchValues[player.id] ?? player.hitman_name ?? ''}
+                                            hitmanDropdownVisible={hitmanDropdownVisible[player.id] ?? false}
+                                            hitmanHighlightedIndex={hitmanHighlightedIndex[player.id] ?? -1}
+                                            hitmanCandidates={getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '')}
+                                            onHitmanSearchChange={(value) => handleHitmanSearchChange(player.id, value)}
+                                            onHitmanFocus={() => handleHitmanFocus(player.id)}
+                                            onHitmanBlur={() => handleHitmanBlur(player.id)}
+                                            onHitmanKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
+                                            onHitmanSelect={(hitmanName) => selectHitman(player.id, hitmanName)}
+                                            onCrosshairClick={() => handleCrosshairClick(player.id)}
+                                            onKOPositionChange={(koPosition) => updatePlayer(player.id, 'ko_position', koPosition)}
+                                            onKOInputFocus={() => handleKOInputFocus(player.id)}
+                                            onKOInputBlur={() => handleKOInputBlur(player.id)}
+                                            onRemove={() => {
+                                                if (confirm(`Remove ${player.player_name} from tournament?`)) {
+                                                    removePlayer(player.id);
+                                                }
+                                            }}
+                                            renderPlayerIndicator={renderPlayerIndicator}
+                                        />
                                     ))}
                                 </div>
                             )}
