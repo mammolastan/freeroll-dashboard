@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
 import { Player } from '@/lib/realtime/types';
 import { GameTimer } from '@/components/Timer/GameTimer';
-import { CheckInModal } from '@/components/CheckInModal';
+import { PlayerCheckInModal } from '@/components/PlayerCheckIn/PlayerCheckInModal';
 import { QrCode, UserPlus } from 'lucide-react';
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate, formatTime } from '@/lib/utils';
@@ -300,10 +300,11 @@ export default function GameViewPage() {
 
         {/* Check In Modal */}
         {checkInToken && (
-          <CheckInModal
+          <PlayerCheckInModal
             isOpen={showCheckInModal}
             onClose={() => setShowCheckInModal(false)}
-            token={checkInToken}
+            tournamentToken={token as string}
+            checkInToken={checkInToken}
             onSuccess={() => {
               setShowCheckInModal(false);
             }}
