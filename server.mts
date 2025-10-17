@@ -385,6 +385,7 @@ async function getTournamentData(tournamentDraftId: number) {
       SELECT
         id,
         tournament_date,
+        tournament_time,
         director_name,
         venue,
         status
@@ -400,6 +401,7 @@ async function getTournamentData(tournamentDraftId: number) {
       id: data.id,
       title: data.venue,
       date: data.tournament_date,
+      time: data.tournament_time,
       venue: data.venue,
       status: data.status,
       max_players: null,

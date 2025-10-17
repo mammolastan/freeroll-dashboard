@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight } from 'lucide-react';
-import { formatGameDate } from '@/lib/utils';
+import { formatGameDate, formatTime } from '@/lib/utils';
 
 interface ActiveTournament {
     id: number;
@@ -53,41 +53,6 @@ export default function CheckInPage() {
     const getBlindLevelDisplay = (level: number | null, schedule: string) => {
         if (!level) return 'Not started';
         return `Level ${level} (${schedule === 'turbo' ? 'Turbo' : 'Standard'})`;
-    };
-
-    const formatTime = (timeString?: string | any) => {
-        if (!timeString) return null;
-
-        try {
-            // Convert to string if it's an object or buffer
-            let timeStr = typeof timeString === 'string' ? timeString : String(timeString);
-
-            // Handle different time formats
-            // If it's a full timestamp, extract just the time part
-            if (timeStr.includes('T')) {
-                const date = new Date(timeStr);
-                const hours = date.getUTCHours();
-                const minutes = date.getUTCMinutes();
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const displayHour = hours % 12 || 12;
-                return `${displayHour}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-            }
-
-            // Standard HH:MM:SS or HH:MM format
-            const parts = timeStr.split(':');
-            if (parts.length >= 2) {
-                const hour = parseInt(parts[0], 10);
-                const minute = parseInt(parts[1], 10);
-                const ampm = hour >= 12 ? 'PM' : 'AM';
-                const displayHour = hour % 12 || 12;
-                return `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
-            }
-
-            return null;
-        } catch (error) {
-            console.error('Error formatting time:', timeString, error);
-            return null;
-        }
     };
 
     if (loading) {

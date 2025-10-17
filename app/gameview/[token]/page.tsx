@@ -10,7 +10,7 @@ import { GameTimer } from '@/components/Timer/GameTimer';
 import { CheckInModal } from '@/components/CheckInModal';
 import { QrCode, UserPlus } from 'lucide-react';
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
-import { formatGameDate } from '@/lib/utils';
+import { formatGameDate, formatTime } from '@/lib/utils';
 
 // Helper function to calculate dynamic placement based on elimination_position
 function calculatePlacement(player: Player, totalPlayers: number): number | null {
@@ -79,7 +79,14 @@ function TournamentHeader({ tournament, stats }: {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h1 className="text-3xl font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">{tournament.title}</h1>
-          <p className="text-gray-400 mt-1">{formatGameDate(typeof tournament.date === 'string' ? tournament.date : tournament.date.toISOString())}</p>
+          <p className="text-gray-400 mt-1">
+            {formatGameDate(typeof tournament.date === 'string' ? tournament.date : tournament.date.toISOString())}
+            {formatTime(tournament.time) && (
+              <span className="ml-2 text-cyan-300 font-semibold">
+                @ {formatTime(tournament.time)}
+              </span>
+            )}
+          </p>
           {tournament.venue && (
             <p className="text-cyan-400 flex items-center gap-2">
               <span className="text-cyan-500">📍</span> {tournament.venue}

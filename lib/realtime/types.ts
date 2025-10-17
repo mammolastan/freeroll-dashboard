@@ -24,6 +24,7 @@ export interface Tournament {
   id: number;
   title: string;
   date: Date;
+  time: string | null; // tournament_time field
   venue: string | null; // Just a text field
   status: 'draft' | 'active' | 'completed';
   max_players: number | null;

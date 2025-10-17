@@ -230,6 +230,42 @@ export function formatDateRangeText(
   return `Stats from ${formatGameDate(startDate.toISOString())}`;
 }
 
+// Helper function to format time strings to 12-hour format with AM/PM
+export function formatTime(timeString?: string | any): string | null {
+  if (!timeString) return null;
+
+  try {
+    // Convert to string if it's an object or buffer
+    let timeStr = typeof timeString === 'string' ? timeString : String(timeString);
+
+    // Handle different time formats
+    // If it's a full timestamp, extract just the time part
+    if (timeStr.includes('T')) {
+      const date = new Date(timeStr);
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 || 12;
+      return `${displayHour}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    }
+
+    // Standard HH:MM:SS or HH:MM format
+    const parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      const hour = parseInt(parts[0], 10);
+      const minute = parseInt(parts[1], 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error formatting time:', timeString, error);
+    return null;
+  }
+}
+
 // In TypeScript:
 // - The colon after a parameter (e.g., isoString: string) specifies the type of that parameter.
 //   Example: isoString: string  // isoString must be a string
