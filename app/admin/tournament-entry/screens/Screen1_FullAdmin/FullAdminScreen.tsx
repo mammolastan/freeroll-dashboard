@@ -150,6 +150,13 @@ export function FullAdminScreen({
     // Venue management
     const [venues, setVenues] = useState<string[]>([]);
 
+    // Toast notification state for auto-calculations
+    const [toast, setToast] = useState<{
+        message: string;
+        type: 'info' | 'success' | 'warning';
+        undoAction?: () => void;
+    } | null>(null);
+
     // Sync currentDraft with parent prop
     useEffect(() => {
         if (currentDraftProp?.id !== currentDraft?.id) {
@@ -580,21 +587,38 @@ export function FullAdminScreen({
             // Create updated player object
             let updatedPlayer = { ...player, [field]: value };
 
-            // Auto-assign KO position when hitman is selected (same logic as before)
+            // Auto-assign KO position when hitman is selected (IMPROVED VERSION)
             if (field === 'hitman_name' && value) {
-                const usedKoPositions = players
-                    .filter(p => p.ko_position !== null && p.id !== playerId)
-                    .map(p => p.ko_position!);
+                // Only auto-assign if player doesn't already have a KO position
+                if (player.ko_position === null) {
+                    const usedKoPositions = players
+                        .filter(p => p.ko_position !== null && p.id !== playerId)
+                        .map(p => p.ko_position!);
 
-                const maxKoPosition = usedKoPositions.length > 0 ? Math.max(...usedKoPositions) : 0;
-                const nextKoPosition = maxKoPosition + 1;
-                updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
+                    const maxKoPosition = usedKoPositions.length > 0 ? Math.max(...usedKoPositions) : 0;
+                    const nextKoPosition = maxKoPosition + 1;
+                    updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
+
+                    // Show toast notification with undo option
+                    setToast({
+                        message: `Auto-assigned KO position ${nextKoPosition} to ${player.player_name}`,
+                        type: 'info',
+                        undoAction: () => {
+                            // Undo the auto-assignment
+                            updatePlayer(playerId, 'ko_position', null);
+                            setToast(null);
+                        }
+                    });
+
+                    // Auto-hide toast after 5 seconds
+                    setTimeout(() => {
+                        setToast(null);
+                    }, 5000);
+                }
             }
 
-            // Clear KO position if hitman is removed
-            if (field === 'hitman_name' && !value) {
-                updatedPlayer = { ...updatedPlayer, ko_position: null };
-            }
+            // DO NOT auto-clear KO position when hitman is removed
+            // This was causing unwanted data loss - users can manually clear if needed
 
             // Store pending updates for this player
             pendingUpdatesRef.current[playerId] = updatedPlayer;
@@ -1825,6 +1849,45 @@ export function FullAdminScreen({
     // Tournament Entry Interface
     return (
         <div className="min-h-screen bg-gray-100 p-4">
+            {/* Toast Notification for Auto-Calculations */}
+            {toast && (
+                <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in">
+                    <div className={`p-4 rounded-lg shadow-lg border ${
+                        toast.type === 'info' ? 'bg-blue-50 border-blue-200' :
+                        toast.type === 'success' ? 'bg-green-50 border-green-200' :
+                        'bg-yellow-50 border-yellow-200'
+                    }`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                                <p className={`text-sm font-medium ${
+                                    toast.type === 'info' ? 'text-blue-800' :
+                                    toast.type === 'success' ? 'text-green-800' :
+                                    'text-yellow-800'
+                                }`}>
+                                    {toast.message}
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                {toast.undoAction && (
+                                    <button
+                                        onClick={toast.undoAction}
+                                        className="text-xs px-2 py-1 bg-white rounded border hover:bg-gray-50"
+                                    >
+                                        Undo
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setToast(null)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {hasPendingChanges && (
                 <div className="text-yellow-600 fixed text-sm">
                     ⏳ Saving changes...
