@@ -109,7 +109,7 @@ export function PlayerCheckInModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/90 flex items-start justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 rounded-2xl shadow-2xl w-full max-w-4xl min-h-[600px] max-h-[90vh] overflow-y-auto border-2 border-cyan-500/30">
         {/* Header */}
         <div className="sticky top-0 bg-slate-950/95 backdrop-blur-sm border-b-2 border-cyan-500/30 p-6 flex items-center justify-between z-10">
