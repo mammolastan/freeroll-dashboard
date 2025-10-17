@@ -37,7 +37,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tournament_date, director_name, venue, start_points } = body;
+    const { tournament_date, tournament_time, director_name, venue, start_points } = body;
 
     console.log("Creating tournament with data:", body);
 
@@ -54,9 +54,9 @@ export async function POST(request: NextRequest) {
 
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
-      INSERT INTO tournament_drafts 
-      (tournament_date, director_name, venue, start_points, created_by, status)
-      VALUES (${tournament_date}, ${director_name || ""}, ${venue}, ${
+      INSERT INTO tournament_drafts
+      (tournament_date, tournament_time, director_name, venue, start_points, created_by, status)
+      VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${venue}, ${
       start_points || 0
     }, 'admin', 'in_progress')
     `;

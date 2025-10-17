@@ -33,6 +33,7 @@ const BLIND_SCHEDULES = {
 interface TournamentDraft {
     id: number;
     tournament_date: string;
+    tournament_time?: string;
     director_name: string;
     venue: string;
     start_points: number;
@@ -105,6 +106,7 @@ export function FullAdminScreen({
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTournament, setNewTournament] = useState({
         tournament_date: '',
+        tournament_time: '',
         director_name: '',
         venue: '',
         start_points: 0
@@ -251,6 +253,7 @@ export function FullAdminScreen({
             setShowCreateModal(false);
             setNewTournament({
                 tournament_date: getTodayDateString(), // Changed this line
+                tournament_time: '',
                 director_name: '',
                 venue: '',
                 start_points: 0
@@ -363,6 +366,7 @@ export function FullAdminScreen({
             const updateData = {
                 tournament_name: '', // Empty since we're not using tournament names anymore
                 tournament_date: field === 'tournament_date' ? value : currentDraft.tournament_date,
+                tournament_time: field === 'tournament_time' ? value : currentDraft.tournament_time,
                 director_name: field === 'director_name' ? value : currentDraft.director_name,
                 venue: field === 'venue' ? value : currentDraft.venue,
                 start_points: field === 'start_points' ? value : currentDraft.start_points
@@ -1485,6 +1489,40 @@ export function FullAdminScreen({
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-900 mb-1">
+                                                Time
+                                            </label>
+                                            <select
+                                                value={newTournament.tournament_time}
+                                                onChange={(e) => setNewTournament({
+                                                    ...newTournament,
+                                                    tournament_time: e.target.value
+                                                })}
+                                                className="w-full px-3 py-2 border rounded text-black"
+                                            >
+                                                <option value="">Select time...</option>
+                                                {/* Generate times from 1:00 PM (13:00) to 9:00 PM (21:00) in 30-minute increments */}
+                                                {Array.from({ length: 17 }, (_, i) => {
+                                                    const totalMinutes = 13 * 60 + i * 30; // Start at 1:00 PM (13:00)
+                                                    const hour = Math.floor(totalMinutes / 60);
+                                                    const minute = totalMinutes % 60;
+
+                                                    // Stop at 9:00 PM (21:00)
+                                                    if (hour > 21) return null;
+
+                                                    const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                                    const hour12 = hour > 12 ? hour - 12 : hour;
+                                                    const displayTime = `${hour12}:${minute.toString().padStart(2, '0')} PM`;
+
+                                                    return (
+                                                        <option key={time24} value={time24}>
+                                                            {displayTime}
+                                                        </option>
+                                                    );
+                                                }).filter(Boolean)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-1">
                                                 Venue *
                                             </label>
                                             <div className="relative">
@@ -1627,18 +1665,16 @@ export function FullAdminScreen({
             {/* Toast Notification for Auto-Calculations */}
             {toast && (
                 <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in">
-                    <div className={`p-4 rounded-lg shadow-lg border ${
-                        toast.type === 'info' ? 'bg-blue-50 border-blue-200' :
-                        toast.type === 'success' ? 'bg-green-50 border-green-200' :
-                        'bg-yellow-50 border-yellow-200'
-                    }`}>
+                    <div className={`p-4 rounded-lg shadow-lg border ${toast.type === 'info' ? 'bg-blue-50 border-blue-200' :
+                            toast.type === 'success' ? 'bg-green-50 border-green-200' :
+                                'bg-yellow-50 border-yellow-200'
+                        }`}>
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
-                                <p className={`text-sm font-medium ${
-                                    toast.type === 'info' ? 'text-blue-800' :
-                                    toast.type === 'success' ? 'text-green-800' :
-                                    'text-yellow-800'
-                                }`}>
+                                <p className={`text-sm font-medium ${toast.type === 'info' ? 'text-blue-800' :
+                                        toast.type === 'success' ? 'text-green-800' :
+                                            'text-yellow-800'
+                                    }`}>
                                     {toast.message}
                                 </p>
                             </div>

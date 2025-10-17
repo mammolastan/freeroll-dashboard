@@ -43,12 +43,13 @@ export async function PUT(
   try {
     const body = await request.json();
     const draftId = parseInt(params.id);
-    const { tournament_date, director_name, venue, start_points } = body;
+    const { tournament_date, tournament_time, director_name, venue, start_points } = body;
 
     await prisma.$queryRaw`
-      UPDATE tournament_drafts 
-      SET 
+      UPDATE tournament_drafts
+      SET
         tournament_date = ${tournament_date},
+        tournament_time = ${tournament_time || null},
         director_name = ${director_name},
         venue = ${venue},
         start_points = ${start_points || 0},

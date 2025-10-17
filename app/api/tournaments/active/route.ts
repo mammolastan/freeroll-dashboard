@@ -9,9 +9,10 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const activeTournaments = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         td.id,
         td.tournament_date,
+        td.tournament_time,
         td.director_name,
         td.venue,
         td.start_points,
@@ -29,15 +30,40 @@ export async function GET() {
       ORDER BY td.tournament_date DESC, td.created_at DESC
     `;
 
-    // Serialize BigInt values
+    // Serialize BigInt values and format time
     const serializedTournaments = (activeTournaments as any[]).map(
-      (tournament) => ({
-        ...tournament,
-        id: Number(tournament.id),
-        start_points: Number(tournament.start_points),
-        total_players: Number(tournament.total_players),
-        players_remaining: Number(tournament.players_remaining),
-      })
+      (tournament) => {
+        let formattedTime = null;
+
+        if (tournament.tournament_time) {
+          // Handle different types that MySQL might return for TIME field
+          if (tournament.tournament_time instanceof Date) {
+            // If it's a Date object, extract time parts
+            const hours = tournament.tournament_time.getUTCHours();
+            const minutes = tournament.tournament_time.getUTCMinutes();
+            formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          } else if (typeof tournament.tournament_time === 'string') {
+            // If it's already a string, just take HH:MM part
+            formattedTime = tournament.tournament_time.substring(0, 5);
+          } else {
+            // For any other type (Buffer, etc), convert to string first
+            const timeStr = String(tournament.tournament_time);
+            // Check if it looks like HH:MM:SS format
+            if (timeStr.includes(':')) {
+              formattedTime = timeStr.substring(0, 5);
+            }
+          }
+        }
+
+        return {
+          ...tournament,
+          id: Number(tournament.id),
+          start_points: Number(tournament.start_points),
+          total_players: Number(tournament.total_players),
+          players_remaining: Number(tournament.players_remaining),
+          tournament_time: formattedTime,
+        };
+      }
     );
 
     return NextResponse.json(serializedTournaments);
