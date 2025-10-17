@@ -91,6 +91,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
       setHitmanSearchText('');
       setSelectedHitman('');
       setHighlightedHitmanIndex(-1);
+      hitmanInputRef.current?.focus()
     }
   }, [selectedPlayer]);
 
@@ -308,7 +309,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                   setHitmanSearchText(e.target.value);
                   setHighlightedHitmanIndex(-1);
                 }}
-                placeholder="Type hitman name or press Enter for 'unknown'..."
+                placeholder="Hit Enter for 'unknown'..."
                 className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500"
                 autoComplete="off"
               />
@@ -319,9 +320,8 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setSelectedHitman(p.player_name);
-                        setHitmanSearchText(p.player_name);
                         setHighlightedHitmanIndex(-1);
+                        handleKnockout(selectedPlayer, p.player_name);
                       }}
                       className={`w-full px-4 py-3 text-left text-lg transition-all ${highlightedHitmanIndex === index
                         ? 'bg-cyan-500/30 text-cyan-300'
