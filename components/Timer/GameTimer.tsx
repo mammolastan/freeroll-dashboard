@@ -40,7 +40,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
-  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/up-and-over.mp3') : null);
+  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
   const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
@@ -209,8 +209,8 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   // Enable audio on first user interaction (required for mobile browsers)
   const enableAudio = () => {
     if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
-      oneMinuteAudio.volume = 0.7;
-      levelChangeAudio.volume = 0.7;
+      oneMinuteAudio.volume = 0.9;
+      levelChangeAudio.volume = 0.9;
 
       // Preload audio files
       oneMinuteAudio.load();

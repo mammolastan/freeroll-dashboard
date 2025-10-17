@@ -39,7 +39,7 @@ interface Player {
 export default function TournamentEntryPage() {
   const { currentScreen } = useScreenRouter(1);
 
-  // Authentication state (lifted from Screen1)
+  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // View state - determines whether to show tournament list or entry view
