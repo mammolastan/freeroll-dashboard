@@ -272,6 +272,7 @@ async function getTournamentData(tournamentDraftId) {
       SELECT
         id,
         tournament_date,
+        tournament_time,
         director_name,
         venue,
         status
@@ -282,10 +283,21 @@ async function getTournamentData(tournamentDraftId) {
         if (tournament.length === 0)
             return null;
         const data = tournament[0];
+        // Convert tournament_time Buffer to string if it exists
+        let timeString = null;
+        if (data.tournament_time) {
+            if (Buffer.isBuffer(data.tournament_time)) {
+                timeString = data.tournament_time.toString('utf-8');
+            }
+            else {
+                timeString = String(data.tournament_time);
+            }
+        }
         return {
             id: data.id,
             title: data.venue,
             date: data.tournament_date,
+            time: timeString,
             venue: data.venue,
             status: data.status,
             max_players: null,

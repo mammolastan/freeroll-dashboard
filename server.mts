@@ -397,11 +397,22 @@ async function getTournamentData(tournamentDraftId: number) {
     if ((tournament as any[]).length === 0) return null;
 
     const data = (tournament as any[])[0];
+
+    // Convert tournament_time Buffer to string if it exists
+    let timeString = null;
+    if (data.tournament_time) {
+      if (Buffer.isBuffer(data.tournament_time)) {
+        timeString = data.tournament_time.toString('utf-8');
+      } else {
+        timeString = String(data.tournament_time);
+      }
+    }
+
     return {
       id: data.id,
       title: data.venue,
       date: data.tournament_date,
-      time: data.tournament_time,
+      time: timeString,
       venue: data.venue,
       status: data.status,
       max_players: null,
