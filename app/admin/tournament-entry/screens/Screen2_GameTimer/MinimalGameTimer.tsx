@@ -93,12 +93,22 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
 
     // Listen for timer updates
     const handleTimerUpdate = (newState: TimerState) => {
-      console.log('MinimalGameTimer: Received timer update:', { level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
+      // CRITICAL: Only accept timer updates for THIS tournament
+      if (newState.tournamentId !== tournamentId) {
+        console.log(`MinimalGameTimer: Ignoring timer update for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`);
+        return;
+      }
+      console.log('MinimalGameTimer: Received timer update:', { tournamentId: newState.tournamentId, level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
       setTimerState(newState);
     };
 
     const handleTimerSync = (newState: TimerState) => {
-      console.log('MinimalGameTimer: Received timer sync:', { level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
+      // CRITICAL: Only accept timer syncs for THIS tournament
+      if (newState.tournamentId !== tournamentId) {
+        console.log(`MinimalGameTimer: Ignoring timer sync for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`);
+        return;
+      }
+      console.log('MinimalGameTimer: Received timer sync:', { tournamentId: newState.tournamentId, level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
       setTimerState(newState);
     };
 

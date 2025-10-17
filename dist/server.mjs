@@ -356,7 +356,17 @@ app.prepare().then(async () => {
                     if (updatedTimer &&
                         typeof updatedTimer.timeRemaining === "number" &&
                         updatedTimer.blindLevels) {
-                        io.to(tournamentId.toString()).emit("timer:update", updatedTimer);
+                        // Explicitly create serializable object with tournamentId
+                        const timerPayload = {
+                            tournamentId: updatedTimer.tournamentId,
+                            currentLevel: updatedTimer.currentLevel,
+                            timeRemaining: updatedTimer.timeRemaining,
+                            isRunning: updatedTimer.isRunning,
+                            isPaused: updatedTimer.isPaused,
+                            blindLevels: updatedTimer.blindLevels,
+                            lastUpdate: updatedTimer.lastUpdate,
+                        };
+                        io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                     }
                     else {
                         console.error(`Invalid timer update for tournament ${tournamentId}:`, updatedTimer);
@@ -403,7 +413,16 @@ app.prepare().then(async () => {
                         if (timerState &&
                             typeof timerState.timeRemaining === "number" &&
                             timerState.blindLevels) {
-                            socket.emit("timer:sync", timerState);
+                            const timerPayload = {
+                                tournamentId: timerState.tournamentId,
+                                currentLevel: timerState.currentLevel,
+                                timeRemaining: timerState.timeRemaining,
+                                isRunning: timerState.isRunning,
+                                isPaused: timerState.isPaused,
+                                blindLevels: timerState.blindLevels,
+                                lastUpdate: timerState.lastUpdate,
+                            };
+                            socket.emit("timer:sync", timerPayload);
                         }
                         else {
                             console.error(`Invalid timer sync state for tournament ${tournamentDraftId}:`, timerState);
@@ -442,7 +461,16 @@ app.prepare().then(async () => {
                 if (timerState &&
                     typeof timerState.timeRemaining === "number" &&
                     timerState.blindLevels) {
-                    io.to(tournamentId.toString()).emit("timer:update", timerState);
+                    const timerPayload = {
+                        tournamentId: timerState.tournamentId,
+                        currentLevel: timerState.currentLevel,
+                        timeRemaining: timerState.timeRemaining,
+                        isRunning: timerState.isRunning,
+                        isPaused: timerState.isPaused,
+                        blindLevels: timerState.blindLevels,
+                        lastUpdate: timerState.lastUpdate,
+                    };
+                    io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                     console.log(`Timer started for tournament ${tournamentId}`);
                 }
                 else {
@@ -451,17 +479,44 @@ app.prepare().then(async () => {
             });
             socket.on("timer:pause", async ({ tournamentId }) => {
                 const timerState = await pauseTimer(tournamentId);
-                io.to(tournamentId.toString()).emit("timer:update", timerState);
+                const timerPayload = {
+                    tournamentId: timerState.tournamentId,
+                    currentLevel: timerState.currentLevel,
+                    timeRemaining: timerState.timeRemaining,
+                    isRunning: timerState.isRunning,
+                    isPaused: timerState.isPaused,
+                    blindLevels: timerState.blindLevels,
+                    lastUpdate: timerState.lastUpdate,
+                };
+                io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                 console.log(`Timer paused for tournament ${tournamentId}`);
             });
             socket.on("timer:resume", async ({ tournamentId }) => {
                 const timerState = await resumeTimer(tournamentId);
-                io.to(tournamentId.toString()).emit("timer:update", timerState);
+                const timerPayload = {
+                    tournamentId: timerState.tournamentId,
+                    currentLevel: timerState.currentLevel,
+                    timeRemaining: timerState.timeRemaining,
+                    isRunning: timerState.isRunning,
+                    isPaused: timerState.isPaused,
+                    blindLevels: timerState.blindLevels,
+                    lastUpdate: timerState.lastUpdate,
+                };
+                io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                 console.log(`Timer resumed for tournament ${tournamentId}`);
             });
             socket.on("timer:reset", async ({ tournamentId }) => {
                 const timerState = await resetTimer(tournamentId);
-                io.to(tournamentId.toString()).emit("timer:update", timerState);
+                const timerPayload = {
+                    tournamentId: timerState.tournamentId,
+                    currentLevel: timerState.currentLevel,
+                    timeRemaining: timerState.timeRemaining,
+                    isRunning: timerState.isRunning,
+                    isPaused: timerState.isPaused,
+                    blindLevels: timerState.blindLevels,
+                    lastUpdate: timerState.lastUpdate,
+                };
+                io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                 console.log(`Timer reset for tournament ${tournamentId}`);
             });
             socket.on("timer:requestSync", async ({ tournamentId }) => {
@@ -475,7 +530,16 @@ app.prepare().then(async () => {
                 if (timerState &&
                     typeof timerState.timeRemaining === "number" &&
                     timerState.blindLevels) {
-                    socket.emit("timer:sync", timerState);
+                    const timerPayload = {
+                        tournamentId: timerState.tournamentId,
+                        currentLevel: timerState.currentLevel,
+                        timeRemaining: timerState.timeRemaining,
+                        isRunning: timerState.isRunning,
+                        isPaused: timerState.isPaused,
+                        blindLevels: timerState.blindLevels,
+                        lastUpdate: timerState.lastUpdate,
+                    };
+                    socket.emit("timer:sync", timerPayload);
                 }
                 else {
                     console.error(`Invalid timer sync state for tournament ${tournamentId}:`, timerState);
@@ -492,7 +556,16 @@ app.prepare().then(async () => {
                     timer.lastUpdate = Date.now();
                     // Save state change to database
                     await saveTimerStateToDB(tournamentId, timer);
-                    io.to(tournamentId.toString()).emit("timer:update", timer);
+                    const timerPayload = {
+                        tournamentId: timer.tournamentId,
+                        currentLevel: timer.currentLevel,
+                        timeRemaining: timer.timeRemaining,
+                        isRunning: timer.isRunning,
+                        isPaused: timer.isPaused,
+                        blindLevels: timer.blindLevels,
+                        lastUpdate: timer.lastUpdate,
+                    };
+                    io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                     console.log(`Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId}`);
                 }
             });
@@ -507,7 +580,16 @@ app.prepare().then(async () => {
                     timer.lastUpdate = Date.now();
                     // Save state change to database
                     await saveTimerStateToDB(tournamentId, timer);
-                    io.to(tournamentId.toString()).emit("timer:update", timer);
+                    const timerPayload = {
+                        tournamentId: timer.tournamentId,
+                        currentLevel: timer.currentLevel,
+                        timeRemaining: timer.timeRemaining,
+                        isRunning: timer.isRunning,
+                        isPaused: timer.isPaused,
+                        blindLevels: timer.blindLevels,
+                        lastUpdate: timer.lastUpdate,
+                    };
+                    io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                     console.log(`Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId}`);
                 }
             });
@@ -517,7 +599,16 @@ app.prepare().then(async () => {
                 timer.lastUpdate = Date.now();
                 // Save state change to database
                 await saveTimerStateToDB(tournamentId, timer);
-                io.to(tournamentId.toString()).emit("timer:update", timer);
+                const timerPayload = {
+                    tournamentId: timer.tournamentId,
+                    currentLevel: timer.currentLevel,
+                    timeRemaining: timer.timeRemaining,
+                    isRunning: timer.isRunning,
+                    isPaused: timer.isPaused,
+                    blindLevels: timer.blindLevels,
+                    lastUpdate: timer.lastUpdate,
+                };
+                io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                 console.log(`Timer set to ${timeInSeconds} seconds for tournament ${tournamentId}`);
             });
             socket.on("timer:setSchedule", async ({ tournamentId, scheduleId }) => {
@@ -539,7 +630,16 @@ app.prepare().then(async () => {
                     timer.currentLevel = 1;
                     timer.timeRemaining = newBlindLevels[0].duration * 60;
                     timer.lastUpdate = Date.now();
-                    io.to(tournamentId.toString()).emit("timer:update", timer);
+                    const timerPayload = {
+                        tournamentId: timer.tournamentId,
+                        currentLevel: timer.currentLevel,
+                        timeRemaining: timer.timeRemaining,
+                        isRunning: timer.isRunning,
+                        isPaused: timer.isPaused,
+                        blindLevels: timer.blindLevels,
+                        lastUpdate: timer.lastUpdate,
+                    };
+                    io.to(tournamentId.toString()).emit("timer:update", timerPayload);
                     console.log(`Timer schedule changed to ${scheduleId} for tournament ${tournamentId}`);
                 }
                 catch (error) {
