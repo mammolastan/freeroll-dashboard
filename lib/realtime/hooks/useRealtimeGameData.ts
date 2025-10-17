@@ -36,6 +36,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
           id: tournamentIdNum,
           title: `Tournament ${tournamentIdNum}`,
           date: new Date(),
+          time: null,
           venue: null,
           status: 'active',
           max_players: null

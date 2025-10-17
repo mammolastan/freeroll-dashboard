@@ -10,6 +10,7 @@ export class TournamentService {
         SELECT
           id,
           tournament_date,
+          tournament_time,
           director_name,
           venue,
           status
@@ -25,6 +26,7 @@ export class TournamentService {
         id: data.id,
         title: `Tournament ${data.id}`, // No tournament_name field, using fallback
         date: data.tournament_date,
+        time: data.tournament_time,
         venue: data.venue,
         status: data.status,
         max_players: null,
