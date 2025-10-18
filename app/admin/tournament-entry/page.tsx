@@ -9,10 +9,12 @@ import { FullAdminScreen } from './screens/Screen1_FullAdmin/FullAdminScreen';
 import { GameTimerScreen } from './screens/Screen2_GameTimer/GameTimerScreen';
 import { PlayerCheckInScreen } from './screens/Screen3_PlayerCheckIn/PlayerCheckInScreen';
 import { PlayerControlScreen } from './screens/Screen4_PlayerControl/PlayerControlScreen';
+import { socket } from '@/lib/socketClient';
 
 interface TournamentDraft {
   id: number;
   tournament_date: string;
+  tournament_time?: string;
   director_name: string;
   venue: string;
   start_points: number;
@@ -96,6 +98,30 @@ export default function TournamentEntryPage() {
   useEffect(() => {
     loadData();
   }, [loadData, dataVersion]);
+
+  // Socket.IO real-time updates for admin screens
+  useEffect(() => {
+    if (!currentDraft || !isAuthenticated) return;
+
+    console.log('Admin: Setting up Socket.IO for tournament:', currentDraft.id);
+
+    // Join the tournament room
+    socket.emit("joinRoom", currentDraft.id.toString());
+
+    // Listen for player updates
+    const handlePlayersUpdated = (event: { data: { players: Player[] } }) => {
+      console.log("Admin: Players updated via socket:", event.data.players);
+      setPlayers(event.data.players);
+    };
+
+    socket.on("players:updated", handlePlayersUpdated);
+
+    // Cleanup when component unmounts or tournament changes
+    return () => {
+      console.log('Admin: Cleaning up Socket.IO for tournament:', currentDraft.id);
+      socket.off("players:updated", handlePlayersUpdated);
+    };
+  }, [currentDraft, isAuthenticated]);
 
   // Callback for screens to trigger data reload
   const handleDataChange = useCallback(() => {
