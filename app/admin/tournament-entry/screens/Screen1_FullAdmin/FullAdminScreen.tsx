@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Users, Trophy, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
-import { formatGameDate } from '@/lib/utils';
+import { formatGameDate, formatTime } from '@/lib/utils';
 import { QRCodeModal } from '../../QRCodeModal';
 import { GameTimer } from '@/components/Timer/GameTimer';
 import { useRealtimeGameData } from '@/lib/realtime/hooks/useRealtimeGameData';
@@ -1395,6 +1395,11 @@ export function FullAdminScreen({
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
                                                             {formatGameDate(tournament.tournament_date || '')}
+                                                            {formatTime(tournament.tournament_time) && (
+                                                                <span className="ml-2 text-blue-600">
+                                                                    @ {formatTime(tournament.tournament_time)}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-gray-600">
                                                             <MapPin className="w-4 h-4" />
@@ -1761,6 +1766,11 @@ export function FullAdminScreen({
                                     <div>
                                         <h2 className="text-xl font-bold text-gray-900">
                                             {currentDraft?.venue} - {formatGameDate(currentDraft?.tournament_date || '')}
+                                            {formatTime(currentDraft?.tournament_time) && (
+                                                <span className="ml-2 text-blue-600">
+                                                    @ {formatTime(currentDraft?.tournament_time)}
+                                                </span>
+                                            )}
                                         </h2>
                                         <p className="text-gray-600">
                                             Director: {currentDraft?.director_name} | Players: {players.length}
