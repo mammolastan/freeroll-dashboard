@@ -74,7 +74,7 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
 // Turbo Speed - 10 minute levels (same blind structure)
 const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map((level) => ({
   ...level,
-  duration: level.isbreak ? level.duration : 15,
+  duration: level.isbreak ? level.duration : 10,
 }));
 
 // Blind schedule definitions
