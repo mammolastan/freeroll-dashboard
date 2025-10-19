@@ -228,7 +228,6 @@ export function FullAdminScreen({
         }
     };
 
-    // Create new tournament
     const createTournament = async () => {
         if (!newTournament.tournament_date || !newTournament.venue) {
             alert('Date and venue are required');
@@ -252,7 +251,7 @@ export function FullAdminScreen({
             setCurrentView('entry');
             setShowCreateModal(false);
             setNewTournament({
-                tournament_date: getTodayDateString(), // Changed this line
+                tournament_date: getTodayDateString(),
                 tournament_time: '',
                 director_name: '',
                 venue: '',
@@ -261,7 +260,7 @@ export function FullAdminScreen({
 
             // Refresh tournaments list and venues (in case a new venue was added)
             loadTournaments();
-            loadVenues(); // Add this line
+            loadVenues();
         } catch (error) {
             console.error('Error creating tournament:', error);
             alert(`Failed to create tournament: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1671,14 +1670,14 @@ export function FullAdminScreen({
             {toast && (
                 <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in">
                     <div className={`p-4 rounded-lg shadow-lg border ${toast.type === 'info' ? 'bg-blue-50 border-blue-200' :
-                            toast.type === 'success' ? 'bg-green-50 border-green-200' :
-                                'bg-yellow-50 border-yellow-200'
+                        toast.type === 'success' ? 'bg-green-50 border-green-200' :
+                            'bg-yellow-50 border-yellow-200'
                         }`}>
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                                 <p className={`text-sm font-medium ${toast.type === 'info' ? 'text-blue-800' :
-                                        toast.type === 'success' ? 'text-green-800' :
-                                            'text-yellow-800'
+                                    toast.type === 'success' ? 'text-green-800' :
+                                        'text-yellow-800'
                                     }`}>
                                     {toast.message}
                                 </p>
