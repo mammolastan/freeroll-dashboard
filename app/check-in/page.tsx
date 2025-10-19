@@ -16,6 +16,8 @@ interface ActiveTournament {
     status: string;
     blind_schedule: string;
     timer_current_level: number | null;
+    timer_is_running: boolean;
+    timer_is_paused: boolean;
     total_players: number;
     players_remaining: number;
     created_at: string;
@@ -50,7 +52,11 @@ export default function CheckInPage() {
         }
     };
 
-    const getBlindLevelDisplay = (level: number | null, schedule: string) => {
+    const getBlindLevelDisplay = (level: number | null, schedule: string, isRunning: boolean, isPaused: boolean) => {
+        // If timer has never been started (not running and not paused), show "Not started"
+        if (!isRunning && !isPaused) return 'Not started';
+
+        // If timer has been started, show the level
         if (!level) return 'Not started';
         return `Level ${level} (${schedule === 'turbo' ? 'Turbo' : 'Standard'})`;
     };
@@ -168,7 +174,9 @@ export default function CheckInPage() {
                                             <span className="text-sm">
                                                 {getBlindLevelDisplay(
                                                     tournament.timer_current_level,
-                                                    tournament.blind_schedule
+                                                    tournament.blind_schedule,
+                                                    tournament.timer_is_running,
+                                                    tournament.timer_is_paused
                                                 )}
                                             </span>
                                         </div>
