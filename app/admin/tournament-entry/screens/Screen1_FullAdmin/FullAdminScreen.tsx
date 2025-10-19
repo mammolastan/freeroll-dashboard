@@ -1395,8 +1395,8 @@ export function FullAdminScreen({
                                                             <Calendar className="w-4 h-4 text-blue-600" />
                                                             {formatGameDate(tournament.tournament_date || '')}
                                                             {formatTime(tournament.tournament_time) && (
-                                                                <span className="ml-2 text-blue-600">
-                                                                    @ {formatTime(tournament.tournament_time)}
+                                                                <span className='text-sm'>
+                                                                    {formatTime(tournament.tournament_time)}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -1764,11 +1764,14 @@ export function FullAdminScreen({
                                 <div className="flex items-center justify-between my-5">
                                     <div>
                                         <h2 className="text-xl font-bold text-gray-900">
-                                            {currentDraft?.venue} - {formatGameDate(currentDraft?.tournament_date || '')}
+                                            {currentDraft?.venue} <br /> {formatGameDate(currentDraft?.tournament_date || '')}
                                             {formatTime(currentDraft?.tournament_time) && (
-                                                <span className="ml-2 text-blue-600">
-                                                    @ {formatTime(currentDraft?.tournament_time)}
-                                                </span>
+                                                <>
+                                                    <br />
+                                                    <span className="text-sm">
+                                                        {formatTime(currentDraft?.tournament_time)}
+                                                    </span>
+                                                </>
                                             )}
                                         </h2>
                                         <p className="text-gray-600">
