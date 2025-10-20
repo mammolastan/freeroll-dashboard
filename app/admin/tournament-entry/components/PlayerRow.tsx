@@ -65,11 +65,10 @@ export function PlayerRow({
 
     return (
         <div
-            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${
-                player.hitman_name && player.ko_position !== null
+            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
                     ? 'bg-red-50 border-red-100'
                     : 'bg-white'
-            }`}
+                }`}
         >
             {/* Player Name Column */}
             <div className="flex items-center gap-2">
@@ -78,11 +77,11 @@ export function PlayerRow({
                         {player.player_name} {player.player_nickname ? `(${player.player_nickname})` : ''}
                     </span>
                     {renderPlayerIndicator(player)}
-                    {player.is_new_player && (
+                    {player.is_new_player ? (
                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                             NEW
                         </span>
-                    )}
+                    ) : ''}
                 </div>
             </div>
 
@@ -101,11 +100,10 @@ export function PlayerRow({
                 {!isIntegrated && (
                     <button
                         onClick={onCrosshairClick}
-                        className={`ml-2 p-1 rounded-full transition-colors ${
-                            player.hitman_name && player.ko_position !== null
+                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && player.ko_position !== null
                                 ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
                                 : 'text-red-600 hover:text-red-800 hover:bg-red-50'
-                        }`}
+                            }`}
                         title={
                             player.hitman_name && player.ko_position !== null
                                 ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${player.ko_position})`
@@ -139,9 +137,8 @@ export function PlayerRow({
                     onFocus={onHitmanFocus}
                     onBlur={onHitmanBlur}
                     onKeyDown={onHitmanKeyDown}
-                    className={`w-full px-2 py-1 border rounded text-black text-sm ${
-                        isIntegrated ? 'bg-gray-100' : ''
-                    }`}
+                    className={`w-full px-2 py-1 border rounded text-black text-sm ${isIntegrated ? 'bg-gray-100' : ''
+                        }`}
                     placeholder="Enter hitman name or leave as 'unknown'"
                     disabled={isIntegrated}
                 />
@@ -153,11 +150,10 @@ export function PlayerRow({
                             <div
                                 key={candidate.id}
                                 onClick={() => onHitmanSelect(candidate.player_name)}
-                                className={`px-2 py-1 cursor-pointer text-black text-sm ${
-                                    index === hitmanHighlightedIndex
+                                className={`px-2 py-1 cursor-pointer text-black text-sm ${index === hitmanHighlightedIndex
                                         ? 'bg-blue-200 text-blue-900'
                                         : 'hover:bg-blue-100'
-                                }`}
+                                    }`}
                             >
                                 {candidate.player_name}
                             </div>
@@ -166,11 +162,10 @@ export function PlayerRow({
                         {unknownOption && (
                             <div
                                 onClick={() => onHitmanSelect('unknown')}
-                                className={`px-2 py-1 cursor-pointer text-black text-sm border-t ${
-                                    hitmanCandidates.length === hitmanHighlightedIndex
+                                className={`px-2 py-1 cursor-pointer text-black text-sm border-t ${hitmanCandidates.length === hitmanHighlightedIndex
                                         ? 'bg-blue-200 text-blue-900'
                                         : 'hover:bg-blue-100'
-                                }`}
+                                    }`}
                             >
                                 <em>unknown hitman</em>
                             </div>
