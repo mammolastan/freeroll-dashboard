@@ -429,13 +429,20 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         {currentBlind && (
           <div>
             {currentBlind.isbreak ? (
-              <div className="text-8xl landscape:text-5xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
+              <div className="text-8xl landscape:text-9xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
                 🔥 BREAK
               </div>
             ) : (
-              <div className="text-8xl landscape:text-5xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
-                {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
-              </div>
+              <>
+                {/* Portrait mode: stack vertically */}
+                <div className="portrait:block landscape:hidden text-8xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
+                  {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
+                </div>
+                {/* Landscape mode: display on one line with pipe separator */}
+                <div className="portrait:hidden landscape:block text-9xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
+                  {currentBlind.smallBlind} {currentBlind.bigBlind}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -448,10 +455,6 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
           </div>
         )}
 
-        {/* Exit hint */}
-        <div className="absolute bottom-8 text-gray-600 text-sm">
-          Tap anywhere to exit
-        </div>
       </div>
     );
   }
