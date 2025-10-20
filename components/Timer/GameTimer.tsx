@@ -265,22 +265,44 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     }
   };
 
+  // Handle visibility changes - update lastLevel when page becomes visible
+  // to prevent audio from playing when returning to a different level
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && timerState) {
+        // Update lastLevel to current level when page becomes visible
+        // This prevents the level change sound from playing when user returns
+        setLastLevel(timerState.currentLevel);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [timerState]);
+
   // Monitor timer state for audio notifications
   useEffect(() => {
     if (!timerState || !timerState.isRunning || timerState.isPaused) {
       return;
     }
 
-    // Check for level change
+    // Check for level change - only play sound if page is visible
     if (lastLevel !== null && lastLevel !== timerState.currentLevel) {
-      playLevelChangeSound();
+      if (document.visibilityState === 'visible') {
+        playLevelChangeSound();
+      }
       setHasPlayedOneMinuteWarning(false); // Reset for new level
     }
     setLastLevel(timerState.currentLevel);
 
-    // Check for 1-minute warning
+    // Check for 1-minute warning - only play sound if page is visible
     if (timerState.timeRemaining === 60 && !hasPlayedOneMinuteWarning) {
-      playOneMinuteWarning();
+      if (document.visibilityState === 'visible') {
+        playOneMinuteWarning();
+      }
       setHasPlayedOneMinuteWarning(true);
     }
 
