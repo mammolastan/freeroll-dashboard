@@ -408,8 +408,9 @@ export function FullAdminScreen({
         // Apply sorting
         return filteredPlayers.sort((a, b) => {
             if (sortBy === 'name') {
-                const nameA = a.player_name.toLowerCase();
-                const nameB = b.player_name.toLowerCase();
+                // Add safety checks for undefined player_name
+                const nameA = (a.player_name || '').toLowerCase();
+                const nameB = (b.player_name || '').toLowerCase();
                 return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             }
 
@@ -861,7 +862,7 @@ export function FullAdminScreen({
 
         return players
             .filter(p => p.id !== currentPlayerId) // Exclude the current player
-            .filter(p => p.player_name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(p => p.player_name && p.player_name.toLowerCase().includes(searchTerm.toLowerCase()))
             .slice(0, 10); // Limit to 10 results
     };
 
