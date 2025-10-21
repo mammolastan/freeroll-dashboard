@@ -251,6 +251,11 @@ export function PlayerCheckInCore({
               onFocus={() => {
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.currentTarget.blur();
+                }
+              }}
               placeholder="Search for your name..."
               className="w-full pl-10 md:pl-20 pr-3 md:pr-6 py-3 md:py-6 text-base md:text-2xl bg-gray-800/80 border-2 border-cyan-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 focus:border-cyan-500"
               autoComplete="off"
@@ -355,6 +360,11 @@ export function PlayerCheckInCore({
               type="text"
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.currentTarget.blur();
+                }
+              }}
               placeholder="Enter your full name"
               className="w-full px-3 md:px-6 py-3 md:py-6 text-base md:text-2xl bg-gray-900 border-2 border-purple-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 mb-4 md:mb-6"
               autoFocus
