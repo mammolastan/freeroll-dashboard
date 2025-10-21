@@ -135,7 +135,7 @@ export function PlayerCheckInCore({
     // Set new timeout
     searchTimeoutRef.current = setTimeout(() => {
       searchPlayers(value);
-    }, 300);
+    }, 50);
   };
 
   // Handle clicking outside dropdown to close it
