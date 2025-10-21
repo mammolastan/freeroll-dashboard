@@ -34,9 +34,20 @@ interface Player {
 interface GameTimerScreenProps {
   currentDraft: TournamentDraft | null;
   players: Player[];
+  audioEnabled: boolean;
+  oneMinuteAudio: HTMLAudioElement | null;
+  levelChangeAudio: HTMLAudioElement | null;
+  enableAudio: () => void;
 }
 
-export function GameTimerScreen({ currentDraft, players }: GameTimerScreenProps) {
+export function GameTimerScreen({
+  currentDraft,
+  players,
+  audioEnabled,
+  oneMinuteAudio,
+  levelChangeAudio,
+  enableAudio
+}: GameTimerScreenProps) {
   // Calculate players remaining (those without ko_position)
   const playersRemaining = players.filter(p => p.ko_position === null).length;
 
@@ -65,6 +76,10 @@ export function GameTimerScreen({ currentDraft, players }: GameTimerScreenProps)
         <MinimalGameTimer
           tournamentId={currentDraft.id}
           playersRemaining={playersRemaining}
+          audioEnabled={audioEnabled}
+          oneMinuteAudio={oneMinuteAudio}
+          levelChangeAudio={levelChangeAudio}
+          enableAudio={enableAudio}
         />
       </div>
     </div>

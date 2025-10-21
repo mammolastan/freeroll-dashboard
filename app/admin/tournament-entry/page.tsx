@@ -52,6 +52,26 @@ export default function TournamentEntryPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
 
+  // Audio state - persists across screen changes
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
+  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
+
+  // Enable audio on first user interaction (required for mobile browsers)
+  const enableAudio = useCallback(() => {
+    if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
+      oneMinuteAudio.volume = 0.7;
+      levelChangeAudio.volume = 0.7;
+
+      // Preload audio files
+      oneMinuteAudio.load();
+      levelChangeAudio.load();
+
+      setAudioEnabled(true);
+      console.log('Audio enabled - will persist across screen changes');
+    }
+  }, [audioEnabled, oneMinuteAudio, levelChangeAudio]);
+
   // Load tournament and player data (only when authenticated)
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -167,6 +187,10 @@ export default function TournamentEntryPage() {
         <GameTimerScreen
           currentDraft={currentDraft}
           players={players}
+          audioEnabled={audioEnabled}
+          oneMinuteAudio={oneMinuteAudio}
+          levelChangeAudio={levelChangeAudio}
+          enableAudio={enableAudio}
         />
       )}
 

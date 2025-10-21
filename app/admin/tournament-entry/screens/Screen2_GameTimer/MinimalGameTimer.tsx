@@ -28,18 +28,26 @@ interface TimerState {
 interface MinimalGameTimerProps {
   tournamentId: number;
   playersRemaining: number;
+  audioEnabled: boolean;
+  oneMinuteAudio: HTMLAudioElement | null;
+  levelChangeAudio: HTMLAudioElement | null;
+  enableAudio: () => void;
 }
 
-export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGameTimerProps) {
+export function MinimalGameTimer({
+  tournamentId,
+  playersRemaining,
+  audioEnabled,
+  oneMinuteAudio,
+  levelChangeAudio,
+  enableAudio
+}: MinimalGameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editMinutes, setEditMinutes] = useState('');
   const [editSeconds, setEditSeconds] = useState('');
   const [lastLevel, setLastLevel] = useState<number | null>(null);
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
-  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
   const minutesInputRef = useRef<HTMLInputElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
@@ -145,21 +153,6 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
     };
   }, [tournamentId]);
 
-  // Enable audio on first user interaction (required for mobile browsers)
-  const enableAudio = () => {
-    if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
-      oneMinuteAudio.volume = 0.7;
-      levelChangeAudio.volume = 0.7;
-
-      // Preload audio files
-      oneMinuteAudio.load();
-      levelChangeAudio.load();
-
-      setAudioEnabled(true);
-      console.log('Audio enabled for mobile browsers');
-    }
-  };
-
   // Audio notification functions
   const playOneMinuteWarning = useCallback(() => {
     if (!audioEnabled || !oneMinuteAudio) return;
@@ -228,8 +221,7 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
     if (tournamentId) {
       socket.emit('timer:start', { tournamentId });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
+  }, [tournamentId, enableAudio]);
 
   const handlePause = useCallback(() => {
     if (tournamentId) {
@@ -242,8 +234,7 @@ export function MinimalGameTimer({ tournamentId, playersRemaining }: MinimalGame
     if (tournamentId) {
       socket.emit('timer:resume', { tournamentId });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
+  }, [tournamentId, enableAudio]);
 
   // Spacebar to start/pause timer
   useEffect(() => {
