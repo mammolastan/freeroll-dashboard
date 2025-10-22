@@ -75,6 +75,7 @@ export function PlayerCheckInCore({
           await onCheckIn(pendingCheckIn.playerData);
           setSuccessMessage('');
           setPendingCheckIn(null);
+          setSearchQuery('');
 
           // Call onSuccess after check-in completes
           onSuccess?.();
