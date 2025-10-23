@@ -1976,10 +1976,12 @@ export function FullAdminScreen({
                                         <PlayerSearchDropdown
                                             searchResults={playerSearchResults}
                                             isSearching={isSearching}
-                                            checkedInPlayers={players.map(p => ({
-                                                player_uid: p.player_uid,
-                                                player_name: p.player_name
-                                            }))}
+                                            checkedInPlayers={players
+                                                .filter(p => p.player_name)
+                                                .map(p => ({
+                                                    player_uid: p.player_uid,
+                                                    player_name: p.player_name
+                                                }))}
                                             onSelectPlayer={(player) => addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID })}
                                             onAddNewPlayer={(name) => addPlayer({ name, isNew: true })}
                                             showAddNewOption={true}

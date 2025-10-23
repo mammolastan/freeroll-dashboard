@@ -36,6 +36,11 @@ export function PlayerSearchDropdown({
 }: PlayerSearchDropdownProps) {
     const isPlayerCheckedIn = (player: PlayerSearchResult): boolean => {
         return checkedInPlayers.some(p => {
+            if (!p.player_name) {
+                console.warn('Encountered checked-in player with undefined player_name:', p);
+                return false;
+            }
+
             const uidMatch = p.player_uid === player.UID;
             const nameMatch = p.player_name.toLowerCase() === player.Name.toLowerCase();
             const nicknameMatch = player.nickname && p.player_name.toLowerCase() === player.nickname.toLowerCase();
@@ -64,11 +69,10 @@ export function PlayerSearchDropdown({
                             <div
                                 key={player.UID}
                                 onClick={() => handlePlayerClick(player, isCheckedIn)}
-                                className={`px-3 py-2 border-b last:border-b-0 ${
-                                    isCheckedIn
+                                className={`px-3 py-2 border-b last:border-b-0 ${isCheckedIn
                                         ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-75'
                                         : 'hover:bg-blue-50 cursor-pointer'
-                                }`}
+                                    }`}
                             >
                                 <div className={`font-medium ${isCheckedIn ? 'line-through' : 'text-gray-900'}`}>
                                     {player.nickname ? `${player.Name} (${player.nickname})` : player.Name}
