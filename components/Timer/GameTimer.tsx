@@ -5,6 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X, Users } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
+import './GameTimer.css';
+import fitty from 'fitty';
 
 interface BlindLevel {
   level: number;
@@ -44,6 +46,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
+  const blindsLandscapeRef = React.useRef<HTMLDivElement>(null);
 
   // Handle fullscreen and wake lock when entering/exiting min mode
   useEffect(() => {
@@ -51,6 +54,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       try {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
+          console.log('enterFullscreen: Entered fullscreen mode for min mode');
         }
       } catch (error) {
         console.log('Fullscreen request failed:', error);
@@ -137,6 +141,36 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isMinMode, wakeLock]);
+
+  // Apply fitty to blinds landscape text in min mode (landscape orientation only)
+  useEffect(() => {
+    let fittyInstance: any = null;
+    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+
+    if (isMinMode && isLandscape && blindsLandscapeRef.current) {
+      // Small delay to ensure element is fully rendered
+      const timer = setTimeout(() => {
+        if (blindsLandscapeRef.current) {
+          fittyInstance = fitty(blindsLandscapeRef.current, {
+            minSize: 64, // 4rem
+            maxSize: 130,
+          });
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        if (fittyInstance) {
+          // fitty returns single instance when passed single element
+          if (Array.isArray(fittyInstance)) {
+            fittyInstance.forEach(instance => instance.unsubscribe());
+          } else {
+            fittyInstance.unsubscribe();
+          }
+        }
+      };
+    }
+  }, [isMinMode, timerState?.currentLevel]);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -431,51 +465,61 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
   // Min Mode Fullscreen Component
   if (isMinMode && timerState) {
+    const getTimeStateClass = () => {
+      if (timerState.timeRemaining < 60) {
+        return `minModeTime--red ${timerState.isPaused ? 'minModeTime--pulsing' : ''}`;
+      } else if (timerState.timeRemaining < 300) {
+        return 'minModeTime--yellow';
+      } else {
+        return 'minModeTime--green';
+      }
+    };
+
     return (
       <div
-        className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center cursor-pointer w-screen h-screen overflow-hidden"
-        style={{ width: '100vw', height: '100vh', margin: 0, padding: 0 }}
+        className="minModeContainer"
         onClick={() => setIsMinMode(false)}
       >
         {/* Time Remaining */}
-        <div className={`text-9xl lg:text-[16rem] font-mono font-bold mb-8 transition-all duration-300 ${timerState.timeRemaining < 60
-          ? `text-red-400 drop-shadow-[0_0_30px_rgba(239,68,68,0.9)] ${timerState.isPaused ? 'animate-pulse' : ''}`
-          : timerState.timeRemaining < 300
-            ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(234,179,8,0.7)]`
-            : `text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]`
-          }`}>
-          {formatTime(timerState.timeRemaining || 0)}
+        <div className="minModeTimeContainer">
+          <div className={`minModeTime ${getTimeStateClass()}`}>
+            {formatTime(timerState.timeRemaining || 0)}
+          </div>
         </div>
 
         {/* Blind Levels */}
-        {currentBlind && (
-          <div>
-            {currentBlind.isbreak ? (
-              <div className="text-8xl landscape:text-9xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
-                🔥 BREAK
-              </div>
-            ) : (
-              <>
-                {/* Portrait mode: stack vertically */}
-                <div className="portrait:block landscape:hidden text-8xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
-                  {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
+        <div className="minModeBlindsContainer">
+          {currentBlind && (
+            <>
+              {currentBlind.isbreak ? (
+                <div className="minModeBreak">
+                  🔥 BREAK
                 </div>
-                {/* Landscape mode: display on one line with pipe separator */}
-                <div className="portrait:hidden landscape:block text-9xl font-mono text-center font-bold text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]">
-                  {currentBlind.smallBlind} {currentBlind.bigBlind}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              ) : (
+                <>
+                  {/* Portrait mode: stack vertically */}
+                  <div className="minModeBlinds--portrait">
+                    {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
+                  </div>
+                  {/* Landscape mode: display on one line */}
+                  <div ref={blindsLandscapeRef} className="minModeBlinds--landscape">
+                    {currentBlind.smallBlind} {currentBlind.bigBlind}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Players Remaining  */}
-        {playersRemaining !== undefined && (
-          <div className="flex items-center gap-4 text-4xl font-bold text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] mt-4">
-            <Users size={30} className="text-purple-400" />
-            <span>{playersRemaining}</span>
-          </div>
-        )}
+        <div className="minModePlayersContainer">
+          {playersRemaining !== undefined && (
+            <div className="minModePlayers">
+              <Users size={30} />
+              <span>{playersRemaining}</span>
+            </div>
+          )}
+        </div>
 
       </div>
     );

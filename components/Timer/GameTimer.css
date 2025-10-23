@@ -1,0 +1,199 @@
+/* GameTimer Min Mode Styles */
+
+/* Main container for min mode fullscreen view */
+.minModeContainer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: black;
+  cursor: pointer;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+/* Portrait mode - stack vertically centered */
+@media (orientation: portrait) {
+  .minModeContainer {
+    grid-template-rows: auto auto auto;
+    grid-template-columns: 1fr;
+    align-content: center;
+    justify-items: center;
+    gap: 2rem;
+  }
+}
+
+/* Landscape mode - specific height distribution */
+@media (orientation: landscape) {
+  .minModeContainer {
+    grid-template-rows: 40% 40% 1fr;
+    grid-template-columns: 1fr;
+    align-items: center;
+    justify-items: center;
+  }
+}
+
+/* Grid item containers */
+.minModeTimeContainer,
+.minModeBlindsContainer,
+.minModePlayersContainer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Time display - base styles */
+.minModeTime {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  transition: all 300ms;
+}
+
+/* Portrait mode - smaller time */
+@media (orientation: portrait) {
+  .minModeTime {
+    font-size: 6rem; /* text-6xl */
+  }
+}
+
+/* Landscape mode - larger time */
+@media (orientation: landscape) {
+  .minModeTime {
+    font-size: 9rem; /* text-9xl */
+  }
+}
+
+/* Extra large landscape screens */
+@media (orientation: landscape) and (min-width: 1024px) {
+  .minModeTime {
+    font-size: 16rem;
+  }
+}
+
+/* Time display - green state (> 5 minutes remaining) */
+.minModeTime--green {
+  color: rgb(74, 222, 128); /* text-green-400 */
+  filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+}
+
+/* Time display - yellow state (1-5 minutes remaining) */
+.minModeTime--yellow {
+  color: rgb(250, 204, 21); /* text-yellow-400 */
+  filter: drop-shadow(0 0 25px rgba(234, 179, 8, 0.7));
+}
+
+/* Time display - red state (< 1 minute remaining) */
+.minModeTime--red {
+  color: rgb(248, 113, 113); /* text-red-400 */
+  filter: drop-shadow(0 0 30px rgba(239, 68, 68, 0.9));
+}
+
+/* Pulsing animation for paused state */
+.minModeTime--pulsing {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Break indicator */
+.minModeBreak {
+  font-weight: 700;
+  color: rgb(251, 146, 60); /* text-orange-400 */
+  filter: drop-shadow(0 0 25px rgba(249, 115, 22, 0.7));
+}
+
+/* Break indicator - portrait mode */
+@media (orientation: portrait) {
+  .minModeBreak {
+    font-size: 4rem; /* text-5xl for portrait */
+  }
+}
+
+/* Break indicator - landscape mode */
+@media (orientation: landscape) {
+  .minModeBreak {
+    font-size: 9rem; /* text-9xl in landscape */
+  }
+}
+
+/* Blinds display - portrait mode */
+.minModeBlinds--portrait {
+  display: block !important;
+  font-size: 4rem; /* text-5xl for portrait */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  font-weight: 700;
+  color: rgb(103, 232, 249); /* text-cyan-300 */
+  filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.6));
+  line-height: 1.2;
+}
+
+@media (orientation: landscape) {
+  .minModeBlinds--portrait {
+    display: none !important;
+  }
+}
+
+/* Blinds display - landscape mode */
+.minModeBlinds--landscape {
+  display: none !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  font-weight: 700;
+  color: rgb(103, 232, 249); /* text-cyan-300 */
+  filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.6));
+}
+
+@media (orientation: landscape) {
+  .minModeBlinds--landscape {
+    display: block !important;
+  }
+}
+
+/* Players remaining display */
+.minModePlayers {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 700;
+  color: rgb(192, 132, 252); /* text-purple-400 */
+  filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.6));
+}
+
+.minModePlayers svg {
+  color: rgb(192, 132, 252); /* text-purple-400 */
+}
+
+/* Portrait mode - smaller players text */
+@media (orientation: portrait) {
+  .minModePlayers {
+    font-size: 2rem; /* text-3xl */
+  }
+  .minModePlayers svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Landscape mode - larger players text */
+@media (orientation: landscape) {
+  .minModePlayers {
+    font-size: 2.25rem; /* text-4xl */
+  }
+  .minModePlayers svg {
+    width: 30px;
+    height: 30px;
+  }
+}
