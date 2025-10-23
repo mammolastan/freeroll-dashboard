@@ -1940,57 +1940,7 @@ export function FullAdminScreen({
                             </div>
                         </div>
 
-                        {/* Add Player Section */}
-                        {currentDraft?.status !== 'integrated' && (
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-900 mb-1">
-                                    Add Player
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={newPlayerName}
-                                        onChange={(e) => setNewPlayerName(e.target.value)}
-                                        onFocus={() => {
-                                            if (newPlayerName.length >= 2) {
-                                                setShowPlayerDropdown(true);
-                                            }
-                                        }}
-                                        className="w-full px-3 py-2 pr-8 border rounded text-black"
-                                        placeholder="Start typing player name..."
-                                        id="player-search-input"
-                                    />
 
-                                    {/* Close button - only show when dropdown is open */}
-                                    {showPlayerDropdown && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPlayerDropdown(false)}
-                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    )}
-
-                                    {showPlayerDropdown && (
-                                        <PlayerSearchDropdown
-                                            searchResults={playerSearchResults}
-                                            isSearching={isSearching}
-                                            checkedInPlayers={players
-                                                .filter(p => p.player_name)
-                                                .map(p => ({
-                                                    player_uid: p.player_uid,
-                                                    player_name: p.player_name
-                                                }))}
-                                            onSelectPlayer={(player) => addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID })}
-                                            onAddNewPlayer={(name) => addPlayer({ name, isNew: true })}
-                                            showAddNewOption={true}
-                                            newPlayerName={newPlayerName}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Tournament Summary */}
                         {players.length > 0 && (
@@ -2095,6 +2045,59 @@ export function FullAdminScreen({
                                 <GameTimer tournamentId={currentDraft.id} playersRemaining={computedStats?.playersRemaining} isAdmin={true} />
                             </div>
                         )}
+
+                        {/* Add Player Section */}
+                        {currentDraft?.status !== 'integrated' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-900 mb-1">
+                                    Add Playerz
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={newPlayerName}
+                                        onChange={(e) => setNewPlayerName(e.target.value)}
+                                        onFocus={() => {
+                                            if (newPlayerName.length >= 2) {
+                                                setShowPlayerDropdown(true);
+                                            }
+                                        }}
+                                        className="w-full px-3 py-2 pr-8 border rounded text-black"
+                                        placeholder="Start typing player name..."
+                                        id="player-search-input"
+                                    />
+
+                                    {/* Close button - only show when dropdown is open */}
+                                    {showPlayerDropdown && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPlayerDropdown(false)}
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+
+                                    {showPlayerDropdown && (
+                                        <PlayerSearchDropdown
+                                            searchResults={playerSearchResults}
+                                            isSearching={isSearching}
+                                            checkedInPlayers={players
+                                                .filter(p => p.player_name)
+                                                .map(p => ({
+                                                    player_uid: p.player_uid,
+                                                    player_name: p.player_name
+                                                }))}
+                                            onSelectPlayer={(player) => addPlayer({ name: player.Name, nickname: player.nickname ?? undefined, uid: player.UID })}
+                                            onAddNewPlayer={(name) => addPlayer({ name, isNew: true })}
+                                            showAddNewOption={true}
+                                            newPlayerName={newPlayerName}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
 
                         {/* Players List */}
                         <div>
