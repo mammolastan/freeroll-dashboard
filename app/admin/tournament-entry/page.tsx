@@ -129,17 +129,46 @@ export default function TournamentEntryPage() {
     socket.emit("joinRoom", currentDraft.id.toString());
 
     // Listen for player updates
-    const handlePlayersUpdated = (event: { data: { players: Player[] } }) => {
-      console.log("Admin: Players updated via socket:", event.data.players);
-      setPlayers(event.data.players);
+    const handlePlayersUpdated = (eventOrPlayers: any) => {
+      console.log("Admin: Raw socket data:", eventOrPlayers);
+
+      // STEP 1: Extract players array (handle multiple formats)
+      let rawPlayers: any[];
+      if (Array.isArray(eventOrPlayers)) {
+        rawPlayers = eventOrPlayers;
+      } else if (eventOrPlayers?.data?.players) {
+        rawPlayers = eventOrPlayers.data.players;
+      } else {
+        console.error('Unknown socket format:', eventOrPlayers);
+        return;
+      }
+
+      // STEP 2: Normalize property names (socket format → admin format)
+      const normalizedPlayers: Player[] = rawPlayers.map((p: any) => ({
+        id: p.id,
+        player_name: p.name || p.player_name,           // Convert name → player_name
+        player_uid: p.uid || p.player_uid,              // Convert uid → player_uid  
+        player_nickname: p.nickname || p.player_nickname,
+        is_new_player: p.is_new_player ?? false,
+        hitman_name: p.hitman_name || null,
+        ko_position: p.ko_position || p.elimination_position || null,
+        placement: p.placement || null,
+        added_by: p.added_by,
+        checked_in_at: p.checked_in_at,
+      }));
+
+      console.log('Admin: Normalized players:', normalizedPlayers);
+      setPlayers(normalizedPlayers);
     };
 
     socket.on("players:updated", handlePlayersUpdated);
+    socket.on("updatePlayers", handlePlayersUpdated);
 
     // Cleanup when component unmounts or tournament changes
     return () => {
       console.log('Admin: Cleaning up Socket.IO for tournament:', currentDraft.id);
       socket.off("players:updated", handlePlayersUpdated);
+      socket.off("updatePlayers", handlePlayersUpdated);
     };
   }, [currentDraft, isAuthenticated]);
 
