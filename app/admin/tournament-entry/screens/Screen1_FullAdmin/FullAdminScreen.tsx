@@ -885,7 +885,7 @@ export function FullAdminScreen({
         // Let the blur handler deal with "unknown" and other values
         const exactMatch = players.find(p =>
             p.id !== playerId &&
-            p.player_name.toLowerCase() === value.toLowerCase()
+            p.player_name?.toLowerCase() === value.toLowerCase()
         );
 
         if (exactMatch) {
