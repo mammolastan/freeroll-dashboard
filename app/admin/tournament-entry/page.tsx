@@ -158,7 +158,7 @@ export default function TournamentEntryPage() {
       }));
 
       console.log('Admin: Normalized players:', normalizedPlayers);
-      setPlayers(normalizedPlayers);
+      setPlayers([...normalizedPlayers]);
     };
 
     socket.on("players:updated", handlePlayersUpdated);
