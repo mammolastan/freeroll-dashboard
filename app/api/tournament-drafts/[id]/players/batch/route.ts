@@ -45,7 +45,7 @@ export async function PUT(
         if ('player_nickname' in updateData) dataToUpdate.player_nickname = updateData.player_nickname;
 
         // Update the player using Prisma's update method
-        const updatedPlayer = await tx.tournament_draft_players.update({
+        const updatedPlayer = await tx.tournamentDraftPlayer.update({
           where: {
             id: playerId,
           },
