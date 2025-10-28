@@ -625,8 +625,11 @@ export function FullAdminScreen({
             // DO NOT auto-clear KO position when hitman is removed
             // This was causing unwanted data loss - users can manually clear if needed
 
-            // Store pending updates for this player
-            pendingUpdatesRef.current[playerId] = updatedPlayer;
+            // Store pending updates for this player, merging with any existing pending updates
+            pendingUpdatesRef.current[playerId] = {
+                ...pendingUpdatesRef.current[playerId],
+                ...updatedPlayer
+            };
 
             // Clear existing global timeout
             if (globalUpdateTimeoutRef.current) {
@@ -899,10 +902,6 @@ export function FullAdminScreen({
 
         // If player is already knocked out, clear knockout
         if (player.hitman_name && player.ko_position !== null) {
-            const hitmanInput = document.getElementById(`hitman-input-${playerId}`) as HTMLInputElement;
-            if (hitmanInput) {
-                hitmanInput.value = '';
-            }
             clearPlayerKnockout(playerId);
         } else {
             // if player is NOT knocked out, set hitman to "unknown" and trigger KO assignment
