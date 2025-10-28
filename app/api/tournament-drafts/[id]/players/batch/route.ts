@@ -30,29 +30,29 @@ export async function PUT(
       for (const playerUpdate of playersToUpdate) {
         const { id: playerId, ...updateData } = playerUpdate;
 
-        // Update the player
-        await tx.$executeRaw`
-          UPDATE tournament_draft_players 
-          SET 
-            player_name = ${updateData.player_name},
-            player_uid = ${updateData.player_uid},
-            is_new_player = ${updateData.is_new_player || false},
-            hitman_name = ${updateData.hitman_name},
-            ko_position = ${updateData.ko_position},
-            placement = ${updateData.placement},
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${playerId} AND tournament_draft_id = ${draftId}
-        `;
+        // Build dynamic update data object - only include fields that are present
+        const dataToUpdate: any = {
+          updated_at: new Date(),
+        };
 
-        // Fetch the updated player data
-        const updatedPlayer = await tx.$queryRaw`
-          SELECT * FROM tournament_draft_players 
-          WHERE id = ${playerId}
-        `;
+        // Only include fields that are explicitly present in updateData
+        if ('player_name' in updateData) dataToUpdate.player_name = updateData.player_name;
+        if ('player_uid' in updateData) dataToUpdate.player_uid = updateData.player_uid;
+        if ('is_new_player' in updateData) dataToUpdate.is_new_player = updateData.is_new_player;
+        if ('hitman_name' in updateData) dataToUpdate.hitman_name = updateData.hitman_name;
+        if ('ko_position' in updateData) dataToUpdate.ko_position = updateData.ko_position;
+        if ('placement' in updateData) dataToUpdate.placement = updateData.placement;
+        if ('player_nickname' in updateData) dataToUpdate.player_nickname = updateData.player_nickname;
 
-        if ((updatedPlayer as any[]).length > 0) {
-          updatedPlayers.push((updatedPlayer as any[])[0]);
-        }
+        // Update the player using Prisma's update method
+        const updatedPlayer = await tx.tournament_draft_players.update({
+          where: {
+            id: playerId,
+          },
+          data: dataToUpdate,
+        });
+
+        updatedPlayers.push(updatedPlayer);
       }
 
       return updatedPlayers;

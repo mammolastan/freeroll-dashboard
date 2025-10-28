@@ -589,8 +589,8 @@ export function FullAdminScreen({
                 return;
             }
 
-            // Create updated player object
-            let updatedPlayer = { ...player, [field]: value };
+            // Track only the fields that are changing (not the entire player object)
+            const fieldsToUpdate: Record<string, any> = { [field]: value };
 
             // Auto-assign KO position when hitman is selected (IMPROVED VERSION)
             if (field === 'hitman_name' && value) {
@@ -602,7 +602,7 @@ export function FullAdminScreen({
 
                     const maxKoPosition = usedKoPositions.length > 0 ? Math.max(...usedKoPositions) : 0;
                     const nextKoPosition = maxKoPosition + 1;
-                    updatedPlayer = { ...updatedPlayer, ko_position: nextKoPosition };
+                    fieldsToUpdate.ko_position = nextKoPosition;
 
                     // Show toast notification with undo option
                     setToast({
@@ -625,10 +625,10 @@ export function FullAdminScreen({
             // DO NOT auto-clear KO position when hitman is removed
             // This was causing unwanted data loss - users can manually clear if needed
 
-            // Store pending updates for this player, merging with any existing pending updates
+            // Store only changed fields, merging with any existing pending updates
             pendingUpdatesRef.current[playerId] = {
                 ...pendingUpdatesRef.current[playerId],
-                ...updatedPlayer
+                ...fieldsToUpdate
             };
 
             // Clear existing global timeout
