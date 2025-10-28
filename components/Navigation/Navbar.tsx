@@ -36,8 +36,8 @@ const Navbar = () => {
                 { href: '/rankings/quarterly', text: 'Quarterly Rankings' }
             ]
         },
-        { href: '/games', icon: <GalleryHorizontalEnd size={20} />, text: 'Games' },
-        { href: '/check-in', icon: <ClipboardCheck size={20} />, text: 'Check-In' },
+        { href: '/games', icon: <GalleryHorizontalEnd size={20} />, text: 'Recent Games' },
+        { href: '/check-in', icon: <ClipboardCheck size={20} />, text: 'Active Games' },
         { href: '/players', icon: <CircleUserRound size={20} />, text: 'Players' },
         { href: '/venues', icon: <Store size={20} />, text: 'Venues' },
         { href: '/badges', icon: <Award size={20} />, text: 'Badges' },
