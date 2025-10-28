@@ -208,6 +208,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
       if (response.ok) {
         setSelectedPlayer(null);
         setSelectedHitman('');
+        setFilterText('');
         onDataChange();
       } else {
         const errorData = await response.json();
