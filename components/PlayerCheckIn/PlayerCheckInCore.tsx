@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, UserPlus, Search, X, Undo } from 'lucide-react';
+import { Check, UserPlus, Search, X } from 'lucide-react';
 
 interface Player {
   id: number;
@@ -52,45 +52,22 @@ export function PlayerCheckInCore({
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [pendingCheckIn, setPendingCheckIn] = useState<{
-    playerData: {
-      player_name: string;
-      player_uid: string | null;
-      is_new_player: boolean;
-      player_nickname?: string | null;
-    };
-    displayName: string;
-  } | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const checkInTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-clear success message and process check-in after 4 seconds
+  // Auto-clear success message after 4 seconds
   useEffect(() => {
-    if (successMessage && pendingCheckIn) {
-      const timer = setTimeout(async () => {
-        // Process the actual check-in
-        try {
-          await onCheckIn(pendingCheckIn.playerData);
-          setSuccessMessage('');
-          setPendingCheckIn(null);
-          setSearchQuery('');
-
-          // Call onSuccess after check-in completes
-          onSuccess?.();
-        } catch (error) {
-          console.error('Error checking in player:', error);
-          alert('Error checking in player. Please try again.');
-          setSuccessMessage('');
-          setPendingCheckIn(null);
-        }
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
       }, 4000);
 
-      checkInTimeoutRef.current = timer;
+      successTimeoutRef.current = timer;
       return () => clearTimeout(timer);
     }
-  }, [successMessage, pendingCheckIn]);
+  }, [successMessage]);
 
   // Search for existing players
   const searchPlayers = async (query: string) => {
@@ -175,25 +152,23 @@ export function PlayerCheckInCore({
       player_nickname: playerResult.nickname,
     };
 
-    // Set pending check-in and show success message
-    setPendingCheckIn({
-      playerData,
-      displayName: welcomeName
-    });
-    setSuccessMessage(`Welcome ${welcomeName}!`);
-    setSearchQuery('');
-    setSearchResults([]);
-    setIsSubmitting(false);
-  };
+    try {
+      // Process the check-in immediately
+      await onCheckIn(playerData);
 
-  const handleUndo = () => {
-    // Cancel the pending check-in
-    if (checkInTimeoutRef.current) {
-      clearTimeout(checkInTimeoutRef.current);
-      checkInTimeoutRef.current = null;
+      // Show success message
+      setSuccessMessage(`Welcome ${welcomeName}!`);
+      setSearchQuery('');
+      setSearchResults([]);
+
+      // Call onSuccess after check-in completes
+      onSuccess?.();
+    } catch (error) {
+      console.error('Error checking in player:', error);
+      alert('Error checking in player. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setSuccessMessage('');
-    setPendingCheckIn(null);
   };
 
   const handleNewPlayerSubmit = async () => {
@@ -207,34 +182,33 @@ export function PlayerCheckInCore({
       is_new_player: true,
     };
 
-    // Set pending check-in and show success message
-    setPendingCheckIn({
-      playerData,
-      displayName: newPlayerName.trim()
-    });
-    setSuccessMessage(`Welcome ${newPlayerName}!`);
-    setNewPlayerName('');
-    setShowNewPlayerForm(false);
-    setIsSubmitting(false);
+    try {
+      // Process the check-in immediately
+      await onCheckIn(playerData);
+
+      // Show success message
+      setSuccessMessage(`Welcome ${newPlayerName.trim()}!`);
+      setNewPlayerName('');
+      setShowNewPlayerForm(false);
+
+      // Call onSuccess after check-in completes
+      onSuccess?.();
+    } catch (error) {
+      console.error('Error checking in new player:', error);
+      alert('Error checking in new player. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Success Message with Undo */}
+      {/* Success Message */}
       {successMessage && (
         <div className="p-3 md:p-6 bg-green-600/20 border-2 border-green-500 rounded-xl">
-          <div className="flex items-center justify-between gap-3 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-3 text-lg md:text-2xl font-bold text-green-400">
-              <Check size={20} className="md:w-8 md:h-8" />
-              {successMessage}
-            </div>
-            <button
-              onClick={handleUndo}
-              className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base font-bold bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all border-2 border-gray-600"
-            >
-              <Undo size={16} className="md:w-5 md:h-5" />
-              Undo
-            </button>
+          <div className="flex items-center gap-2 md:gap-3 text-lg md:text-2xl font-bold text-green-400">
+            <Check size={20} className="md:w-8 md:h-8" />
+            {successMessage}
           </div>
         </div>
       )}
