@@ -134,7 +134,7 @@ export function BadgeGroup({ badges, size = 'medium', limit = 0, showName = true
     const hasMoreBadges = limit > 0 && sortedBadges.length > limit;
 
     return (
-        <div className="items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
             {displayBadges.map(badge => (
                 <Badge
                     key={badge.id}
