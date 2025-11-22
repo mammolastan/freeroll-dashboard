@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 interface DraftTournament {
   id: number;
   tournament_date: string;
+  tournament_time?: string;
   director_name: string;
   venue: string;
   start_points: number;
@@ -142,7 +143,8 @@ function calculatePlayerScore(placement: number, totalPlayers: number): number {
 function generateFileName(
   date: string,
   venue: string,
-  director_name: string
+  director_name: string,
+  time?: string
 ): string {
   const gameDate = new Date(date);
   const month = (gameDate.getMonth() + 1).toString().padStart(2, "0");
@@ -151,7 +153,14 @@ function generateFileName(
   const cleanDirector = director_name
     .replace(/\s+/g, "_")
     .replace(/[^a-zA-Z0-9_]/g, "");
-  return `SYS-${month}${day}_${cleanVenue}_${cleanDirector}`;
+
+  // Format time if provided (e.g., "14:30" -> "1430")
+  let timeString = "";
+  if (time) {
+    timeString = "_" + time.replace(/:/g, "").replace(/\s+/g, "");
+  }
+
+  return `SYS-${month}${day}${timeString}_${cleanVenue}_${cleanDirector}`;
 }
 
 export async function POST(
@@ -200,7 +209,8 @@ export async function POST(
         const fileName = generateFileName(
           draft.tournament_date,
           draft.venue,
-          draft.director_name
+          draft.director_name,
+          draft.tournament_time
         );
 
         const gameUID = "SYS-G-" + uuidv4();
