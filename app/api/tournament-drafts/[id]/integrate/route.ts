@@ -157,7 +157,8 @@ function generateFileName(
   // Format time if provided (e.g., "14:30" -> "1430")
   let timeString = "";
   if (time) {
-    timeString = "_" + time.replace(/:/g, "").replace(/\s+/g, "");
+    const timeStr = String(time);
+    timeString = "_" + timeStr.replace(/:/g, "").replace(/\s+/g, "");
   }
 
   return `SYS-${month}${day}${timeString}_${cleanVenue}_${cleanDirector}`;
