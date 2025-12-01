@@ -20,9 +20,38 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("q");
     const isNameSearch = searchParams.get("name") === "true";
+    const unclaimedOnly = searchParams.get("unclaimed") === "true";
 
     if (!query) {
       return NextResponse.json([]);
+    }
+
+    if (unclaimedOnly) {
+      const searchTerm = `%${query}%`;
+      const players = await prisma.$queryRaw`
+        SELECT
+          p.uid,
+          p.name,
+          p.nickname,
+          COUNT(DISTINCT pt.File_name) as TotalGames
+        FROM players p
+        LEFT JOIN poker_tournaments pt ON p.uid = pt.UID
+        WHERE (p.name LIKE ${searchTerm} OR p.nickname LIKE ${searchTerm})
+          AND p.email IS NULL
+        GROUP BY p.uid, p.name, p.nickname
+        ORDER BY COUNT(DISTINCT pt.File_name) DESC, p.name ASC
+        LIMIT 10
+      `;
+
+      const serialized = serializeResults(players as any[]);
+      return NextResponse.json({
+        players: serialized.map((p) => ({
+          uid: p.uid,
+          name: p.name,
+          nickname: p.nickname,
+          totalGames: p.TotalGames,
+        })),
+      });
     }
 
     let players;

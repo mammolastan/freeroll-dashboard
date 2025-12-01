@@ -23,6 +23,10 @@
 /build
 /dist
 
+# User uploads
+public/uploads/avatars/*
+!public/uploads/avatars/.gitkeep
+
 # misc
 .DS_Store
 *.pem
