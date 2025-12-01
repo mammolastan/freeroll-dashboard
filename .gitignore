@@ -28,6 +28,7 @@
 *.pem
 .notes
 _notes
+.vscode
 
 # debug
 npm-debug.log*
