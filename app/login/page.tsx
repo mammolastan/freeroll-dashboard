@@ -1,11 +1,14 @@
+// app/login/page.tsx
+
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+// Separate component that uses useSearchParams
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -41,9 +44,9 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-            <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-                <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+                <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
                     Sign In
                 </h1>
 
@@ -66,10 +69,8 @@ export default function LoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                             required
-                            autoComplete="email"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="bitch@ss.com"
                         />
                     </div>
 
@@ -85,10 +86,8 @@ export default function LoginPage() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                             required
-                            autoComplete="current-password"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Password mothafucka do you know it?"
                         />
                     </div>
 
@@ -109,5 +108,32 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+// Loading fallback for Suspense
+function LoginFormFallback() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+                <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+                    Sign In
+                </h1>
+                <div className="animate-pulse space-y-4">
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-blue-200 rounded"></div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Main page component wraps the form in Suspense
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<LoginFormFallback />}>
+            <LoginForm />
+        </Suspense>
     );
 }
