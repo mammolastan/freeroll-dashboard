@@ -68,8 +68,9 @@ export default function ProfilePage() {
 
                 // Update the session so navbar/other components reflect change
                 await updateSession({
-                    ...session,
-                    user: { ...session?.user, nickname: data.nickname },
+                    name: session?.user?.name,
+                    nickname: data.nickname,
+                    image: session?.user?.image,
                 });
             } else {
                 const error = await res.json();
@@ -121,8 +122,9 @@ export default function ProfilePage() {
 
                 // Update session
                 await updateSession({
-                    ...session,
-                    user: { ...session?.user, image: data.photo_url },
+                    name: session?.user?.name,
+                    nickname: session?.user?.nickname,
+                    image: data.photo_url,
                 });
             } else {
                 const error = await res.json();
@@ -155,8 +157,9 @@ export default function ProfilePage() {
                 setMessage({ type: "success", text: "Photo removed" });
 
                 await updateSession({
-                    ...session,
-                    user: { ...session?.user, image: null },
+                    name: session?.user?.name,
+                    nickname: session?.user?.nickname,
+                    image: null,
                 });
             } else {
                 setMessage({ type: "error", text: "Failed to remove photo" });
