@@ -280,7 +280,6 @@ export default function ProfilePage() {
                                     type="text"
                                     value={session.user.name || ""}
                                     disabled
-                                    autoComplete="name"
                                     className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600"
                                 />
                             </div>
@@ -294,7 +293,6 @@ export default function ProfilePage() {
                                     type="email"
                                     value={session.user.email || ""}
                                     disabled
-                                    autoComplete="email"
                                     className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600"
                                 />
                             </div>
