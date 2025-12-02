@@ -211,11 +211,10 @@ export default function ProfilePage() {
                                     className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 >
                                     {photoUrl ? (
-                                        <Image
+                                        <img
                                             src={photoUrl}
                                             alt="Profile"
-                                            fill
-                                            className="object-cover"
+                                            className="object-cover w-full h-full"
                                         />
                                     ) : (
                                         <User className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -284,9 +283,6 @@ export default function ProfilePage() {
                                     autoComplete="name"
                                     className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600"
                                 />
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Contact an admin to change your name
-                                </p>
                             </div>
 
                             {/* Email (read-only) */}
@@ -306,7 +302,7 @@ export default function ProfilePage() {
                             {/* Nickname (editable) */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nickname
+                                    Display name
                                 </label>
                                 <div className="flex gap-2">
                                     <input
@@ -342,7 +338,7 @@ export default function ProfilePage() {
                                 onClick={() => {
                                     signOut({ callbackUrl: "/" });
                                 }}
-                                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                                className="px-4 py-2 hover:text-red-700 text-gray-800 rounded-md transition-colors bg-red-300/70"
                             >
                                 Sign Out
                             </button>
