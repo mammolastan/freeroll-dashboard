@@ -118,19 +118,26 @@ export default function ProfilePage() {
             if (res.ok) {
                 const data = await res.json();
                 setPhotoUrl(data.photo_url);
-                setMessage({ type: "success", text: "Photo updated!" });
 
                 // Update session
-                await updateSession({
-                    name: session?.user?.name,
-                    nickname: session?.user?.nickname,
-                    image: data.photo_url,
-                });
+                try {
+                    await updateSession({
+                        name: session?.user?.name,
+                        nickname: session?.user?.nickname,
+                        image: data.photo_url,
+                    });
+                    setMessage({ type: "success", text: "Photo updated!" });
+                } catch (sessionError) {
+                    console.error("Session update error:", sessionError);
+                    // Photo uploaded successfully, just session update failed
+                    setMessage({ type: "success", text: "Photo updated! (refresh page to see changes)" });
+                }
             } else {
                 const error = await res.json();
                 setMessage({ type: "error", text: error.error || "Failed to upload photo" });
             }
         } catch (error) {
+            console.error("Upload error:", error);
             setMessage({ type: "error", text: "Failed to upload photo" });
         } finally {
             setIsUploadingPhoto(false);
