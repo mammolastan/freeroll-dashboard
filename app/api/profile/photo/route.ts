@@ -79,8 +79,9 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filepath, buffer);
 
-    // Update database
-    const photoUrl = `/uploads/avatars/${filename}`;
+    // Update database with cache-busting timestamp
+    const timestamp = Date.now();
+    const photoUrl = `/uploads/avatars/${filename}?t=${timestamp}`;
     await prisma.player.update({
       where: { uid: session.user.uid },
       data: { photo_url: photoUrl },
