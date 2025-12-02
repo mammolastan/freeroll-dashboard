@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Camera, User, Save, Loader2 } from "lucide-react";
-import Image from "next/image";
 
 
 export default function ProfilePage() {
