@@ -110,50 +110,30 @@ export default function ProfilePage() {
             const formData = new FormData();
             formData.append("photo", file);
 
-            console.log("[Client] Starting photo upload fetch");
             const res = await fetch("/api/profile/photo", {
                 method: "POST",
                 body: formData,
             });
 
-            console.log(`[Client] Fetch complete, status: ${res.status}`);
-
             if (res.ok) {
                 const data = await res.json();
-                console.log("[Client] Response data:", data);
+                setPhotoUrl(data.photo_url);
+                setMessage({ type: "success", text: "Photo updated!" });
 
-                // Update session first, before setting photo URL to avoid render issues
-                try {
-                    console.log("[Client] Updating session");
-                    await updateSession({
-                        name: session?.user?.name,
-                        nickname: session?.user?.nickname,
-                        image: data.photo_url,
-                    });
-                    console.log("[Client] Session updated successfully");
-
-                    // Set photo URL after successful session update
-                    setPhotoUrl(data.photo_url);
-                    setMessage({ type: "success", text: "Photo updated!" });
-                } catch (sessionError) {
-                    console.error("[Client] Session update error:", sessionError);
-                    // Photo uploaded successfully, just session update failed
-                    setPhotoUrl(data.photo_url);
-                    setMessage({ type: "success", text: "Photo updated! (refresh page to see changes)" });
-                }
+                // Update session (non-blocking to avoid mobile timeout issues)
+                updateSession({
+                    name: session?.user?.name,
+                    nickname: session?.user?.nickname,
+                    image: data.photo_url,
+                }).catch(() => {
+                    // Ignore session update errors - photo is already uploaded
+                });
             } else {
-                const errorText = await res.text();
-                console.error("[Client] Upload failed with status:", res.status, errorText);
-                try {
-                    const error = JSON.parse(errorText);
-                    setMessage({ type: "error", text: error.error || "Failed to upload photo" });
-                } catch {
-                    setMessage({ type: "error", text: "Failed to upload photo" });
-                }
+                const error = await res.json();
+                setMessage({ type: "error", text: error.error || "Failed to upload photo" });
             }
         } catch (error) {
-            console.error("[Client] Upload error:", error);
-            setMessage({ type: "error", text: `Failed to upload photo: ${error instanceof Error ? error.message : "Unknown error"}` });
+            setMessage({ type: "error", text: "Failed to upload photo" });
         } finally {
             setIsUploadingPhoto(false);
             // Reset file input
