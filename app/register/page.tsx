@@ -122,6 +122,9 @@ export default function RegisterPage() {
                 <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
                     Create Account
                 </h1>
+                <p className="text-sm text-gray-600 mb-3">
+                    Register your email address with your existing Freeroll Atlanta player profile or create a new one.
+                </p>
 
                 {error && (
                     <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -179,7 +182,7 @@ export default function RegisterPage() {
                     {/* Player Selection Section */}
                     <div className="border-t pt-4 mt-4">
                         <p className="text-sm text-gray-600 mb-3">
-                            Have you played in Freeroll Atlanta tournaments before?
+                            Search for your existing player profile to link it to your account, or register as a new player.
                         </p>
 
                         {!isNewPlayer && !selectedPlayer && (
