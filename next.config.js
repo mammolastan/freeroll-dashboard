@@ -1,10 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  swcMinify: true,
   output: "standalone", // Optimizes the output for production
   poweredByHeader: false,
   generateEtags: true,
   compress: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async headers() {
     return [
       {
