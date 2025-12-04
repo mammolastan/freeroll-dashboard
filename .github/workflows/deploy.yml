@@ -33,10 +33,13 @@ jobs:
             # Navigate to project directory
             cd /var/www/freeroll-dashboard
 
-            # Clean local changes to build artifacts
+            # Reset tracked files to clean state (discards local changes to committed files)
+            echo "Resetting tracked files to clean state..."
+            git reset --hard HEAD
+
+            # Clean only build artifacts and node_modules, preserve uploads
             echo "Cleaning build artifacts..."
-            git checkout -- dist/ 2>/dev/null || true
-            git clean -fd dist/ 2>/dev/null || true
+            rm -rf .next/ dist/ node_modules/.cache/ 2>/dev/null || true
 
             # Pull latest changes
             echo "Pulling latest changes..."
