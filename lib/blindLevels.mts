@@ -71,6 +71,14 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
   },
 ];
 
+// Medium - 15 minute levels (same blind structure)
+const MEDIUM_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map(
+  (level) => ({
+    ...level,
+    duration: level.isbreak ? level.duration : 15,
+  })
+);
+
 // Turbo Speed - 10 minute levels (same blind structure)
 const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map((level) => ({
   ...level,
@@ -84,6 +92,12 @@ const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
     name: "Standard Speed",
     description: "20-minute levels",
     levels: STANDARD_SPEED_LEVELS,
+  },
+  medium: {
+    id: "medium",
+    name: "Medium Speed",
+    description: "15-minute levels",
+    levels: MEDIUM_SPEED_LEVELS,
   },
   turbo: {
     id: "turbo",
