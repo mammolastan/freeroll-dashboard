@@ -23,6 +23,11 @@ const BLIND_SCHEDULES = {
         name: 'Standard Speed',
         description: '20-minute levels'
     },
+    medium: {
+        id: 'medium',
+        name: 'Medium Speed',
+        description: '15-minute levels'
+    },
     turbo: {
         id: 'turbo',
         name: 'Turbo Speed',
