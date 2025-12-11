@@ -363,7 +363,7 @@ export default function ProfilePage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Display name
                                 </label>
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2">
                                     <input
                                         type="text"
                                         value={nickname}
@@ -371,12 +371,12 @@ export default function ProfilePage() {
                                         placeholder="Enter a nickname"
                                         maxLength={50}
                                         autoComplete="nickname"
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                     <button
                                         onClick={handleSaveNickname}
                                         disabled={isSaving}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center gap-2"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center gap-2 whitespace-nowrap"
                                     >
                                         {isSaving ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
