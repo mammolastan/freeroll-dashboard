@@ -10,7 +10,7 @@ import {
   BlindSchedule,
   BLIND_SCHEDULES,
   getBlindSchedule,
-} from "./lib/blindLevels.mjs";
+} from "./lib/blindLevels.js";
 
 // Initialize Prisma Client
 const globalForPrisma = globalThis as unknown as {

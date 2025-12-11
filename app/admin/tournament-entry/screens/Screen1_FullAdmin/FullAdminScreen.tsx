@@ -15,25 +15,7 @@ import { PlayerRow } from '../../components/PlayerRow';
 import { TournamentValidationStatus } from '../../components/TournamentValidationStatus';
 import { validateTournamentForIntegration, exportTournamentAsText } from '@/lib/tournamentValidation';
 import { apiGet, apiPost, apiPut, apiDelete, handleApiError } from '@/lib/errorHandler';
-
-// Blind schedule definitions
-const BLIND_SCHEDULES = {
-    standard: {
-        id: 'standard',
-        name: 'Standard Speed',
-        description: '20-minute levels'
-    },
-    medium: {
-        id: 'medium',
-        name: 'Medium Speed',
-        description: '15-minute levels'
-    },
-    turbo: {
-        id: 'turbo',
-        name: 'Turbo Speed',
-        description: '10-minute levels'
-    }
-};
+import { BLIND_SCHEDULES } from '@/lib/blindLevels';
 
 interface TournamentDraft {
     id: number;
