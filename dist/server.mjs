@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
-import { BLIND_SCHEDULES, getBlindSchedule, } from "./lib/blindLevels.mjs";
+import { BLIND_SCHEDULES, getBlindSchedule, } from "./lib/blindLevels.js";
 // Initialize Prisma Client
 const globalForPrisma = globalThis;
 const prisma = (_a = globalForPrisma.prisma) !== null && _a !== void 0 ? _a : new PrismaClient();
