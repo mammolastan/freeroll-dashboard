@@ -21,6 +21,7 @@ interface PlayerRanking {
     ranking: number;
     isQualified: boolean;
     nickname: string | null;
+    photoUrl: string | null;
     badges?: BadgeData[];
 }
 

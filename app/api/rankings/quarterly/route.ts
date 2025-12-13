@@ -91,6 +91,7 @@ export async function GET(request: Request) {
         p.Name as name,
         p.UID as uid,
         pl.nickname,
+        pl.photo_url,
         COUNT(DISTINCT CASE WHEN p.Venue != 'bonus' THEN p.File_name END) as gamesPlayed,
         CAST(SUM(p.Total_Points) AS SIGNED) as totalPoints,
         CAST(SUM(CASE WHEN p.Venue != 'bonus' THEN p.Knockouts ELSE 0 END) AS SIGNED) as totalKnockouts,
@@ -110,6 +111,8 @@ export async function GET(request: Request) {
       ...player,
       ranking: index + 1,
       isQualified: index < 40, // Top 40 players qualify
+      // Convert photo_url to photoUrl (camelCase)
+      photoUrl: player.photo_url,
       // Ensure avgScore is properly converted to number
       avgScore: player.avgScore ? Number(player.avgScore) : 0,
       // Calculate FTP and PPG in JavaScript to ensure they're properly calculated

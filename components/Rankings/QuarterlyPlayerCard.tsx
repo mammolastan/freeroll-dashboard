@@ -2,9 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Trophy, Zap, Hexagon, LandPlot, Calculator, User } from 'lucide-react';
+import { Trophy, Zap, Hexagon, LandPlot, Calculator } from 'lucide-react';
 import { BadgeData, BadgeGroup } from '../ui/Badge';
 import './PlayerRankingCard.css';
+import PlayerAvatar from '../ui/PlayerAvatar';
 
 interface QuarterlyPlayer {
     name: string;
@@ -19,6 +20,7 @@ interface QuarterlyPlayer {
     ranking: number;
     isQualified: boolean;
     nickname: string | null;
+    photoUrl: string | null;
     badges?: BadgeData[];
 }
 
@@ -85,19 +87,11 @@ export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: Qu
 
             {/* Profile Picture Placeholder */}
             <div className="profilePicture">
-                <div style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '50%',
-                    backgroundColor: '#e5e7eb',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid #fff',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}>
-                    <User size={24} color="#9ca3af" />
-                </div>
+                <PlayerAvatar
+                    photoUrl={player.photoUrl}
+                    name={player.name}
+                    size="md"
+                />
             </div>
 
             {/* Player Info */}
