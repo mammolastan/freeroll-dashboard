@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Update database with cache-busting timestamp
     const timestamp = Date.now();
-    const photoUrl = `/uploads/avatars/${filename}?t=${timestamp}`;
+    const photoUrl = `/api/uploads/avatars/${filename}?t=${timestamp}`;
     await prisma.player.update({
       where: { uid: session.user.uid },
       data: { photo_url: photoUrl },
