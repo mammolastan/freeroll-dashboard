@@ -32,7 +32,6 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-left: 25px;
 }
 
 .ranking {
@@ -94,8 +93,7 @@
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
+  max-width: 150px;
 }
 
 .badges {
