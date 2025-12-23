@@ -59,7 +59,7 @@ export function QualificationBarrier({ qualifiedCount, totalPlayers }: Qualifica
                         </>
                     ) : (
                         <>
-                            Looks like this season is just getting started.
+                            Looks like this season is just getting started
                         </>
                     )}
                 </p>
