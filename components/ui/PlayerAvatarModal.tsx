@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import './PlayerAvatarModal.css';
 
 interface PlayerAvatarModalProps {
     photoUrl: string;
@@ -41,41 +42,59 @@ export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAva
 
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn"
+            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 animate-fadeIn"
             onClick={handleBackdropClick}
         >
             <div
-                className="relative bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+                className="relative w-full px-4"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-all"
+                    className="absolute -top-12 right-0 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-all backdrop-blur-sm"
                     aria-label="Close"
                 >
                     <X size={24} />
                 </button>
 
-                {/* Image */}
-                <div className="flex items-center justify-center p-8 min-h-[400px]">
-                    <img
-                        src={photoUrl}
-                        alt={name}
-                        className="rounded-lg"
-                        style={{
-                            width: '100%',
-                            height: 'auto',
-                            maxHeight: '70vh',
-                            objectFit: 'contain',
-                            borderRadius: '0.5rem'
-                        }}
-                    />
+                {/* Glass Frame Container */}
+                <div className="glass-frame">
+                    {/* Corner accents */}
+                    <div className="glass-corner glass-corner-tl" />
+                    <div className="glass-corner glass-corner-tr" />
+                    <div className="glass-corner glass-corner-bl" />
+                    <div className="glass-corner glass-corner-br" />
+
+                    {/* Top reflection */}
+                    <div className="glass-reflection" />
+
+                    {/* Image container with sheen effect */}
+                    <div className="glass-image-container">
+                        <img
+                            src={photoUrl}
+                            alt={name}
+                            className="glass-image"
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '70vh',
+                                objectFit: 'contain',
+                                display: 'block'
+                            }}
+                        />
+                        {/* Moving sheen overlay */}
+                        <div className="glass-sheen" />
+                        {/* Inner glow */}
+                        <div className="glass-inner-glow" />
+                    </div>
                 </div>
 
-                {/* Name footer */}
-                <div className="bg-gray-100 px-6 py-4 text-center">
-                    <p className="text-lg font-semibold text-gray-800">{name}</p>
+                {/* Name footer - styled to match the glass theme */}
+                <div className="mt-4 text-center">
+                    <p className="text-xl font-semibold text-white drop-shadow-lg">
+                        {name}
+                    </p>
                 </div>
             </div>
         </div>

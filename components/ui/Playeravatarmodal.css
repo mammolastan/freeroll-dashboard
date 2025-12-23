@@ -1,0 +1,186 @@
+/* PlayerAvatarModal.css - Glass Enclosure Effect */
+
+.glass-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  border-radius: 1rem;
+  box-shadow:
+    /* Outer glow */ 0 0 40px rgba(255, 255, 255, 0.15),
+    /* Glass edge highlight */ inset 0 2px 3px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.1),
+    /* Depth shadow */ 0 20px 60px rgba(0, 0, 0, 0.4),
+    0 5px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-sizing: border-box;
+
+  /* Held-in-hand shifting animation */
+  animation: cardShift 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+/* Subtle shifting like holding a card in your palm */
+@keyframes cardShift {
+  0% {
+    transform: rotateY(-2deg) rotateX(1deg) rotateZ(-0.5deg);
+  }
+  25% {
+    transform: rotateY(1.5deg) rotateX(-0.5deg) rotateZ(0.8deg);
+  }
+  50% {
+    transform: rotateY(2deg) rotateX(1.5deg) rotateZ(-0.3deg);
+  }
+  75% {
+    transform: rotateY(-1deg) rotateX(-1deg) rotateZ(0.5deg);
+  }
+  100% {
+    transform: rotateY(-2deg) rotateX(1deg) rotateZ(-0.5deg);
+  }
+}
+
+/* The image container */
+.glass-image-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.2), 0 4px 15px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The actual image */
+.glass-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+/* Sheen overlay - the magic! */
+.glass-sheen {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 70%,
+    transparent 70%,
+    transparent 100%
+  );
+  animation: sheen 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sheen {
+  0% {
+    left: -100%;
+  }
+  20% {
+    left: 150%;
+  }
+  100% {
+    left: 150%;
+  }
+}
+
+/* Corner accents - glass reflections */
+.glass-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+}
+
+.glass-corner-tl {
+  top: 4px;
+  left: 4px;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px 0 0 0;
+}
+
+.glass-corner-tr {
+  top: 4px;
+  right: 4px;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  border-right: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0 8px 0 0;
+}
+
+.glass-corner-bl {
+  bottom: 4px;
+  left: 4px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 0 0 8px;
+}
+
+.glass-corner-br {
+  bottom: 4px;
+  right: 4px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  border-right: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 8px 0;
+}
+
+/* Top reflection bar */
+.glass-reflection {
+  position: absolute;
+  top: 8px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Subtle inner glow on the image */
+.glass-inner-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+/* Ambient light effect on hover */
+.glass-frame:hover {
+  box-shadow: 0 0 60px rgba(100, 200, 255, 0.2),
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.1), 0 25px 70px rgba(0, 0, 0, 0.5),
+    0 5px 25px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.3s ease;
+  animation-play-state: paused;
+  transform: rotateY(0deg) rotateX(0deg) rotateZ(0deg);
+}
+
+.glass-frame:hover .glass-sheen {
+  animation: sheen 4s ease-in-out infinite;
+}
