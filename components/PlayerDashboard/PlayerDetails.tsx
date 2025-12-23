@@ -223,9 +223,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         <TooltipProvider delayDuration={0} skipDelayDuration={0}>
             <div className="space-y-8">
                 <div className="flex flex-col justify-between items-center gap-4">
-                    <h2 className="text-2xl font-bold text-white-800">
-                        Stats for {playerName}
-                    </h2>
+
                     {/* Player Badges Display */}
                     {!badgesLoading && badges.length > 0 && (
                         <div className="items-center text-center m-2">

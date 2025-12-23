@@ -4,11 +4,13 @@
 import { useEffect, useState } from 'react'
 import { PlayerSearch } from '@/components/PlayerDashboard/PlayerSearch'
 import { PlayerDetails } from '@/components/PlayerDashboard/PlayerDetails'
+import { PlayerAvatarModal } from '@/components/ui/PlayerAvatarModal'
 
 interface Player {
     Name: string
     UID: string
     nickname: string | null
+    photo_url?: string | null
 }
 
 export default function PlayersPage() {
@@ -16,6 +18,7 @@ export default function PlayersPage() {
     const [selectedRange, setSelectedRange] = useState<string>('current-month');
     const [isClient, setIsClient] = useState(false);
     const [initialRange, setInitialRange] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Single useEffect to handle initialization
     useEffect(() => {
@@ -51,7 +54,8 @@ export default function PlayersPage() {
                         const playerData = {
                             Name: data[0].Name,
                             UID: data[0].UID,
-                            nickname: data[0].nickname || null
+                            nickname: data[0].nickname || null,
+                            photo_url: data[0].photo_url || null
                         };
                         setSelectedPlayer(playerData);
                         localStorage.setItem('selectedPlayer', JSON.stringify(playerData));
@@ -67,7 +71,8 @@ export default function PlayersPage() {
                         const playerData = {
                             Name: data[0].Name,
                             UID: data[0].UID,
-                            nickname: data[0].nickname || null
+                            nickname: data[0].nickname || null,
+                            photo_url: data[0].photo_url || null
                         };
                         setSelectedPlayer(playerData);
                         localStorage.setItem('selectedPlayer', JSON.stringify(playerData));
@@ -115,12 +120,60 @@ export default function PlayersPage() {
             </div>
 
             {selectedPlayer && (
-                <PlayerDetails
-                    key={`${selectedPlayer.UID}-${initialRange}`}
-                    playerUID={selectedPlayer.UID}
-                    playerName={selectedPlayer.nickname || selectedPlayer.Name}
-                    initialRange={initialRange}
-                />
+                <>
+                    {/* Player Profile Header */}
+                    <div className="flex items-center gap-6 mb-8 rounded-xl shadow-md p-6 lg:justify-center">
+                        {selectedPlayer.photo_url ? (
+                            <img
+                                src={selectedPlayer.photo_url}
+                                alt={selectedPlayer.nickname || selectedPlayer.Name}
+                                className="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setIsModalOpen(true)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setIsModalOpen(true);
+                                    }
+                                }}
+                            />
+                        ) : (
+                            <div className="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center ">
+                                <span className="text-3xl font-bold text-white">
+                                    {(selectedPlayer.nickname || selectedPlayer.Name).charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                        )}
+                        <div>
+                            <h2 className="text-3xl font-bold text-white">
+                                {selectedPlayer.nickname || selectedPlayer.Name}
+                            </h2>
+                            {selectedPlayer.nickname && (
+                                <p className="text-white text-sm mt-1">
+                                    {selectedPlayer.Name}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <PlayerDetails
+                        key={`${selectedPlayer.UID}-${initialRange}`}
+                        playerUID={selectedPlayer.UID}
+                        playerName={selectedPlayer.nickname || selectedPlayer.Name}
+                        initialRange={initialRange}
+                    />
+
+                    {/* Avatar Modal */}
+                    {selectedPlayer.photo_url && (
+                        <PlayerAvatarModal
+                            photoUrl={selectedPlayer.photo_url}
+                            name={selectedPlayer.nickname || selectedPlayer.Name}
+                            isOpen={isModalOpen}
+                            onClose={() => setIsModalOpen(false)}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

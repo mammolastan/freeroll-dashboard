@@ -60,22 +60,23 @@ export async function GET(request: NextRequest) {
       // Search by name or nickname - ordered by recent activity
       const searchTerm = `%${query}%`;
       players = await prisma.$queryRaw`
-        SELECT 
+        SELECT
           p.Name,
           p.UID,
           pl.nickname,
+          pl.photo_url,
           COUNT(DISTINCT p.File_name) as TotalGames,
           SUM(p.Total_Points) as TotalPoints,
           MAX(p.game_date) as LastGameDate
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
-        WHERE p.Name LIKE ${searchTerm} 
+        WHERE p.Name LIKE ${searchTerm}
           OR pl.nickname LIKE ${searchTerm}
-        GROUP BY p.Name, p.UID, pl.nickname
-        ORDER BY 
-          CASE 
-            WHEN MAX(p.game_date) IS NULL THEN 1 
-            ELSE 0 
+        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url
+        ORDER BY
+          CASE
+            WHEN MAX(p.game_date) IS NULL THEN 1
+            ELSE 0
           END,
           MAX(p.game_date) DESC,
           SUM(p.Total_Points) DESC,
@@ -85,21 +86,22 @@ export async function GET(request: NextRequest) {
     } else {
       // Search by exact UID match
       players = await prisma.$queryRaw`
-        SELECT 
+        SELECT
           p.Name,
           p.UID,
           pl.nickname,
+          pl.photo_url,
           COUNT(DISTINCT p.File_name) as TotalGames,
           SUM(p.Total_Points) as TotalPoints,
           MAX(p.game_date) as LastGameDate
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE p.UID = ${query}
-        GROUP BY p.Name, p.UID, pl.nickname
-        ORDER BY 
-          CASE 
-            WHEN MAX(p.game_date) IS NULL THEN 1 
-            ELSE 0 
+        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url
+        ORDER BY
+          CASE
+            WHEN MAX(p.game_date) IS NULL THEN 1
+            ELSE 0
           END,
           MAX(p.game_date) DESC,
           SUM(p.Total_Points) DESC,
