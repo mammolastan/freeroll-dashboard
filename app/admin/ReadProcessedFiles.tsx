@@ -1,6 +1,6 @@
 // app/admin/ReadProcessedFiles.tsx
 
-import React, { use } from 'react'
+import React from 'react'
 import { useEffect, useState } from 'react';
 
 

@@ -15,7 +15,7 @@ interface Player {
 
 export default function PlayersPage() {
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-    const [selectedRange, setSelectedRange] = useState<string>('current-month');
+    const [_selectedRange, setSelectedRange] = useState<string>('current-month');
     const [isClient, setIsClient] = useState(false);
     const [initialRange, setInitialRange] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);

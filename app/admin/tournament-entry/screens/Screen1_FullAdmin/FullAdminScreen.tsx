@@ -14,7 +14,6 @@ import { PlayerSearchDropdown } from '@/components/PlayerSearchDropdown';
 import { PlayerRow } from '../../components/PlayerRow';
 import { TournamentValidationStatus } from '../../components/TournamentValidationStatus';
 import { validateTournamentForIntegration, exportTournamentAsText } from '@/lib/tournamentValidation';
-import { apiGet, apiPost, apiPut, apiDelete, handleApiError } from '@/lib/errorHandler';
 import { BLIND_SCHEDULES } from '@/lib/blindLevels';
 
 interface TournamentDraft {
@@ -84,8 +83,7 @@ export function FullAdminScreen({
     const [displayCount, setDisplayCount] = useState(8);
     const [showLoadMore, setShowLoadMore] = useState(false);
     const [isReverting, setIsReverting] = useState(false);
-    const { gameData, computedStats, loading: realtimeLoading, error: realtimeError } =
-        useRealtimeGameData(currentDraft?.id || 0);
+    const { computedStats } = useRealtimeGameData(currentDraft?.id || 0);
 
 
 
@@ -135,7 +133,7 @@ export function FullAdminScreen({
 
     // UI state for editing KO positions
     const [editingKOPlayers, setEditingKOPlayers] = useState(new Set());
-    const [pendingSortUpdate, setPendingSortUpdate] = useState(false);
+    const [_pendingSortUpdate, setPendingSortUpdate] = useState(false);
 
     const [skipNextAutoRefresh, setSkipNextAutoRefresh] = useState(false);
     const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -384,7 +382,7 @@ export function FullAdminScreen({
 
 
     const getFilteredAndSortedPlayers = () => {
-        let filteredPlayers = players;
+        const filteredPlayers = players;
 
         // If we're in KO edit mode and there are players being edited, don't sort
         if (sortBy === 'ko_position' && editingKOPlayers.size > 0) {
@@ -652,7 +650,7 @@ export function FullAdminScreen({
                         try {
                             const errorData = await response.json();
                             errorMessage = errorData.userMessage || errorData.error || errorMessage;
-                        } catch (jsonError) {
+                        } catch {
                             errorMessage = "Server error - Unable to save changes. Please refresh the page and try again.";
                         }
 
@@ -667,7 +665,7 @@ export function FullAdminScreen({
                     }
 
                     // ✅ SUCCESS PATH
-                    const result = await response.json();
+                    await response.json();
                     temporarilyDisableAutoRefresh();
 
                     // Trigger parent to reload all player data
@@ -711,7 +709,7 @@ export function FullAdminScreen({
     }, []);
 
     // force immediate save
-    const saveAllPendingUpdates = useCallback(async () => {
+    const _saveAllPendingUpdates = useCallback(async () => {
         if (globalUpdateTimeoutRef.current) {
             clearTimeout(globalUpdateTimeoutRef.current);
             globalUpdateTimeoutRef.current = null;
@@ -1092,7 +1090,7 @@ export function FullAdminScreen({
     };
 
     // Auto-calculate placement when KO positions change
-    const updatePlayerWithPlacementCalculation = async (playerId: number, field: string, value: string | number | null) => {
+    const _updatePlayerWithPlacementCalculation = async (playerId: number, field: string, value: string | number | null) => {
         // Update the player as before
         await updatePlayer(playerId, field, value);
 
@@ -1103,7 +1101,7 @@ export function FullAdminScreen({
     };
 
     // Reload players from parent (replaced local load with parent callback)
-    const loadPlayersForTournament = async (tournamentId: number) => {
+    const loadPlayersForTournament = async (_tournamentId: number) => {
         // Trigger parent to reload player data
         onDataChange();
         setLastUpdated(new Date());  // Track when data was last refreshed

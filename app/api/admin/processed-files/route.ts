@@ -13,7 +13,7 @@ export async function GET() {
     });
 
     return NextResponse.json(processedFiles);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch files" },
       { status: 500 }

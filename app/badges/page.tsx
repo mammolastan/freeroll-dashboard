@@ -45,10 +45,7 @@ export default function BadgeLegendPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
     const [hoveredBadge, setHoveredBadge] = useState<Badge | null>(null);
-    const [filterCategory, setFilterCategory] = useState<string>('all');
-
-    // Get unique categories from badges
-    const categories = ['all', ...Array.from(new Set(badges.map(badge => badge.category)))];
+    const [filterCategory] = useState<string>('all');
 
     useEffect(() => {
         async function fetchBadges() {

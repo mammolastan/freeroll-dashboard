@@ -75,7 +75,7 @@ export default function ProfilePage() {
                 const error = await res.json();
                 setMessage({ type: "error", text: error.error || "Failed to update nickname" });
             }
-        } catch (error) {
+        } catch {
             setMessage({ type: "error", text: "Something went wrong" });
         } finally {
             setIsSaving(false);
@@ -188,7 +188,7 @@ export default function ProfilePage() {
                 const error = await res.json();
                 setMessage({ type: "error", text: error.error || "Failed to upload photo" });
             }
-        } catch (error) {
+        } catch {
             setMessage({ type: "error", text: "Failed to upload photo" });
         } finally {
             setIsUploadingPhoto(false);
@@ -222,7 +222,7 @@ export default function ProfilePage() {
             } else {
                 setMessage({ type: "error", text: "Failed to remove photo" });
             }
-        } catch (error) {
+        } catch {
             setMessage({ type: "error", text: "Something went wrong" });
         } finally {
             setIsUploadingPhoto(false);

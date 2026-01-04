@@ -1,7 +1,5 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Card } from '@/components/ui/card';
-import { Trophy } from 'lucide-react';
 
 interface PlacementFrequencyData {
     placement: number;

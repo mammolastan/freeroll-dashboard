@@ -1,7 +1,7 @@
 // components/Rankings/QualificationBarrier.tsx
 
 import React from 'react';
-import { AlertTriangle, Trophy, X } from 'lucide-react';
+import { AlertTriangle, Trophy } from 'lucide-react';
 import './QualificationBarrier.css';
 
 interface QualificationBarrierProps {

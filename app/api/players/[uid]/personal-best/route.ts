@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-interface QuarterlyStats {
+interface _QuarterlyStats {
   quarter: number;
   year: number;
   gamesPlayed: number;

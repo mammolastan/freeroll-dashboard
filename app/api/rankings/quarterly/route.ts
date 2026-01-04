@@ -18,7 +18,7 @@ function getCurrentQuarter(date: Date = new Date()): number {
 function serializeResults(results: any[]) {
   return results.map((record) => {
     const serialized = { ...record };
-    for (let key in serialized) {
+    for (const key in serialized) {
       if (typeof serialized[key] === "bigint") {
         serialized[key] = Number(serialized[key]);
       }

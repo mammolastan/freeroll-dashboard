@@ -1,9 +1,7 @@
 // components/ui/BadgeModal.tsx
 import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
 import { BadgeData } from './Badge';
 import './BadgeModal.css';
-import { get } from 'http';
 
 interface BadgeModalProps {
     badge: BadgeData;

@@ -55,7 +55,7 @@ export default function UpdateNickname() {
             } else {
                 setUpdateStatus('Failed to update nickname')
             }
-        } catch (error) {
+        } catch {
             setUpdateStatus('Error updating nickname')
         }
     }

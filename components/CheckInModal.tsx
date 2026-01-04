@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, AlertCircle } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { PlayerSearchDropdown, PlayerSearchResult, CheckedInPlayer } from './PlayerSearchDropdown';
 
 interface PlayerSuggestion {

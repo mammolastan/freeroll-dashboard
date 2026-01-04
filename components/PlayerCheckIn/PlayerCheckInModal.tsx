@@ -36,8 +36,8 @@ export function PlayerCheckInModal({
 }: PlayerCheckInModalProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [venue, setVenue] = useState('');
-  const [tournamentDate, setTournamentDate] = useState('');
+  const [venue] = useState('');
+  const [tournamentDate] = useState('');
 
   // Fetch checked-in players when modal opens
   useEffect(() => {

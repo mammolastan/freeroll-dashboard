@@ -30,7 +30,6 @@ export async function GET(
         : Prisma.sql``;
 
     const dateCondition = getDateCondition(startDate, endDate);
-    const dateConditionP = getDateCondition(startDate, endDate, "p");
     const dateConditionP1 = getDateCondition(startDate, endDate, "p1");
 
     // Get available venues for this player within the date range

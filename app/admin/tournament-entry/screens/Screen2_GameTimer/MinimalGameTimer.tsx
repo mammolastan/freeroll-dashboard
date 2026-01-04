@@ -162,7 +162,7 @@ export function MinimalGameTimer({
       oneMinuteAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
-    } catch (error) {
+    } catch {
       console.log('Audio not available');
     }
   }, [audioEnabled, oneMinuteAudio]);
@@ -175,7 +175,7 @@ export function MinimalGameTimer({
       levelChangeAudio.play().catch(error => {
         console.log('Audio playback failed:', error);
       });
-    } catch (error) {
+    } catch {
       console.log('Audio not available');
     }
   }, [audioEnabled, levelChangeAudio]);

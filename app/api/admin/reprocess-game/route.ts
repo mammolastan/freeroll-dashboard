@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         }
 
         // Then, delete the processed file record
-        const deletedFile = await tx.processedFile.delete({
+        await tx.processedFile.delete({
           where: {
             id: parseInt(fileId),
           },

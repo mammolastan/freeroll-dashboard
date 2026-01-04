@@ -7,7 +7,6 @@ import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
 import { formatGameDate, formatDateRangeText } from '@/lib/utils';
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { TooltipProvider, MobileTooltipTrigger } from "@/components/ui/tooltip"
 import VenueSelector from './VenueSelector';
 import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
@@ -481,8 +480,6 @@ Math: log(total_players + 1 / Placement)`}
 
 
 function StatRow({ label, value, tooltip }: { label: string; value: string | number; tooltip?: string }) {
-    const [isOpen, setIsOpen] = useState(false);
-
     if (!tooltip) {
         return (
             <div className="flex justify-between items-center">

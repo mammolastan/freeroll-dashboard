@@ -47,7 +47,7 @@ export async function GET(
       ORDER BY p.Placement ASC, p.Name ASC
     `;
 
-    const serializedPlayers = players.map((player: any) => ({
+    const _serializedPlayers = players.map((player: any) => ({
       name: player.Name,
       uid: player.UID,
       nickname: player.nickname,

@@ -2,7 +2,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Trophy, Users, Award, ArrowLeft, Swords } from 'lucide-react'
+import { Trophy, Users, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 

@@ -1,7 +1,7 @@
 // components/PlayerDashboard/KnockoutStats.tsx
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Swords, Search, User, RefreshCw } from 'lucide-react';
+import { Swords, Search } from 'lucide-react';
 import { formatGameDate } from '@/lib/utils';
 import { PlayerSearch } from './PlayerSearch';
 import RotatingImageLoader from '../ui/RotatingImageLoader';

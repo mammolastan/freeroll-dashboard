@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { formatGameDate } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowLeft, Swords, Users, Trophy, Search } from 'lucide-react'
+import { ArrowLeft, Swords, Search } from 'lucide-react'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import { PlayerSearch } from '@/components/PlayerDashboard/PlayerSearch'
 

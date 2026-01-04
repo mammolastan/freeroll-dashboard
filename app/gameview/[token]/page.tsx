@@ -70,9 +70,8 @@ function PlayerCard({ player, totalPlayers }: { player: Player; totalPlayers: nu
   );
 }
 
-function TournamentHeader({ tournament, stats }: {
-  tournament: any,
-  stats: any
+function TournamentHeader({ tournament }: {
+  tournament: any
 }) {
   return (
     <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.2)] border border-cyan-500/30 p-6 mb-6">

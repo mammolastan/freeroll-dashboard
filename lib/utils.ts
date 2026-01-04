@@ -236,7 +236,7 @@ export function formatTime(timeString?: string | any): string | null {
 
   try {
     // Convert to string if it's an object or buffer
-    let timeStr = typeof timeString === 'string' ? timeString : String(timeString);
+    const timeStr = typeof timeString === 'string' ? timeString : String(timeString);
 
     // Handle different time formats
     // If it's a full timestamp, extract just the time part

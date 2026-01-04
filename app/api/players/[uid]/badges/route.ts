@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const playerUID = params.uid;
-    const currentDate = new Date();
+    const _currentDate = new Date();
 
     // Fetch badges for the specified player, filtering out expired ones
     const playerBadges = await prisma.$queryRaw`

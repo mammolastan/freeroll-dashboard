@@ -35,7 +35,7 @@ interface PersonalBestCardProps {
     playerName: string;
 }
 
-export function PersonalBestCard({ playerUID, playerName }: PersonalBestCardProps) {
+export function PersonalBestCard({ playerUID }: PersonalBestCardProps) {
     const [data, setData] = useState<PersonalBestData | null>(null);
     const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState(false);

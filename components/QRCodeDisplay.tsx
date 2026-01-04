@@ -3,7 +3,6 @@
 
 import { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { X } from 'lucide-react';
 
 interface QRCodeDisplayProps {
     value: string;
@@ -47,7 +46,7 @@ interface QRCodeModalProps {
     copyCheckInUrl: () => void;
 }
 
-const QRCodeModal = ({ showQRCode, setShowQRCode, checkInUrl, copyCheckInUrl }: QRCodeModalProps) => {
+const _QRCodeModal = ({ showQRCode, setShowQRCode, checkInUrl, copyCheckInUrl }: QRCodeModalProps) => {
     if (!showQRCode) return null;
 
     return (

@@ -7,9 +7,7 @@ interface DateRangePickerProps {
 }
 
 export function DateRangePicker({
-    onRangeChange,
-    initialStartDate,
-    initialEndDate
+    onRangeChange
 }: DateRangePickerProps) {
     const today = new Date().toISOString().split('T')[0];
     const [startDate, setStartDate] = useState<Date | null>(null);
