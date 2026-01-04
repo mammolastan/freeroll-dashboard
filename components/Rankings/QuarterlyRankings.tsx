@@ -321,7 +321,7 @@ export default function QuarterlyRankings() {
                         ))}
                     </select>
                 </div>
-                <div className="text-xl text-white">No players found for Q{rankingsData?.quarter} {rankingsData?.year}</div>
+                <div className="text-xl text-white">No games yet for this quarter (Q{rankingsData?.quarter} {rankingsData?.year}). Check back soon. </div>
             </div>
         );
     }
