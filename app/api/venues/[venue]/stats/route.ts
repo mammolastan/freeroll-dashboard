@@ -59,11 +59,12 @@ function getDateRangeForMonth(date: Date): {
 
 export async function GET(
   request: Request,
-  { params }: { params: { venue: string } }
+  { params }: { params: Promise<{ venue: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const venue = decodeURIComponent(params.venue);
+    const { venue: venueParam } = await params;
+    const venue = decodeURIComponent(venueParam);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
     // Get current date

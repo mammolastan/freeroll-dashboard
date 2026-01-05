@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { game_uid: string } }
+  { params }: { params: Promise<{ game_uid: string }> }
 ) {
   try {
     // The identifier could be either game_uid or fileName (as fallback)
-    const identifier = decodeURIComponent(params.game_uid);
+    const { game_uid } = await params;
+    const identifier = decodeURIComponent(game_uid);
 
     // Try to find players by game_uid first, then fallback to fileName
     const players = await prisma.pokerTournament.findMany({

@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const data = await request.json();
 
     const player = await prisma.pokerTournament.update({

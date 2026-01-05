@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
-    const playerUID = params.uid;
+    const { uid } = await params;
+    const playerUID = uid;
 
     // Fetch badges for the specified player, filtering out expired ones
     const playerBadges = await prisma.$queryRaw`

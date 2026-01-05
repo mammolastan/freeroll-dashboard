@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
     const { players: playersToUpdate } = body;
 
     if (!Array.isArray(playersToUpdate) || playersToUpdate.length === 0) {

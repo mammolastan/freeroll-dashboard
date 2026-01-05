@@ -15,10 +15,11 @@ interface DraftTournament {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
 
     if (isNaN(draftId)) {
       return NextResponse.json(

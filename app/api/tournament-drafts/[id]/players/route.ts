@@ -7,10 +7,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
 
     const players = await prisma.$queryRaw`
       SELECT
@@ -34,11 +35,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
     const { player_name, player_nickname, player_uid, is_new_player } = body;
 
     // Check for duplicate player in same tournament

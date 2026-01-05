@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { game_uid: string } }
+  { params }: { params: Promise<{ game_uid: string }> }
 ) {
   try {
+    const { game_uid } = await params;
+
     // Get all players from this game
     const players: {
       Name: string;
@@ -25,7 +27,7 @@ export async function GET(
       file_name: string;
       game_date: string;
     }[] = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         p.Name,
         p.UID,
         p.Placement,
@@ -43,7 +45,7 @@ export async function GET(
         p.game_date
       FROM poker_tournaments p
       LEFT JOIN players pl ON p.UID = pl.uid
-      WHERE p.game_uid = ${params.game_uid}
+      WHERE p.game_uid = ${game_uid}
       ORDER BY p.Placement ASC, p.Name ASC
     `;
 

@@ -7,10 +7,11 @@ import { prisma } from "@/lib/prisma";
 // Generate or get existing check-in token
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tournamentId = parseInt(params.id);
+    const { id } = await params;
+    const tournamentId = parseInt(id);
 
     // Check if tournament exists and is in progress
     const tournament = await prisma.$queryRaw`

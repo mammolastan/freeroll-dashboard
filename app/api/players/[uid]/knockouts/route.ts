@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const playerUID = params.uid;
+    const { uid } = await params;
+    const playerUID = uid;
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
     const venue = searchParams.get("venue");

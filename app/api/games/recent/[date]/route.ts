@@ -5,10 +5,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { date: string } }
+  { params }: { params: Promise<{ date: string }> }
 ) {
   try {
-    const { date } = params;
+    const { date } = await params;
 
     // Convert input date string to a Date object
     const selectedDate = new Date(date);

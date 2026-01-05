@@ -5,10 +5,10 @@ import { prisma } from "@/lib/prisma";
 // Get tournament info by check-in token
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
     const tournament = await prisma.$queryRaw`
       SELECT 

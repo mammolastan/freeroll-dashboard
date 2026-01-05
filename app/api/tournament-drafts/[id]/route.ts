@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
 
     const draft = await prisma.$queryRaw`
       SELECT
@@ -38,11 +39,12 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
     const { tournament_date, tournament_time, director_name, venue, start_points } = body;
 
     await prisma.$queryRaw`
@@ -73,11 +75,12 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
-    const draftId = parseInt(params.id);
+    const { id } = await params;
+    const draftId = parseInt(id);
     const { blind_schedule } = body;
 
     // Validate blind_schedule value
@@ -112,10 +115,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tournamentId = parseInt(params.id);
+    const { id } = await params;
+    const tournamentId = parseInt(id);
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(

@@ -5,10 +5,10 @@ import { prisma } from "@/lib/prisma";
 // Get list of checked-in players for a tournament
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
     // Get tournament by token
     const tournament = await prisma.$queryRaw`
@@ -56,10 +56,10 @@ export async function GET(
 // POST method
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
     const body = await request.json();
     const { player_name, force_new_player } = body;
 
@@ -226,10 +226,10 @@ export async function POST(
 // Handle player selection from suggestions
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
     const body = await request.json();
     const { selected_player_uid, entered_name } = body;
 
