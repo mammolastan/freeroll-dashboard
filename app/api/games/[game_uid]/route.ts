@@ -47,21 +47,6 @@ export async function GET(
       ORDER BY p.Placement ASC, p.Name ASC
     `;
 
-    const _serializedPlayers = players.map((player: any) => ({
-      name: player.Name,
-      uid: player.UID,
-      nickname: player.nickname,
-      placement: player.Placement,
-      knockouts: player.Knockouts,
-      hitman: player.Hitman,
-      totalPoints: player.Total_Points,
-      startPoints: player.Start_Points,
-      hitPoints: player.Hit_Points,
-      placementPoints: player.Placement_Points,
-      venue: player.Venue,
-      season: player.Season,
-    }));
-
     if (!players.length) {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }

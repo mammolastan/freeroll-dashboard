@@ -126,14 +126,17 @@ export function FullAdminScreen({
     const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
     const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<Record<number, number>>({});
 
-    // Debounce refs for player updates
+    // Refs
     const globalUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pendingUpdatesRef = useRef<{ [key: number]: Partial<Player> }>({});
     const hasPendingChanges = Object.keys(pendingUpdatesRef.current).length > 0;
 
+    const loadPlayersRef = useRef<(id: number) => Promise<void>>(async () => { });
+    const onDataChangeRef = useRef<() => void>(() => { });
+
+
     // UI state for editing KO positions
     const [editingKOPlayers, setEditingKOPlayers] = useState(new Set());
-    const [_pendingSortUpdate, setPendingSortUpdate] = useState(false);
 
     const [skipNextAutoRefresh, setSkipNextAutoRefresh] = useState(false);
     const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,7 +199,7 @@ export function FullAdminScreen({
 
 
     // Load tournaments list
-    const loadTournaments = async () => {
+    const loadTournaments = useCallback(async () => {
         setLoadingTournaments(true);
         try {
             const response = await fetch('/api/tournament-drafts');
@@ -211,7 +214,7 @@ export function FullAdminScreen({
         } finally {
             setLoadingTournaments(false);
         }
-    };
+    }, []);
 
     const createTournament = async () => {
         if (!newTournament.tournament_date || !newTournament.venue) {
@@ -441,13 +444,7 @@ export function FullAdminScreen({
             return newSet;
         });
 
-        // If no more players being edited, trigger a sort update
-        if (editingKOPlayers.size === 1 && sortBy === 'ko_position') { // size will be 1 before deletion
-            setPendingSortUpdate(true);
-            setTimeout(() => {
-                setPendingSortUpdate(false);
-            }, 100);
-        }
+
     };
 
 
@@ -548,7 +545,7 @@ export function FullAdminScreen({
 
             if (response.ok) {
                 // Trigger parent to reload player data
-                onDataChange();
+                onDataChangeRef.current();
                 setNewPlayerName('');
                 setShowPlayerDropdown(false);
 
@@ -643,7 +640,7 @@ export function FullAdminScreen({
                         })
                     });
 
-                    // ✅ NEW ERROR HANDLING
+                    // ERROR HANDLING
                     if (!response.ok) {
                         let errorMessage = "Failed to save changes";
 
@@ -657,8 +654,9 @@ export function FullAdminScreen({
                         alert(`⚠️ Error Saving Changes\n\n${errorMessage}\n\nPlease try again. If the problem persists, contact support.`);
 
                         if (currentDraft) {
-                            await loadPlayersForTournament(currentDraft.id);
+                            await loadPlayersRef.current(currentDraft.id);  // Use ref
                         }
+                        onDataChangeRef.current();
 
                         console.error("Save failed:", response.status, errorMessage);
                         return;
@@ -669,7 +667,7 @@ export function FullAdminScreen({
                     temporarilyDisableAutoRefresh();
 
                     // Trigger parent to reload all player data
-                    onDataChange();
+                    onDataChangeRef.current();
 
 
                 } catch (error) {
@@ -677,8 +675,10 @@ export function FullAdminScreen({
                     alert(`⚠️ Network Error\n\nUnable to save changes. Please check your connection and try again.\n\nIf the problem persists, contact support.`);
 
                     if (currentDraft) {
-                        loadPlayersForTournament(currentDraft.id);
+                        await loadPlayersRef.current(currentDraft.id);
                     }
+                    onDataChangeRef.current();
+
                 } finally {
                     // Clean up
                     pendingUpdatesRef.current = {};
@@ -690,6 +690,7 @@ export function FullAdminScreen({
             console.error('Error in updatePlayer:', error);
         }
     }, [players, currentDraft]);
+
 
     // cleanup on component unmount
     useEffect(() => {
@@ -707,71 +708,6 @@ export function FullAdminScreen({
             }
         };
     }, []);
-
-    // force immediate save
-    const _saveAllPendingUpdates = useCallback(async () => {
-        if (globalUpdateTimeoutRef.current) {
-            clearTimeout(globalUpdateTimeoutRef.current);
-            globalUpdateTimeoutRef.current = null;
-
-            const playersToUpdate = { ...pendingUpdatesRef.current };
-
-            if (Object.keys(playersToUpdate).length === 0) {
-                return { success: true, updatedCount: 0 };
-            }
-
-
-            try {
-                const updatePromises = Object.entries(playersToUpdate).map(async ([playerIdStr, updatedData]) => {
-                    const playerId = parseInt(playerIdStr);
-
-                    const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updatedData)
-                    });
-
-                    if (response.ok) {
-                        const serverUpdatedPlayer = await response.json();
-                        return { success: true, playerId, data: serverUpdatedPlayer };
-                    } else {
-                        const errorText = await response.text();
-                        return { success: false, playerId, error: errorText };
-                    }
-                });
-
-                const results = await Promise.allSettled(updatePromises);
-                const successCount = results.filter(r =>
-                    r.status === 'fulfilled' && r.value.success
-                ).length;
-
-                // Update UI with successful results
-                const successfulUpdates = results
-                    .filter((r): r is PromiseFulfilledResult<any> =>
-                        r.status === 'fulfilled' && r.value.success
-                    )
-                    .map(r => r.value);
-
-                if (successfulUpdates.length > 0) {
-                    // Trigger parent to reload player data
-                    onDataChange();
-                }
-
-                pendingUpdatesRef.current = {};
-
-                return {
-                    success: true,
-                    updatedCount: successCount,
-                    totalAttempted: Object.keys(playersToUpdate).length
-                };
-            } catch (error) {
-                console.error('Error in force save:', error);
-                return { success: false, error };
-            }
-        }
-
-        return { success: true, updatedCount: 0 };
-    }, [currentDraft, players]);
 
     // Auto-calculate KO positions to fix duplicates and gaps
     const autoCalculateKOPositions = async () => {
@@ -819,7 +755,7 @@ export function FullAdminScreen({
 
             // Refresh the player data to ensure consistency
             if (currentDraft) {
-                await loadPlayersForTournament(currentDraft.id);
+                await loadPlayersRef.current(currentDraft.id);
             }
 
         } catch (error) {
@@ -837,7 +773,7 @@ export function FullAdminScreen({
 
             if (response.ok) {
                 // Trigger parent to reload player data
-                onDataChange();
+                onDataChangeRef.current();
             }
         } catch (error) {
             console.error('Error removing player:', error);
@@ -1089,21 +1025,10 @@ export function FullAdminScreen({
         }
     };
 
-    // Auto-calculate placement when KO positions change
-    const _updatePlayerWithPlacementCalculation = async (playerId: number, field: string, value: string | number | null) => {
-        // Update the player as before
-        await updatePlayer(playerId, field, value);
-
-        // If KO position changed, show validation status update
-        if (field === 'ko_position' || field === 'hitman_name') {
-            // The validation component will automatically re-render and show updated status
-        }
-    };
-
-    // Reload players from parent (replaced local load with parent callback)
-    const loadPlayersForTournament = async (_tournamentId: number) => {
+    // Reload players from parent 
+    const loadPlayersForTournament = async () => {
         // Trigger parent to reload player data
-        onDataChange();
+        onDataChangeRef.current();
         setLastUpdated(new Date());  // Track when data was last refreshed
     };
 
@@ -1118,6 +1043,15 @@ export function FullAdminScreen({
         setShowQRCode(true);
         setGeneratingQR(false);
     };
+
+    // 3. Keep refs updated 
+    useEffect(() => {
+        loadPlayersRef.current = loadPlayersForTournament;
+    });
+
+    useEffect(() => {
+        onDataChangeRef.current = onDataChange;
+    });
 
     //render player indicators
     const renderPlayerIndicator = (player: Player) => {
@@ -1225,7 +1159,7 @@ export function FullAdminScreen({
             loadTournaments();
             loadVenues();
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, loadTournaments]);
 
     // manage load more button visibility
     useEffect(() => {
@@ -1247,16 +1181,16 @@ export function FullAdminScreen({
         if (!currentDraft || currentDraft.status !== 'in_progress') return;
 
         // Refresh when tab becomes active
-        const handleVisibilityChange = () => {
+        const handleVisibilityChange = async () => {
             if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
-                loadPlayersForTournament(currentDraft.id);
+                await loadPlayersRef.current(currentDraft.id);
             }
         };
 
         // Poll every 15 seconds when tab is active
-        const interval = setInterval(() => {
+        const interval = setInterval(async () => {
             if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
-                loadPlayersForTournament(currentDraft.id);
+                await loadPlayersRef.current(currentDraft.id);
             }
         }, 15000);
 

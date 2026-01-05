@@ -2,19 +2,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-interface _QuarterlyStats {
-  quarter: number;
-  year: number;
-  gamesPlayed: number;
-  totalPoints: number;
-  finalTables: number;
-  finalTablePercentage: number;
-  avgScore: number;
-  leagueRanking: number;
-  totalPlayersInQuarter: number;
-  wins: number; // Added wins field
-}
-
 export async function GET(
   request: Request,
   { params }: { params: { uid: string } }

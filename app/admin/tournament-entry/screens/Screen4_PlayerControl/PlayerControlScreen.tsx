@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Target, Users, Trophy, X } from 'lucide-react';
 
 interface TournamentDraft {
@@ -79,6 +79,42 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
   const knockedOutPlayers = players
     .filter(p => p.ko_position !== null)
     .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
+
+  const handleKnockout = useCallback(async (player: Player, hitmanName: string) => {
+    if (!currentDraft || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Calculate next knockout position
+      const maxKoPosition = Math.max(0, ...players.map(p => p.ko_position || 0));
+      const nextKoPosition = maxKoPosition + 1;
+
+      const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          player_name: player.player_name,
+          hitman_name: hitmanName || null,
+          ko_position: nextKoPosition,
+        }),
+      });
+
+      if (response.ok) {
+        setSelectedPlayer(null);
+        setSelectedHitman('');
+        setFilterText('');
+        onDataChange();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to record knockout');
+      }
+    } catch (error) {
+      console.error('Error recording knockout:', error);
+      alert('Error recording knockout. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [currentDraft, isSubmitting, players, onDataChange]);
 
   // Reset highlighted index when filter changes
   useEffect(() => {
@@ -184,43 +220,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [highlightedIndex, remainingPlayers, selectedPlayer, hitmanSearchText, highlightedHitmanIndex, filteredHitmanOptions]);
+  }, [highlightedIndex, remainingPlayers, selectedPlayer, hitmanSearchText, highlightedHitmanIndex, filteredHitmanOptions, handleKnockout]);
 
-  const handleKnockout = async (player: Player, hitmanName: string) => {
-    if (!currentDraft || isSubmitting) return;
 
-    setIsSubmitting(true);
-    try {
-      // Calculate next knockout position
-      const maxKoPosition = Math.max(0, ...players.map(p => p.ko_position || 0));
-      const nextKoPosition = maxKoPosition + 1;
-
-      const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          player_name: player.player_name,
-          hitman_name: hitmanName || null,
-          ko_position: nextKoPosition,
-        }),
-      });
-
-      if (response.ok) {
-        setSelectedPlayer(null);
-        setSelectedHitman('');
-        setFilterText('');
-        onDataChange();
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to record knockout');
-      }
-    } catch (error) {
-      console.error('Error recording knockout:', error);
-      alert('Error recording knockout. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleUndoKnockout = async (player: Player) => {
     if (!currentDraft || isSubmitting) return;

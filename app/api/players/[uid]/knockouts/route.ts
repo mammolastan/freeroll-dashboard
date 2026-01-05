@@ -29,7 +29,6 @@ export async function GET(
         ? Prisma.sql`AND p1.Venue = ${venue}`
         : Prisma.sql``;
 
-    const _dateCondition = getDateCondition(startDate, endDate);
     const dateConditionP1 = getDateCondition(startDate, endDate, "p1");
 
     // Top 10 Most Knocked Out By

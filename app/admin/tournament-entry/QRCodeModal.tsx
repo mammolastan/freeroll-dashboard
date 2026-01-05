@@ -19,6 +19,60 @@ export function QRCodeModal({ checkInUrl, showQRCode, setShowQRCode, currentDraf
 
     // Generate QR code and composite image when modal opens
     useEffect(() => {
+        const createCompositeQRImage = () => {
+            if (!canvasRef.current || !compositeCanvasRef.current || !currentDraft) return;
+
+            const qrCanvas = canvasRef.current;
+            const compositeCanvas = compositeCanvasRef.current;
+            const ctx = compositeCanvas.getContext('2d');
+            if (!ctx) return;
+
+            // Set composite canvas dimensions
+            const padding = 40;
+            const headerHeight = 40;
+            const footerHeight = 0;
+            const qrSize = 192;
+            const totalWidth = qrSize + (padding * 2);
+            const totalHeight = qrSize + headerHeight + footerHeight + (padding * 2);
+
+            compositeCanvas.width = totalWidth;
+            compositeCanvas.height = totalHeight;
+
+            // Fill background with white
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+            // Add border
+            ctx.strokeStyle = '#E5E7EB';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, totalWidth - 2, totalHeight - 2);
+
+            // Format tournament date
+            const tournamentDate = new Date(currentDraft.tournament_date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Header text - Tournament info
+            ctx.fillStyle = '#1F2937';
+            ctx.font = 'bold 18px Arial, sans-serif';
+            ctx.textAlign = 'center';
+
+            ctx.font = '14px Arial, sans-serif';
+            ctx.fillStyle = '#374151';
+            ctx.fillText(tournamentDate, totalWidth / 2, padding + 10);
+            ctx.fillText(currentDraft.venue, totalWidth / 2, padding + 30);
+
+            // Draw the QR code in the center
+            const qrX = (totalWidth - qrSize) / 2;
+            const qrY = padding + headerHeight;
+            ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+
+        };
+
         if (canvasRef.current && compositeCanvasRef.current && checkInUrl && showQRCode && currentDraft) {
             // First generate the QR code on the hidden canvas
             QRCode.toCanvas(canvasRef.current, checkInUrl, {
@@ -40,59 +94,7 @@ export function QRCodeModal({ checkInUrl, showQRCode, setShowQRCode, currentDraf
         }
     }, [checkInUrl, showQRCode, currentDraft]);
 
-    const createCompositeQRImage = () => {
-        if (!canvasRef.current || !compositeCanvasRef.current || !currentDraft) return;
 
-        const qrCanvas = canvasRef.current;
-        const compositeCanvas = compositeCanvasRef.current;
-        const ctx = compositeCanvas.getContext('2d');
-        if (!ctx) return;
-
-        // Set composite canvas dimensions
-        const padding = 40;
-        const headerHeight = 40;
-        const footerHeight = 0;
-        const qrSize = 192;
-        const totalWidth = qrSize + (padding * 2);
-        const totalHeight = qrSize + headerHeight + footerHeight + (padding * 2);
-
-        compositeCanvas.width = totalWidth;
-        compositeCanvas.height = totalHeight;
-
-        // Fill background with white
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, totalWidth, totalHeight);
-
-        // Add border
-        ctx.strokeStyle = '#E5E7EB';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(1, 1, totalWidth - 2, totalHeight - 2);
-
-        // Format tournament date
-        const tournamentDate = new Date(currentDraft.tournament_date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
-        // Header text - Tournament info
-        ctx.fillStyle = '#1F2937';
-        ctx.font = 'bold 18px Arial, sans-serif';
-        ctx.textAlign = 'center';
-
-        ctx.font = '14px Arial, sans-serif';
-        ctx.fillStyle = '#374151';
-        ctx.fillText(tournamentDate, totalWidth / 2, padding + 10);
-        ctx.fillText(currentDraft.venue, totalWidth / 2, padding + 30);
-
-        // Draw the QR code in the center
-        const qrX = (totalWidth - qrSize) / 2;
-        const qrY = padding + headerHeight;
-        ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-
-
-    };
 
     const downloadQRCode = () => {
         if (!compositeCanvasRef.current || !currentDraft) return;
