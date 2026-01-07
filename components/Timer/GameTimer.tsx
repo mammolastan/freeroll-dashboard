@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X, Users } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
 import './GameTimer.css';
@@ -117,7 +117,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         releaseWakeLock();
       }
     };
-  }, [isMinMode]);
+  }, [isMinMode, wakeLock]);
 
   // Re-acquire wake lock when page becomes visible again (if in min mode)
   useEffect(() => {
@@ -267,7 +267,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   };
 
   // Audio notification functions
-  const playOneMinuteWarning = () => {
+  const playOneMinuteWarning = useCallback(() => {
     if (!audioEnabled || !oneMinuteAudio) return;
 
     try {
@@ -276,14 +276,14 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         console.log('Audio playback failed:', error);
       });
       // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
-      // 
+      //
       vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
-      console.log('Audio not available');
+      console.log('Audio not available: ' + error);
     }
-  };
+  }, [audioEnabled, oneMinuteAudio]);
 
-  const playLevelChangeSound = () => {
+  const playLevelChangeSound = useCallback(() => {
     if (!audioEnabled || !levelChangeAudio) return;
 
     try {
@@ -295,9 +295,9 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       // 150ms vibrate, 50ms pause, 450ms vibrate
       vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
-      console.log('Audio not available');
+      console.log('Audio not available' + error);
     }
-  };
+  }, [audioEnabled, levelChangeAudio]);
 
   // Handle visibility changes - update lastLevel when page becomes visible
   // to prevent audio from playing when returning to a different level
@@ -344,7 +344,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     if (timerState.timeRemaining > 60) {
       setHasPlayedOneMinuteWarning(false);
     }
-  }, [timerState, lastLevel, hasPlayedOneMinuteWarning]);
+  }, [timerState, lastLevel, hasPlayedOneMinuteWarning, playLevelChangeSound, playOneMinuteWarning]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);

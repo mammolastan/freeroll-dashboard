@@ -70,7 +70,7 @@ export class PlayersService {
     playerData: Partial<Player>
   ): Promise<Player | null> {
     try {
-      const result = await prisma.$queryRaw<any[]>`
+      await prisma.$queryRaw<any[]>`
         INSERT INTO tournament_draft_players
         (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, is_active)
         VALUES (${tournamentId}, ${playerData.name}, ${playerData.nickname}, ${playerData.uid}, ${playerData.is_new_player}, true)

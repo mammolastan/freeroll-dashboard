@@ -165,12 +165,11 @@ export default function QuarterlyRankings() {
         if (alreadyHaveBadges) return;
 
         const fetchBadges = async () => {
-            console.log("Fetching badges for visible players...");
+            console.log("Fetching badges for all players...");
             setBadgesLoading(true);
             try {
-                // Get the UIDs of all visible players
-                const visiblePlayers = getSortedAndFilteredRankings();
-                const playerUids = visiblePlayers.map(player => player.uid);
+                // Get the UIDs of all players
+                const playerUids = rankingsData.rankings.map(player => player.uid);
 
                 if (playerUids.length === 0) return;
 

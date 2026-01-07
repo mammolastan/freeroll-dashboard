@@ -1,6 +1,6 @@
 // components/PlayerDashboard/PlayerDetails.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
 import Link from 'next/link';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
@@ -128,7 +128,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
     const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
 
-    const fetchPlayerStats = async (customStart?: Date, customEnd?: Date) => {
+    const fetchPlayerStats = useCallback(async (customStart?: Date, customEnd?: Date) => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
@@ -157,7 +157,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         } finally {
             setLoading(false);
         }
-    };
+    }, [playerUID, isCustomRange, startDate, endDate, selectedVenue]);
 
     // Handle custom date range changes
     const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
@@ -178,7 +178,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 fetchPlayerStats(customStartDate, customEndDate);
             }
         }
-    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue]);
+    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue, fetchPlayerStats]);
 
     // Fetch player badges
     useEffect(() => {

@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       }
 
       // Remove player_uid from the badge object to keep the response clean
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { player_uid, ...badgeData } = badge;
       acc[playerUid].push(badgeData);
 

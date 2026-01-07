@@ -7,7 +7,6 @@ import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import {
   BlindLevel,
-  BlindSchedule,
   BLIND_SCHEDULES,
   getBlindSchedule,
 } from "./lib/blindLevels.mjs";
@@ -402,7 +401,7 @@ async function getTournamentData(tournamentDraftId: number) {
     let timeString = null;
     if (data.tournament_time) {
       if (Buffer.isBuffer(data.tournament_time)) {
-        timeString = data.tournament_time.toString('utf-8');
+        timeString = data.tournament_time.toString("utf-8");
       } else {
         timeString = String(data.tournament_time);
       }
