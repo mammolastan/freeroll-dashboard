@@ -45,7 +45,13 @@ export async function PUT(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const { tournament_date, tournament_time, director_name, venue, start_points } = body;
+    const {
+      tournament_date,
+      tournament_time,
+      director_name,
+      venue,
+      start_points,
+    } = body;
 
     await prisma.$queryRaw`
       UPDATE tournament_drafts
@@ -84,9 +90,15 @@ export async function PATCH(
     const { blind_schedule } = body;
 
     // Validate blind_schedule value
-    if (blind_schedule && !["standard", "medium", "turbo"].includes(blind_schedule)) {
+    if (
+      blind_schedule &&
+      !["standard", "medium", "turbo"].includes(blind_schedule)
+    ) {
       return NextResponse.json(
-        { error: "Invalid blind schedule. Must be 'standard', 'medium', or 'turbo'" },
+        {
+          error:
+            "Invalid blind schedule. Must be 'standard', 'medium', or 'turbo'",
+        },
         { status: 400 }
       );
     }
@@ -139,8 +151,6 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    const tournament = (existingTournament as any[])[0];
 
     // Use Prisma's transaction functionality
     await prisma.$transaction(async (tx) => {

@@ -47,7 +47,6 @@ export async function GET(request: Request) {
     // Get the date range for the target month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
     const dateCondition = getDateCondition(startOfMonth, endOfMonth);
-    const dateConditionP = getDateCondition(startOfMonth, endOfMonth, "p"); // Use alias for JOIN queries
 
     // Get all venues for the month
     const venues = await prisma.$queryRaw<{ name: string }[]>`

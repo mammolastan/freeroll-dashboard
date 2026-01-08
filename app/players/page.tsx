@@ -15,7 +15,6 @@ interface Player {
 
 export default function PlayersPage() {
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-    const [_selectedRange, setSelectedRange] = useState<string>('current-month');
     const [isClient, setIsClient] = useState(false);
     const [initialRange, setInitialRange] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,13 +30,11 @@ export default function PlayersPage() {
 
         // Set range from URL or localStorage
         if (urlRange) {
-            setSelectedRange(urlRange);
             setInitialRange(urlRange);
             localStorage.setItem('selectedRange', urlRange);
         } else {
             const savedRange = localStorage.getItem('selectedRange');
             if (savedRange) {
-                setSelectedRange(savedRange);
                 setInitialRange(savedRange);
             }
         }

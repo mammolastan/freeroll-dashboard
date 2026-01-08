@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Remove LastGameDate from response since it's only used for sorting
     const cleanedPlayers = serializedPlayers.map((player) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { LastGameDate, ...cleanPlayer } = player;
       return cleanPlayer;
     });

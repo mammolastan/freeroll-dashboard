@@ -1,8 +1,8 @@
 // app/api/venues/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Get unique venues from poker_tournaments table within the past year
     const oneYearAgo = new Date();

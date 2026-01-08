@@ -110,7 +110,7 @@ export default function RegisterPage() {
                 router.refresh();
             }
         } catch (err) {
-            setError("Something went wrong. Please try again.");
+            setError("Something went wrong:" + (err as Error).message);
         } finally {
             setIsLoading(false);
         }

@@ -22,7 +22,6 @@ interface Player {
 interface PlayerCheckInModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tournamentToken: string;
   checkInToken: string;
   onSuccess?: () => void;
 }
@@ -30,7 +29,6 @@ interface PlayerCheckInModalProps {
 export function PlayerCheckInModal({
   isOpen,
   onClose,
-  tournamentToken,
   checkInToken,
   onSuccess
 }: PlayerCheckInModalProps) {
@@ -41,25 +39,25 @@ export function PlayerCheckInModal({
 
   // Fetch checked-in players when modal opens
   useEffect(() => {
+    const fetchCheckedInPlayers = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/checkin/${checkInToken}/players`);
+        if (response.ok) {
+          const data = await response.json();
+          setPlayers(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Error fetching checked-in players:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen) {
       fetchCheckedInPlayers();
     }
-  }, [isOpen, tournamentToken]);
-
-  const fetchCheckedInPlayers = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/checkin/${checkInToken}/players`);
-      if (response.ok) {
-        const data = await response.json();
-        setPlayers(Array.isArray(data) ? data : []);
-      }
-    } catch (error) {
-      console.error('Error fetching checked-in players:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isOpen, checkInToken]);
 
   const handleCheckIn = async (playerData: {
     player_name: string;
