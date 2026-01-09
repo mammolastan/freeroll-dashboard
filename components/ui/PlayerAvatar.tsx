@@ -3,6 +3,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { User } from 'lucide-react';
 import { PlayerAvatarModal } from './PlayerAvatarModal';
 
@@ -59,7 +60,7 @@ export function PlayerAvatar({
                 }}
             >
                 {photoUrl ? (
-                    <img
+                    <Image
                         src={photoUrl}
                         alt={name || 'Player'}
                         className="w-full h-full object-cover"
