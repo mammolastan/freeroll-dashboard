@@ -1,6 +1,14 @@
 // lib/socketServer.ts
 
-export function emitPlayerJoined(tournamentDraftId: number, newPlayer: any) {
+interface PlayerData {
+  id: number;
+  player_name: string;
+  player_uid: string | null;
+  player_nickname?: string | null;
+  [key: string]: unknown;
+}
+
+export function emitPlayerJoined(tournamentDraftId: number, newPlayer: PlayerData) {
   // Simple approach: make an HTTP request to localhost to trigger the update
   try {
     console.log(

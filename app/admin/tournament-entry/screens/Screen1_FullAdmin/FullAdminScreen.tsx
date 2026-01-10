@@ -572,7 +572,7 @@ export function FullAdminScreen({
             }
 
             // Track only the fields that are changing (not the entire player object)
-            const fieldsToUpdate: Record<string, any> = { [field]: value };
+            const fieldsToUpdate: Record<string, string | number | null> = { [field]: value };
 
             // Auto-assign KO position when hitman is selected (IMPROVED VERSION)
             if (field === 'hitman_name' && value) {
@@ -877,7 +877,15 @@ export function FullAdminScreen({
         // Create full options list (candidates + unknown if applicable)
         const allOptions = [...candidates];
         if (unknownOption) {
-            allOptions.push({ id: -1, player_name: 'unknown' } as any);
+            allOptions.push({
+                id: -1,
+                player_name: 'unknown',
+                player_uid: null,
+                is_new_player: false,
+                hitman_name: null,
+                ko_position: null,
+                placement: null
+            });
         }
 
         const currentHighlight = hitmanHighlightedIndex[playerId] ?? -1;
@@ -1135,8 +1143,8 @@ export function FullAdminScreen({
     };
 
     // Authentication
-    const handleLogin = async (e: any) => {
-        if (e.key === 'Enter' || e.type === 'click') {
+    const handleLogin = async (e: React.KeyboardEvent | React.MouseEvent) => {
+        if (('key' in e && e.key === 'Enter') || e.type === 'click') {
             const response = await fetch('/api/admin/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

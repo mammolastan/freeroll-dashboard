@@ -2,8 +2,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentETDate, getDateCondition } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
-function serializeResults(results: any[]) {
+
+function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -87,7 +89,7 @@ export async function GET(
     const dateConditionP = getDateCondition(startDate, endDate, "p"); // Use alias for JOIN queries
 
     // Get top players for the venue
-    const topPlayers = await prisma.$queryRaw`
+    const topPlayers = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
       p.Name,
       p.UID,
@@ -107,7 +109,7 @@ export async function GET(
     `;
 
     // Get venue statistics
-    const venueStats = await prisma.$queryRaw`
+    const venueStats = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         COUNT(DISTINCT File_name) as totalGames,
         COUNT(DISTINCT UID) as uniquePlayers,
@@ -119,8 +121,8 @@ export async function GET(
     `;
 
     const response = {
-      topPlayers: serializeResults(topPlayers as any[]),
-      stats: serializeResults(venueStats as any[])[0],
+      topPlayers: serializeResults(topPlayers),
+      stats: serializeResults(venueStats)[0],
       month: monthName,
       year,
       dateRange: {

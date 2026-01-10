@@ -6,6 +6,7 @@ import {
   getDateCondition,
 } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -15,7 +16,7 @@ function getCurrentQuarter(date: Date = new Date()): number {
 }
 
 // Helper function to convert BigInt values
-function serializeResults(results: any[]) {
+function serializeResults(results: RawQueryResult[]) {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
     const dateConditionP = getDateCondition(startOfQuarter, endOfQuarter, "p");
 
     // Get player stats for the quarter
-    const players = await prisma.$queryRaw`
+    const players = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         p.Name as name,
         p.UID as uid,
@@ -106,25 +107,31 @@ export async function GET(request: Request) {
     `;
 
     // Serialize the results and add rankings
-    const serializedPlayers = serializeResults(players as any[]);
-    const rankings = serializedPlayers.map((player, index) => ({
-      ...player,
-      ranking: index + 1,
-      isQualified: index < 40, // Top 40 players qualify
-      // Convert photo_url to photoUrl (camelCase)
-      photoUrl: player.photo_url,
-      // Ensure avgScore is properly converted to number
-      avgScore: player.avgScore ? Number(player.avgScore) : 0,
-      // Calculate FTP and PPG in JavaScript to ensure they're properly calculated
-      finalTablePercentage:
-        player.gamesPlayed > 0
-          ? Number(((player.finalTables / player.gamesPlayed) * 100).toFixed(2))
-          : 0,
-      pointsPerGame:
-        player.gamesPlayed > 0
-          ? Number((player.totalPoints / player.gamesPlayed).toFixed(2))
-          : 0,
-    }));
+    const serializedPlayers = serializeResults(players);
+    const rankings = serializedPlayers.map((player, index) => {
+      const gamesPlayed = Number(player.gamesPlayed) || 0;
+      const finalTables = Number(player.finalTables) || 0;
+      const totalPoints = Number(player.totalPoints) || 0;
+
+      return {
+        ...player,
+        ranking: index + 1,
+        isQualified: index < 40, // Top 40 players qualify
+        // Convert photo_url to photoUrl (camelCase)
+        photoUrl: player.photo_url,
+        // Ensure avgScore is properly converted to number
+        avgScore: player.avgScore ? Number(player.avgScore) : 0,
+        // Calculate FTP and PPG in JavaScript to ensure they're properly calculated
+        finalTablePercentage:
+          gamesPlayed > 0
+            ? Number(((finalTables / gamesPlayed) * 100).toFixed(2))
+            : 0,
+        pointsPerGame:
+          gamesPlayed > 0
+            ? Number((totalPoints / gamesPlayed).toFixed(2))
+            : 0,
+      };
+    });
 
     // Return the results with quarter and year
     return NextResponse.json({

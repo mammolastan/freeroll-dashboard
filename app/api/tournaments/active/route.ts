@@ -1,6 +1,7 @@
 // app/api/tournaments/active/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types"
 
 // Disable caching for this route to always get fresh tournament data
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const activeTournaments = await prisma.$queryRaw`
+    const activeTournaments = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.id,
         td.tournament_date,
@@ -33,7 +34,7 @@ export async function GET() {
     `;
 
     // Serialize BigInt values and format time
-    const serializedTournaments = (activeTournaments as any[]).map(
+    const serializedTournaments = (activeTournaments).map(
       (tournament) => {
         let formattedTime = null;
 

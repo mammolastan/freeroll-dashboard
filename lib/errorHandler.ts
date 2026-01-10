@@ -9,12 +9,12 @@ export interface ApiErrorResponse {
 export interface ApiCallOptions {
     url: string;
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-    body?: any;
+    body?: unknown;
     headers?: Record<string, string>;
     errorMessage?: string;
 }
 
-export interface ApiCallResult<T = any> {
+export interface ApiCallResult<T = unknown> {
     success: boolean;
     data?: T;
     error?: string;
@@ -23,7 +23,7 @@ export interface ApiCallResult<T = any> {
 /**
  * Wrapper for fetch API calls with consistent error handling
  */
-export async function apiCall<T = any>(options: ApiCallOptions): Promise<ApiCallResult<T>> {
+export async function apiCall<T = unknown>(options: ApiCallOptions): Promise<ApiCallResult<T>> {
     const {
         url,
         method = 'GET',
@@ -101,27 +101,27 @@ export function handleApiError(result: ApiCallResult, defaultMessage?: string): 
 /**
  * Simplified wrapper for common GET requests
  */
-export async function apiGet<T = any>(url: string, errorMessage?: string): Promise<ApiCallResult<T>> {
+export async function apiGet<T = unknown>(url: string, errorMessage?: string): Promise<ApiCallResult<T>> {
     return apiCall<T>({ url, method: 'GET', errorMessage });
 }
 
 /**
  * Simplified wrapper for common POST requests
  */
-export async function apiPost<T = any>(url: string, body: any, errorMessage?: string): Promise<ApiCallResult<T>> {
+export async function apiPost<T = unknown>(url: string, body: unknown, errorMessage?: string): Promise<ApiCallResult<T>> {
     return apiCall<T>({ url, method: 'POST', body, errorMessage });
 }
 
 /**
  * Simplified wrapper for common PUT requests
  */
-export async function apiPut<T = any>(url: string, body: any, errorMessage?: string): Promise<ApiCallResult<T>> {
+export async function apiPut<T = unknown>(url: string, body: unknown, errorMessage?: string): Promise<ApiCallResult<T>> {
     return apiCall<T>({ url, method: 'PUT', body, errorMessage });
 }
 
 /**
  * Simplified wrapper for common DELETE requests
  */
-export async function apiDelete<T = any>(url: string, errorMessage?: string): Promise<ApiCallResult<T>> {
+export async function apiDelete<T = unknown>(url: string, errorMessage?: string): Promise<ApiCallResult<T>> {
     return apiCall<T>({ url, method: 'DELETE', errorMessage });
 }

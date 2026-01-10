@@ -1,12 +1,13 @@
 // app/api/admin/recent-badges/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export const dynamic = "force-dynamic"; // This ensures the route always runs dynamically
 
 export async function GET() {
   try {
-    const recentBadges = await prisma.$queryRaw`
+    const recentBadges = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         pb.id,
         pb.player_uid,
@@ -25,7 +26,7 @@ export async function GET() {
     `;
 
     // Convert BigInt values to numbers for JSON serialization
-    const serializedBadges = (recentBadges as any[]).map((badge) => ({
+    const serializedBadges = (recentBadges).map((badge) => ({
       ...badge,
       id: Number(badge.id),
       earned_at:

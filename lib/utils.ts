@@ -231,7 +231,7 @@ export function formatDateRangeText(
 }
 
 // Helper function to format time strings to 12-hour format with AM/PM
-export function formatTime(timeString?: string | any): string | null {
+export function formatTime(timeString?: string | null | unknown): string | null {
   if (!timeString) return null;
 
   try {

@@ -129,14 +129,22 @@ export default function TournamentEntryPage() {
     socket.emit("joinRoom", currentDraft.id.toString());
 
     // Listen for player updates
-    const handlePlayersUpdated = (eventOrPlayers: any) => {
+    const handlePlayersUpdated = (eventOrPlayers: unknown) => {
       console.log("Admin: Raw socket data:", eventOrPlayers);
 
       // STEP 1: Extract players array (handle multiple formats)
-      let rawPlayers: any[];
+      let rawPlayers: unknown[];
       if (Array.isArray(eventOrPlayers)) {
         rawPlayers = eventOrPlayers;
-      } else if (eventOrPlayers?.data?.players) {
+      } else if (
+        typeof eventOrPlayers === 'object' &&
+        eventOrPlayers !== null &&
+        'data' in eventOrPlayers &&
+        typeof eventOrPlayers.data === 'object' &&
+        eventOrPlayers.data !== null &&
+        'players' in eventOrPlayers.data &&
+        Array.isArray(eventOrPlayers.data.players)
+      ) {
         rawPlayers = eventOrPlayers.data.players;
       } else {
         console.error('Unknown socket format:', eventOrPlayers);
@@ -144,18 +152,35 @@ export default function TournamentEntryPage() {
       }
 
       // STEP 2: Normalize property names (socket format → admin format)
-      const normalizedPlayers: Player[] = rawPlayers.map((p: any) => ({
-        id: p.id,
-        player_name: p.name || p.player_name,           // Convert name → player_name
-        player_uid: p.uid || p.player_uid,              // Convert uid → player_uid  
-        player_nickname: p.nickname || p.player_nickname,
-        is_new_player: p.is_new_player ?? false,
-        hitman_name: p.hitman_name || null,
-        ko_position: p.ko_position || p.elimination_position || null,
-        placement: p.placement || null,
-        added_by: p.added_by,
-        checked_in_at: p.checked_in_at,
-      }));
+      const normalizedPlayers: Player[] = rawPlayers.map((p) => {
+        // Type guard: ensure p is an object
+        if (typeof p !== 'object' || p === null) {
+          return {
+            id: 0,
+            player_name: '',
+            player_uid: null,
+            player_nickname: null,
+            is_new_player: false,
+            hitman_name: null,
+            ko_position: null,
+            placement: null,
+          };
+        }
+
+        const player = p as Record<string, unknown>;
+        return {
+          id: Number(player.id) || 0,
+          player_name: String(player.name || player.player_name || ''),
+          player_uid: player.uid ? String(player.uid) : player.player_uid ? String(player.player_uid) : null,
+          player_nickname: player.nickname ? String(player.nickname) : player.player_nickname ? String(player.player_nickname) : null,
+          is_new_player: Boolean(player.is_new_player),
+          hitman_name: player.hitman_name ? String(player.hitman_name) : null,
+          ko_position: player.ko_position ? Number(player.ko_position) : player.elimination_position ? Number(player.elimination_position) : null,
+          placement: player.placement ? Number(player.placement) : null,
+          added_by: (player.added_by === 'admin' || player.added_by === 'self_checkin') ? player.added_by : undefined,
+          checked_in_at: player.checked_in_at ? String(player.checked_in_at) : undefined,
+        };
+      });
 
       console.log('Admin: Normalized players:', normalizedPlayers);
       setPlayers([...normalizedPlayers]);

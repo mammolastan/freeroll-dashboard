@@ -1,9 +1,15 @@
 // lib/realtime/broadcastManager.ts
 
-import { RealtimeEvent, RealtimeEventType } from "./types";
+import {
+  RealtimeEvent,
+  RealtimeEventType,
+  Player,
+  Tournament
+} from "./types";
+import { TypedServer } from "@/types";
 
 declare global {
-  var socketIoInstance: any;
+  var socketIoInstance: TypedServer | undefined;
 }
 
 export class BroadcastManager {
@@ -50,20 +56,20 @@ export class BroadcastManager {
   }
 
   // Convenience methods for specific event types
-  broadcastTournamentUpdate(tournamentId: number, tournament: any): void {
+  broadcastTournamentUpdate(tournamentId: number, tournament: Tournament): void {
     const event = this.createEvent('tournament:updated', tournamentId, { tournament });
     this.broadcast(event);
   }
 
-  broadcastPlayersUpdate(tournamentId: number, players: any[]): void {
+  broadcastPlayersUpdate(tournamentId: number, players: Player[]): void {
     const event = this.createEvent('players:updated', tournamentId, { players });
     this.broadcast(event);
   }
 
   broadcastPlayerElimination(
     tournamentId: number,
-    player: any,
-    eliminatedBy: any,
+    player: Player,
+    eliminatedBy: Player,
     position: number
   ): void {
     const event = this.createEvent('player:eliminated', tournamentId, {
@@ -74,12 +80,12 @@ export class BroadcastManager {
     this.broadcast(event);
   }
 
-  broadcastPlayerAdded(tournamentId: number, player: any): void {
+  broadcastPlayerAdded(tournamentId: number, player: Player): void {
     const event = this.createEvent('player:added', tournamentId, { player });
     this.broadcast(event);
   }
 
-  broadcastVenueUpdate(tournamentId: number, venue: any): void {
+  broadcastVenueUpdate(tournamentId: number, venue: Tournament['venue']): void {
     const event = this.createEvent('venue:updated', tournamentId, { venue });
     this.broadcast(event);
   }

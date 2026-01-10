@@ -2,8 +2,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
-function serializeResults(results: any[]) {
+function serializeResults(results: RawQueryResult[]) {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (unclaimedOnly) {
       const searchTerm = `%${query}%`;
-      const players = await prisma.$queryRaw`
+      const players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           p.uid,
           p.name,
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
         LIMIT 10
       `;
 
-      const serialized = serializeResults(players as any[]);
+      const serialized = serializeResults(players);
       return NextResponse.json({
         players: serialized.map((p) => ({
           uid: p.uid,
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     if (isNameSearch) {
       // Search by name or nickname - ordered by recent activity
       const searchTerm = `%${query}%`;
-      players = await prisma.$queryRaw`
+      players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           p.Name,
           p.UID,
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
       `;
     } else {
       // Search by exact UID match
-      players = await prisma.$queryRaw`
+      players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           p.Name,
           p.UID,
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       `;
     }
 
-    const serializedPlayers = serializeResults(players as any[]);
+    const serializedPlayers = serializeResults(players);
 
     // Remove LastGameDate from response since it's only used for sorting
     const cleanedPlayers = serializedPlayers.map((player) => {

@@ -70,8 +70,15 @@ function PlayerCard({ player, totalPlayers }: { player: Player; totalPlayers: nu
   );
 }
 
+interface TournamentHeaderData {
+  title: string;
+  date: string | Date;
+  time?: string | null;
+  venue?: string | null;
+}
+
 function TournamentHeader({ tournament }: {
-  tournament: any
+  tournament: TournamentHeaderData
 }) {
   return (
     <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.2)] border border-cyan-500/30 p-6 mb-6">

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { RealtimeAPI } from "@/lib/realtime";
 
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export async function GET(
   request: NextRequest,
@@ -44,12 +45,12 @@ export async function POST(
     const { player_name, player_nickname, player_uid, is_new_player } = body;
 
     // Check for duplicate player in same tournament
-    const existingPlayer = await prisma.$queryRaw`
-      SELECT id FROM tournament_draft_players 
+    const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_draft_players
       WHERE tournament_draft_id = ${draftId} AND player_name = ${player_name}
     `;
 
-    if ((existingPlayer as any[]).length > 0) {
+    if (existingPlayer.length > 0) {
       return NextResponse.json(
         { error: "Player already exists in this tournament" },
         { status: 400 }
@@ -64,13 +65,16 @@ export async function POST(
     }, 'admin', UTC_TIMESTAMP())
       `;
 
-    const newPlayer = await prisma.$queryRaw`
+    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
     // Emit Socket.IO event for real-time updates
     if (Array.isArray(newPlayer) && newPlayer.length > 0) {
-      await RealtimeAPI.playerAdded(draftId, (newPlayer[0] as any).id);
+      const playerId = newPlayer[0].id;
+      if (typeof playerId === 'number') {
+        await RealtimeAPI.playerAdded(draftId, playerId);
+      }
     }
 
     return NextResponse.json(newPlayer);

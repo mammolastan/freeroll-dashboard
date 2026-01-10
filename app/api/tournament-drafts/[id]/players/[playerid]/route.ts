@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export async function PUT(
   request: NextRequest,
@@ -34,15 +35,17 @@ export async function PUT(
 
     if (updateResult === 1) {
       // Fetch the complete updated record
-      const updatedPlayerResult = await prisma.$queryRaw`
+      const updatedPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT * FROM tournament_draft_players WHERE id = ${playerId}
       `;
 
+      const updatedPlayer = updatedPlayerResult[0];
+
       // Emit Socket.IO event for real-time updates
       const draftId = parseInt(params.id);
-      emitPlayerJoined(draftId, (updatedPlayerResult as any[])[0]);
+      emitPlayerJoined(draftId, updatedPlayer);
 
-      return NextResponse.json((updatedPlayerResult as any[])[0]);
+      return NextResponse.json(updatedPlayer);
     } else {
       return NextResponse.json(
         { error: "Player not found or update failed" },

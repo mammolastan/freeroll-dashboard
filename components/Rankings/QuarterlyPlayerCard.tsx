@@ -76,7 +76,10 @@ export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: Qu
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        handleRankingClick(e as any);
+                        e.stopPropagation();
+                        if (onToggleFavorite) {
+                            onToggleFavorite(player.uid);
+                        }
                     }
                 }}
                 aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}

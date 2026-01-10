@@ -14,7 +14,7 @@ interface PlayerSuggestion {
 
 interface CheckInResponse {
     type: 'success' | 'suggestions' | 'error';
-    player?: any;
+    player?: CheckedInPlayer;
     suggestions?: PlayerSuggestion[];
     entered_name?: string;
     message?: string;

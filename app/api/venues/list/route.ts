@@ -2,11 +2,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentETDate, getDateCondition } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import {RawQueryResult} from "@/types"
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
 
-function serializeResults(results: any[]) {
+function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
     const dateConditionP = getDateCondition(startDate, endDate, "p");
 
     // Get all venues
-    const venues = await prisma.$queryRaw`
+    const venues = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT DISTINCT 
         Venue as name,
         COUNT(DISTINCT File_name) as totalGames
@@ -91,8 +92,8 @@ export async function GET(request: Request) {
     `;
 
     const venuesWithPlayers = await Promise.all(
-      (venues as any[]).map(async (venue) => {
-        const topPlayers = await prisma.$queryRaw`
+      (venues).map(async (venue) => {
+        const topPlayers = await prisma.$queryRaw<RawQueryResult[]>`
           SELECT 
             p.Name as name,
             p.UID as uid,
@@ -112,7 +113,7 @@ export async function GET(request: Request) {
 
         return {
           ...venue,
-          topPlayers: serializeResults(topPlayers as any[]),
+          topPlayers: serializeResults(topPlayers),
         };
       })
     );

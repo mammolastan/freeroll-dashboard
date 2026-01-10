@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types"
 
 // Set cache control
 export const revalidate = 604800; // 7 days in seconds
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const playerUIDs = body.uids.slice(0, 400);
 
     // Fetch badges for all requested players in a single query, filtering out expired ones
-    const batchBadges = await prisma.$queryRaw`
+    const batchBadges = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         pb.player_uid,
         pb.id,
@@ -44,19 +45,22 @@ export async function POST(request: Request) {
     `;
 
     // Group badges by player_uid
-    const groupedBadges = (batchBadges as any[]).reduce((acc, badge) => {
-      const playerUid = badge.player_uid;
-      if (!acc[playerUid]) {
-        acc[playerUid] = [];
-      }
+    const groupedBadges = batchBadges.reduce<Record<string, RawQueryResult[]>>(
+      (acc, badge) => {
+        const playerUid = String(badge.player_uid);
+        if (!acc[playerUid]) {
+          acc[playerUid] = [];
+        }
 
-      // Remove player_uid from the badge object to keep the response clean
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { player_uid, ...badgeData } = badge;
-      acc[playerUid].push(badgeData);
+        // Remove player_uid from the badge object to keep the response clean
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { player_uid, ...badgeData } = badge;
+        acc[playerUid].push(badgeData);
 
-      return acc;
-    }, {});
+        return acc;
+      },
+      {}
+    );
 
     return NextResponse.json(groupedBadges);
   } catch (error) {

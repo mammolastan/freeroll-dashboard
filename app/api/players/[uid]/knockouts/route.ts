@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDateCondition } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export async function GET(
   request: Request,
@@ -33,7 +34,7 @@ export async function GET(
     const dateConditionP1 = getDateCondition(startDate, endDate, "p1");
 
     // Top 10 Most Knocked Out By
-    const knockedOutBy = await prisma.$queryRaw`
+    const knockedOutBy = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         p2.Name as name,
         p2.UID as uid,
@@ -59,7 +60,7 @@ export async function GET(
     `;
 
     // Top 10 Most Knocked Out
-    const knockedOut = await prisma.$queryRaw`
+    const knockedOut = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         p2.Name as name,
         p2.UID as uid,
@@ -87,7 +88,7 @@ export async function GET(
     let headToHead = null;
     if (compareUid) {
       // Get player names
-      const playerData = await prisma.$queryRaw`
+      const playerData = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT p.Name as name, pl.nickname 
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
@@ -95,7 +96,7 @@ export async function GET(
         LIMIT 1
       `;
 
-      const comparePlayerData = await prisma.$queryRaw`
+      const comparePlayerData = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT p.Name as name, pl.nickname 
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
@@ -104,7 +105,7 @@ export async function GET(
       `;
 
       // Knockouts by main player against compare player
-      const knockoutsByPlayer = await prisma.$queryRaw`
+      const knockoutsByPlayer = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT 
           p1.game_date as date,
           p1.Venue as venue,
@@ -118,7 +119,7 @@ export async function GET(
       `;
 
       // Knockouts by compare player against main player
-      const knockoutsByCompare = await prisma.$queryRaw`
+      const knockoutsByCompare = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT 
           p1.game_date as date,
           p1.Venue as venue,
@@ -132,7 +133,7 @@ export async function GET(
       `;
 
       // Games where both players participated but neither knocked out the other
-      const gamesPlayed = await prisma.$queryRaw`
+      const gamesPlayed = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT 
           p1.game_date as date,
           p1.Venue as venue,
@@ -150,14 +151,14 @@ export async function GET(
       headToHead = {
         player: {
           uid: playerUID,
-          name: (playerData as any[])[0]?.name || "Unknown",
-          nickname: (playerData as any[])[0]?.nickname || null,
+          name: String(playerData[0]?.name) || "Unknown",
+          nickname: playerData[0]?.nickname || null,
           knockouts: knockoutsByPlayer,
         },
         comparePlayer: {
           uid: compareUid,
-          name: (comparePlayerData as any[])[0]?.name || "Unknown",
-          nickname: (comparePlayerData as any[])[0]?.nickname || null,
+          name: String(comparePlayerData[0]?.name) || "Unknown",
+          nickname: comparePlayerData[0]?.nickname || null,
           knockouts: knockoutsByCompare,
         },
         gamesPlayed,
@@ -165,7 +166,7 @@ export async function GET(
     }
 
     // Process the results
-    const knockedOutByParsed = (knockedOutBy as any[]).map((ko) => ({
+    const knockedOutByParsed = knockedOutBy.map((ko) => ({
       name: ko.name,
       uid: ko.uid,
       nickname: ko.nickname,
@@ -173,7 +174,7 @@ export async function GET(
       games: typeof ko.games === "string" ? JSON.parse(ko.games) : ko.games,
     }));
 
-    const knockedOutParsed = (knockedOut as any[]).map((ko) => ({
+    const knockedOutParsed = knockedOut.map((ko) => ({
       name: ko.name,
       uid: ko.uid,
       nickname: ko.nickname,
@@ -182,7 +183,7 @@ export async function GET(
     }));
 
     // Total knockout stats
-    const totalStats = await prisma.$queryRaw`
+    const totalStats = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         SUM(CASE WHEN p1.Hitman IS NOT NULL THEN 1 ELSE 0 END) as knockedOutCount,
         SUM(p1.Knockouts) as knockoutCount
@@ -196,8 +197,8 @@ export async function GET(
       knockedOutBy: knockedOutByParsed,
       knockedOut: knockedOutParsed,
       totalStats: {
-        knockedOutCount: Number((totalStats as any[])[0]?.knockedOutCount || 0),
-        knockoutCount: Number((totalStats as any[])[0]?.knockoutCount || 0),
+        knockedOutCount: Number(totalStats[0]?.knockedOutCount || 0),
+        knockoutCount: Number(totalStats[0]?.knockoutCount || 0),
       },
       headToHead,
     };

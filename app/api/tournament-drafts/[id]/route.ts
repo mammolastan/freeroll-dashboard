@@ -1,6 +1,7 @@
 // app/api/tournament-drafts/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types"
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +11,7 @@ export async function GET(
     const { id } = await params;
     const draftId = parseInt(id);
 
-    const draft = await prisma.$queryRaw`
+    const draft = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.*,
         COUNT(tdp.id) as player_count
@@ -20,14 +21,14 @@ export async function GET(
       GROUP BY td.id
     `;
 
-    if (!(draft as any[]).length) {
+    if (!(draft).length) {
       return NextResponse.json(
         { error: "Tournament draft not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json((draft as any[])[0]);
+    return NextResponse.json((draft)[0]);
   } catch (error) {
     console.error("Error fetching tournament draft:", error);
     return NextResponse.json(
@@ -141,11 +142,11 @@ export async function DELETE(
     }
 
     // Check if tournament exists and get its status
-    const existingTournament = await prisma.$queryRaw`
+    const existingTournament = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT id, status FROM tournament_drafts WHERE id = ${tournamentId}
     `;
 
-    if ((existingTournament as any[]).length === 0) {
+    if ((existingTournament).length === 0) {
       return NextResponse.json(
         { error: "Tournament not found" },
         { status: 404 }

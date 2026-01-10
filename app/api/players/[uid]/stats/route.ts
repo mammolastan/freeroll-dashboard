@@ -1,9 +1,9 @@
 // app/api/players/[uid]/stats/route.ts
 import { NextResponse } from "next/server";
 import { getDateCondition } from "@/lib/utils";
-
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
 
 export async function GET(
   request: Request,
@@ -185,26 +185,26 @@ export async function GET(
           quarterlyStats[0]?.finalTablePercentage || 0
         ),
       },
-      availableVenues: availableVenues.map((v: any) => v.Venue),
-      mostKnockedOutBy: knockedOutBy.map((ko: any) => ({
+      availableVenues: availableVenues.map((v) => v.Venue),
+      mostKnockedOutBy: knockedOutBy.map((ko) => ({
         name: ko.name,
         uid: ko.uid,
         nickname: ko.nickname,
         count: Number(ko.count),
       })),
-      mostKnockedOut: knockedOut.map((ko: any) => ({
+      mostKnockedOut: knockedOut.map((ko) => ({
         name: ko.name,
         uid: ko.uid,
         nickname: ko.nickname,
         count: Number(ko.count),
       })),
-      venueStats: venueStats.map((stat: any) => ({
+      venueStats: venueStats.map((stat) => ({
         venue: stat.venue,
         points: Number(stat.points),
       })),
       recentGames,
       earliestGameDate,
-      placementFrequency: placementFrequency.map((pf: any) => ({
+      placementFrequency: placementFrequency.map((pf) => ({
         placement: Number(pf.Placement),
         frequency: Number(pf.frequency),
       })),

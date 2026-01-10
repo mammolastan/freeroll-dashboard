@@ -19,9 +19,9 @@ export class TournamentService {
         LIMIT 1
       `;
 
-      if ((tournament as any[]).length === 0) return null;
+      if (!Array.isArray(tournament) || tournament.length === 0) return null;
 
-      const data = (tournament as any[])[0];
+      const data = tournament[0];
       return {
         id: data.id,
         title: `Tournament ${data.id}`, // No tournament_name field, using fallback

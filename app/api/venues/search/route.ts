@@ -2,9 +2,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {RawQueryResult} from "@/types"
 export const dynamic = "force-dynamic";
 
-function serializeResults(results: any[]) {
+function serializeResults(results: RawQueryResult[]):RawQueryResult[] {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const venues = await prisma.$queryRaw`
+    const venues = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         Venue as name,
         COUNT(DISTINCT File_name) as totalGames
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       LIMIT 10
     `;
 
-    const serializedVenues = serializeResults(venues as any[]);
+    const serializedVenues = serializeResults(venues);
     return NextResponse.json(serializedVenues);
   } catch (error) {
     console.error("Venue search error:", error);

@@ -46,7 +46,7 @@ export type RealtimeEventType =
   | 'player:added'
   | 'venue:updated';
 
-export interface RealtimeEvent<T = any> {
+export interface RealtimeEvent<T = unknown> {
   type: RealtimeEventType;
   tournamentId: number;
   data: T;

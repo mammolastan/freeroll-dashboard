@@ -20,9 +20,13 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+// Type for raw query results from Prisma
+type RawQueryResult = Record<string, unknown>;
+
 // Global type declaration for Socket.IO instance
 declare global {
-  var socketIoInstance: any;
+  // eslint-disable-next-line no-var
+  var socketIoInstance: Server | undefined;
 }
 
 // Timer state management
@@ -380,7 +384,7 @@ async function loadTimerStateFromDB(
 
 async function getTournamentData(tournamentDraftId: number) {
   try {
-    const tournament = await prisma.$queryRaw`
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         id,
         tournament_date,
@@ -393,9 +397,9 @@ async function getTournamentData(tournamentDraftId: number) {
       LIMIT 1
     `;
 
-    if ((tournament as any[]).length === 0) return null;
+    if (!Array.isArray(tournament) || tournament.length === 0) return null;
 
-    const data = (tournament as any[])[0];
+    const data = tournament[0];
 
     // Convert tournament_time Buffer to string if it exists
     let timeString = null;
@@ -408,12 +412,12 @@ async function getTournamentData(tournamentDraftId: number) {
     }
 
     return {
-      id: data.id,
-      title: data.venue,
+      id: Number(data.id),
+      title: String(data.venue),
       date: data.tournament_date,
       time: timeString,
-      venue: data.venue,
-      status: data.status,
+      venue: String(data.venue),
+      status: String(data.status),
       max_players: null,
     };
   } catch (error) {
@@ -424,7 +428,7 @@ async function getTournamentData(tournamentDraftId: number) {
 
 async function getCheckedInPlayers(tournamentDraftId: number) {
   try {
-    const players = await prisma.$queryRaw`
+    const players = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         tdp.*,
         COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname
@@ -434,23 +438,23 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
       ORDER BY tdp.created_at ASC
     `;
 
-    return (players as any[]).map((p) => ({
-      id: p.id,
-      name: p.player_name,
-      nickname: p.resolved_nickname,
-      uid: p.player_uid,
-      is_new_player: p.is_new_player,
-      checked_in_at: p.checked_in_at,
-      created_at: p.created_at,
+    return players.map((p) => ({
+      id: Number(p.id),
+      name: String(p.player_name),
+      nickname: p.resolved_nickname ? String(p.resolved_nickname) : null,
+      uid: p.player_uid ? String(p.player_uid) : null,
+      is_new_player: Boolean(p.is_new_player),
+      checked_in_at: p.checked_in_at || null,
+      created_at: p.created_at || null,
       is_active: p.ko_position === null, // Active if no ko_position
       eliminated_at: null,
       eliminated_by_player_id: null,
-      elimination_position: p.ko_position,
-      placement: p.placement,
+      elimination_position: p.ko_position ? Number(p.ko_position) : null,
+      placement: p.placement ? Number(p.placement) : null,
       hitman: p.hitman_name
         ? {
             id: null,
-            name: p.hitman_name,
+            name: String(p.hitman_name),
             nickname: null,
           }
         : undefined,

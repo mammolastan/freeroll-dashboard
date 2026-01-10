@@ -1,6 +1,7 @@
 // app/api/checkin/[token]/players/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -11,22 +12,22 @@ export async function GET(
     const { token } = await params;
 
     // Get tournament by token
-    const tournament = await prisma.$queryRaw`
-      SELECT id FROM tournament_drafts 
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_drafts
       WHERE check_in_token = ${token} AND status = 'in_progress'
     `;
 
-    if (!(tournament as any[]).length) {
+    if (!tournament.length) {
       return NextResponse.json(
         { error: "Tournament not found or check-in not available" },
         { status: 404 }
       );
     }
 
-    const tournamentId = (tournament as any[])[0].id;
+    const tournamentId = tournament[0].id;
 
     // Get all checked-in players, sorted by most recent first
-    const players = await prisma.$queryRaw`
+    const players = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         id,
         player_name,
@@ -73,27 +74,27 @@ export async function POST(
     const cleanPlayerName = player_name.trim();
 
     // Get tournament by token
-    const tournament = await prisma.$queryRaw`
-      SELECT id FROM tournament_drafts 
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_drafts
       WHERE check_in_token = ${token} AND status = 'in_progress'
     `;
 
-    if (!(tournament as any[]).length) {
+    if (!tournament.length) {
       return NextResponse.json(
         { error: "Tournament not found or check-in not available" },
         { status: 404 }
       );
     }
 
-    const tournamentId = (tournament as any[])[0].id;
+    const tournamentId = tournament[0].id;
 
     // Check if player already checked in
-    const existingPlayer = await prisma.$queryRaw`
-      SELECT id FROM tournament_draft_players 
+    const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_draft_players
       WHERE tournament_draft_id = ${tournamentId} AND player_name = ${cleanPlayerName}
     `;
 
-    if ((existingPlayer as any[]).length > 0) {
+    if (existingPlayer.length > 0) {
       return NextResponse.json(
         {
           type: "error",
@@ -116,7 +117,7 @@ export async function POST(
       // Search for existing player in main database by BOTH Name AND nickname
       // First get potential matches
       const likePattern = `%${cleanPlayerName}%`;
-      const existingPlayers = await prisma.$queryRaw`
+      const existingPlayers = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT Name, UID, nickname FROM players
         WHERE Name LIKE ${likePattern}
            OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
@@ -124,7 +125,7 @@ export async function POST(
       `;
 
       // Sort the results in JavaScript to avoid parameter duplication in SQL
-      const sortedPlayers = (existingPlayers as any[])
+      const sortedPlayers = existingPlayers
         .sort((a, b) => {
           // Exact name match gets highest priority (0)
           if (a.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
@@ -152,10 +153,10 @@ export async function POST(
       if (sortedPlayers.length > 0) {
         //Check for exact match in BOTH Name AND nickname fields
         const exactMatch = sortedPlayers.find(
-          (p: any) =>
-            p.Name.toLowerCase() === cleanPlayerName.toLowerCase() ||
+          (p) =>
+            String(p.Name).toLowerCase() === cleanPlayerName.toLowerCase() ||
             (p.nickname &&
-              p.nickname.toLowerCase() === cleanPlayerName.toLowerCase())
+              String(p.nickname).toLowerCase() === cleanPlayerName.toLowerCase())
         );
 
         if (exactMatch) {
@@ -164,7 +165,7 @@ export async function POST(
           is_new_player = false;
         } else {
           // Return suggestions for fuzzy matches
-          suggested_players = sortedPlayers.slice(0, 3).map((p: any) => ({
+          suggested_players = sortedPlayers.slice(0, 3).map((p) => ({
             name: p.Name,
             uid: p.UID,
             nickname: p.nickname,
@@ -186,7 +187,7 @@ export async function POST(
       VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
-    const newPlayer = await prisma.$queryRaw`
+    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
@@ -209,7 +210,7 @@ export async function POST(
 
     return NextResponse.json({
       type: "success",
-      player: (newPlayer as any[])[0],
+      player: newPlayer[0],
       message: is_new_player
         ? `Welcome! You've been added as a new player.`
         : `Welcome back, ${cleanPlayerName}!`,
@@ -234,19 +235,19 @@ export async function PUT(
     const { selected_player_uid, entered_name } = body;
 
     // Get tournament by token
-    const tournament = await prisma.$queryRaw`
-      SELECT id FROM tournament_drafts 
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_drafts
       WHERE check_in_token = ${token} AND status = 'in_progress'
     `;
 
-    if (!(tournament as any[]).length) {
+    if (!tournament.length) {
       return NextResponse.json(
         { error: "Tournament not found or check-in not available" },
         { status: 404 }
       );
     }
 
-    const tournamentId = (tournament as any[])[0].id;
+    const tournamentId = tournament[0].id;
 
     let player_name, player_uid, player_nickname, is_new_player;
 
@@ -258,18 +259,18 @@ export async function PUT(
       is_new_player = true;
     } else {
       // User selected existing player
-      const selectedPlayer = await prisma.$queryRaw`
+      const selectedPlayer = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT Name, UID, nickname FROM players WHERE UID = ${selected_player_uid}
       `;
 
-      if (!(selectedPlayer as any[]).length) {
+      if (!selectedPlayer.length) {
         return NextResponse.json(
           { error: "Selected player not found" },
           { status: 400 }
         );
       }
 
-      const playerData = (selectedPlayer as any[])[0];
+      const playerData = selectedPlayer[0];
       player_name = playerData.Name;
       player_uid = playerData.UID;
       player_nickname = playerData.nickname;
@@ -277,13 +278,13 @@ export async function PUT(
     }
 
     // Check if player already checked in
-    const existingPlayer = await prisma.$queryRaw`
-      SELECT id FROM tournament_draft_players 
-      WHERE tournament_draft_id = ${tournamentId} AND 
+    const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id FROM tournament_draft_players
+      WHERE tournament_draft_id = ${tournamentId} AND
             (player_name = ${player_name} OR player_uid = ${player_uid})
     `;
 
-    if ((existingPlayer as any[]).length > 0) {
+    if (existingPlayer.length > 0) {
       return NextResponse.json(
         { error: "This player has already checked in for this tournament" },
         { status: 400 }
@@ -297,7 +298,7 @@ export async function PUT(
       VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
     `;
 
-    const newPlayer = await prisma.$queryRaw`
+    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
@@ -320,7 +321,7 @@ export async function PUT(
 
     return NextResponse.json({
       type: "success",
-      player: (newPlayer as any[])[0],
+      player: newPlayer[0],
       message: is_new_player
         ? `Welcome! You've been added as a new player.`
         : `Welcome back, ${player_name}!`,

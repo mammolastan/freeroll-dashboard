@@ -1,6 +1,6 @@
 // app/games/[fileName]/page.tsx
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
@@ -39,14 +39,15 @@ function formatGameDate(isoDateString: string): string {
     });
 }
 
-export default function GamePage({ params }: { params: { game_uid: string } }) {
+export default function GamePage({ params }: { params: Promise<{ game_uid: string }> }) {
+    const resolvedParams = use(params)
     const [gameDetails, setGameDetails] = useState<GameDetails | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         async function fetchGameDetails() {
             try {
-                const response = await fetch(`/api/games/${params.game_uid}`)
+                const response = await fetch(`/api/games/${resolvedParams.game_uid}`)
                 const data = await response.json()
                 setGameDetails(data)
             } catch (error) {
@@ -56,10 +57,10 @@ export default function GamePage({ params }: { params: { game_uid: string } }) {
             }
         }
 
-        if (params.game_uid) {
+        if (resolvedParams.game_uid) {
             fetchGameDetails()
         }
-    }, [params.game_uid])
+    }, [resolvedParams.game_uid])
 
     if (loading) {
         return (

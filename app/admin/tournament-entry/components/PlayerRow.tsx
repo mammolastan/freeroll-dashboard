@@ -60,7 +60,16 @@ export function PlayerRow({
     const unknownOption = hitmanSearchValue && hitmanSearchValue.toLowerCase().includes('unknown');
     const allOptions = [...hitmanCandidates];
     if (unknownOption) {
-        allOptions.push({ id: -1, player_name: 'unknown' } as any);
+        allOptions.push({
+            id: -1,
+            player_name: 'unknown',
+            player_uid: null,
+            is_new_player: false,
+            hitman_name: null,
+            ko_position: null,
+            placement: null,
+            player_nickname: null
+        });
     }
 
     return (

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types"
 
 // Generate or get existing check-in token
 export async function POST(
@@ -14,19 +15,19 @@ export async function POST(
     const tournamentId = parseInt(id);
 
     // Check if tournament exists and is in progress
-    const tournament = await prisma.$queryRaw`
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT id, status, check_in_token FROM tournament_drafts 
       WHERE id = ${tournamentId} AND status = 'in_progress'
     `;
 
-    if (!(tournament as any[]).length) {
+    if (!(tournament).length) {
       return NextResponse.json(
         { error: "Tournament not found or not available for check-in" },
         { status: 404 }
       );
     }
 
-    const tournamentData = (tournament as any[])[0];
+    const tournamentData = (tournament)[0];
 
     // Generate token if doesn't exist
     if (!tournamentData.check_in_token) {

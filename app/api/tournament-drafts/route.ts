@@ -1,11 +1,12 @@
 // app/api/tournament-drafts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {RawQueryResult } from "@/types"
 
 // GET - List all tournament drafts
 export async function GET() {
   try {
-    const drafts = await prisma.$queryRaw`
+    const drafts = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
         td.*,
         COUNT(tdp.id) as player_count
@@ -16,7 +17,7 @@ export async function GET() {
     `;
 
     // Serialize BigInt values
-    const serializedDrafts = (drafts as any[]).map((draft) => ({
+    const serializedDrafts = (drafts).map((draft) => ({
       ...draft,
       id: Number(draft.id),
       start_points: Number(draft.start_points),
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     console.log("Insert result:", result);
 
     // Get the inserted record
-    const newDraft = await prisma.$queryRaw`
+    const newDraft = await prisma.$queryRaw <RawQueryResult[]>`
       SELECT * FROM tournament_drafts 
       WHERE id = LAST_INSERT_ID()
     `;
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     console.log("New draft created:", newDraft);
 
     // Serialize the response
-    const serializedDraft = (newDraft as any[]).map((draft) => ({
+    const serializedDraft = (newDraft).map((draft) => ({
       ...draft,
       id: Number(draft.id),
       start_points: Number(draft.start_points),

@@ -1,6 +1,7 @@
 // app/api/checkin/[token]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 // Get tournament info by check-in token
 export async function GET(
@@ -10,8 +11,8 @@ export async function GET(
   try {
     const { token } = await params;
 
-    const tournament = await prisma.$queryRaw`
-      SELECT 
+    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT
         td.id,
         td.tournament_date,
         td.director_name,
@@ -25,14 +26,14 @@ export async function GET(
       GROUP BY td.id
     `;
 
-    if (!(tournament as any[]).length) {
+    if (!tournament.length) {
       return NextResponse.json(
         { error: "Tournament not found or check-in not available" },
         { status: 404 }
       );
     }
 
-    const tournamentData = (tournament as any[])[0];
+    const tournamentData = tournament[0];
 
     return NextResponse.json({
       id: Number(tournamentData.id),

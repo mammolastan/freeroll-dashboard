@@ -2,11 +2,12 @@
 
 import { Player } from "../types";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export class PlayersService {
   async getTournamentPlayers(tournamentId: number): Promise<Player[]> {
     try {
-      const players = await prisma.$queryRaw<any[]>`
+      const players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT * FROM tournament_draft_players
         WHERE tournament_draft_id = ${tournamentId}
         ORDER BY created_at ASC
@@ -70,7 +71,7 @@ export class PlayersService {
     playerData: Partial<Player>
   ): Promise<Player | null> {
     try {
-      await prisma.$queryRaw<any[]>`
+      await prisma.$queryRaw<RawQueryResult[]>`
         INSERT INTO tournament_draft_players
         (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, is_active)
         VALUES (${tournamentId}, ${playerData.name}, ${playerData.nickname}, ${playerData.uid}, ${playerData.is_new_player}, true)

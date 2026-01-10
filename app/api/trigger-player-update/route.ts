@@ -1,29 +1,32 @@
 // app/api/trigger-player-update/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { TypedServer, RealtimePlayer } from "@/types";
 
 // Add type declaration for global.socketIoInstance
 declare global {
-  // Replace 'any' with the actual type if available
-  var socketIoInstance: any | undefined;
+  var socketIoInstance: TypedServer | undefined;
 }
 
 import { prisma } from "@/lib/prisma";
 
-type CheckedInPlayer = {
+type PlayerQueryResult = {
   id: number;
-  name: string;
-  nickname: string | null;
-  uid: string;
+  player_name: string;
+  player_nickname: string | null;
+  player_uid: string;
   is_new_player: boolean;
   checked_in_at: Date | null;
   created_at: Date;
+  ko_position: number | null;
+  placement: number | null;
+  hitman_name: string | null;
 };
 
 async function getCheckedInPlayers(
   tournamentDraftId: number
-): Promise<CheckedInPlayer[]> {
+): Promise<RealtimePlayer[]> {
   try {
-    const players = await prisma.$queryRaw`
+    const players = await prisma.$queryRaw<PlayerQueryResult[]>`
       SELECT
         tdp.*,
         p.nickname as player_nickname
@@ -33,26 +36,17 @@ async function getCheckedInPlayers(
       ORDER BY tdp.created_at ASC
     `;
 
-    return (players as any[]).map((p) => ({
+    return players.map((p) => ({
       id: p.id,
-      name: p.player_name,
-      nickname: p.player_nickname,
-      uid: p.player_uid,
+      player_name: p.player_name,
+      player_nickname: p.player_nickname,
+      player_uid: p.player_uid,
       is_new_player: p.is_new_player,
-      checked_in_at: p.checked_in_at,
-      created_at: p.created_at,
-      is_active: p.ko_position === null, // Active if no ko_position
-      eliminated_at: null,
-      eliminated_by_player_id: null,
-      elimination_position: p.ko_position,
+      hitman_name: p.hitman_name,
+      ko_position: p.ko_position,
       placement: p.placement,
-      hitman: p.hitman_name
-        ? {
-            id: null,
-            name: p.hitman_name,
-            nickname: null,
-          }
-        : undefined,
+      checked_in_at: p.checked_in_at,
+      added_by: 'admin' as const,
     }));
   } catch (error) {
     console.error("Error fetching checked-in players:", error);
@@ -78,7 +72,11 @@ export async function POST(request: NextRequest) {
       console.log(`[TRIGGER] Broadcasting to room: ${tournamentDraftId}`);
       global.socketIoInstance
         .to(tournamentDraftId.toString())
-        .emit("updatePlayers", players);
+        .emit("players:batch_update", {
+          tournament_id: tournamentDraftId,
+          players,
+          action: 'bulk_update'
+        });
       return NextResponse.json({ success: true, playersCount: players.length });
     } else {
       console.error("[TRIGGER] Socket.IO instance not available!");

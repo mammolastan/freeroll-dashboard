@@ -144,7 +144,11 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
   // Apply fitty to blinds landscape text in min mode (landscape orientation only)
   useEffect(() => {
-    let fittyInstance: any = null;
+    interface FittyInstance {
+      unsubscribe: () => void;
+    }
+
+    let fittyInstance: FittyInstance | FittyInstance[] | null = null;
     const isLandscape = window.matchMedia('(orientation: landscape)').matches;
 
     if (isMinMode && isLandscape && blindsLandscapeRef.current) {
@@ -154,7 +158,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
           fittyInstance = fitty(blindsLandscapeRef.current, {
             minSize: 64, // 4rem
             maxSize: 130,
-          });
+          }) as FittyInstance | FittyInstance[];
         }
       }, 100);
 

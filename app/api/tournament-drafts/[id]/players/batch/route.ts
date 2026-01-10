@@ -1,7 +1,8 @@
-// Create: app/api/tournament-drafts/[id]/players/batch/route.ts
+// app/api/tournament-drafts/[id]/players/batch/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { prisma } from "@/lib/prisma";
+import { TournamentDraftPlayerUpdateInput } from "@/types";
 
 export async function PUT(
   request: NextRequest,
@@ -32,7 +33,7 @@ export async function PUT(
         const { id: playerId, ...updateData } = playerUpdate;
 
         // Build dynamic update data object - only include fields that are present
-        const dataToUpdate: any = {
+        const dataToUpdate: TournamentDraftPlayerUpdateInput = {
           updated_at: new Date(),
         };
 
