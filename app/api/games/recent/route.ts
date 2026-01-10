@@ -40,9 +40,10 @@ export async function GET() {
             uid: string;
             nickname: string;
             game_uid: string;
+            photo_url: string | null;
           }>
         >`
-          SELECT 
+          SELECT
             p.Name as name,
             p.Placement as placement,
             p.Total_Points as totalPoints,
@@ -50,7 +51,8 @@ export async function GET() {
             p.Venue as venue,
             p.UID as uid,
             p.game_uid as game_uid,
-            pl.nickname
+            pl.nickname,
+            pl.photo_url
           FROM poker_tournaments p
           LEFT JOIN players pl ON p.UID = pl.uid
           WHERE p.game_uid = ${game.game_uid}
@@ -64,6 +66,7 @@ export async function GET() {
           knockouts: player.knockouts || 0,
           UID: player.uid,
           nickname: player.nickname,
+          photo_url: player.photo_url,
         }));
 
         return {

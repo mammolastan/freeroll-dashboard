@@ -26,6 +26,7 @@ export async function GET(
       nickname: string;
       file_name: string;
       game_date: string;
+      photo_url: string | null;
     }[] = await prisma.$queryRaw`
       SELECT
         p.Name,
@@ -42,6 +43,7 @@ export async function GET(
         p.game_uid,
         p.file_name,
         pl.nickname,
+        pl.photo_url,
         p.game_date
       FROM poker_tournaments p
       LEFT JOIN players pl ON p.UID = pl.uid
@@ -80,6 +82,7 @@ export async function GET(
         startPoints: player.Start_Points,
         hitPoints: player.Hit_Points,
         placementPoints: player.Placement_Points,
+        photo_url: player.photo_url,
       })),
       venue: players[0].Venue,
       date: gameDate,

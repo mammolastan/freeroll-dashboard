@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
+import PlayerAvatar from '@/components/ui/PlayerAvatar'
 
 interface Player {
     name: string
@@ -17,6 +18,7 @@ interface Player {
     hitPoints: number
     placementPoints: number
     nickname: string | null
+    photo_url: string | null
 }
 
 interface GameDetails {
@@ -134,6 +136,14 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
                                     >
                                         {player.placement}
                                     </div>
+                                    {player.photo_url && (
+                                        <PlayerAvatar
+                                            photoUrl={player.photo_url}
+                                            name={player.nickname || player.name}
+                                            size="sm"
+                                            showFallback={false}
+                                        />
+                                    )}
                                     <Link
                                         href={`/players?uid=${encodeURIComponent(player.uid)}`}
                                         className="freeroll-link font-medium"

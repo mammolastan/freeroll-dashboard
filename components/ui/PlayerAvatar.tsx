@@ -12,6 +12,7 @@ interface PlayerAvatarProps {
     name?: string;
     size?: 'sm' | 'md' | 'lg' | 'xl';
     className?: string;
+    showFallback?: boolean;
 }
 
 const sizeClasses = {
@@ -19,6 +20,13 @@ const sizeClasses = {
     md: 'w-12 h-12',
     lg: 'w-16 h-16',
     xl: 'w-24 h-24',
+};
+
+const pixelSizes = {
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96,
 };
 
 const iconSizes = {
@@ -32,12 +40,18 @@ export function PlayerAvatar({
     photoUrl,
     name,
     size = 'md',
-    className = ''
+    className = '',
+    showFallback = true
 }: PlayerAvatarProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const sizeClass = sizeClasses[size];
+    const pixelSize = pixelSizes[size];
     const iconSize = iconSizes[size];
     const hasPhoto = photoUrl && photoUrl.trim() !== '';
+
+    // Strip query parameters from the photo URL for Next.js Image component
+    // Query params are used for cache busting but cause issues with Next.js Image optimization
+    const cleanPhotoUrl = photoUrl ? photoUrl.split('?')[0] : null;
 
     const handleClick = () => {
         if (hasPhoto) {
@@ -59,10 +73,12 @@ export function PlayerAvatar({
                     }
                 }}
             >
-                {photoUrl ? (
+                {cleanPhotoUrl ? (
                     <Image
-                        src={photoUrl}
+                        src={cleanPhotoUrl}
                         alt={name || 'Player'}
+                        width={pixelSize}
+                        height={pixelSize}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                             // Hide broken image and show fallback
@@ -73,10 +89,12 @@ export function PlayerAvatar({
                 ) : null}
 
                 {/* Fallback icon - shown if no photo or if photo fails to load */}
-                <User
-                    size={iconSize}
-                    className={`text-gray-400 ${photoUrl ? 'hidden' : ''}`}
-                />
+                {showFallback && (
+                    <User
+                        size={iconSize}
+                        className={`text-gray-400 ${cleanPhotoUrl ? 'hidden' : ''}`}
+                    />
+                )}
             </div>
 
             {/* Modal */}

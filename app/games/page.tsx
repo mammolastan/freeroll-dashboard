@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Trophy, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import { formatGameDateET } from "@/lib/utils";
+import PlayerAvatar from '@/components/ui/PlayerAvatar'
 
 interface TopPlayer {
     name: string
@@ -13,6 +14,7 @@ interface TopPlayer {
     knockouts: number
     UID: string
     nickname: string
+    photo_url: string | null
 }
 
 interface Game {
@@ -74,8 +76,7 @@ export default function GamesPage() {
             </div>
         )
     }
-    console.log("games")
-    console.log(games)
+    
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Recent Games</h1>
@@ -107,6 +108,14 @@ export default function GamesPage() {
                                                 >
                                                     {index + 1}
                                                 </div>
+                                                {player.photo_url && (
+                                                    <PlayerAvatar
+                                                        photoUrl={player.photo_url}
+                                                        name={player.nickname || player.name}
+                                                        size="sm"
+                                                        showFallback={false}
+                                                    />
+                                                )}
                                                 <Link
                                                     href={`/players?uid=${encodeURIComponent(player.UID)}`}
                                                     className="freeroll-link font-medium text-blue-600"
