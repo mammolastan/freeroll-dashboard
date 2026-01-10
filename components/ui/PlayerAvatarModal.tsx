@@ -1,6 +1,7 @@
 // components/ui/PlayerAvatarModal.tsx
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import './PlayerAvatarModal.css';
 
@@ -40,9 +41,9 @@ export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAva
 
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 animate-fadeIn"
+            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[9999] p-4 animate-fadeIn"
             onClick={handleBackdropClick}
         >
             <div
@@ -99,4 +100,6 @@ export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAva
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

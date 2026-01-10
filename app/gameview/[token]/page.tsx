@@ -11,6 +11,7 @@ import { PlayerCheckInModal } from '@/components/PlayerCheckIn/PlayerCheckInModa
 import { QrCode, UserPlus } from 'lucide-react';
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate, formatTime } from '@/lib/utils';
+import PlayerAvatar from '@/components/ui/PlayerAvatar';
 
 // Helper function to calculate dynamic placement based on elimination_position
 function calculatePlacement(player: Player, totalPlayers: number): number | null {
@@ -28,17 +29,27 @@ function PlayerCard({ player, totalPlayers }: { player: Player; totalPlayers: nu
       : 'bg-gray-900/60 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
       }`}>
       <div className="flex justify-between items-start">
-        <div>
-          <h3 className={`font-semibold ${player.is_active ? 'text-cyan-300' : 'text-gray-400'}`}>
-            {player.nickname ? (
-              <span>{player.nickname}</span>
-            ) : player.name}
-          </h3>
-          {player.is_new_player ? (
-            <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-1 rounded-full border border-purple-500/50">
-              New Player
-            </span>
-          ) : ''}
+        <div className="flex items-center gap-3">
+          {player.photo_url && (
+            <PlayerAvatar
+              photoUrl={player.photo_url}
+              name={player.nickname || player.name}
+              size="sm"
+              showFallback={false}
+            />
+          )}
+          <div>
+            <h3 className={`font-semibold ${player.is_active ? 'text-cyan-300' : 'text-gray-400'}`}>
+              {player.nickname ? (
+                <span>{player.nickname}</span>
+              ) : player.name}
+            </h3>
+            {player.is_new_player ? (
+              <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-1 rounded-full border border-purple-500/50">
+                New Player
+              </span>
+            ) : ''}
+          </div>
         </div>
 
         <div className="text-right">

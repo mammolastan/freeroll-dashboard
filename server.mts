@@ -431,7 +431,8 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
     const players = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         tdp.*,
-        COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname
+        COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname,
+        p.photo_url
       FROM tournament_draft_players tdp
       LEFT JOIN players p ON tdp.player_uid = p.UID
       WHERE tdp.tournament_draft_id = ${tournamentDraftId}
@@ -451,6 +452,7 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
       eliminated_by_player_id: null,
       elimination_position: p.ko_position ? Number(p.ko_position) : null,
       placement: p.placement ? Number(p.placement) : null,
+      photo_url: p.photo_url ? String(p.photo_url) : null,
       hitman: p.hitman_name
         ? {
             id: null,

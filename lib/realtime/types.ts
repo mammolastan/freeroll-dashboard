@@ -13,6 +13,7 @@ export interface Player {
   eliminated_by_player_id: number | null;
   elimination_position: number | null; // ko_position in DB
   placement: number | null; // placement in DB
+  photo_url: string | null;
   hitman?: {
     id: number | null;
     name: string; // hitman_name in DB
