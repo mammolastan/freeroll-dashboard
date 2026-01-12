@@ -128,10 +128,7 @@ export default function GamesPage() {
                                                     <Trophy size={14} className="text-green-500" />
                                                     {player.points}
                                                 </span>
-                                                <span className="flex items-center gap-1 text-black">
-                                                    <UtensilsCrossed size={14} className="text-red-500" />
-                                                    {player.knockouts}
-                                                </span>
+                                               
                                             </div>
                                         </div>
                                     ))}

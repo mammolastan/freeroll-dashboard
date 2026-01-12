@@ -62,7 +62,7 @@ export function PlayerAvatar({
     return (
         <>
             <div
-                className={`${sizeClass} rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shadow-sm ${hasPhoto ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${className}`}
+                className={`${sizeClass}  overflow-hidden bg-gray-200 flex items-center justify-center shadow-sm ${hasPhoto ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${className}`}
                 onClick={handleClick}
                 role={hasPhoto ? 'button' : undefined}
                 tabIndex={hasPhoto ? 0 : undefined}
