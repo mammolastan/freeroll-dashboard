@@ -76,13 +76,6 @@ export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAva
                             src={photoUrl}
                             alt={name}
                             className="glass-image"
-                            style={{
-                                width: '100%',
-                                height: 'auto',
-                                maxHeight: '70vh',
-                                objectFit: 'contain',
-                                display: 'block'
-                            }}
                         />
                         {/* Moving sheen overlay */}
                         <div className="glass-sheen" />
