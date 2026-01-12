@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Camera, User, Save, Loader2 } from "lucide-react";
+import CropModal from "./CropModal";
 
 
 export default function ProfilePage() {
@@ -18,6 +19,9 @@ export default function ProfilePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedFileName, setSelectedFileName] = useState<string>("");
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -157,14 +161,33 @@ export default function ProfilePage() {
             return;
         }
 
+        setMessage(null);
+
+        // Read the file and show crop modal
+        const reader = new FileReader();
+        reader.onload = () => {
+            setSelectedImage(reader.result as string);
+            setSelectedFileName(file.name);
+            setShowCropModal(true);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        setShowCropModal(false);
         setIsUploadingPhoto(true);
         setMessage(null);
 
         try {
-            // Resize image to normalize camera photos and screenshots
-            const resizedBlob = await resizeImage(file);
+            // Resize the cropped image
+            const resizedBlob = await resizeImage(new File([croppedBlob], selectedFileName, { type: "image/jpeg" }));
             const formData = new FormData();
-            formData.append("photo", resizedBlob, file.name);
+            formData.append("photo", resizedBlob, selectedFileName);
 
             const res = await fetch("/api/profile/photo", {
                 method: "POST",
@@ -192,11 +215,14 @@ export default function ProfilePage() {
             setMessage({ type: "error", text: "Failed to upload photo" });
         } finally {
             setIsUploadingPhoto(false);
-            // Reset file input
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
+            setSelectedImage(null);
         }
+    };
+
+    const handleCropCancel = () => {
+        setShowCropModal(false);
+        setSelectedImage(null);
+        setSelectedFileName("");
     };
 
     const handleRemovePhoto = async () => {
@@ -406,6 +432,15 @@ export default function ProfilePage() {
 
                 </div>
             </div>
+
+            {/* Crop Modal */}
+            {showCropModal && selectedImage && (
+                <CropModal
+                    imageSrc={selectedImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </div>
     );
 }
