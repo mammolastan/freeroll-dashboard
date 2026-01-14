@@ -7,7 +7,7 @@ import path from "path";
 import { existsSync } from "fs";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 // Ensure upload directory exists
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB" },
+        { error: "File too large. Maximum size is 10MB" },
         { status: 400 }
       );
     }
