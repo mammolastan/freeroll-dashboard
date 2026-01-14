@@ -155,9 +155,9 @@ export default function ProfilePage() {
             return;
         }
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setMessage({ type: "error", text: "Image must be less than 5MB" });
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            setMessage({ type: "error", text: "Image must be less than 10MB" });
             return;
         }
 
@@ -349,7 +349,7 @@ export default function ProfilePage() {
                         </div>
 
                         <p className="mt-3 text-sm text-gray-500">
-                            Click the photo or button to upload. Max size: 5MB
+                            Click the photo or button to upload. Max size: 10MB
                         </p>
                     </div>
 

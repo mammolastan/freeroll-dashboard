@@ -1,3 +1,5 @@
+// app/api/profile/photo/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,7 +9,7 @@ import path from "path";
 import { existsSync } from "fs";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 // Ensure upload directory exists
