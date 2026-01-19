@@ -202,8 +202,7 @@ export default function GameViewPage() {
     <div className="min-h-screen bg-black py-8">
       <div className="max-w-6xl mx-auto px-4">
         <TournamentHeader
-          tournament={gameData.tournament}
-          stats={computedStats}
+          tournament={gameData.tournament}          
         />
 
         {/* Check In Button */}
@@ -319,8 +318,7 @@ export default function GameViewPage() {
         {checkInToken && (
           <PlayerCheckInModal
             isOpen={showCheckInModal}
-            onClose={() => setShowCheckInModal(false)}
-            tournamentToken={token as string}
+            onClose={() => setShowCheckInModal(false)}            
             checkInToken={checkInToken}
             onSuccess={() => {
               setShowCheckInModal(false);

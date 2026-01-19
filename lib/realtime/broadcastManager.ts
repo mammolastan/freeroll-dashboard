@@ -32,7 +32,8 @@ export class BroadcastManager {
       const room = event.tournamentId.toString();
       console.log(`[BROADCAST] ${event.type} to room ${room}:`, event.data);
 
-      global.socketIoInstance.to(room).emit(event.type, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (global.socketIoInstance.to(room) as any).emit(event.type, {
         tournamentId: event.tournamentId,
         data: event.data,
         timestamp: event.timestamp
@@ -69,12 +70,12 @@ export class BroadcastManager {
   broadcastPlayerElimination(
     tournamentId: number,
     player: Player,
-    eliminatedBy: Player,
+    eliminatedBy: Player | { id: number | null; name: string; nickname: string | null } | undefined,
     position: number
   ): void {
     const event = this.createEvent('player:eliminated', tournamentId, {
       player,
-      eliminatedBy,
+      eliminatedBy: eliminatedBy ?? null,
       position
     });
     this.broadcast(event);

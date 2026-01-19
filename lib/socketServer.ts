@@ -8,7 +8,19 @@ interface PlayerData {
   [key: string]: unknown;
 }
 
-export function emitPlayerJoined(tournamentDraftId: number, newPlayer: PlayerData) {
+interface PlayerDeleteNotification {
+  deleted: true;
+  playerId: number;
+}
+
+interface BatchUpdateNotification {
+  batchUpdate: true;
+  updatedPlayers: PlayerData[];
+}
+
+type PlayerUpdateData = PlayerData | PlayerDeleteNotification | BatchUpdateNotification;
+
+export function emitPlayerJoined(tournamentDraftId: number, newPlayer: PlayerUpdateData) {
   // Simple approach: make an HTTP request to localhost to trigger the update
   try {
     console.log(

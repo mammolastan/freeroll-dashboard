@@ -8,28 +8,31 @@ export class PlayersService {
   async getTournamentPlayers(tournamentId: number): Promise<Player[]> {
     try {
       const players = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT * FROM tournament_draft_players
-        WHERE tournament_draft_id = ${tournamentId}
-        ORDER BY created_at ASC
+        SELECT tdp.*, p.photo_url
+        FROM tournament_draft_players tdp
+        LEFT JOIN players p ON tdp.player_uid = p.UID
+        WHERE tdp.tournament_draft_id = ${tournamentId}
+        ORDER BY tdp.created_at ASC
       `;
 
       return players.map((p) => ({
-        id: p.id,
-        name: p.player_name,
-        nickname: p.player_nickname,
-        uid: p.player_uid,
-        is_new_player: p.is_new_player,
-        checked_in_at: p.checked_in_at,
-        created_at: p.created_at,
+        id: p.id as number,
+        name: p.player_name as string,
+        nickname: p.player_nickname as string | null,
+        uid: p.player_uid as string | null,
+        is_new_player: p.is_new_player as boolean,
+        checked_in_at: p.checked_in_at as Date | null,
+        created_at: p.created_at as Date,
         is_active: p.ko_position === null, // Active if no ko_position
         eliminated_at: null,
         eliminated_by_player_id: null,
-        elimination_position: p.ko_position,
-        placement: p.placement,
+        elimination_position: p.ko_position as number | null,
+        placement: p.placement as number | null,
+        photo_url: p.photo_url as string | null,
         hitman: p.hitman_name
           ? {
               id: null,
-              name: p.hitman_name,
+              name: p.hitman_name as string,
               nickname: null,
             }
           : undefined,

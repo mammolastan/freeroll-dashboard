@@ -1,7 +1,7 @@
 // app/api/checkin/[token]/players/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { RawQueryResult } from "@/types";
+import { RawQueryResult, PlayerSearchResult } from "@/types";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -114,12 +114,12 @@ export async function POST(
       player_nickname = null;
       is_new_player = true;
     } else {
-      // Search for existing player in main database by BOTH Name AND nickname
+      // Search for existing player in main database by BOTH name AND nickname
       // First get potential matches
       const likePattern = `%${cleanPlayerName}%`;
-      const existingPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT Name, UID, nickname FROM players
-        WHERE Name LIKE ${likePattern}
+      const existingPlayers = await prisma.$queryRaw<PlayerSearchResult[]>`
+        SELECT name, uid, nickname FROM players
+        WHERE name LIKE ${likePattern}
            OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
         LIMIT 10
       `;
@@ -128,8 +128,8 @@ export async function POST(
       const sortedPlayers = existingPlayers
         .sort((a, b) => {
           // Exact name match gets highest priority (0)
-          if (a.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
-          if (b.Name.toLowerCase() === cleanPlayerName.toLowerCase()) return 1;
+          if (a.name.toLowerCase() === cleanPlayerName.toLowerCase()) return -1;
+          if (b.name.toLowerCase() === cleanPlayerName.toLowerCase()) return 1;
 
           // Exact nickname match gets second priority (1)
           if (
@@ -144,30 +144,30 @@ export async function POST(
             return 1;
 
           // Alphabetical order for fuzzy matches
-          return a.Name.localeCompare(b.Name);
+          return a.name.localeCompare(b.name);
         })
         .slice(0, 5);
 
       let suggested_players = [];
 
       if (sortedPlayers.length > 0) {
-        //Check for exact match in BOTH Name AND nickname fields
+        //Check for exact match in BOTH name AND nickname fields
         const exactMatch = sortedPlayers.find(
           (p) =>
-            String(p.Name).toLowerCase() === cleanPlayerName.toLowerCase() ||
+            p.name.toLowerCase() === cleanPlayerName.toLowerCase() ||
             (p.nickname &&
-              String(p.nickname).toLowerCase() === cleanPlayerName.toLowerCase())
+              p.nickname.toLowerCase() === cleanPlayerName.toLowerCase())
         );
 
         if (exactMatch) {
-          player_uid = exactMatch.UID;
+          player_uid = exactMatch.uid;
           player_nickname = exactMatch.nickname;
           is_new_player = false;
         } else {
           // Return suggestions for fuzzy matches
           suggested_players = sortedPlayers.slice(0, 3).map((p) => ({
-            name: p.Name,
-            uid: p.UID,
+            name: p.name,
+            uid: p.uid,
             nickname: p.nickname,
           }));
 
@@ -259,8 +259,8 @@ export async function PUT(
       is_new_player = true;
     } else {
       // User selected existing player
-      const selectedPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT Name, UID, nickname FROM players WHERE UID = ${selected_player_uid}
+      const selectedPlayer = await prisma.$queryRaw<PlayerSearchResult[]>`
+        SELECT name, uid, nickname FROM players WHERE uid = ${selected_player_uid}
       `;
 
       if (!selectedPlayer.length) {
@@ -271,8 +271,8 @@ export async function PUT(
       }
 
       const playerData = selectedPlayer[0];
-      player_name = playerData.Name;
-      player_uid = playerData.UID;
+      player_name = playerData.name;
+      player_uid = playerData.uid;
       player_nickname = playerData.nickname;
       is_new_player = false;
     }

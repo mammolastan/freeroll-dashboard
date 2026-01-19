@@ -10,6 +10,7 @@ import {
   BLIND_SCHEDULES,
   getBlindSchedule,
 } from "./lib/blindLevels.mjs";
+import { TypedServer } from "./types/socket.js";
 
 // Initialize Prisma Client
 const globalForPrisma = globalThis as unknown as {
@@ -26,7 +27,7 @@ type RawQueryResult = Record<string, unknown>;
 // Global type declaration for Socket.IO instance
 declare global {
   // eslint-disable-next-line no-var
-  var socketIoInstance: Server | undefined;
+  var socketIoInstance: TypedServer | undefined;
 }
 
 // Timer state management
@@ -480,7 +481,7 @@ app.prepare().then(async () => {
     const io = new Server(httpServer);
 
     // Make Socket.IO instance available globally for API routes
-    global.socketIoInstance = io;
+    global.socketIoInstance = io as unknown as TypedServer;
 
     // Recover active timers from database on startup
     await recoverActiveTimers();

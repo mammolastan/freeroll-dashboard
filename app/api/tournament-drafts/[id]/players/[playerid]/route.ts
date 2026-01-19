@@ -2,15 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { prisma } from "@/lib/prisma";
-import { RawQueryResult } from "@/types";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; playerid: string } }
+  { params }: { params: Promise<{ id: string; playerid: string }> }
 ) {
   try {
+    const { id, playerid } = await params;
     const body = await request.json();
-    const playerId = parseInt(params.playerid);
+    const playerId = parseInt(playerid);
     const { player_name, hitman_name, ko_position, placement } = body;
 
     console.log("Updating player:", playerId, "with data:", {
@@ -35,14 +35,20 @@ export async function PUT(
 
     if (updateResult === 1) {
       // Fetch the complete updated record
-      const updatedPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
+      const updatedPlayerResult = await prisma.$queryRaw<{
+        id: number;
+        player_name: string;
+        player_uid: string | null;
+        player_nickname?: string | null;
+        [key: string]: unknown;
+      }[]>`
         SELECT * FROM tournament_draft_players WHERE id = ${playerId}
       `;
 
       const updatedPlayer = updatedPlayerResult[0];
 
       // Emit Socket.IO event for real-time updates
-      const draftId = parseInt(params.id);
+      const draftId = parseInt(id);
       emitPlayerJoined(draftId, updatedPlayer);
 
       return NextResponse.json(updatedPlayer);
@@ -65,11 +71,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string; playerid: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string; playerid: string }> }
 ) {
   try {
-    const playerId = parseInt(params.playerid);
+    const { id, playerid } = await params;
+    const playerId = parseInt(playerid);
 
     const deleteResult = await prisma.$executeRaw`
       DELETE FROM tournament_draft_players WHERE id = ${playerId}
@@ -77,7 +84,7 @@ export async function DELETE(
 
     if (deleteResult === 1) {
       // Emit Socket.IO event for real-time updates
-      const draftId = parseInt(params.id);
+      const draftId = parseInt(id);
       emitPlayerJoined(draftId, { deleted: true, playerId });
 
       return NextResponse.json({ success: true });

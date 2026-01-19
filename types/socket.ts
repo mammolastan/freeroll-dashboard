@@ -146,6 +146,8 @@ export interface ServerToClientEvents {
   'player:removed': (payload: PlayerUpdatePayload) => void;
   'player:checked_in': (payload: CheckInPayload) => void;
   'player:knockout': (payload: PlayerKnockoutPayload) => void;
+  'player:eliminated': (payload: PlayerKnockoutPayload) => void;
+  'players:updated': (payload: BatchPlayerUpdatePayload) => void;
   'players:batch_update': (payload: BatchPlayerUpdatePayload) => void;
 
   // Tournament events
@@ -153,6 +155,7 @@ export interface ServerToClientEvents {
   'tournament:status_changed': (payload: TournamentUpdatePayload) => void;
   'tournament:finalized': (payload: TournamentUpdatePayload) => void;
   'tournament:full_state': (payload: TournamentGameState) => void;
+  'venue:updated': (payload: TournamentUpdatePayload) => void;
 
   // Timer events
   'timer:updated': (payload: TimerUpdatePayload) => void;
