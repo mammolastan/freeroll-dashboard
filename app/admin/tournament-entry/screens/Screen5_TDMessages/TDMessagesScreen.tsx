@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Megaphone, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { TournamentFeed } from '@/components/TournamentFeed/TournamentFeed';
 import { ScreenTabs } from '../../components/ScreenTabs';
@@ -31,6 +31,21 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSpecialsClick = () => {
+    const specialsText = "Special hand: \nDrink specials: ";
+    const cursorPosition = "Special hand: ".length;
+    setMessage(specialsText);
+
+    // Focus and set cursor position after state update
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,8 +134,19 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
             </div>
 
             <form onSubmit={handleSubmit}>
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={handleSpecialsClick}
+                  disabled={isSubmitting}
+                  className="px-3 py-1 text-xs font-medium bg-amber-600/80 text-white rounded-md hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500"
+                >
+                  Specials
+                </button>
+              </div>
               <div className="mb-3">
                 <textarea
+                  ref={textareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Enter your message to players..."
