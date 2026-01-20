@@ -4,6 +4,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Target, Users, Trophy, X } from 'lucide-react';
+import { ScreenTabs } from '../../components/ScreenTabs';
+import { ScreenNumber } from '../../hooks/useScreenRouter';
 
 interface TournamentDraft {
   id: number;
@@ -35,6 +37,8 @@ interface PlayerControlScreenProps {
   currentDraft: TournamentDraft | null;
   players: Player[];
   onDataChange: () => void;
+  currentScreen: ScreenNumber;
+  onScreenChange: (screen: ScreenNumber) => void;
 }
 
 // Helper function to calculate dynamic placement based on ko_position
@@ -43,7 +47,7 @@ function calculatePlacement(player: Player, totalPlayers: number): number | null
   return totalPlayers - player.ko_position + 1;
 }
 
-export function PlayerControlScreen({ currentDraft, players, onDataChange }: PlayerControlScreenProps) {
+export function PlayerControlScreen({ currentDraft, players, onDataChange, currentScreen, onScreenChange }: PlayerControlScreenProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedHitman, setSelectedHitman] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -281,6 +285,11 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange }: Pla
         <p className="text-xl text-gray-400">
           {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
+      </div>
+
+      {/* Screen Navigation Tabs */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
       </div>
 
       {/* Knockout Modal */}

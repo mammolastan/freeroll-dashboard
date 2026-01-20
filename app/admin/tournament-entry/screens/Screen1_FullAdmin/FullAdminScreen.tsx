@@ -15,6 +15,8 @@ import { PlayerRow } from '../../components/PlayerRow';
 import { TournamentValidationStatus } from '../../components/TournamentValidationStatus';
 import { validateTournamentForIntegration, exportTournamentAsText } from '@/lib/tournamentValidation';
 import { BLIND_SCHEDULES } from '@/lib/blindLevels';
+import { ScreenTabs } from '../../components/ScreenTabs';
+import { ScreenNumber } from '../../hooks/useScreenRouter';
 
 interface TournamentDraft {
     id: number;
@@ -60,6 +62,8 @@ interface FullAdminScreenProps {
     players: Player[];
     onDraftChange: (draft: TournamentDraft | null) => void;
     onDataChange: () => void;
+    currentScreen: ScreenNumber;
+    onScreenChange: (screen: ScreenNumber) => void;
 }
 
 export function FullAdminScreen({
@@ -71,6 +75,8 @@ export function FullAdminScreen({
     players,
     onDraftChange,
     onDataChange,
+    currentScreen,
+    onScreenChange,
 }: FullAdminScreenProps) {
     // Authentication
     const [password, setPassword] = useState('');
@@ -1722,6 +1728,9 @@ export function FullAdminScreen({
 
 
                                 </div>
+
+                                {/* Screen Navigation Tabs */}
+                                <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 
                                 {/* Status Banner */}
                                 {currentDraft && (

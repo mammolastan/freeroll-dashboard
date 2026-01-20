@@ -40,7 +40,7 @@ interface Player {
 }
 
 export default function TournamentEntryPage() {
-  const { currentScreen } = useScreenRouter(1);
+  const { currentScreen, setCurrentScreen } = useScreenRouter(1);
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -235,6 +235,8 @@ export default function TournamentEntryPage() {
           players={players}
           onDraftChange={handleDraftChange}
           onDataChange={handleDataChange}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
         />
       )}
 
@@ -246,6 +248,8 @@ export default function TournamentEntryPage() {
           oneMinuteAudio={oneMinuteAudio}
           levelChangeAudio={levelChangeAudio}
           enableAudio={enableAudio}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
         />
       )}
 
@@ -254,6 +258,8 @@ export default function TournamentEntryPage() {
           currentDraft={currentDraft}
           players={players}
           onDataChange={handleDataChange}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
         />
       )}
 
@@ -262,12 +268,16 @@ export default function TournamentEntryPage() {
           currentDraft={currentDraft}
           players={players}
           onDataChange={handleDataChange}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
         />
       )}
 
       {currentScreen === 5 && (
         <TDMessagesScreen
           currentDraft={currentDraft}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
         />
       )}
     </>

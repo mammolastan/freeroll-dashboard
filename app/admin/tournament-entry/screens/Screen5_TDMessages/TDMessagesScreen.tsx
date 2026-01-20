@@ -5,6 +5,8 @@
 import React, { useState } from 'react';
 import { Megaphone, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { TournamentFeed } from '@/components/TournamentFeed/TournamentFeed';
+import { ScreenTabs } from '../../components/ScreenTabs';
+import { ScreenNumber } from '../../hooks/useScreenRouter';
 
 interface TournamentDraft {
   id: number;
@@ -21,9 +23,11 @@ interface TournamentDraft {
 
 interface TDMessagesScreenProps {
   currentDraft: TournamentDraft | null;
+  currentScreen: ScreenNumber;
+  onScreenChange: (screen: ScreenNumber) => void;
 }
 
-export function TDMessagesScreen({ currentDraft }: TDMessagesScreenProps) {
+export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }: TDMessagesScreenProps) {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -90,6 +94,11 @@ export function TDMessagesScreen({ currentDraft }: TDMessagesScreenProps) {
         <p className="text-lg text-gray-400">
           {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
+      </div>
+
+      {/* Screen Navigation Tabs */}
+      <div className="max-w-6xl mx-auto mb-4">
+        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
       </div>
 
       {/* Two Column Layout */}

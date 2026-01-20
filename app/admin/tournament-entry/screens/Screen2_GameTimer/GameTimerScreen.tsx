@@ -4,6 +4,8 @@
 
 import React from 'react';
 import { MinimalGameTimer } from './MinimalGameTimer';
+import { ScreenTabs } from '../../components/ScreenTabs';
+import { ScreenNumber } from '../../hooks/useScreenRouter';
 
 interface TournamentDraft {
   id: number;
@@ -38,6 +40,8 @@ interface GameTimerScreenProps {
   oneMinuteAudio: HTMLAudioElement | null;
   levelChangeAudio: HTMLAudioElement | null;
   enableAudio: () => void;
+  currentScreen: ScreenNumber;
+  onScreenChange: (screen: ScreenNumber) => void;
 }
 
 export function GameTimerScreen({
@@ -46,7 +50,9 @@ export function GameTimerScreen({
   audioEnabled,
   oneMinuteAudio,
   levelChangeAudio,
-  enableAudio
+  enableAudio,
+  currentScreen,
+  onScreenChange
 }: GameTimerScreenProps) {
   // Calculate players remaining (those without ko_position)
   const playersRemaining = players.filter(p => p.ko_position === null).length;
@@ -69,7 +75,10 @@ export function GameTimerScreen({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-8">
-
+      {/* Screen Navigation Tabs */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+      </div>
 
       {/* Minimal Game Timer - Full Screen Display */}
       <div className="w-full flex-1 flex items-center justify-center">

@@ -4,6 +4,8 @@
 
 import React from 'react';
 import { PlayerCheckInCore } from '@/components/PlayerCheckIn/PlayerCheckInCore';
+import { ScreenTabs } from '../../components/ScreenTabs';
+import { ScreenNumber } from '../../hooks/useScreenRouter';
 
 interface TournamentDraft {
   id: number;
@@ -35,9 +37,11 @@ interface PlayerCheckInScreenProps {
   currentDraft: TournamentDraft | null;
   players: Player[];
   onDataChange: () => void;
+  currentScreen: ScreenNumber;
+  onScreenChange: (screen: ScreenNumber) => void;
 }
 
-export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: PlayerCheckInScreenProps) {
+export function PlayerCheckInScreen({ currentDraft, players, onDataChange, currentScreen, onScreenChange }: PlayerCheckInScreenProps) {
   const handleCheckIn = async (playerData: {
     player_name: string;
     player_uid: string | null;
@@ -91,6 +95,9 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange }: Pla
             {players.length} Players Registered
           </div>
         </div>
+
+        {/* Screen Navigation Tabs */}
+        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 
         <PlayerCheckInCore
           players={players}
