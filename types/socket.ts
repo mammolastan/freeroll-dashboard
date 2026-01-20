@@ -149,6 +149,8 @@ export interface ServerToClientEvents {
   'player:eliminated': (payload: PlayerKnockoutPayload) => void;
   'players:updated': (payload: BatchPlayerUpdatePayload) => void;
   'players:batch_update': (payload: BatchPlayerUpdatePayload) => void;
+  // Legacy event for backwards compatibility with gameview
+  'updatePlayers': (players: unknown[]) => void;
 
   // Tournament events
   'tournament:updated': (payload: TournamentUpdatePayload) => void;
