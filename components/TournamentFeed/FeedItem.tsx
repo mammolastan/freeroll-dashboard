@@ -5,10 +5,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { FeedItem as FeedItemType } from '@/lib/realtime/hooks/useTournamentFeed';
-import { Skull, MessageCircle, UserCheck, Info, Megaphone } from 'lucide-react';
+import { Skull, UserCheck, Info, Megaphone, X } from 'lucide-react';
 
 interface FeedItemProps {
   item: FeedItemType;
+  onDelete?: (itemId: number) => void;
 }
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -70,9 +71,9 @@ function KnockoutItem({ item }: FeedItemProps) {
 }
 
 // Message Item
-function MessageItem({ item }: FeedItemProps) {
+function MessageItem({ item, onDelete }: FeedItemProps) {
   return (
-    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors group">
       {/* Avatar/Icon */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center overflow-hidden">
         {item.author_photo_url ? (
@@ -104,6 +105,17 @@ function MessageItem({ item }: FeedItemProps) {
           {item.message_text}
         </p>
       </div>
+
+      {/* Delete Button */}
+      {onDelete && (
+        <button
+          onClick={() => onDelete(item.id)}
+          className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete message"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
@@ -153,9 +165,9 @@ function SystemItem({ item }: FeedItemProps) {
 }
 
 // TD Message Item
-function TDMessageItem({ item }: FeedItemProps) {
+function TDMessageItem({ item, onDelete }: FeedItemProps) {
   return (
-    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors bg-cyan-500/5">
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors bg-cyan-500/5 group">
       {/* Icon */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
         <Megaphone className="h-4 w-4 text-cyan-400" />
@@ -175,23 +187,34 @@ function TDMessageItem({ item }: FeedItemProps) {
           {item.message_text}
         </p>
       </div>
+
+      {/* Delete Button */}
+      {onDelete && (
+        <button
+          onClick={() => onDelete(item.id)}
+          className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete message"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
 
 // Main FeedItem Component (polymorphic)
-export function FeedItem({ item }: FeedItemProps) {
+export function FeedItem({ item, onDelete }: FeedItemProps) {
   switch (item.item_type) {
     case 'knockout':
       return <KnockoutItem item={item} />;
     case 'message':
-      return <MessageItem item={item} />;
+      return <MessageItem item={item} onDelete={onDelete} />;
     case 'checkin':
       return <CheckInItem item={item} />;
     case 'system':
       return <SystemItem item={item} />;
     case 'td_message':
-      return <TDMessageItem item={item} />;
+      return <TDMessageItem item={item} onDelete={onDelete} />;
     default:
       return null;
   }

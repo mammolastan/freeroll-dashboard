@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult, PlayerSearchResult } from "@/types";
+import { createCheckInFeedItem } from "@/lib/feed/feedService";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -191,6 +192,14 @@ export async function POST(
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
+    // Create feed item for check-in
+    try {
+      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName);
+    } catch (error) {
+      console.error("Failed to create check-in feed item:", error);
+      // Don't fail the check-in if feed item creation fails
+    }
+
     // Trigger real-time update for all connected clients
     try {
       await fetch(
@@ -301,6 +310,14 @@ export async function PUT(
     const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
+
+    // Create feed item for check-in
+    try {
+      await createCheckInFeedItem(Number(tournamentId), player_name);
+    } catch (error) {
+      console.error("Failed to create check-in feed item:", error);
+      // Don't fail the check-in if feed item creation fails
+    }
 
     // Trigger real-time update for all connected clients
     try {

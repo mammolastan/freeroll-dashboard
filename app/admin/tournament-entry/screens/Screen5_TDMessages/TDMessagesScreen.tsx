@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { Megaphone, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { TournamentFeed } from '@/components/TournamentFeed/TournamentFeed';
 
 interface TournamentDraft {
   id: number;
@@ -45,9 +46,8 @@ export function TDMessagesScreen({ currentDraft }: TDMessagesScreenProps) {
       const data = await response.json();
 
       if (response.ok) {
-        setFeedback({ type: 'success', text: 'Message sent to feed!' });
+        setFeedback({ type: 'success', text: 'Message sent!' });
         setMessage('');
-        // Clear success message after 3 seconds
         setTimeout(() => setFeedback(null), 3000);
       } else {
         setFeedback({ type: 'error', text: data.error || 'Failed to send message' });
@@ -81,108 +81,108 @@ export function TDMessagesScreen({ currentDraft }: TDMessagesScreenProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-5xl font-bold text-cyan-300 mb-2 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]">
-          TD Messages
+      <div className="mb-6 text-center">
+        <h1 className="text-4xl font-bold text-cyan-300 mb-1 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+          Feed Management
         </h1>
-        <p className="text-xl text-gray-400">
+        <p className="text-lg text-gray-400">
           {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto">
-        {/* Message Form Card */}
-        <div className="bg-gray-900/80 border-2 border-cyan-500/30 rounded-xl p-8 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
-              <Megaphone className="h-6 w-6 text-cyan-400" />
+      {/* Two Column Layout */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Send TD Message */}
+        <div>
+          <div className="bg-gray-900/80 border-2 border-cyan-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+                <Megaphone className="h-5 w-5 text-cyan-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-cyan-300">Send TD Message</h2>
+                <p className="text-gray-400 text-xs">
+                  Appears in the &quot;From the TD&quot; tab
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-cyan-300">Send Message to Feed</h2>
-              <p className="text-gray-400 text-sm">
-                This message will appear in the &quot;From the TD&quot; tab for all players
-              </p>
-            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Enter your message to players..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none"
+                  disabled={isSubmitting}
+                />
+                <div className="flex justify-between items-center mt-1">
+                  <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-gray-500'}`}>
+                    {charCount} / {maxChars}
+                  </span>
+                  {isOverLimit && (
+                    <span className="text-xs text-red-400">Too long</span>
+                  )}
+                </div>
+              </div>
+
+              {feedback && (
+                <div className={`mb-3 p-2 rounded-lg flex items-center gap-2 text-sm ${
+                  feedback.type === 'success'
+                    ? 'bg-green-500/20 border border-green-500/40 text-green-400'
+                    : 'bg-red-500/20 border border-red-500/40 text-red-400'
+                }`}>
+                  {feedback.type === 'success' ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  <span>{feedback.text}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !message.trim() || isOverLimit}
+                className="w-full px-4 py-3 text-base font-bold bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5" />
+                    Send to Feed
+                  </>
+                )}
+              </button>
+            </form>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Enter your message to players..."
-                rows={4}
-                className="w-full px-4 py-3 text-lg bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none"
-                disabled={isSubmitting}
-              />
-              <div className="flex justify-between items-center mt-2">
-                <span className={`text-sm ${isOverLimit ? 'text-red-400' : 'text-gray-500'}`}>
-                  {charCount} / {maxChars}
-                </span>
-                {isOverLimit && (
-                  <span className="text-sm text-red-400">
-                    Message is too long
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Feedback Message */}
-            {feedback && (
-              <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-                feedback.type === 'success'
-                  ? 'bg-green-500/20 border border-green-500/40 text-green-400'
-                  : 'bg-red-500/20 border border-red-500/40 text-red-400'
-              }`}>
-                {feedback.type === 'success' ? (
-                  <CheckCircle className="h-5 w-5" />
-                ) : (
-                  <AlertCircle className="h-5 w-5" />
-                )}
-                <span>{feedback.text}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting || !message.trim() || isOverLimit}
-              className="w-full px-6 py-4 text-xl font-bold bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-3"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-6 w-6" />
-                  Send to Feed
-                </>
-              )}
-            </button>
-          </form>
+          {/* Tips */}
+          <div className="mt-4 bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">Admin Tips</h3>
+            <ul className="space-y-1 text-gray-400 text-xs">
+              <li>• Hover over messages to reveal the delete button</li>
+              <li>• Only user messages and TD messages can be deleted</li>
+              <li>• Knockouts and check-ins cannot be removed</li>
+            </ul>
+          </div>
         </div>
 
-        {/* Tips Card */}
-        <div className="mt-6 bg-gray-800/50 border border-gray-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-gray-300 mb-3">Tips for TD Messages</h3>
-          <ul className="space-y-2 text-gray-400 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="text-cyan-400">•</span>
-              <span>Use for important announcements like break times, blind changes, or special rules</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-cyan-400">•</span>
-              <span>Messages appear instantly in the &quot;From the TD&quot; tab on the game view</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-cyan-400">•</span>
-              <span>Keep messages clear and concise for maximum impact</span>
-            </li>
-          </ul>
+        {/* Right Column - Feed with Admin Controls */}
+        <div>
+          <TournamentFeed
+            tournamentId={currentDraft.id}
+            maxHeight="calc(100vh - 220px)"
+            showInput={false}
+            isAdmin={true}
+          />
         </div>
       </div>
     </div>

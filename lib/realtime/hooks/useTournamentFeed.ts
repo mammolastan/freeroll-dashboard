@@ -60,6 +60,8 @@ interface UseTournamentFeedReturn {
   canPost: boolean;
   /** Refresh the feed (reload from scratch) */
   refresh: () => Promise<void>;
+  /** Delete a feed item (admin only) */
+  deleteItem: (itemId: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function useTournamentFeed(
@@ -281,6 +283,33 @@ export function useTournamentFeed(
     }
   }, [fetchFeed]);
 
+  // Delete a feed item
+  const deleteItem = useCallback(async (itemId: number): Promise<{ success: boolean; error?: string }> => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) {
+      return { success: false, error: 'Invalid tournament' };
+    }
+
+    try {
+      const response = await fetch(`/api/tournament-drafts/${tournamentIdNum}/feed/${itemId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to delete item' };
+      }
+
+      // Remove item from state
+      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting feed item:', err);
+      return { success: false, error: 'Failed to delete item. Please try again.' };
+    }
+  }, [tournamentIdNum]);
+
   return {
     items,
     loading,
@@ -292,5 +321,6 @@ export function useTournamentFeed(
     posting,
     canPost,
     refresh,
+    deleteItem,
   };
 }
