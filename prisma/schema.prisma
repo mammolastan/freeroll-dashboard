@@ -102,7 +102,7 @@ model Badge {
 
 model PlayerBadge {
   id          Int       @id @default(autoincrement())
-  player_uid  String    @db.VarChar(36)
+  player_uid  String
   badge_id    String    @db.VarChar(36)
   earned_at   DateTime  @db.DateTime(0)
   quarter     String?   @db.VarChar(7)
@@ -180,6 +180,7 @@ model TournamentDraft {
   timer_is_paused         Boolean?                @default(false)
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
   players                 TournamentDraftPlayer[]
+  tournament_feed_items   tournament_feed_items[]
 
   @@index([status], map: "idx_status")
   @@index([tournament_date], map: "idx_tournament_date")
@@ -228,6 +229,22 @@ model bonus_points {
   @@index([player_uid, season], map: "idx_player_season")
 }
 
+model tournament_feed_items {
+  id                     Int                             @id @default(autoincrement())
+  tournament_draft_id    Int
+  item_type              tournament_feed_items_item_type
+  author_uid             String?                         @db.VarChar(50)
+  author_name            String?                         @db.VarChar(255)
+  message_text           String?                         @db.Text
+  eliminated_player_name String?                         @db.VarChar(255)
+  hitman_name            String?                         @db.VarChar(255)
+  ko_position            Int?
+  created_at             DateTime?                       @default(now()) @db.Timestamp(0)
+  tournament_drafts      TournamentDraft                 @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_feed_items_ibfk_1")
+
+  @@index([tournament_draft_id, created_at(sort: Desc)], map: "idx_tournament_created")
+}
+
 enum Status {
   success
   error
@@ -247,4 +264,11 @@ enum TournamentDraftStatus {
 enum tournament_draft_players_added_by {
   admin
   self_checkin
+}
+
+enum tournament_feed_items_item_type {
+  knockout
+  message
+  checkin
+  system
 }
