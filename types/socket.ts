@@ -1,7 +1,7 @@
 // types/socket.ts
 // Socket.IO event types and real-time communication
 
-import { TournamentDraft, TournamentDraftPlayer, TournamentDraftStatus } from '@prisma/client';
+import { TournamentDraftStatus } from '@prisma/client';
 
 /**
  * Player data for real-time updates
@@ -118,6 +118,24 @@ export interface CheckInPayload {
 }
 
 /**
+ * Feed item payload for real-time feed updates
+ */
+export interface FeedItemPayload {
+  tournament_id: number;
+  item: {
+    id: number;
+    item_type: 'knockout' | 'message' | 'checkin' | 'system';
+    author_uid: string | null;
+    author_name: string | null;
+    message_text: string | null;
+    eliminated_player_name: string | null;
+    hitman_name: string | null;
+    ko_position: number | null;
+    created_at: string;
+  };
+}
+
+/**
  * Error event payload
  */
 export interface SocketErrorPayload {
@@ -158,6 +176,9 @@ export interface ServerToClientEvents {
   'tournament:finalized': (payload: TournamentUpdatePayload) => void;
   'tournament:full_state': (payload: TournamentGameState) => void;
   'venue:updated': (payload: TournamentUpdatePayload) => void;
+
+  // Feed events
+  'feed:new_item': (payload: FeedItemPayload) => void;
 
   // Timer events
   'timer:updated': (payload: TimerUpdatePayload) => void;

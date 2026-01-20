@@ -45,7 +45,8 @@ export type RealtimeEventType =
   | 'players:updated'
   | 'player:eliminated'
   | 'player:added'
-  | 'venue:updated';
+  | 'venue:updated'
+  | 'feed:new_item'; 
 
 export interface RealtimeEvent<T = unknown> {
   type: RealtimeEventType;

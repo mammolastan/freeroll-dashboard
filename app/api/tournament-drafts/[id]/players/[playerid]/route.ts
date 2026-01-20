@@ -1,16 +1,18 @@
 // app/api/tournament-drafts/[id]/players/[playerid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
+import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
+import { RawQueryResult } from "@/types";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; playerid: string }> }
+  { params }: { params: { id: string; playerid: string } }
 ) {
   try {
-    const { id, playerid } = await params;
     const body = await request.json();
-    const playerId = parseInt(playerid);
+    const playerId = parseInt(params.playerid);
+    const draftId = parseInt(params.id);
     const { player_name, hitman_name, ko_position, placement } = body;
 
     console.log("Updating player:", playerId, "with data:", {
@@ -19,6 +21,15 @@ export async function PUT(
       ko_position,
       placement,
     });
+
+    // FIRST: Get the current player state to detect knockout
+    const currentPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT player_name, ko_position, hitman_name 
+      FROM tournament_draft_players 
+      WHERE id = ${playerId}
+    `;
+    
+    const currentPlayer = currentPlayerResult.length > 0 ? currentPlayerResult[0] : null;
 
     const updateResult = await prisma.$executeRaw`
       UPDATE tournament_draft_players 
@@ -35,21 +46,44 @@ export async function PUT(
 
     if (updateResult === 1) {
       // Fetch the complete updated record
-      const updatedPlayerResult = await prisma.$queryRaw<{
-        id: number;
-        player_name: string;
-        player_uid: string | null;
-        player_nickname?: string | null;
-        [key: string]: unknown;
-      }[]>`
+      const updatedPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT * FROM tournament_draft_players WHERE id = ${playerId}
       `;
 
       const updatedPlayer = updatedPlayerResult[0];
 
       // Emit Socket.IO event for real-time updates
-      const draftId = parseInt(id);
-      emitPlayerJoined(draftId, updatedPlayer);
+      // Cast to the expected PlayerData type (has index signature for extra fields)
+      emitPlayerJoined(draftId, {
+        id: Number(updatedPlayer.id),
+        player_name: String(updatedPlayer.player_name || ""),
+        player_uid: updatedPlayer.player_uid ? String(updatedPlayer.player_uid) : null,
+        player_nickname: updatedPlayer.player_nickname ? String(updatedPlayer.player_nickname) : null,
+        ...updatedPlayer,
+      });
+
+      // DETECT KNOCKOUT: ko_position went from null to a number
+      const wasKnockedOut = 
+        currentPlayer &&
+        currentPlayer.ko_position === null &&
+        ko_position !== null &&
+        ko_position !== undefined &&
+        typeof ko_position === 'number';
+
+      if (wasKnockedOut) {
+        // Create feed item for the knockout
+        try {
+          await createKnockoutFeedItem(
+            draftId,
+            String(currentPlayer.player_name || player_name),
+            hitman_name || null,
+            ko_position
+          );
+        } catch (feedError) {
+          // Log but don't fail the request if feed creation fails
+          console.error("Failed to create knockout feed item:", feedError);
+        }
+      }
 
       return NextResponse.json(updatedPlayer);
     } else {
@@ -69,6 +103,7 @@ export async function PUT(
     );
   }
 }
+
 
 export async function DELETE(
   _request: NextRequest,

@@ -99,6 +99,7 @@ export type {
   TournamentGameState,
   PlayerUpdatePayload,
   TournamentUpdatePayload,
+  FeedItemPayload,
   TimerUpdatePayload,
   BatchPlayerUpdatePayload,
   PlayerKnockoutPayload,

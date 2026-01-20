@@ -1,6 +1,7 @@
 // app/api/tournament-drafts/[id]/players/batch/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
+import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { TournamentDraftPlayerUpdateInput } from "@/types";
 
@@ -25,12 +26,29 @@ export async function PUT(
       `Batch updating ${playersToUpdate.length} players for tournament ${draftId}`
     );
 
+    // Track knockouts for feed items (player name, hitman, ko_position)
+    const knockoutsToPost: Array<{
+      playerName: string;
+      hitmanName: string | null;
+      koPosition: number;
+    }> = [];
+
     // Use Prisma transaction to update all players atomically
     const results = await prisma.$transaction(async (tx) => {
       const updatedPlayers = [];
 
       for (const playerUpdate of playersToUpdate) {
         const { id: playerId, ...updateData } = playerUpdate;
+
+        // FIRST: Get the current player state to detect knockout
+        const currentPlayer = await tx.tournamentDraftPlayer.findUnique({
+          where: { id: playerId },
+          select: {
+            player_name: true,
+            ko_position: true,
+            hitman_name: true,
+          },
+        });
 
         // Build dynamic update data object - only include fields that are present
         const dataToUpdate: TournamentDraftPlayerUpdateInput = {
@@ -55,6 +73,22 @@ export async function PUT(
         });
 
         updatedPlayers.push(updatedPlayer);
+
+        // DETECT KNOCKOUT: ko_position went from null to a number
+        const wasKnockedOut = 
+          currentPlayer &&
+          currentPlayer.ko_position === null &&
+          'ko_position' in updateData &&
+          updateData.ko_position !== null &&
+          typeof updateData.ko_position === 'number';
+
+        if (wasKnockedOut) {
+          knockoutsToPost.push({
+            playerName: currentPlayer.player_name,
+            hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
+            koPosition: updateData.ko_position as number,
+          });
+        }
       }
 
       return updatedPlayers;
@@ -67,6 +101,22 @@ export async function PUT(
       emitPlayerJoined(draftId, { batchUpdate: true, updatedPlayers: results });
     }
 
+    // Create feed items for any knockouts that occurred
+    // Do this AFTER the transaction completes successfully
+    for (const knockout of knockoutsToPost) {
+      try {
+        await createKnockoutFeedItem(
+          draftId,
+          knockout.playerName,
+          knockout.hitmanName,
+          knockout.koPosition
+        );
+      } catch (feedError) {
+        // Log but don't fail the request if feed creation fails
+        console.error("Failed to create knockout feed item:", feedError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       updatedPlayers: results,
@@ -77,21 +127,14 @@ export async function PUT(
 
     // Return a proper JSON error response with detailed information
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    const isConnectionError =
-      errorMessage.includes("connection") ||
-      errorMessage.includes("timeout") ||
-      errorMessage.includes("ECONNREFUSED");
+      error instanceof Error ? error.message : "Unknown database error";
 
     return NextResponse.json(
       {
-        error: isConnectionError
-          ? "Database connection error. Please try again."
-          : "Failed to save changes. Please try again.",
+        error: "Failed to batch update players",
+        userMessage:
+          "Unable to save changes. Please check your connection and try again.",
         details: errorMessage,
-        userMessage: isConnectionError
-          ? "Unable to connect to the database. Please check your connection and try again."
-          : "An error occurred while saving. Your changes may not have been saved.",
       },
       { status: 500 }
     );

@@ -7,6 +7,7 @@ import {
   Tournament
 } from "./types";
 import { TypedServer } from "@/types";
+import { FeedItemPayload } from "@/types";
 
 declare global {
   var socketIoInstance: TypedServer | undefined;
@@ -90,4 +91,29 @@ export class BroadcastManager {
     const event = this.createEvent('venue:updated', tournamentId, { venue });
     this.broadcast(event);
   }
+
+  /**
+   * Broadcast a new feed item to all clients viewing the tournament
+   */
+  broadcastFeedItem(tournamentId: number, item: FeedItemPayload['item']): void {
+    try {
+      if (!global.socketIoInstance) {
+        console.error("Socket.IO instance not available for broadcasting feed item");
+        return;
+      }
+
+      const room = tournamentId.toString();
+      const payload: FeedItemPayload = {
+        tournament_id: tournamentId,
+        item,
+      };
+
+      console.log(`[BROADCAST] feed:new_item to room ${room}:`, payload);
+
+      global.socketIoInstance.to(room).emit('feed:new_item', payload);
+    } catch (error) {
+      console.error("Error broadcasting feed item:", error);
+    }
+  }
+
 }
