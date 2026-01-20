@@ -1,0 +1,169 @@
+// components/TournamentFeed/FeedItem.tsx
+
+'use client';
+
+import React from 'react';
+import Image from 'next/image';
+import { FeedItem as FeedItemType } from '@/lib/realtime/hooks/useTournamentFeed';
+import { Skull, MessageCircle, UserCheck, Info } from 'lucide-react';
+
+interface FeedItemProps {
+  item: FeedItemType;
+}
+
+// Format relative time (e.g., "2m ago", "1h ago")
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Knockout Item
+function KnockoutItem({ item }: FeedItemProps) {
+  const hitmanDisplay = item.hitman_name && item.hitman_name !== 'unknown' 
+    ? item.hitman_name 
+    : null;
+
+  return (
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
+      {/* Icon */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
+        <Skull className="h-4 w-4 text-red-400" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm">
+          <span className="font-medium text-red-400">{item.eliminated_player_name}</span>
+          <span className="text-gray-400"> was eliminated</span>
+          {hitmanDisplay && (
+            <>
+              <span className="text-gray-400"> by </span>
+              <span className="font-medium text-cyan-400">{hitmanDisplay}</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs text-gray-500">
+            {formatRelativeTime(item.created_at)}
+          </span>
+          {item.ko_position && (
+            <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
+              KO #{item.ko_position}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Message Item
+function MessageItem({ item }: FeedItemProps) {
+  return (
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
+      {/* Avatar/Icon */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center overflow-hidden">
+        {item.author_photo_url ? (
+          <Image
+            src={item.author_photo_url}
+            alt={item.author_name || 'User'}
+            width={32}
+            height={32}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-sm font-medium text-cyan-400">
+            {item.author_name?.charAt(0).toUpperCase() || '?'}
+          </span>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="font-medium text-cyan-300 text-sm">
+            {item.author_name || 'Anonymous'}
+          </span>
+          <span className="text-xs text-gray-500">
+            {formatRelativeTime(item.created_at)}
+          </span>
+        </div>
+        <p className="text-gray-300 text-sm mt-0.5 break-words">
+          {item.message_text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Check-in Item
+function CheckInItem({ item }: FeedItemProps) {
+  return (
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
+      {/* Icon */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+        <UserCheck className="h-4 w-4 text-green-400" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-gray-400">
+          {item.message_text || 'A player checked in'}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {formatRelativeTime(item.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// System Message Item
+function SystemItem({ item }: FeedItemProps) {
+  return (
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
+      {/* Icon */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
+        <Info className="h-4 w-4 text-purple-400" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-purple-300">
+          {item.message_text}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {formatRelativeTime(item.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main FeedItem Component (polymorphic)
+export function FeedItem({ item }: FeedItemProps) {
+  switch (item.item_type) {
+    case 'knockout':
+      return <KnockoutItem item={item} />;
+    case 'message':
+      return <MessageItem item={item} />;
+    case 'checkin':
+      return <CheckInItem item={item} />;
+    case 'system':
+      return <SystemItem item={item} />;
+    default:
+      return null;
+  }
+}

@@ -13,6 +13,7 @@ interface FeedItem {
   item_type: 'knockout' | 'message' | 'checkin' | 'system';
   author_uid: string | null;
   author_name: string | null;
+  author_photo_url: string | null;
   message_text: string | null;
   eliminated_player_name: string | null;
   hitman_name: string | null;
@@ -62,44 +63,50 @@ export async function GET(
     // Fetch feed items with optional cursor
     let feedItems: RawQueryResult[];
 
+    const fetchLimit = limit + 1;
+
     if (before) {
       // Cursor-based pagination: get items older than the cursor
       feedItems = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT 
-          id,
-          tournament_draft_id,
-          item_type,
-          author_uid,
-          author_name,
-          message_text,
-          eliminated_player_name,
-          hitman_name,
-          ko_position,
-          created_at
-        FROM tournament_feed_items
-        WHERE tournament_draft_id = ${tournamentId}
-          AND created_at < ${new Date(before)}
-        ORDER BY created_at DESC
-        LIMIT ${limit + 1}
+        SELECT
+          f.id,
+          f.tournament_draft_id,
+          f.item_type,
+          f.author_uid,
+          f.author_name,
+          p.photo_url as author_photo_url,
+          f.message_text,
+          f.eliminated_player_name,
+          f.hitman_name,
+          f.ko_position,
+          f.created_at
+        FROM tournament_feed_items f
+        LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+        WHERE f.tournament_draft_id = ${tournamentId}
+          AND f.created_at < ${new Date(before)}
+        ORDER BY f.created_at DESC
+        LIMIT ${fetchLimit}
       `;
     } else {
       // Initial load: get most recent items
       feedItems = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT 
-          id,
-          tournament_draft_id,
-          item_type,
-          author_uid,
-          author_name,
-          message_text,
-          eliminated_player_name,
-          hitman_name,
-          ko_position,
-          created_at
-        FROM tournament_feed_items
-        WHERE tournament_draft_id = ${tournamentId}
-        ORDER BY created_at DESC
-        LIMIT ${limit + 1}
+        SELECT
+          f.id,
+          f.tournament_draft_id,
+          f.item_type,
+          f.author_uid,
+          f.author_name,
+          p.photo_url as author_photo_url,
+          f.message_text,
+          f.eliminated_player_name,
+          f.hitman_name,
+          f.ko_position,
+          f.created_at
+        FROM tournament_feed_items f
+        LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+        WHERE f.tournament_draft_id = ${tournamentId}
+        ORDER BY f.created_at DESC
+        LIMIT ${fetchLimit}
       `;
     }
 
@@ -119,12 +126,13 @@ export async function GET(
       item_type: item.item_type as FeedItem['item_type'],
       author_uid: item.author_uid ? String(item.author_uid) : null,
       author_name: item.author_name ? String(item.author_name) : null,
+      author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
       hitman_name: item.hitman_name ? String(item.hitman_name) : null,
       ko_position: item.ko_position ? Number(item.ko_position) : null,
-      created_at: item.created_at instanceof Date 
-        ? item.created_at.toISOString() 
+      created_at: item.created_at instanceof Date
+        ? item.created_at.toISOString()
         : String(item.created_at),
     }));
 
@@ -233,21 +241,23 @@ export async function POST(
       VALUES (${tournamentId}, 'message', ${authorUid}, ${authorName}, ${trimmedMessage}, NOW())
     `;
 
-    // Get the inserted record
+    // Get the inserted record with author photo
     const newItem = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-        id,
-        tournament_draft_id,
-        item_type,
-        author_uid,
-        author_name,
-        message_text,
-        eliminated_player_name,
-        hitman_name,
-        ko_position,
-        created_at
-      FROM tournament_feed_items 
-      WHERE id = LAST_INSERT_ID()
+      SELECT
+        f.id,
+        f.tournament_draft_id,
+        f.item_type,
+        f.author_uid,
+        f.author_name,
+        p.photo_url as author_photo_url,
+        f.message_text,
+        f.eliminated_player_name,
+        f.hitman_name,
+        f.ko_position,
+        f.created_at
+      FROM tournament_feed_items f
+      LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+      WHERE f.id = LAST_INSERT_ID()
     `;
 
     if (!newItem.length) {
@@ -265,6 +275,7 @@ export async function POST(
       item_type: item.item_type as FeedItem["item_type"],
       author_uid: item.author_uid ? String(item.author_uid) : null,
       author_name: item.author_name ? String(item.author_name) : null,
+      author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
       hitman_name: item.hitman_name ? String(item.hitman_name) : null,
