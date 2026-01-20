@@ -124,7 +124,7 @@ export interface FeedItemPayload {
   tournament_id: number;
   item: {
     id: number;
-    item_type: 'knockout' | 'message' | 'checkin' | 'system';
+    item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
     author_uid: string | null;
     author_name: string | null;
     message_text: string | null;

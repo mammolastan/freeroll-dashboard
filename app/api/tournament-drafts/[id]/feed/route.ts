@@ -10,7 +10,7 @@ import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 interface FeedItem {
   id: number;
   tournament_draft_id: number;
-  item_type: 'knockout' | 'message' | 'checkin' | 'system';
+  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
   author_name: string | null;
   author_photo_url: string | null;

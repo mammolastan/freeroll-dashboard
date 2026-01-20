@@ -9,6 +9,7 @@ import { FullAdminScreen } from './screens/Screen1_FullAdmin/FullAdminScreen';
 import { GameTimerScreen } from './screens/Screen2_GameTimer/GameTimerScreen';
 import { PlayerCheckInScreen } from './screens/Screen3_PlayerCheckIn/PlayerCheckInScreen';
 import { PlayerControlScreen } from './screens/Screen4_PlayerControl/PlayerControlScreen';
+import { TDMessagesScreen } from './screens/Screen5_TDMessages/TDMessagesScreen';
 import { socket } from '@/lib/socketClient';
 
 interface TournamentDraft {
@@ -261,6 +262,12 @@ export default function TournamentEntryPage() {
           currentDraft={currentDraft}
           players={players}
           onDataChange={handleDataChange}
+        />
+      )}
+
+      {currentScreen === 5 && (
+        <TDMessagesScreen
+          currentDraft={currentDraft}
         />
       )}
     </>

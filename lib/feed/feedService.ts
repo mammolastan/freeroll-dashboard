@@ -10,7 +10,7 @@ import { RawQueryResult } from "@/types";
 export interface FeedItemData {
   id: number;
   tournament_draft_id: number;
-  item_type: 'knockout' | 'message' | 'checkin' | 'system';
+  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
   author_name: string | null;
   message_text: string | null;
@@ -190,6 +190,58 @@ export async function createSystemFeedItem(
     return serializedItem;
   } catch (error) {
     console.error("Error creating system feed item:", error);
+    return null;
+  }
+}
+
+/**
+ * Create a TD (Tournament Director) message feed item and broadcast it
+ */
+export async function createTDMessageFeedItem(
+  tournamentId: number,
+  message: string
+): Promise<FeedItemData | null> {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO tournament_feed_items
+      (tournament_draft_id, item_type, message_text, author_name, created_at)
+      VALUES (${tournamentId}, 'td_message', ${message}, 'Tournament Director', NOW())
+    `;
+
+    const newItem = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT * FROM tournament_feed_items WHERE id = LAST_INSERT_ID()
+    `;
+
+    if (!newItem.length) return null;
+
+    const item = newItem[0];
+    const serializedItem: FeedItemData = {
+      id: Number(item.id),
+      tournament_draft_id: Number(item.tournament_draft_id),
+      item_type: 'td_message',
+      author_uid: null,
+      author_name: 'Tournament Director',
+      message_text: item.message_text ? String(item.message_text) : null,
+      eliminated_player_name: null,
+      hitman_name: null,
+      ko_position: null,
+      created_at: item.created_at instanceof Date
+        ? item.created_at.toISOString()
+        : String(item.created_at),
+    };
+
+    try {
+      const broadcast = BroadcastManager.getInstance();
+      broadcast.broadcastFeedItem(tournamentId, serializedItem);
+    } catch (broadcastError) {
+      console.error("Failed to broadcast TD message feed item:", broadcastError);
+    }
+
+    console.log(`[FEED] Created TD message: ${message}`);
+
+    return serializedItem;
+  } catch (error) {
+    console.error("Error creating TD message feed item:", error);
     return null;
   }
 }

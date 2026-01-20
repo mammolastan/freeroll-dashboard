@@ -271,4 +271,5 @@ enum tournament_feed_items_item_type {
   message
   checkin
   system
+  td_message
 }

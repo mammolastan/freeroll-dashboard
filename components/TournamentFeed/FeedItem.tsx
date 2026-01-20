@@ -5,7 +5,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { FeedItem as FeedItemType } from '@/lib/realtime/hooks/useTournamentFeed';
-import { Skull, MessageCircle, UserCheck, Info } from 'lucide-react';
+import { Skull, MessageCircle, UserCheck, Info, Megaphone } from 'lucide-react';
 
 interface FeedItemProps {
   item: FeedItemType;
@@ -100,7 +100,7 @@ function MessageItem({ item }: FeedItemProps) {
             {formatRelativeTime(item.created_at)}
           </span>
         </div>
-        <p className="text-gray-300 text-sm mt-0.5 break-words">
+        <p className="text-gray-300 text-sm mt-0.5 break-words whitespace-pre-wrap">
           {item.message_text}
         </p>
       </div>
@@ -152,6 +152,33 @@ function SystemItem({ item }: FeedItemProps) {
   );
 }
 
+// TD Message Item
+function TDMessageItem({ item }: FeedItemProps) {
+  return (
+    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors bg-cyan-500/5">
+      {/* Icon */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+        <Megaphone className="h-4 w-4 text-cyan-400" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="font-medium text-cyan-300 text-sm">
+            Tournament Director
+          </span>
+          <span className="text-xs text-gray-500">
+            {formatRelativeTime(item.created_at)}
+          </span>
+        </div>
+        <p className="text-gray-200 text-sm mt-0.5 break-words whitespace-pre-wrap">
+          {item.message_text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // Main FeedItem Component (polymorphic)
 export function FeedItem({ item }: FeedItemProps) {
   switch (item.item_type) {
@@ -163,6 +190,8 @@ export function FeedItem({ item }: FeedItemProps) {
       return <CheckInItem item={item} />;
     case 'system':
       return <SystemItem item={item} />;
+    case 'td_message':
+      return <TDMessageItem item={item} />;
     default:
       return null;
   }

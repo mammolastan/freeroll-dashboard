@@ -2,14 +2,13 @@
 
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import {
-  useTournamentFeed,
-  FeedItem as FeedItemType,
-} from "@/lib/realtime/hooks/useTournamentFeed";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import { useTournamentFeed } from "@/lib/realtime/hooks/useTournamentFeed";
 import { FeedItem } from "./FeedItem";
 import { FeedInput } from "./FeedInput";
-import { MessageSquare, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { MessageSquare, Loader2, AlertCircle, RefreshCw, Megaphone } from "lucide-react";
+
+type FeedTab = 'all' | 'td';
 
 interface TournamentFeedProps {
   tournamentId: number;
@@ -17,15 +16,12 @@ interface TournamentFeedProps {
   maxHeight?: string;
   /** Show the message input (default: true) */
   showInput?: boolean;
-  /** Title for the feed section */
-  title?: string;
 }
 
 export function TournamentFeed({
   tournamentId,
   maxHeight = "400px",
   showInput = true,
-  title = "Feed",
 }: TournamentFeedProps) {
   const {
     items,
@@ -40,8 +36,22 @@ export function TournamentFeed({
     refresh,
   } = useTournamentFeed(tournamentId);
 
+  const [activeTab, setActiveTab] = useState<FeedTab>('all');
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
+
+  // Filter items based on active tab
+  const filteredItems = useMemo(() => {
+    if (activeTab === 'td') {
+      return items.filter(item => item.item_type === 'td_message');
+    }
+    return items;
+  }, [items, activeTab]);
+
+  // Count TD messages for the tab badge
+  const tdMessageCount = useMemo(() => {
+    return items.filter(item => item.item_type === 'td_message').length;
+  }, [items]);
 
   // Track scroll position to auto-scroll for new items
   const handleScroll = () => {
@@ -74,16 +84,37 @@ export function TournamentFeed({
 
   return (
     <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/20 bg-gray-900/50">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-cyan-400" />
-          <h3 className="font-semibold text-cyan-300">{title}</h3>
-          {items.length > 0 && (
-            <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
-              {items.length}
-            </span>
-          )}
+      {/* Tabs */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              activeTab === 'all'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600'
+            }`}
+          >
+            Feed
+          </button>
+          <button
+            onClick={() => setActiveTab('td')}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              activeTab === 'td'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600'
+            }`}
+          >
+            <Megaphone className="h-3 w-3" />
+            From the TD
+            {tdMessageCount > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === 'td' ? 'bg-cyan-500/30' : 'bg-gray-700'
+              }`}>
+                {tdMessageCount}
+              </span>
+            )}
+          </button>
         </div>
         <button
           onClick={refresh}
@@ -138,20 +169,32 @@ export function TournamentFeed({
         )}
 
         {/* Empty State */}
-        {!loading && !error && items.length === 0 && (
+        {!loading && !error && filteredItems.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <MessageSquare className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-gray-500 text-sm">No activity yet</p>
-            <p className="text-gray-600 text-xs mt-1">
-              Knockouts and messages will appear here
-            </p>
+            {activeTab === 'td' ? (
+              <>
+                <Megaphone className="h-10 w-10 text-gray-600 mb-3" />
+                <p className="text-gray-500 text-sm">No TD messages yet</p>
+                <p className="text-gray-600 text-xs mt-1">
+                  Messages from the Tournament Director will appear here
+                </p>
+              </>
+            ) : (
+              <>
+                <MessageSquare className="h-10 w-10 text-gray-600 mb-3" />
+                <p className="text-gray-500 text-sm">No activity yet</p>
+                <p className="text-gray-600 text-xs mt-1">
+                  Knockouts and messages will appear here
+                </p>
+              </>
+            )}
           </div>
         )}
 
         {/* Feed Items */}
-        {!loading && !error && items.length > 0 && (
+        {!loading && !error && filteredItems.length > 0 && (
           <div className="divide-y divide-gray-800/50">
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <FeedItem
                 key={item.id}
                 item={item}
@@ -168,7 +211,7 @@ export function TournamentFeed({
         )}
 
         {/* End of Feed */}
-        {!loading && !loadingMore && !hasMore && items.length > 0 && (
+        {!loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
           <div className="text-center py-4 text-gray-600 text-xs">
             — End of feed —
           </div>

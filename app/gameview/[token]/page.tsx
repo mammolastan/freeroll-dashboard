@@ -316,7 +316,6 @@ export default function GameViewPage() {
             <TournamentFeed
               tournamentId={parseInt(token as string)}
               maxHeight="350px"
-              title="Live Feed"
             />
           </div>
         )}
