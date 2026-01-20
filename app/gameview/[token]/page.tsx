@@ -30,7 +30,6 @@ function PlayerCard({
   player: Player;
   totalPlayers: number;
 }) {
-  console.log("Rendering PlayerCard for:", player);
   const dynamicPlacement = calculatePlacement(player, totalPlayers);
 
   return (
@@ -243,7 +242,7 @@ export default function GameViewPage() {
           >
             <QrCode className="h-4 w-4" /> Share
           </button>
-          
+
           {showQRCode && gameData && (
             <QRCodeModal
               checkInUrl={checkInUrl}
@@ -299,18 +298,18 @@ export default function GameViewPage() {
             </div>
           )}
         </div>
-{/* Feed Toggle Button */}
-          <button
-            onClick={() => setShowFeed(!showFeed)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all border ${
-              showFeed
-                ? "bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] border-amber-500/50"
-                : "bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600"
-            }`}
-          >
-            <MessageSquare size={20} />
-            {showFeed ? "Hide Feed" : "Show Feed"}
-          </button>
+        {/* Feed Toggle Button */}
+        <button
+          onClick={() => setShowFeed(!showFeed)}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all border ${
+            showFeed
+              ? "bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] border-amber-500/50"
+              : "bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600"
+          }`}
+        >
+          <MessageSquare size={20} />
+          {showFeed ? "Hide Feed" : "Show Feed"}
+        </button>
         {/* Tournament Feed */}
         {showFeed && (
           <div className="mb-8">

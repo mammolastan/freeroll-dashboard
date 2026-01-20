@@ -1,12 +1,15 @@
 // components/TournamentFeed/TournamentFeed.tsx
 
-'use client';
+"use client";
 
-import React, { useRef, useEffect } from 'react';
-import { useTournamentFeed, FeedItem as FeedItemType } from '@/lib/realtime/hooks/useTournamentFeed';
-import { FeedItem } from './FeedItem';
-import { FeedInput } from './FeedInput';
-import { MessageSquare, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useRef, useEffect } from "react";
+import {
+  useTournamentFeed,
+  FeedItem as FeedItemType,
+} from "@/lib/realtime/hooks/useTournamentFeed";
+import { FeedItem } from "./FeedItem";
+import { FeedInput } from "./FeedInput";
+import { MessageSquare, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 interface TournamentFeedProps {
   tournamentId: number;
@@ -20,9 +23,9 @@ interface TournamentFeedProps {
 
 export function TournamentFeed({
   tournamentId,
-  maxHeight = '400px',
+  maxHeight = "400px",
   showInput = true,
-  title = 'Live Feed',
+  title = "Feed",
 }: TournamentFeedProps) {
   const {
     items,
@@ -57,8 +60,13 @@ export function TournamentFeed({
   // Infinite scroll - load more when reaching bottom
   const handleLoadMore = () => {
     if (feedContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = feedContainerRef.current;
-      if (scrollHeight - scrollTop - clientHeight < 100 && hasMore && !loadingMore) {
+      const { scrollTop, scrollHeight, clientHeight } =
+        feedContainerRef.current;
+      if (
+        scrollHeight - scrollTop - clientHeight < 100 &&
+        hasMore &&
+        !loadingMore
+      ) {
         loadMore();
       }
     }
@@ -83,7 +91,7 @@ export function TournamentFeed({
           className="p-1.5 text-gray-400 hover:text-cyan-400 hover:bg-gray-800 rounded transition-colors disabled:opacity-50"
           title="Refresh feed"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -144,7 +152,10 @@ export function TournamentFeed({
         {!loading && !error && items.length > 0 && (
           <div className="divide-y divide-gray-800/50">
             {items.map((item) => (
-              <FeedItem key={item.id} item={item} />
+              <FeedItem
+                key={item.id}
+                item={item}
+              />
             ))}
           </div>
         )}
