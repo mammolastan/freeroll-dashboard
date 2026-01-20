@@ -124,7 +124,7 @@ export function TournamentFeed({
                 : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
             }`}
           >
-            <Megaphone className="h-3 w-3" />
+            <Megaphone className="h-5 w-5" />
             {tdMessageCount > 0 && (
               <span
                 className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -143,7 +143,7 @@ export function TournamentFeed({
                 : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
             }`}
           >
-            <MessageCircle className="h-3 w-3" />
+            <MessageCircle className="h-5 w-5" />
             {chatMessageCount > 0 && (
               <span
                 className={`text-xs px-1.5 py-0.5 rounded-full ${
