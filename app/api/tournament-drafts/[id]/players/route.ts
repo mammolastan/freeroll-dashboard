@@ -5,6 +5,7 @@ import { RealtimeAPI } from "@/lib/realtime";
 
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { createCheckInFeedItem } from "@/lib/feed/feedService";
 
 export async function GET(
   request: NextRequest,
@@ -68,6 +69,14 @@ export async function POST(
     const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
+
+    // Create feed item for check-in
+    try {
+      await createCheckInFeedItem(draftId, player_name);
+    } catch (error) {
+      console.error("Failed to create check-in feed item:", error);
+      // Don't fail the add if feed item creation fails
+    }
 
     // Emit Socket.IO event for real-time updates
     if (Array.isArray(newPlayer) && newPlayer.length > 0) {
