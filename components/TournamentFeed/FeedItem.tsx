@@ -51,6 +51,7 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
       : null;
 
   const isBubble = placement === 9;
+  const isFirstBlood = item.ko_position === 1;
 
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
@@ -74,18 +75,31 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="text-sm">
-          <span className="font-medium text-red-400">
-            {item.eliminated_player_name}
-          </span>
-          {isBubble ? (
-            <span className="text-gray-400"> burst the bubble!</span>
-          ) : (
-            <span className="text-gray-400"> was eliminated</span>
-          )}
-          {hitmanDisplay && !isBubble && (
+          {isFirstBlood && hitmanDisplay ? (
             <>
-              <span className="text-gray-400"> by </span>
               <span className="font-medium text-cyan-400">{hitmanDisplay}</span>
+              <span className="text-gray-400"> drew first blood! </span>
+              <span className="font-medium text-red-400">
+                {item.eliminated_player_name}
+              </span>
+              <span className="text-gray-400"> eliminated</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-red-400">
+                {item.eliminated_player_name}
+              </span>
+              {isBubble ? (
+                <span className="text-gray-400"> burst the bubble!</span>
+              ) : (
+                <span className="text-gray-400"> was eliminated</span>
+              )}
+              {hitmanDisplay && !isBubble && (
+                <>
+                  <span className="text-gray-400"> by </span>
+                  <span className="font-medium text-cyan-400">{hitmanDisplay}</span>
+                </>
+              )}
             </>
           )}
         </div>
