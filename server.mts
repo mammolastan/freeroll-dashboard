@@ -641,35 +641,29 @@ app.prepare().then(async () => {
       socket.on("timer:start", async ({ tournamentId }) => {
         console.log(`Timer start requested for tournament ${tournamentId}`);
         const timerState = await startTimer(tournamentId);
+
+        if (!timerState) {
+          console.error(`Cannot start timer - tournament ${tournamentId} not found`);
+          return;
+        }
+
         console.log(`Emitting timer update:`, {
           level: timerState.currentLevel,
           time: timerState.timeRemaining,
           isRunning: timerState.isRunning,
         });
 
-        // Validate timer state before sending
-        if (
-          timerState &&
-          typeof timerState.timeRemaining === "number" &&
-          timerState.blindLevels
-        ) {
-          const timerPayload = {
-            tournamentId: timerState.tournamentId,
-            currentLevel: timerState.currentLevel,
-            timeRemaining: timerState.timeRemaining,
-            isRunning: timerState.isRunning,
-            isPaused: timerState.isPaused,
-            blindLevels: timerState.blindLevels,
-            lastUpdate: timerState.lastUpdate,
-          };
-          io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-          console.log(`Timer started for tournament ${tournamentId}`);
-        } else {
-          console.error(
-            `Invalid timer state for tournament ${tournamentId}:`,
-            timerState
-          );
-        }
+        const timerPayload = {
+          tournamentId: timerState.tournamentId,
+          currentLevel: timerState.currentLevel,
+          timeRemaining: timerState.timeRemaining,
+          isRunning: timerState.isRunning,
+          isPaused: timerState.isPaused,
+          blindLevels: timerState.blindLevels,
+          lastUpdate: timerState.lastUpdate,
+        };
+        io.to(tournamentId.toString()).emit("timer:update", timerPayload);
+        console.log(`Timer started for tournament ${tournamentId}`);
       });
 
       socket.on("timer:pause", async ({ tournamentId }) => {
