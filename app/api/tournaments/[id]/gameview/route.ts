@@ -10,7 +10,6 @@ interface TournamentRow {
   tournament_time: string | null;
   venue: string | null;
   status: string;
-  max_players: number | null;
 }
 
 interface PlayerRow {
@@ -50,8 +49,7 @@ export async function GET(
         tournament_date,
         tournament_time,
         venue,
-        status,
-        max_players
+        status
       FROM tournament_drafts
       WHERE id = ${tournamentId}
     `;
@@ -93,7 +91,7 @@ export async function GET(
       time: tournamentRow.tournament_time,
       venue: tournamentRow.venue,
       status: (tournamentRow.status as Tournament['status']) || 'active',
-      max_players: tournamentRow.max_players,
+      max_players: null,
     };
 
     // Transform players data

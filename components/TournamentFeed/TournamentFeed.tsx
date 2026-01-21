@@ -25,6 +25,7 @@ interface TournamentFeedProps {
   showInput?: boolean;
   /** Admin mode - shows delete buttons on messages (default: false) */
   isAdmin?: boolean;
+  totalPlayers?: number;
 }
 
 export function TournamentFeed({
@@ -32,6 +33,7 @@ export function TournamentFeed({
   maxHeight = "400px",
   showInput = true,
   isAdmin = false,
+  totalPlayers,
 }: TournamentFeedProps) {
   const {
     items,
@@ -246,6 +248,7 @@ export function TournamentFeed({
                 key={item.id}
                 item={item}
                 onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                totalPlayers={totalPlayers}
               />
             ))}
           </div>
