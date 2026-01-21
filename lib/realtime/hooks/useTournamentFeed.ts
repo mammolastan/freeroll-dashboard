@@ -164,7 +164,7 @@ export function useTournamentFeed(
     // Listen for new feed items
     const handleNewFeedItem = (payload: FeedItemPayload) => {
       console.log('[Feed] Received new feed item:', payload);
-      
+
       if (payload.tournament_id === tournamentIdNum) {
         setItems(prevItems => {
           // Check if item already exists (prevent duplicates)
@@ -185,6 +185,41 @@ export function useTournamentFeed(
       socket.off('feed:new_item', handleNewFeedItem);
     };
   }, [tournamentIdNum]);
+
+  // Refresh feed when page becomes visible again (e.g., user switches back to tab)
+  // This handles cases where WebSocket events were missed while tab was hidden
+  useEffect(() => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Feed] Page became visible, refreshing feed...');
+        // Reset the fetch guard and reload
+        hasFetched.current = false;
+        setLoading(true);
+        setError(null);
+
+        try {
+          const data = await fetchFeed();
+          if (data) {
+            setItems(data.items);
+            setHasMore(data.hasMore);
+            setNextCursor(data.nextCursor);
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load feed');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [tournamentIdNum, fetchFeed]);
 
   // Load more items (pagination)
   const loadMore = useCallback(async () => {

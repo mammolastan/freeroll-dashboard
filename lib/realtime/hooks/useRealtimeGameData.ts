@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { socket } from '@/lib/socketClient';
 import { Tournament, Player, GameViewData } from '../types';
 
@@ -10,11 +10,83 @@ export function useRealtimeGameData(tournamentId: string | number) {
   const [gameData, setGameData] = useState<GameViewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
+  const tournamentIdNum = typeof tournamentId === 'string' ? parseInt(tournamentId) : tournamentId;
+
+  // Fetch game data via HTTP API
+  const fetchGameData = useCallback(async () => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) return null;
+
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentIdNum}/gameview`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch game data');
+      }
+      return await response.json();
+    } catch (err) {
+      console.error('Error fetching game data:', err);
+      throw err;
+    }
+  }, [tournamentIdNum]);
+
+  // Initial HTTP fetch for game data
   useEffect(() => {
-    if (!tournamentId) return;
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) {
+      setLoading(false);
+      return;
+    }
 
-    const tournamentIdNum = typeof tournamentId === 'string' ? parseInt(tournamentId) : tournamentId;
+    // Prevent double-fetch in React strict mode
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const loadInitialData = async () => {
+      try {
+        const data = await fetchGameData();
+        if (data) {
+          setGameData(data);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load game data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, [tournamentIdNum, fetchGameData]);
+
+  // Refresh data when page becomes visible again (handles missed WebSocket events)
+  useEffect(() => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[GameData] Page became visible, refreshing data...');
+        try {
+          const data = await fetchGameData();
+          if (data) {
+            setGameData(data);
+          }
+        } catch (err) {
+          console.error('[GameData] Error refreshing on visibility change:', err);
+          // Don't set error state to avoid disrupting the UI for background refresh failures
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [tournamentIdNum, fetchGameData]);
+
+  // Socket.IO real-time updates
+  useEffect(() => {
+    if (!tournamentIdNum) return;
 
     // Connect and join room
     socket.on("connect", () => {
@@ -105,7 +177,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
       socket.off("venue:updated");
       socket.off("connect_error");
     };
-  }, [tournamentId]);
+  }, [tournamentIdNum]);
 
   // Computed values (calculated locally)
   const computedStats = gameData ? {
