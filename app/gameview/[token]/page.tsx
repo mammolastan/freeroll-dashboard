@@ -315,7 +315,7 @@ export default function GameViewPage() {
           <div className="mb-8">
             <TournamentFeed
               tournamentId={parseInt(token as string)}
-              maxHeight="350px"
+              maxHeight="450px"
               totalPlayers={gameData.players.length}
             />
           </div>
