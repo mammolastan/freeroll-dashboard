@@ -6,6 +6,7 @@ import React from "react";
 import Image from "next/image";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
 import { Skull, UserCheck, Info, Megaphone, X } from "lucide-react";
+import PlayerAvatar from "@/components/ui/PlayerAvatar";
 
 interface FeedItemProps {
   item: FeedItemType;
@@ -109,21 +110,20 @@ function MessageItem({ item, onDelete }: FeedItemProps) {
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors group">
       {/* Avatar/Icon */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center overflow-hidden">
-        {item.author_photo_url ? (
-          <Image
-            src={item.author_photo_url}
-            alt={item.author_name || "User"}
-            width={32}
-            height={32}
-            className="w-full h-full object-cover"
-          />
-        ) : (
+      {item.author_photo_url ? (
+        <PlayerAvatar
+          photoUrl={item.author_photo_url}
+          name={item.author_name || "User"}
+          size="sm"
+          showFallback={false}
+        />
+      ) : (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
           <span className="text-sm font-medium text-cyan-400">
             {item.author_name?.charAt(0).toUpperCase() || "?"}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
