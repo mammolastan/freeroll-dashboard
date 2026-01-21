@@ -50,7 +50,7 @@ const timerStates = new Map<number, TimerState>();
 // Timer helper functions
 async function getOrCreateTimerState(
   tournamentId: number
-): Promise<TimerState> {
+): Promise<TimerState | null> {
   if (!timerStates.has(tournamentId)) {
     console.log(`Initializing timer state for tournament ${tournamentId}`);
 
@@ -75,6 +75,12 @@ async function getOrCreateTimerState(
         select: { blind_schedule: true },
       });
 
+      // If tournament doesn't exist, don't create a timer state for it
+      if (!tournament) {
+        console.log(`Tournament ${tournamentId} not found in database, skipping timer creation`);
+        return null;
+      }
+
       console.log(
         `Tournament ${tournamentId} blind_schedule:`,
         tournament?.blind_schedule
@@ -90,7 +96,7 @@ async function getOrCreateTimerState(
       }
     } catch (error) {
       console.error("Error fetching tournament blind schedule:", error);
-      // Fall back to default schedule
+      return null; // Don't create timer state if we can't verify tournament exists
     }
 
     const currentLevel = 1;
@@ -116,11 +122,12 @@ async function getOrCreateTimerState(
     // Save initial state to database
     await saveTimerStateToDB(tournamentId, newTimerState);
   }
-  return timerStates.get(tournamentId)!;
+  return timerStates.get(tournamentId) || null;
 }
 
-async function updateTimer(tournamentId: number): Promise<TimerState> {
+async function updateTimer(tournamentId: number): Promise<TimerState | null> {
   const timer = await getOrCreateTimerState(tournamentId);
+  if (!timer) return null;
   let stateChanged = false;
 
   if (timer.isRunning && !timer.isPaused) {
@@ -172,8 +179,9 @@ async function updateTimer(tournamentId: number): Promise<TimerState> {
   return timer;
 }
 
-async function startTimer(tournamentId: number): Promise<TimerState> {
+async function startTimer(tournamentId: number): Promise<TimerState | null> {
   const timer = await getOrCreateTimerState(tournamentId);
+  if (!timer) return null;
   timer.isRunning = true;
   timer.isPaused = false;
   timer.lastUpdate = Date.now();
@@ -184,8 +192,9 @@ async function startTimer(tournamentId: number): Promise<TimerState> {
   return timer;
 }
 
-async function pauseTimer(tournamentId: number): Promise<TimerState> {
+async function pauseTimer(tournamentId: number): Promise<TimerState | null> {
   const timer = await updateTimer(tournamentId);
+  if (!timer) return null;
   timer.isPaused = true;
 
   // Save state change to database
@@ -194,8 +203,9 @@ async function pauseTimer(tournamentId: number): Promise<TimerState> {
   return timer;
 }
 
-async function resumeTimer(tournamentId: number): Promise<TimerState> {
+async function resumeTimer(tournamentId: number): Promise<TimerState | null> {
   const timer = await getOrCreateTimerState(tournamentId);
+  if (!timer) return null;
   timer.isPaused = false;
   timer.lastUpdate = Date.now();
 
@@ -205,8 +215,9 @@ async function resumeTimer(tournamentId: number): Promise<TimerState> {
   return timer;
 }
 
-async function resetTimer(tournamentId: number): Promise<TimerState> {
+async function resetTimer(tournamentId: number): Promise<TimerState | null> {
   const timer = await getOrCreateTimerState(tournamentId);
+  if (!timer) return null;
 
   // Reload blind schedule from database in case it changed
   let blindLevels = DEFAULT_BLIND_LEVELS;
@@ -523,6 +534,18 @@ app.prepare().then(async () => {
     setInterval(async () => {
       for (const [tournamentId, timer] of Array.from(timerStates.entries())) {
         try {
+          // Verify tournament still exists before saving
+          const tournament = await prisma.tournamentDraft.findUnique({
+            where: { id: tournamentId },
+            select: { id: true },
+          });
+
+          if (!tournament) {
+            console.log(`Tournament ${tournamentId} no longer exists, removing timer state`);
+            timerStates.delete(tournamentId);
+            continue;
+          }
+
           await saveTimerStateToDB(tournamentId, timer);
           console.log(`Periodic sync completed for tournament ${tournamentId}`);
         } catch (error) {
@@ -651,6 +674,10 @@ app.prepare().then(async () => {
 
       socket.on("timer:pause", async ({ tournamentId }) => {
         const timerState = await pauseTimer(tournamentId);
+        if (!timerState) {
+          console.error(`Cannot pause timer - tournament ${tournamentId} not found`);
+          return;
+        }
         const timerPayload = {
           tournamentId: timerState.tournamentId,
           currentLevel: timerState.currentLevel,
@@ -666,6 +693,10 @@ app.prepare().then(async () => {
 
       socket.on("timer:resume", async ({ tournamentId }) => {
         const timerState = await resumeTimer(tournamentId);
+        if (!timerState) {
+          console.error(`Cannot resume timer - tournament ${tournamentId} not found`);
+          return;
+        }
         const timerPayload = {
           tournamentId: timerState.tournamentId,
           currentLevel: timerState.currentLevel,
@@ -681,6 +712,10 @@ app.prepare().then(async () => {
 
       socket.on("timer:reset", async ({ tournamentId }) => {
         const timerState = await resetTimer(tournamentId);
+        if (!timerState) {
+          console.error(`Cannot reset timer - tournament ${tournamentId} not found`);
+          return;
+        }
         const timerPayload = {
           tournamentId: timerState.tournamentId,
           currentLevel: timerState.currentLevel,
@@ -697,37 +732,35 @@ app.prepare().then(async () => {
       socket.on("timer:requestSync", async ({ tournamentId }) => {
         console.log(`Timer sync requested for tournament ${tournamentId}`);
         const timerState = await getOrCreateTimerState(tournamentId);
+
+        if (!timerState) {
+          console.error(`Cannot sync timer - tournament ${tournamentId} not found`);
+          return;
+        }
+
         console.log(`Sending timer sync:`, {
           level: timerState.currentLevel,
           time: timerState.timeRemaining,
         });
 
-        // Validate timer state before sending
-        if (
-          timerState &&
-          typeof timerState.timeRemaining === "number" &&
-          timerState.blindLevels
-        ) {
-          const timerPayload = {
-            tournamentId: timerState.tournamentId,
-            currentLevel: timerState.currentLevel,
-            timeRemaining: timerState.timeRemaining,
-            isRunning: timerState.isRunning,
-            isPaused: timerState.isPaused,
-            blindLevels: timerState.blindLevels,
-            lastUpdate: timerState.lastUpdate,
-          };
-          socket.emit("timer:sync", timerPayload);
-        } else {
-          console.error(
-            `Invalid timer sync state for tournament ${tournamentId}:`,
-            timerState
-          );
-        }
+        const timerPayload = {
+          tournamentId: timerState.tournamentId,
+          currentLevel: timerState.currentLevel,
+          timeRemaining: timerState.timeRemaining,
+          isRunning: timerState.isRunning,
+          isPaused: timerState.isPaused,
+          blindLevels: timerState.blindLevels,
+          lastUpdate: timerState.lastUpdate,
+        };
+        socket.emit("timer:sync", timerPayload);
       });
 
       socket.on("timer:nextLevel", async ({ tournamentId }) => {
         const timer = await getOrCreateTimerState(tournamentId);
+        if (!timer) {
+          console.error(`Cannot advance timer - tournament ${tournamentId} not found`);
+          return;
+        }
         if (timer.currentLevel < timer.blindLevels.length) {
           timer.currentLevel++;
           const nextLevel = timer.blindLevels[timer.currentLevel - 1];
@@ -757,6 +790,10 @@ app.prepare().then(async () => {
 
       socket.on("timer:prevLevel", async ({ tournamentId }) => {
         const timer = await getOrCreateTimerState(tournamentId);
+        if (!timer) {
+          console.error(`Cannot go to previous level - tournament ${tournamentId} not found`);
+          return;
+        }
         if (timer.currentLevel > 1) {
           timer.currentLevel--;
           const prevLevel = timer.blindLevels[timer.currentLevel - 1];
@@ -786,6 +823,10 @@ app.prepare().then(async () => {
 
       socket.on("timer:setTime", async ({ tournamentId, timeInSeconds }) => {
         const timer = await getOrCreateTimerState(tournamentId);
+        if (!timer) {
+          console.error(`Cannot set time - tournament ${tournamentId} not found`);
+          return;
+        }
         timer.timeRemaining = Math.max(0, timeInSeconds);
         timer.lastUpdate = Date.now();
 

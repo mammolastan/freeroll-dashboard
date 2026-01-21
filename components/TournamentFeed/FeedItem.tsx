@@ -49,12 +49,26 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
       ? item.hitman_name
       : null;
 
+  const isBubble = placement === 9;
+
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
       {/* Icon */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
-        <Skull className="h-4 w-4 text-red-400" />
-      </div>
+      {isBubble ? (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+          <Image
+            src="/images/sad-bubble.png"
+            alt="Bubble"
+            width={128}
+            height={128}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
+          <Skull className="h-4 w-4 text-red-400" />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -62,8 +76,12 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
           <span className="font-medium text-red-400">
             {item.eliminated_player_name}
           </span>
-          <span className="text-gray-400"> was eliminated</span>
-          {hitmanDisplay && (
+          {isBubble ? (
+            <span className="text-gray-400"> burst the bubble!</span>
+          ) : (
+            <span className="text-gray-400"> was eliminated</span>
+          )}
+          {hitmanDisplay && !isBubble && (
             <>
               <span className="text-gray-400"> by </span>
               <span className="font-medium text-cyan-400">{hitmanDisplay}</span>

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Megaphone,
   MessageCircle,
+  Trophy,
 } from "lucide-react";
 
 type FeedTab = "all" | "td" | "chat";
@@ -73,6 +74,26 @@ export function TournamentFeed({
   const chatMessageCount = useMemo(() => {
     return items.filter((item) => item.item_type === "message").length;
   }, [items]);
+
+  // Determine if tournament is over and who won
+  const winner = useMemo(() => {
+    if (!totalPlayers || totalPlayers < 2) return null;
+
+    const knockouts = items.filter((item) => item.item_type === "knockout");
+    // Tournament is over when all but one player is knocked out
+    if (knockouts.length !== totalPlayers - 1) return null;
+
+    // Find the final knockout (highest ko_position)
+    const finalKnockout = knockouts.reduce((latest, current) => {
+      if (!latest) return current;
+      return (current.ko_position || 0) > (latest.ko_position || 0)
+        ? current
+        : latest;
+    }, knockouts[0]);
+
+    // The winner is the hitman of the final knockout
+    return finalKnockout?.hitman_name || null;
+  }, [items, totalPlayers]);
 
   // Track scroll position to auto-scroll for new items
   const handleScroll = () => {
@@ -237,6 +258,25 @@ export function TournamentFeed({
                 </p>
               </>
             )}
+          </div>
+        )}
+
+        {/* Victory Announcement */}
+        {winner && activeTab === "all" && (
+          <div className="p-4 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 border-b border-yellow-500/30">
+            <div className="flex items-center justify-center gap-3">
+              <Trophy className="h-6 w-6 text-yellow-400" />
+              <div className="text-center">
+                <span className="text-yellow-300 font-bold text-lg">
+                  {winner}
+                </span>
+                <span className="text-yellow-200/80 text-lg">
+                  {" "}
+                  wins the tournament!
+                </span>
+              </div>
+              <Trophy className="h-6 w-6 text-yellow-400" />
+            </div>
           </div>
         )}
 
