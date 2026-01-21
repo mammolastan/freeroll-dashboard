@@ -24,8 +24,8 @@ export async function PUT(
 
     // FIRST: Get the current player state to detect knockout
     const currentPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT player_name, ko_position, hitman_name 
-      FROM tournament_draft_players 
+      SELECT player_name, player_nickname, ko_position, hitman_name
+      FROM tournament_draft_players
       WHERE id = ${playerId}
     `;
     
@@ -73,10 +73,29 @@ export async function PUT(
       if (wasKnockedOut) {
         // Create feed item for the knockout
         try {
+          // Use nickname for eliminated player if available
+          const eliminatedPlayerName = String(
+            currentPlayer.player_nickname || currentPlayer.player_name || player_name
+          );
+
+          // Look up hitman's nickname if hitman exists
+          let hitmanDisplayName = hitman_name || null;
+          if (hitman_name) {
+            const hitmanPlayer = await prisma.$queryRaw<RawQueryResult[]>`
+              SELECT player_nickname
+              FROM tournament_draft_players
+              WHERE tournament_draft_id = ${draftId} AND player_name = ${hitman_name}
+              LIMIT 1
+            `;
+            if (hitmanPlayer.length > 0 && hitmanPlayer[0].player_nickname) {
+              hitmanDisplayName = String(hitmanPlayer[0].player_nickname);
+            }
+          }
+
           await createKnockoutFeedItem(
             draftId,
-            String(currentPlayer.player_name || player_name),
-            hitman_name || null,
+            eliminatedPlayerName,
+            hitmanDisplayName,
             ko_position
           );
         } catch (feedError) {

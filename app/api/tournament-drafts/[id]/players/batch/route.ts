@@ -45,6 +45,7 @@ export async function PUT(
           where: { id: playerId },
           select: {
             player_name: true,
+            player_nickname: true,
             ko_position: true,
             hitman_name: true,
           },
@@ -84,7 +85,7 @@ export async function PUT(
 
         if (wasKnockedOut) {
           knockoutsToPost.push({
-            playerName: currentPlayer.player_name,
+            playerName: currentPlayer.player_nickname || currentPlayer.player_name,
             hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
             koPosition: updateData.ko_position as number,
           });
@@ -105,10 +106,27 @@ export async function PUT(
     // Do this AFTER the transaction completes successfully
     for (const knockout of knockoutsToPost) {
       try {
+        // Look up hitman's nickname if hitman exists
+        let hitmanDisplayName = knockout.hitmanName;
+        if (knockout.hitmanName) {
+          const hitmanPlayer = await prisma.tournamentDraftPlayer.findFirst({
+            where: {
+              tournament_draft_id: draftId,
+              player_name: knockout.hitmanName,
+            },
+            select: {
+              player_nickname: true,
+            },
+          });
+          if (hitmanPlayer?.player_nickname) {
+            hitmanDisplayName = hitmanPlayer.player_nickname;
+          }
+        }
+
         await createKnockoutFeedItem(
           draftId,
           knockout.playerName,
-          knockout.hitmanName,
+          hitmanDisplayName,
           knockout.koPosition
         );
       } catch (feedError) {
