@@ -158,7 +158,11 @@ function generateFileName(
   let timeString = "";
   if (time) {
     const timeStr = String(time);
-    timeString = "_" + timeStr.replace(/:/g, "").replace(/\s+/g, "");
+    // Extract only HH:MM format (first 5 characters)
+    const timeMatch = timeStr.match(/^(\d{2}):?(\d{2})/);
+    if (timeMatch) {
+      timeString = "_" + timeMatch[1] + timeMatch[2];
+    }
   }
 
   return `SYS-${month}${day}${timeString}_${cleanVenue}_${cleanDirector}`;
