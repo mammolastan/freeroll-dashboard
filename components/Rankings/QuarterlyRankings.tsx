@@ -41,8 +41,15 @@ interface QuarterOption {
     value: string;
 }
 
+// Helper function to check for quartersplus cheat code
+function hasQuartersPlusCheatCode(): boolean {
+    if (typeof window === 'undefined') return false;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('cheatcode') === 'quartersplus';
+}
+
 // Helper function to generate quarter options
-function generateQuarterOptions(): QuarterOption[] {
+function generateQuarterOptions(extendedMode: boolean = false): QuarterOption[] {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
@@ -52,8 +59,9 @@ function generateQuarterOptions(): QuarterOption[] {
     let year = currentYear;
     let quarter = currentQuarter;
 
-    // Generate 6 quarters (current + 5 previous)
-    for (let i = 0; i < 6; i++) {
+    // Generate 6 quarters normally, or 12 if extendedMode is enabled
+    const quarterCount = extendedMode ? 12 : 6;
+    for (let i = 0; i < quarterCount; i++) {
         const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
         const monthRanges = [
             'Jan - Mar',
@@ -114,8 +122,15 @@ export default function QuarterlyRankings() {
         direction: 'asc'
     });
 
+    // Check for extended quarters mode (cheatcode=quartersplus)
+    const [extendedQuartersMode, setExtendedQuartersMode] = useState(false);
+
+    useEffect(() => {
+        setExtendedQuartersMode(hasQuartersPlusCheatCode());
+    }, []);
+
     // Generate quarter options and get selected quarter
-    const quarterOptions = generateQuarterOptions();
+    const quarterOptions = generateQuarterOptions(extendedQuartersMode);
     const [selectedQuarter, setSelectedQuarter] = useState<string>(() => getSelectedQuarterFromURL());
 
     // Update URL when quarter changes
