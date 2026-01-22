@@ -5,13 +5,14 @@
 import React from "react";
 import Image from "next/image";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
-import { Skull, UserCheck, Info, Megaphone, X } from "lucide-react";
+import { Skull, UserCheck, Info, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 
 interface FeedItemProps {
   item: FeedItemType;
   totalPlayers?: number;
   onDelete?: (itemId: number) => void;
+  startPoints?: number;
 }
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -32,8 +33,16 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Calculate placement points (same formula as integrate route)
+function calculatePlacementPoints(placement: number): number {
+  if (placement === 1) return 10;
+  if (placement === 2) return 7;
+  if (placement >= 3 && placement <= 8) return 9 - placement;
+  return 0;
+}
+
 // Knockout Item
-function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
+function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -44,6 +53,11 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
     item.ko_position && totalPlayers
       ? totalPlayers - item.ko_position + 1
       : null;
+
+  // Calculate points earned (only for 8th place or better)
+  const placementPoints =
+    placement && placement <= 8 ? calculatePlacementPoints(placement) : 0;
+  const totalPoints = placementPoints > 0 ? startPoints + placementPoints : 0;
 
   const hitmanDisplay =
     item.hitman_name && item.hitman_name !== "unknown"
@@ -97,7 +111,9 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
               {hitmanDisplay && !isBubble && (
                 <>
                   <span className="text-gray-400"> by </span>
-                  <span className="font-medium text-cyan-400">{hitmanDisplay}</span>
+                  <span className="font-medium text-cyan-400">
+                    {hitmanDisplay}
+                  </span>
                 </>
               )}
             </>
@@ -111,6 +127,15 @@ function KnockoutItem({ item, totalPlayers }: FeedItemProps) {
             <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
               {placement}
               {getOrdinalSuffix(placement)} place
+            </span>
+          )}
+          {totalPoints > 0 && (
+            <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+              <Star
+                size={10}
+                className="fill-current"
+              />
+              {totalPoints} point{totalPoints !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -250,13 +275,19 @@ function TDMessageItem({ item, onDelete }: FeedItemProps) {
 }
 
 // Main FeedItem Component (polymorphic)
-export function FeedItem({ item, totalPlayers, onDelete }: FeedItemProps) {
+export function FeedItem({
+  item,
+  totalPlayers,
+  onDelete,
+  startPoints,
+}: FeedItemProps) {
   switch (item.item_type) {
     case "knockout":
       return (
         <KnockoutItem
           item={item}
           totalPlayers={totalPlayers}
+          startPoints={startPoints}
         />
       );
     case "message":

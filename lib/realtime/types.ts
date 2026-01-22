@@ -29,6 +29,7 @@ export interface Tournament {
   venue: string | null; // Just a text field
   status: 'draft' | 'active' | 'completed';
   max_players: number | null;
+  start_points: number;
 }
 
 export interface GameViewData {

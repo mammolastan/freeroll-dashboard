@@ -27,6 +27,8 @@ interface TournamentFeedProps {
   /** Admin mode - shows delete buttons on messages (default: false) */
   isAdmin?: boolean;
   totalPlayers?: number;
+  /** Starting points for the tournament (used to calculate total points earned) */
+  startPoints?: number;
 }
 
 export function TournamentFeed({
@@ -35,6 +37,7 @@ export function TournamentFeed({
   showInput = true,
   isAdmin = false,
   totalPlayers,
+  startPoints = 0,
 }: TournamentFeedProps) {
   const {
     items,
@@ -289,6 +292,7 @@ export function TournamentFeed({
                 item={item}
                 onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
                 totalPlayers={totalPlayers}
+                startPoints={startPoints}
               />
             ))}
           </div>

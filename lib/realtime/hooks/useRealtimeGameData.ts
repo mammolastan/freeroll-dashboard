@@ -111,7 +111,8 @@ export function useRealtimeGameData(tournamentId: string | number) {
           time: null,
           venue: null,
           status: 'active',
-          max_players: null
+          max_players: null,
+          start_points: 0
         },
         players
       }));

@@ -217,6 +217,8 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
             maxHeight="calc(100vh - 220px)"
             showInput={false}
             isAdmin={true}
+            totalPlayers={currentDraft.player_count}
+            startPoints={currentDraft.start_points}
           />
         </div>
       </div>

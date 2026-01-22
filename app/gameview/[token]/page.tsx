@@ -318,6 +318,7 @@ export default function GameViewPage() {
               tournamentId={parseInt(token as string)}
               maxHeight="450px"
               totalPlayers={gameData.players.length}
+              startPoints={gameData.tournament.start_points}
             />
           </div>
         )}
