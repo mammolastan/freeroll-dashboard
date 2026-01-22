@@ -60,14 +60,34 @@ export async function GET(
       );
     }
 
-    // Fetch feed items with optional cursor
-    let feedItems: RawQueryResult[];
+    // Always fetch ALL TD messages and chat messages (they should always be visible)
+    const alwaysVisibleMessages = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT
+        f.id,
+        f.tournament_draft_id,
+        f.item_type,
+        f.author_uid,
+        f.author_name,
+        p.photo_url as author_photo_url,
+        f.message_text,
+        f.eliminated_player_name,
+        f.hitman_name,
+        f.ko_position,
+        f.created_at
+      FROM tournament_feed_items f
+      LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+      WHERE f.tournament_draft_id = ${tournamentId}
+        AND f.item_type IN ('td_message', 'message')
+      ORDER BY f.created_at DESC
+    `;
 
+    // Fetch other feed items with pagination (knockouts, check-ins, system)
+    let otherItems: RawQueryResult[];
     const fetchLimit = limit + 1;
 
     if (before) {
-      // Cursor-based pagination: get items older than the cursor
-      feedItems = await prisma.$queryRaw<RawQueryResult[]>`
+      // Cursor-based pagination: get items older than the cursor (excluding always-visible types)
+      otherItems = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           f.id,
           f.tournament_draft_id,
@@ -83,13 +103,14 @@ export async function GET(
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
+          AND f.item_type NOT IN ('td_message', 'message')
           AND f.created_at < ${new Date(before)}
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
     } else {
-      // Initial load: get most recent items
-      feedItems = await prisma.$queryRaw<RawQueryResult[]>`
+      // Initial load: get most recent paginated items (knockouts, check-ins, system)
+      otherItems = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           f.id,
           f.tournament_draft_id,
@@ -105,18 +126,38 @@ export async function GET(
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
+          AND f.item_type NOT IN ('td_message', 'message')
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
     }
 
-    // Check if there are more items
-    const hasMore = feedItems.length > limit;
-    
+    // Check if there are more paginated items
+    const hasMore = otherItems.length > limit;
+
     // Remove the extra item we fetched for pagination check
     if (hasMore) {
-      feedItems = feedItems.slice(0, limit);
+      otherItems = otherItems.slice(0, limit);
     }
+
+    // Merge always-visible messages with other items and deduplicate by id
+    const seenIds = new Set<number>();
+    const feedItems: RawQueryResult[] = [];
+
+    for (const item of [...alwaysVisibleMessages, ...otherItems]) {
+      const id = Number(item.id);
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        feedItems.push(item);
+      }
+    }
+
+    // Sort by created_at DESC
+    feedItems.sort((a, b) => {
+      const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at as string);
+      const dateB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at as string);
+      return dateB.getTime() - dateA.getTime();
+    });
 
     // Serialize the response (handle BigInt and Date)
     // Cast string fields explicitly since Prisma raw queries return {} for nullable fields
@@ -136,9 +177,13 @@ export async function GET(
         : String(item.created_at),
     }));
 
-    // Determine the next cursor (timestamp of the oldest item in this batch)
-    const nextCursor = hasMore && serializedItems.length > 0
-      ? serializedItems[serializedItems.length - 1].created_at
+    // Determine the next cursor (timestamp of the oldest paginated item in this batch)
+    // We use otherItems for the cursor since TD messages and chat messages are always fully returned
+    const oldestOtherItem = otherItems.length > 0 ? otherItems[otherItems.length - 1] : null;
+    const nextCursor = hasMore && oldestOtherItem
+      ? (oldestOtherItem.created_at instanceof Date
+          ? oldestOtherItem.created_at.toISOString()
+          : String(oldestOtherItem.created_at))
       : null;
 
     const response: FeedResponse = {

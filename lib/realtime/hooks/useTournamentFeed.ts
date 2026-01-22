@@ -230,7 +230,12 @@ export function useTournamentFeed(
     try {
       const data = await fetchFeed(nextCursor);
       if (data) {
-        setItems(prev => [...prev, ...data.items]);
+        // Deduplicate items (TD messages are always returned and may already exist)
+        setItems(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.items.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
       }
