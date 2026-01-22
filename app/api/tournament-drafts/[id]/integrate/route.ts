@@ -100,8 +100,7 @@ function validateTournamentForIntegration(players: DraftPlayer[]): {
 
     if (!koPositions.every((pos, index) => pos === expectedPositions[index])) {
       errors.push(
-        `KO positions must be sequential from 1 to ${
-          koPositions.length
+        `KO positions must be sequential from 1 to ${koPositions.length
         }. Current positions: ${koPositions.join(", ")}`
       );
     }
@@ -284,9 +283,6 @@ export async function POST(
             },
           });
 
-          console.log(
-            `Integrated player: ${player.player_name}, Placement: ${player.placement}, KO Position: ${player.ko_position}, Points: ${totalPoints}`
-          );
         }
 
         // 8. Update draft status to integrated
@@ -295,6 +291,12 @@ export async function POST(
         SET status = 'integrated', game_uid = ${gameUID},file_name = ${fileName}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
+        // Delete existing check-in feed items
+        await tx.$executeRaw`                                                                                                                              
+        DELETE FROM tournament_feed_items                                                                                                                
+        WHERE tournament_draft_id = ${draftId}                                                                                                           
+        AND item_type = 'checkin'                                                                                                                        
+        `;
 
         return {
           success: true,
