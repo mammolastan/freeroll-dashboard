@@ -20,6 +20,8 @@ export async function GET() {
         nickname: true,
         email: true,
         photo_url: true,
+        favorite_hand: true,
+        favorite_pro: true,
         created_at: true,
       },
     });
@@ -47,7 +49,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { nickname } = await request.json();
+    const { nickname, favorite_hand, favorite_pro } = await request.json();
 
     // Validate nickname
     if (nickname !== null && nickname !== undefined) {
@@ -66,15 +68,53 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Validate favorite_hand
+    if (favorite_hand !== null && favorite_hand !== undefined) {
+      if (typeof favorite_hand !== "string") {
+        return NextResponse.json(
+          { error: "Invalid favorite hand" },
+          { status: 400 }
+        );
+      }
+
+      if (favorite_hand.length > 100) {
+        return NextResponse.json(
+          { error: "Favorite hand must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate favorite_pro
+    if (favorite_pro !== null && favorite_pro !== undefined) {
+      if (typeof favorite_pro !== "string") {
+        return NextResponse.json(
+          { error: "Invalid favorite pro" },
+          { status: 400 }
+        );
+      }
+
+      if (favorite_pro.length > 100) {
+        return NextResponse.json(
+          { error: "Favorite pro must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updatedPlayer = await prisma.player.update({
       where: { uid: session.user.uid },
       data: {
         nickname: nickname?.trim() || null,
+        favorite_hand: favorite_hand?.trim() || null,
+        favorite_pro: favorite_pro?.trim() || null,
       },
       select: {
         uid: true,
         name: true,
         nickname: true,
+        favorite_hand: true,
+        favorite_pro: true,
       },
     });
 

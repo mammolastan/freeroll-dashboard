@@ -11,6 +11,8 @@ interface Player {
     UID: string
     nickname: string | null
     photo_url?: string | null
+    favorite_hand?: string | null
+    favorite_pro?: string | null
 }
 
 export default function PlayersPage() {
@@ -52,7 +54,9 @@ export default function PlayersPage() {
                             Name: data[0].Name,
                             UID: data[0].UID,
                             nickname: data[0].nickname || null,
-                            photo_url: data[0].photo_url || null
+                            photo_url: data[0].photo_url || null,
+                            favorite_hand: data[0].favorite_hand || null,
+                            favorite_pro: data[0].favorite_pro || null
                         };
                         setSelectedPlayer(playerData);
                         localStorage.setItem('selectedPlayer', JSON.stringify(playerData));
@@ -69,7 +73,9 @@ export default function PlayersPage() {
                             Name: data[0].Name,
                             UID: data[0].UID,
                             nickname: data[0].nickname || null,
-                            photo_url: data[0].photo_url || null
+                            photo_url: data[0].photo_url || null,
+                            favorite_hand: data[0].favorite_hand || null,
+                            favorite_pro: data[0].favorite_pro || null
                         };
                         setSelectedPlayer(playerData);
                         localStorage.setItem('selectedPlayer', JSON.stringify(playerData));
@@ -150,6 +156,16 @@ export default function PlayersPage() {
                                 <p className="text-white text-sm mt-1">
                                     {selectedPlayer.Name}
                                 </p>
+                            )}
+                            {(selectedPlayer.favorite_hand || selectedPlayer.favorite_pro) && (
+                                <div className="mt-3 text-sm text-gray-300 space-y-1">
+                                    {selectedPlayer.favorite_hand && (
+                                        <p><span className="text-gray-400">Favorite Hand:</span> {selectedPlayer.favorite_hand}</p>
+                                    )}
+                                    {selectedPlayer.favorite_pro && (
+                                        <p><span className="text-gray-400">Favorite Pro:</span> {selectedPlayer.favorite_pro}</p>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>

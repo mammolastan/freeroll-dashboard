@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
           p.UID,
           pl.nickname,
           pl.photo_url,
+          pl.favorite_hand,
+          pl.favorite_pro,
           COUNT(DISTINCT p.File_name) as TotalGames,
           SUM(p.Total_Points) as TotalPoints,
           MAX(p.game_date) as LastGameDate
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE p.Name LIKE ${searchTerm}
           OR pl.nickname LIKE ${searchTerm}
-        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url
+        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url, pl.favorite_hand, pl.favorite_pro
         ORDER BY
           CASE
             WHEN MAX(p.game_date) IS NULL THEN 1
@@ -92,13 +94,15 @@ export async function GET(request: NextRequest) {
           p.UID,
           pl.nickname,
           pl.photo_url,
+          pl.favorite_hand,
+          pl.favorite_pro,
           COUNT(DISTINCT p.File_name) as TotalGames,
           SUM(p.Total_Points) as TotalPoints,
           MAX(p.game_date) as LastGameDate
         FROM poker_tournaments p
         LEFT JOIN players pl ON p.UID = pl.uid
         WHERE p.UID = ${query}
-        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url
+        GROUP BY p.Name, p.UID, pl.nickname, pl.photo_url, pl.favorite_hand, pl.favorite_pro
         ORDER BY
           CASE
             WHEN MAX(p.game_date) IS NULL THEN 1

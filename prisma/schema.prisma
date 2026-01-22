@@ -60,6 +60,8 @@ model Player {
   last_login_at     DateTime?       @db.Timestamp(0)
   password_hash     String?         @db.VarChar(255)
   photo_url         String?         @db.VarChar(500)
+  favorite_hand     String?         @db.VarChar(100)
+  favorite_pro      String?         @db.VarChar(100)
   bonus_points      bonus_points[]
   password_resets   PasswordReset[]
   PlayerBadge       PlayerBadge[]
