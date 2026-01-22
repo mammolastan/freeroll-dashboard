@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { QuarterlyPlayerCard } from './QuarterlyPlayerCard'; // Updated import
-import { ArrowUpDown, Trophy, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
+import { ArrowUpDown, Star, Zap, Hexagon, LandPlot, Calculator, Swords } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useFavorites, FavoritesFilter } from './FavoritesComponents';
 import { BadgeData } from '../ui/Badge';
@@ -275,7 +275,7 @@ export default function QuarterlyRankings() {
     const SortableHeader = ({ field, label, bg, icon }: { field: SortField; label: string; bg: string; icon: string }) => {
         // Icon mapping
         const iconMap: Record<string, React.ElementType> = {
-            Trophy,
+            Star,
             Zap,
             Hexagon,
             LandPlot,
@@ -414,7 +414,7 @@ export default function QuarterlyRankings() {
                                 field="totalPoints"
                                 label="Points"
                                 bg="stat1"
-                                icon="Trophy"
+                                icon="Star"
                             />
                         </div>
                         <SortableHeader field="avgScore" label="Power Rating" bg="stat2" icon="Zap" />

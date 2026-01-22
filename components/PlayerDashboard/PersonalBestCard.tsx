@@ -1,6 +1,6 @@
 // components/PlayerDashboard/PersonalBestCard.tsx
 import React, { useState, useEffect } from 'react';
-import { Trophy, Zap, Hexagon, LandPlot, Star, TrendingUp, Crown, Award } from 'lucide-react';
+import { Zap, Hexagon, LandPlot, Star, TrendingUp, Crown, Award } from 'lucide-react';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 
 interface QuarterlyStats {
@@ -181,7 +181,7 @@ export function PersonalBestCard({ playerUID }: PersonalBestCardProps) {
         },
         {
             title: 'Most Total Points',
-            icon: <Trophy className="h-6 w-6" />,
+            icon: <Star className="h-6 w-6" />,
             value: personalBests.mostTotalPoints?.totalPoints || 0,
             quarter: personalBests.mostTotalPoints ? formatQuarter(personalBests.mostTotalPoints.quarter, personalBests.mostTotalPoints.year) : null,
             detail: personalBests.mostTotalPoints ? `${personalBests.mostTotalPoints.gamesPlayed} games played` : null,

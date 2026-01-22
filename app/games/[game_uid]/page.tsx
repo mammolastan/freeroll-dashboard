@@ -2,7 +2,7 @@
 'use client'
 import { useState, useEffect, use } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Trophy, Users, ArrowLeft, Swords } from 'lucide-react'
+import { Star, Users, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import PlayerAvatar from '@/components/ui/PlayerAvatar'
@@ -156,7 +156,7 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
                                     <div className="flex items-center">
                                         {player.totalPoints > 0 && (
                                             <>
-                                                <Trophy className="w-4 h-4 mr-1 text-blue-500" />
+                                                <Star className="w-4 h-4 mr-1 text-blue-500" />
                                                 <span>{player.totalPoints} pts</span>
                                             </>
                                         )}

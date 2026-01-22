@@ -1,6 +1,6 @@
 // components/VenueDashboard/VenueDetails.tsx
 import { useState, useEffect } from 'react';
-import { Trophy, Users, Award, Crown } from 'lucide-react';
+import { Trophy, Users, Award, Crown, Star } from 'lucide-react';
 import Link from 'next/link';
 
 interface VenueStats {
@@ -145,7 +145,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Trophy size={16} className="text-blue-500" />
+                                <Star size={16} className="text-blue-500" />
                                 <span className="font-bold text-blue-600">
                                     {player.totalPoints > 0 ?
                                         player.totalPoints : '0'

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Trophy, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
+import { Star, Users, ChevronRight, UtensilsCrossed } from 'lucide-react'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import { formatGameDateET } from "@/lib/utils";
 import PlayerAvatar from '@/components/ui/PlayerAvatar'
@@ -126,7 +126,7 @@ export default function GamesPage() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="flex items-center gap-1 text-black">
-                                                    <Trophy size={14} className="text-green-500" />
+                                                    <Star size={14} className="text-green-500" />
                                                     {player.points}
                                                 </span>
                                                
