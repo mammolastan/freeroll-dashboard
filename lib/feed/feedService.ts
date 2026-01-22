@@ -96,16 +96,19 @@ export async function createKnockoutFeedItem(
 
 /**
  * Create a check-in feed item and broadcast it
+ * @param displayName - Optional display name (e.g., nickname) to show instead of full playerName
  */
 export async function createCheckInFeedItem(
   tournamentId: number,
-  playerName: string
+  playerName: string,
+  displayName?: string | null
 ): Promise<FeedItemData | null> {
   try {
+    const nameToShow = displayName || playerName;
     await prisma.$executeRaw`
-      INSERT INTO tournament_feed_items 
+      INSERT INTO tournament_feed_items
       (tournament_draft_id, item_type, message_text, created_at)
-      VALUES (${tournamentId}, 'checkin', ${`${playerName} checked in`}, NOW())
+      VALUES (${tournamentId}, 'checkin', ${`${nameToShow} checked in`}, NOW())
     `;
 
     const newItem = await prisma.$queryRaw<RawQueryResult[]>`

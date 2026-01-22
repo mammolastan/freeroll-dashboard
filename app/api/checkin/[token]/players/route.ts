@@ -192,9 +192,9 @@ export async function POST(
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
-    // Create feed item for check-in
+    // Create feed item for check-in (use nickname if available)
     try {
-      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName);
+      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName, player_nickname);
     } catch (error) {
       console.error("Failed to create check-in feed item:", error);
       // Don't fail the check-in if feed item creation fails
@@ -311,9 +311,9 @@ export async function PUT(
       SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
     `;
 
-    // Create feed item for check-in
+    // Create feed item for check-in (use nickname if available)
     try {
-      await createCheckInFeedItem(Number(tournamentId), player_name);
+      await createCheckInFeedItem(Number(tournamentId), player_name, player_nickname);
     } catch (error) {
       console.error("Failed to create check-in feed item:", error);
       // Don't fail the check-in if feed item creation fails
