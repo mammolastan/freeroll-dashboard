@@ -242,10 +242,7 @@ export async function POST(
               AND player_name = ${player.player_name}
               AND is_new_player = true
             `;
-
-            console.log(
-              `Created new player: ${player.player_name} with UID: ${newUID}`
-            );
+            
           }
 
           // Calculate points and score
@@ -285,7 +282,7 @@ export async function POST(
 
         }
 
-        // 8. Update draft status to integrated
+        // Update draft status to integrated
         await tx.$queryRaw`
         UPDATE tournament_drafts 
         SET status = 'integrated', game_uid = ${gameUID},file_name = ${fileName}, updated_at = CURRENT_TIMESTAMP
