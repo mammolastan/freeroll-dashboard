@@ -3,16 +3,18 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import Link from 'next/link';
 import './PlayerAvatarModal.css';
 
 interface PlayerAvatarModalProps {
     photoUrl: string;
     name: string;
+    uid?: string | null;
     isOpen: boolean;
     onClose: () => void;
 }
 
-export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAvatarModalProps) {
+export function PlayerAvatarModal({ photoUrl, name, uid, isOpen, onClose }: PlayerAvatarModalProps) {
     // Handle escape key
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -71,24 +73,47 @@ export function PlayerAvatarModal({ photoUrl, name, isOpen, onClose }: PlayerAva
                     <div className="glass-reflection" />
 
                     {/* Image container with sheen effect */}
-                    <div className="glass-image-container">
-                        <img
-                            src={photoUrl}
-                            alt={name}
-                            className="glass-image"
-                        />
-                        {/* Moving sheen overlay */}
-                        <div className="glass-sheen" />
-                        {/* Inner glow */}
-                        <div className="glass-inner-glow" />
-                    </div>
+                    {uid ? (
+                        <Link href={`/players?uid=${encodeURIComponent(uid)}`} className="glass-image-container block">
+                            <img
+                                src={photoUrl}
+                                alt={name}
+                                className="glass-image"
+                            />
+                            {/* Moving sheen overlay */}
+                            <div className="glass-sheen" />
+                            {/* Inner glow */}
+                            <div className="glass-inner-glow" />
+                        </Link>
+                    ) : (
+                        <div className="glass-image-container">
+                            <img
+                                src={photoUrl}
+                                alt={name}
+                                className="glass-image"
+                            />
+                            {/* Moving sheen overlay */}
+                            <div className="glass-sheen" />
+                            {/* Inner glow */}
+                            <div className="glass-inner-glow" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Name footer - styled to match the glass theme */}
                 <div className="mt-4 text-center">
-                    <p className="text-xl font-semibold text-white drop-shadow-lg">
-                        {name}
-                    </p>
+                    {uid ? (
+                        <Link
+                            href={`/players?uid=${encodeURIComponent(uid)}`}
+                            className="text-xl font-semibold text-white drop-shadow-lg hover:text-cyan-300 transition-colors"
+                        >
+                            {name}
+                        </Link>
+                    ) : (
+                        <p className="text-xl font-semibold text-white drop-shadow-lg">
+                            {name}
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

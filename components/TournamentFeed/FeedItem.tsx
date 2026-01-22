@@ -128,6 +128,7 @@ function MessageItem({ item, onDelete }: FeedItemProps) {
         <PlayerAvatar
           photoUrl={item.author_photo_url}
           name={item.author_name || "User"}
+          uid={item.author_uid}
           size="sm"
           showFallback={false}
         />

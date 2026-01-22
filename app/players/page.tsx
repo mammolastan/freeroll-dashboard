@@ -182,6 +182,7 @@ export default function PlayersPage() {
                         <PlayerAvatarModal
                             photoUrl={selectedPlayer.photo_url}
                             name={selectedPlayer.nickname || selectedPlayer.Name}
+                            uid={selectedPlayer.UID}
                             isOpen={isModalOpen}
                             onClose={() => setIsModalOpen(false)}
                         />

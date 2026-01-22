@@ -46,6 +46,7 @@ function PlayerCard({
             <PlayerAvatar
               photoUrl={player.photo_url}
               name={player.nickname || player.name}
+              uid={player.uid}
               size="sm"
               showFallback={false}
             />

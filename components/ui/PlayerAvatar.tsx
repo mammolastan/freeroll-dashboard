@@ -10,6 +10,7 @@ import { PlayerAvatarModal } from './PlayerAvatarModal';
 interface PlayerAvatarProps {
     photoUrl?: string | null;
     name?: string;
+    uid?: string | null;
     size?: 'sm' | 'md' | 'lg' | 'xl';
     className?: string;
     showFallback?: boolean;
@@ -39,6 +40,7 @@ const iconSizes = {
 export function PlayerAvatar({
     photoUrl,
     name,
+    uid,
     size = 'md',
     className = '',
     showFallback = true
@@ -102,6 +104,7 @@ export function PlayerAvatar({
                 <PlayerAvatarModal
                     photoUrl={photoUrl}
                     name={name || 'Player'}
+                    uid={uid}
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                 />

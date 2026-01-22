@@ -112,6 +112,7 @@ export default function GamesPage() {
                                                     <PlayerAvatar
                                                         photoUrl={player.photo_url}
                                                         name={player.nickname || player.name}
+                                                        uid={player.UID}
                                                         size="sm"
                                                         showFallback={false}
                                                     />

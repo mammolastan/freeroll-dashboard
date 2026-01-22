@@ -93,6 +93,7 @@ export function QuarterlyPlayerCard({ player, isFavorite, onToggleFavorite }: Qu
                 <PlayerAvatar
                     photoUrl={player.photoUrl}
                     name={player.nickname || player.name}
+                    uid={player.uid}
                     size="md"
                 />
             </div>

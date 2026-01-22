@@ -140,6 +140,7 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
                                         <PlayerAvatar
                                             photoUrl={player.photo_url}
                                             name={player.nickname || player.name}
+                                            uid={player.uid}
                                             size="sm"
                                             showFallback={false}
                                         />
