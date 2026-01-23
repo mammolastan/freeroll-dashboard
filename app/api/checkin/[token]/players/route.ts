@@ -194,7 +194,7 @@ export async function POST(
 
     // Create feed item for check-in (use nickname if available)
     try {
-      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName, player_nickname);
+      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName, player_uid, player_nickname);
     } catch (error) {
       console.error("Failed to create check-in feed item:", error);
       // Don't fail the check-in if feed item creation fails
@@ -313,7 +313,7 @@ export async function PUT(
 
     // Create feed item for check-in (use nickname if available)
     try {
-      await createCheckInFeedItem(Number(tournamentId), player_name, player_nickname);
+      await createCheckInFeedItem(Number(tournamentId), player_name, player_uid, player_nickname);
     } catch (error) {
       console.error("Failed to create check-in feed item:", error);
       // Don't fail the check-in if feed item creation fails

@@ -13,6 +13,7 @@ export interface FeedItemData {
   item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
   author_name: string | null;
+  author_photo_url: string | null;
   message_text: string | null;
   eliminated_player_name: string | null;
   hitman_name: string | null;
@@ -67,6 +68,7 @@ export async function createKnockoutFeedItem(
       item_type: item.item_type as FeedItemData["item_type"],
       author_uid: item.author_uid ? String(item.author_uid) : null,
       author_name: item.author_name ? String(item.author_name) : null,
+      author_photo_url: null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
       hitman_name: item.hitman_name ? String(item.hitman_name) : null,
@@ -96,19 +98,34 @@ export async function createKnockoutFeedItem(
 
 /**
  * Create a check-in feed item and broadcast it
+ * @param playerName - The player's full name
+ * @param playerUid - The player's UID (if they're an existing player)
  * @param displayName - Optional display name (e.g., nickname) to show instead of full playerName
  */
 export async function createCheckInFeedItem(
   tournamentId: number,
   playerName: string,
+  playerUid?: string | null,
   displayName?: string | null
 ): Promise<FeedItemData | null> {
   try {
     const nameToShow = displayName || playerName;
+
+    // Look up player's photo URL if they have a UID
+    let photoUrl: string | null = null;
+    if (playerUid) {
+      const playerData = await prisma.$queryRaw<RawQueryResult[]>`
+        SELECT photo_url FROM players WHERE uid = ${playerUid}
+      `;
+      if (playerData.length > 0 && playerData[0].photo_url) {
+        photoUrl = String(playerData[0].photo_url);
+      }
+    }
+
     await prisma.$executeRaw`
       INSERT INTO tournament_feed_items
-      (tournament_draft_id, item_type, message_text, created_at)
-      VALUES (${tournamentId}, 'checkin', ${`${nameToShow} checked in`}, NOW())
+      (tournament_draft_id, item_type, author_uid, author_name, author_photo_url, message_text, created_at)
+      VALUES (${tournamentId}, 'checkin', ${playerUid}, ${nameToShow}, ${photoUrl}, ${`${nameToShow} checked in`}, NOW())
     `;
 
     const newItem = await prisma.$queryRaw<RawQueryResult[]>`
@@ -122,8 +139,9 @@ export async function createCheckInFeedItem(
       id: Number(item.id),
       tournament_draft_id: Number(item.tournament_draft_id),
       item_type: 'checkin',
-      author_uid: null,
-      author_name: null,
+      author_uid: item.author_uid ? String(item.author_uid) : null,
+      author_name: item.author_name ? String(item.author_name) : null,
+      author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
       hitman_name: null,
@@ -174,6 +192,7 @@ export async function createSystemFeedItem(
       item_type: 'system',
       author_uid: null,
       author_name: null,
+      author_photo_url: null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
       hitman_name: null,
@@ -224,6 +243,7 @@ export async function createTDMessageFeedItem(
       item_type: 'td_message',
       author_uid: null,
       author_name: 'Tournament Director',
+      author_photo_url: null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
       hitman_name: null,

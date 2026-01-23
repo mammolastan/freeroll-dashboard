@@ -198,17 +198,34 @@ function MessageItem({ item, onDelete }: FeedItemProps) {
 
 // Check-in Item
 function CheckInItem({ item }: FeedItemProps) {
+  const playerName = item.author_name || "A player";
+
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
-      {/* Icon */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
-        <UserCheck className="h-4 w-4 text-green-400" />
-      </div>
+      {/* Avatar - spans both lines */}
+      {item.author_photo_url ? (
+        <PlayerAvatar
+          photoUrl={item.author_photo_url}
+          name={playerName}
+          uid={item.author_uid}
+          size="sm"
+          showFallback={false}
+          className="flex-shrink-0"
+        />
+      ) : (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+          <span className="text-sm font-medium text-green-400">
+            {playerName.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-gray-400">
-          {item.message_text || "A player checked in"}
+        <div className="flex items-center gap-1.5 text-sm">
+          <UserCheck className="h-4 w-4 text-green-400 flex-shrink-0" />
+          <span className="font-medium text-green-300">{playerName}</span>
+          <span className="text-gray-400">checked in</span>
         </div>
         <div className="text-xs text-gray-500 mt-1">
           {formatRelativeTime(item.created_at)}
