@@ -111,7 +111,7 @@ export async function createCheckInFeedItem(
   try {
     const nameToShow = displayName || playerName;
 
-    // Look up player's photo URL if they have a UID
+    // Look up player's photo URL for the broadcast (not stored in DB)
     let photoUrl: string | null = null;
     if (playerUid) {
       const playerData = await prisma.$queryRaw<RawQueryResult[]>`
@@ -124,8 +124,8 @@ export async function createCheckInFeedItem(
 
     await prisma.$executeRaw`
       INSERT INTO tournament_feed_items
-      (tournament_draft_id, item_type, author_uid, author_name, author_photo_url, message_text, created_at)
-      VALUES (${tournamentId}, 'checkin', ${playerUid}, ${nameToShow}, ${photoUrl}, ${`${nameToShow} checked in`}, NOW())
+      (tournament_draft_id, item_type, author_uid, author_name, message_text, created_at)
+      VALUES (${tournamentId}, 'checkin', ${playerUid}, ${nameToShow}, ${`${nameToShow} checked in`}, NOW())
     `;
 
     const newItem = await prisma.$queryRaw<RawQueryResult[]>`
@@ -141,7 +141,7 @@ export async function createCheckInFeedItem(
       item_type: 'checkin',
       author_uid: item.author_uid ? String(item.author_uid) : null,
       author_name: item.author_name ? String(item.author_name) : null,
-      author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
+      author_photo_url: photoUrl,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
       hitman_name: null,

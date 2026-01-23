@@ -558,15 +558,10 @@ app.prepare().then(async () => {
     }, 30000); // 30 seconds
 
     io.on("connection", (socket) => {
-      console.log(`User connected: ${socket.id}`);
 
       socket.on("joinRoom", async (room) => {
-        console.log(
-          `[JOIN_ROOM] Socket ${socket.id} attempting to join room: ${room}`
-        );
         try {
           socket.join(room);
-          console.log(`Socket ${socket.id} joined room: ${room}`);
 
           // Fetch tournament and player data
           const tournamentDraftId = parseInt(room);
@@ -576,8 +571,7 @@ app.prepare().then(async () => {
               getCheckedInPlayers(tournamentDraftId),
             ]);
 
-            console.log("Tournament:", JSON.stringify(tournament, null, 2));
-            console.log("Players:", JSON.stringify(players, null, 2));
+            console.log(`Socket ${socket.id} joined room ${room} (${players?.length || 0} players)`);
 
             // Send both tournament and player data
             socket.emit("updatePlayers", players);

@@ -57,6 +57,13 @@ export function PlayerCheckInCore({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-focus the search input on mount
+  useEffect(() => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }, []);
+
   // Auto-clear success message after 4 seconds
   useEffect(() => {
     if (successMessage) {
