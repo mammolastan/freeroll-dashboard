@@ -89,9 +89,11 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="text-sm">
-          {isFirstBlood && hitmanDisplay ? (
+          {isFirstBlood ? (
             <>
-              <span className="font-medium text-cyan-400">{hitmanDisplay}</span>
+              <span className="font-medium text-cyan-400">
+                {hitmanDisplay ? hitmanDisplay : "Somebody"}
+              </span>
               <span className="text-gray-400"> drew first blood! </span>
               <span className="font-medium text-red-400">
                 {item.eliminated_player_name}
