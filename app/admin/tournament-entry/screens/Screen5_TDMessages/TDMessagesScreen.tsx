@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Megaphone, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Megaphone, Send, Loader2, CheckCircle, AlertCircle, Sparkles, Shuffle } from 'lucide-react';
 import { TournamentFeed } from '@/components/TournamentFeed/TournamentFeed';
 import { ScreenTabs } from '../../components/ScreenTabs';
 import { ScreenNumber } from '../../hooks/useScreenRouter';
@@ -32,6 +32,11 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Special hand generator state
+  const [specialHand, setSpecialHand] = useState<{ hand: string; playerName: string } | null>(null);
+  const [isGeneratingHand, setIsGeneratingHand] = useState(false);
+  const [handError, setHandError] = useState<string | null>(null);
 
   const handleSpecialsClick = () => {
     const specialsText = "Special hand: \nDrink specials: ";
@@ -76,6 +81,27 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
       setFeedback({ type: 'error', text: 'Failed to send message. Please try again.' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateSpecialHand = async () => {
+    setIsGeneratingHand(true);
+    setHandError(null);
+
+    try {
+      const response = await fetch('/api/random-favorite-hand');
+      const data = await response.json();
+
+      if (response.ok) {
+        setSpecialHand({ hand: data.hand, playerName: data.playerName });
+      } else {
+        setHandError(data.error || 'Failed to generate special hand');
+      }
+    } catch (error) {
+      console.error('Error generating special hand:', error);
+      setHandError('Failed to generate special hand');
+    } finally {
+      setIsGeneratingHand(false);
     }
   };
 
@@ -207,6 +233,59 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
               <li>• Only user messages and TD messages can be deleted</li>
               <li>• Knockouts and check-ins cannot be removed</li>
             </ul>
+          </div>
+
+          {/* Special Hand Generator */}
+          <div className="mt-4 bg-gray-900/80 border-2 border-purple-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-purple-300">Special Hand Generator</h2>
+                <p className="text-gray-400 text-xs">
+                  Random hand from player favorites
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleGenerateSpecialHand}
+              disabled={isGeneratingHand}
+              className="w-full px-4 py-3 text-base font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2"
+            >
+              {isGeneratingHand ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Shuffle className="h-5 w-5" />
+                  Generate Special Hand
+                </>
+              )}
+            </button>
+
+            {handError && (
+              <div className="mt-3 p-3 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{handError}</span>
+              </div>
+            )}
+
+            {specialHand && !handError && (
+              <div className="mt-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-200 mb-1">
+                    {specialHand.hand}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {specialHand.playerName}&apos;s favorite
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
