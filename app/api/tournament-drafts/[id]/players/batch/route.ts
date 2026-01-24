@@ -29,6 +29,7 @@ export async function PUT(
     // Track knockouts for feed items (player name, hitman, ko_position)
     const knockoutsToPost: Array<{
       playerName: string;
+      playerUid: string | null;
       hitmanName: string | null;
       koPosition: number;
     }> = [];
@@ -46,6 +47,7 @@ export async function PUT(
           select: {
             player_name: true,
             player_nickname: true,
+            player_uid: true,
             ko_position: true,
             hitman_name: true,
           },
@@ -76,7 +78,7 @@ export async function PUT(
         updatedPlayers.push(updatedPlayer);
 
         // DETECT KNOCKOUT: ko_position went from null to a number
-        const wasKnockedOut = 
+        const wasKnockedOut =
           currentPlayer &&
           currentPlayer.ko_position === null &&
           'ko_position' in updateData &&
@@ -86,6 +88,7 @@ export async function PUT(
         if (wasKnockedOut) {
           knockoutsToPost.push({
             playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+            playerUid: currentPlayer.player_uid ?? null,
             hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
             koPosition: updateData.ko_position as number,
           });
@@ -127,7 +130,8 @@ export async function PUT(
           draftId,
           knockout.playerName,
           hitmanDisplayName,
-          knockout.koPosition
+          knockout.koPosition,
+          knockout.playerUid
         );
       } catch (feedError) {
         // Log but don't fail the request if feed creation fails

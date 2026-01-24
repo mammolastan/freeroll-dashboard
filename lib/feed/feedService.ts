@@ -28,14 +28,15 @@ export async function createKnockoutFeedItem(
   tournamentId: number,
   eliminatedPlayerName: string,
   hitmanName: string | null,
-  koPosition: number
+  koPosition: number,
+  eliminatedPlayerUid?: string | null
 ): Promise<FeedItemData | null> {
   try {
     // Insert the feed item
     await prisma.$executeRaw`
       INSERT INTO tournament_feed_items 
-      (tournament_draft_id, item_type, eliminated_player_name, hitman_name, ko_position, created_at)
-      VALUES (${tournamentId}, 'knockout', ${eliminatedPlayerName}, ${hitmanName}, ${koPosition}, NOW())
+      (tournament_draft_id, item_type, author_uid, eliminated_player_name, hitman_name, ko_position, created_at)
+      VALUES (${tournamentId}, 'knockout', ${eliminatedPlayerUid}, ${eliminatedPlayerName}, ${hitmanName}, ${koPosition}, NOW())
     `;
 
     // Get the inserted record
@@ -88,7 +89,7 @@ export async function createKnockoutFeedItem(
     }
 
     console.log(`[FEED] Created knockout feed item: ${eliminatedPlayerName} eliminated by ${hitmanName || 'unknown'} at position ${koPosition}`);
-    
+
     return serializedItem;
   } catch (error) {
     console.error("Error creating knockout feed item:", error);

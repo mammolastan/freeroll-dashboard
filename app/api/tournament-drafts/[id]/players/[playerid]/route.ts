@@ -24,11 +24,11 @@ export async function PUT(
 
     // FIRST: Get the current player state to detect knockout
     const currentPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT player_name, player_nickname, ko_position, hitman_name
+      SELECT player_name, player_nickname, player_uid, ko_position, hitman_name
       FROM tournament_draft_players
       WHERE id = ${playerId}
     `;
-    
+
     const currentPlayer = currentPlayerResult.length > 0 ? currentPlayerResult[0] : null;
 
     const updateResult = await prisma.$executeRaw`
@@ -63,7 +63,7 @@ export async function PUT(
       });
 
       // DETECT KNOCKOUT: ko_position went from null to a number
-      const wasKnockedOut = 
+      const wasKnockedOut =
         currentPlayer &&
         currentPlayer.ko_position === null &&
         ko_position !== null &&
@@ -96,7 +96,8 @@ export async function PUT(
             draftId,
             eliminatedPlayerName,
             hitmanDisplayName,
-            ko_position
+            ko_position,
+            currentPlayer.player_uid ? String(currentPlayer.player_uid) : null
           );
         } catch (feedError) {
           // Log but don't fail the request if feed creation fails
