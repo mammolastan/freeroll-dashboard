@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 interface DraftTournament {
   id: number;
   tournament_date: string;
-  tournament_time?: string;
+  tournament_time?: Date | string | null;
   director_name: string;
   venue: string;
   start_points: number;
@@ -143,7 +143,7 @@ function generateFileName(
   date: string,
   venue: string,
   director_name: string,
-  time?: string
+  time?: string | Date | null
 ): string {
   const gameDate = new Date(date);
   const month = (gameDate.getMonth() + 1).toString().padStart(2, "0");
@@ -156,11 +156,30 @@ function generateFileName(
   // Format time if provided (e.g., "14:30" -> "1430")
   let timeString = "";
   if (time) {
-    const timeStr = String(time);
-    // Extract only HH:MM format (first 5 characters)
-    const timeMatch = timeStr.match(/^(\d{2}):?(\d{2})/);
-    if (timeMatch) {
-      timeString = "_" + timeMatch[1] + timeMatch[2];
+    let hours: string;
+    let minutes: string;
+
+    if (time instanceof Date) {
+      // MySQL TIME column returns as Date object via Prisma $queryRaw
+      hours = time.getUTCHours().toString().padStart(2, "0");
+      minutes = time.getUTCMinutes().toString().padStart(2, "0");
+    } else if (typeof time === "string") {
+      // Handle string format "HH:MM" or "HH:MM:SS"
+      const timeMatch = time.match(/^(\d{2}):?(\d{2})/);
+      if (timeMatch) {
+        hours = timeMatch[1];
+        minutes = timeMatch[2];
+      } else {
+        hours = "";
+        minutes = "";
+      }
+    } else {
+      hours = "";
+      minutes = "";
+    }
+
+    if (hours && minutes) {
+      timeString = "_" + hours + minutes;
     }
   }
 
