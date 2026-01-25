@@ -69,7 +69,6 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
 
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
-      {/* Icon */}
       {isBubble ? (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
           <Image
