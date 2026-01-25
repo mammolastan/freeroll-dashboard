@@ -102,7 +102,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
 
     // Handle initial data load (backwards compatibility)
     socket.on("updatePlayers", (players: Player[]) => {
-      console.log("Received updatePlayers event:", players);
+      console.log("Received updatePlayers event:");
       setGameData(prev => ({
         tournament: prev?.tournament || {
           id: tournamentIdNum,
