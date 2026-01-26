@@ -2,27 +2,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Set revalidation period to 6 hours (in seconds)
-export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
+// Set revalidation cache period to 6 hours (in seconds)
+export const revalidate = 3600; // 1 * 60 * 60 = 3600 seconds
 
 export async function GET() {
   try {
-    // First get all unique recent games
+    // First get all unique recent games (deduplicated by game_uid)
     const games = await prisma.$queryRaw<
       Array<{
-        File_name: string;
         game_date: Date;
         Venue: string;
         game_uid: string;
       }>
     >`
-      SELECT DISTINCT
-        File_name,
-        game_date,
-        Venue,
+      SELECT
+        MAX(game_date) as game_date,
+        MAX(Venue) as Venue,
         game_uid
       FROM poker_tournaments
       WHERE game_date IS NOT NULL
+      GROUP BY game_uid
       ORDER BY game_date DESC
       LIMIT 15
     `;
@@ -70,7 +69,6 @@ export async function GET() {
         }));
 
         return {
-          fileName: game.File_name,
           game_uid: game.game_uid,
           venue: game.Venue || "Unknown Venue",
           date: game.game_date.toISOString(), // Use actual game_date
