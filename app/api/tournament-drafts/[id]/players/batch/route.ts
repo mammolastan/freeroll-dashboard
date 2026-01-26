@@ -67,6 +67,51 @@ export async function PUT(
         if ('placement' in updateData) dataToUpdate.placement = updateData.placement;
         if ('player_nickname' in updateData) dataToUpdate.player_nickname = updateData.player_nickname;
 
+        // DETECT KNOCKOUT: ko_position went from null to a number
+        const isKnockout =
+          currentPlayer &&
+          currentPlayer.ko_position === null &&
+          'ko_position' in updateData &&
+          updateData.ko_position !== null &&
+          typeof updateData.ko_position === 'number';
+
+        // DETECT UNDO: ko_position went from a number to null
+        const isUndoKnockout =
+          currentPlayer &&
+          currentPlayer.ko_position !== null &&
+          'ko_position' in updateData &&
+          updateData.ko_position === null;
+
+        // Handle knockout status updates
+        if (isKnockout) {
+          // Look up hitman's UID
+          const hitmanName = updateData.hitman_name ?? currentPlayer.hitman_name;
+          if (hitmanName) {
+            const hitmanPlayer = await tx.tournamentDraftPlayer.findFirst({
+              where: {
+                tournament_draft_id: draftId,
+                player_name: hitmanName,
+              },
+              select: {
+                player_uid: true,
+              },
+            });
+            if (hitmanPlayer?.player_uid) {
+              dataToUpdate.hitman_uid = hitmanPlayer.player_uid;
+            }
+          }
+          dataToUpdate.status = 'knockedout';
+          // Set knockedout_at to UTC-5
+          const now = new Date();
+          const utcMinus5 = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+          dataToUpdate.knockedout_at = utcMinus5;
+        } else if (isUndoKnockout) {
+          // Reset knockout-related fields
+          dataToUpdate.status = 'active';
+          dataToUpdate.hitman_uid = null;
+          dataToUpdate.knockedout_at = null;
+        }
+
         // Update the player using Prisma's update method
         const updatedPlayer = await tx.tournamentDraftPlayer.update({
           where: {
@@ -77,15 +122,7 @@ export async function PUT(
 
         updatedPlayers.push(updatedPlayer);
 
-        // DETECT KNOCKOUT: ko_position went from null to a number
-        const wasKnockedOut =
-          currentPlayer &&
-          currentPlayer.ko_position === null &&
-          'ko_position' in updateData &&
-          updateData.ko_position !== null &&
-          typeof updateData.ko_position === 'number';
-
-        if (wasKnockedOut) {
+        if (isKnockout) {
           knockoutsToPost.push({
             playerName: currentPlayer.player_nickname || currentPlayer.player_name,
             playerUid: currentPlayer.player_uid ?? null,

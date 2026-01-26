@@ -57,7 +57,7 @@ export function TournamentFeed({
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
 
-  // Filter items based on active tab
+  // Filter items based on active tab (for mobile view)
   const filteredItems = useMemo(() => {
     if (activeTab === "td") {
       return items.filter((item) => item.item_type === "td_message");
@@ -67,6 +67,16 @@ export function TournamentFeed({
     }
     return items;
   }, [items, activeTab]);
+
+  // TD messages for the right column on large screens
+  const tdMessages = useMemo(() => {
+    return items.filter((item) => item.item_type === "td_message");
+  }, [items]);
+
+  // Non-TD messages for the left column on large screens
+  const nonTdMessages = useMemo(() => {
+    return items.filter((item) => item.item_type !== "td_message");
+  }, [items]);
 
   // Count TD messages for the tab badge
   const tdMessageCount = useMemo(() => {
@@ -129,8 +139,8 @@ export function TournamentFeed({
 
   return (
     <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden">
-      {/* Tabs */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
+      {/* Mobile Tabs - hidden on large screens */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("all")}
@@ -191,6 +201,19 @@ export function TournamentFeed({
         </button>
       </div>
 
+      {/* Desktop Header - visible only on large screens */}
+      <div className="hidden lg:flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
+        <span className="text-sm font-medium text-cyan-300">Tournament Feed</span>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="p-1.5 text-gray-400 hover:text-cyan-400 hover:bg-gray-800 rounded transition-colors disabled:opacity-50"
+          title="Refresh feed"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
       {/* Message Input */}
       {showInput && (
         <div className="border-b border-cyan-500/20">
@@ -202,14 +225,14 @@ export function TournamentFeed({
         </div>
       )}
 
-      {/* Feed Content */}
+      {/* Mobile Feed Content - single column with tabs */}
       <div
         ref={feedContainerRef}
         onScroll={() => {
           handleScroll();
           handleLoadMore();
         }}
-        className="overflow-y-auto"
+        className="lg:hidden overflow-y-auto"
         style={{ maxHeight }}
       >
         {/* Loading State */}
@@ -311,6 +334,134 @@ export function TournamentFeed({
             — End of feed —
           </div>
         )}
+      </div>
+
+      {/* Desktop Feed Content - two column layout */}
+      <div className="hidden lg:flex" style={{ maxHeight }}>
+        {/* Left Column - Non-TD Messages (knockouts, chat) */}
+        <div className="flex-1 overflow-y-auto border-r border-cyan-500/20">
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 text-cyan-500 animate-spin" />
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <AlertCircle className="h-8 w-8 text-red-400 mb-2" />
+              <p className="text-red-400 text-sm">{error}</p>
+              <button
+                onClick={refresh}
+                className="mt-3 text-xs text-cyan-400 hover:text-cyan-300 underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {/* Victory Announcement */}
+          {winner && !loading && !error && (
+            <div className="p-4 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 border-b border-yellow-500/30">
+              <div className="flex items-center justify-center gap-3">
+                <Trophy className="h-6 w-6 text-yellow-400" />
+                <div className="text-center">
+                  <span className="text-yellow-300 font-bold text-lg">
+                    {winner}
+                  </span>
+                  <span className="text-yellow-200/80 text-lg">
+                    {" "}
+                    wins the tournament!
+                  </span>
+                </div>
+                <Trophy className="h-6 w-6 text-yellow-400" />
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && nonTdMessages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <MessageSquare className="h-10 w-10 text-gray-600 mb-3" />
+              <p className="text-gray-500 text-sm">No activity yet</p>
+              <p className="text-gray-600 text-xs mt-1">
+                Knockouts and messages will appear here
+              </p>
+            </div>
+          )}
+
+          {/* Feed Items */}
+          {!loading && !error && nonTdMessages.length > 0 && (
+            <div className="divide-y divide-gray-800/50">
+              {nonTdMessages.map((item) => (
+                <FeedItem
+                  key={item.id}
+                  item={item}
+                  onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                  totalPlayers={totalPlayers}
+                  startPoints={startPoints}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Load More Indicator */}
+          {loadingMore && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - TD Messages */}
+        <div className="w-80 flex-shrink-0 flex flex-col bg-gray-900/40">
+          {/* TD Column Header */}
+          <div className="px-3 py-2 border-b border-cyan-500/20 bg-amber-500/10">
+            <div className="flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-amber-400" />
+              <span className="text-sm font-medium text-amber-300">TD Messages</span>
+              {tdMessageCount > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                  {tdMessageCount}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* TD Messages Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!loading && !error && tdMessages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <Megaphone className="h-8 w-8 text-gray-600 mb-2" />
+                <p className="text-gray-500 text-xs">No TD messages yet</p>
+              </div>
+            )}
+
+            {/* TD Feed Items */}
+            {!loading && !error && tdMessages.length > 0 && (
+              <div className="divide-y divide-gray-800/50">
+                {tdMessages.map((item) => (
+                  <FeedItem
+                    key={item.id}
+                    item={item}
+                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    totalPlayers={totalPlayers}
+                    startPoints={startPoints}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
