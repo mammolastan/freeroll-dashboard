@@ -1,12 +1,9 @@
-'use client'
+import QuarterlyRankings from "@/components/Rankings/QuarterlyRankings";
 
-import React from 'react'
-import QuarterlyRankings from '@/components/Rankings/QuarterlyRankings'
+export const metadata = {
+  title: "Quarterly Rankings",
+};
 
 export default function QuarterlyRankingsPage() {
-    return (
-        <>
-            <QuarterlyRankings />
-        </>
-    )
+  return <QuarterlyRankings />;
 }

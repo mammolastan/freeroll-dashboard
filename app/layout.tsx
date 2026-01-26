@@ -1,39 +1,45 @@
-import "./globals.css"
-import { Inter } from "next/font/google"
-import { cn } from "@/lib/utils"
-import Navbar from "@/components/Navigation/Navbar"
+// app/layout.tsx
+
+import "./globals.css";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+import Navbar from "@/components/Navigation/Navbar";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Freeroll Atlanta Player Dashboard",
-  description: "Dashboard for Freeroll Atlanta poker tournament player statistics",
+  title: {
+    default: "Freeroll Atlanta Player Dashboard",
+    template: "%s | Freeroll Atlanta",
+  },
+  description:
+    "Dashboard for Freeroll Atlanta poker tournament player statistics",
   icons: {
     icon: [
       {
-        url: '/images/Poker-Chip-Isloated-Blue.png',
-        sizes: '32x32',
-        type: 'image/png',
+        url: "/images/Poker-Chip-Isloated-Blue.png",
+        sizes: "32x32",
+        type: "image/png",
       },
       {
-        url: '/images/Poker-Chip-Isloated-Blue.png',
-        sizes: '16x16',
-        type: 'image/png',
-      }
+        url: "/images/Poker-Chip-Isloated-Blue.png",
+        sizes: "16x16",
+        type: "image/png",
+      },
     ],
     apple: {
-      url: '/images/Poker-Chip-Isloated-Blue.png',
-      sizes: '180x180',
-      type: 'image/png',
-    }
-  }
-}
+      url: "/images/Poker-Chip-Isloated-Blue.png",
+      sizes: "180x180",
+      type: "image/png",
+    },
+  },
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -44,5 +50,5 @@ export default function RootLayout({
         </SessionProvider>
       </body>
     </html>
-  )
+  );
 }
