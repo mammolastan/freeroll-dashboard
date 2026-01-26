@@ -149,21 +149,21 @@ export default function PlayersPage() {
                             </div>
                         )}
                         <div>
-                            <h2 className="text-3xl font-bold text-white">
+                            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                                 {selectedPlayer.nickname || selectedPlayer.Name}
                             </h2>
                             {selectedPlayer.nickname && (
-                                <p className="text-white text-sm mt-1">
+                                <p className="text-gray-600 dark:text-white text-sm mt-1">
                                     {selectedPlayer.Name}
                                 </p>
                             )}
                             {(selectedPlayer.favorite_hand || selectedPlayer.favorite_pro) && (
-                                <div className="mt-3 text-sm text-gray-300 space-y-1">
+                                <div className="mt-3 text-sm text-gray-700 dark:text-gray-300 space-y-1">
                                     {selectedPlayer.favorite_hand && (
-                                        <p><span className="text-gray-400">Favorite Hand:</span> {selectedPlayer.favorite_hand}</p>
+                                        <p><span className="text-gray-500 dark:text-gray-400">Favorite Hand:</span> {selectedPlayer.favorite_hand}</p>
                                     )}
                                     {selectedPlayer.favorite_pro && (
-                                        <p><span className="text-gray-400">Favorite Pro:</span> {selectedPlayer.favorite_pro}</p>
+                                        <p><span className="text-gray-500 dark:text-gray-400">Favorite Pro:</span> {selectedPlayer.favorite_pro}</p>
                                     )}
                                 </div>
                             )}
