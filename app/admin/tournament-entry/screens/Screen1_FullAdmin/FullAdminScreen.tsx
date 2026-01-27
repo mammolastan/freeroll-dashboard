@@ -1317,13 +1317,12 @@ export function FullAdminScreen({
                                             <div className='text-black text-sm'>
                                                 {tournament.id}
                                             </div>
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                                 <div
-                                                    className="flex items-center gap-4 flex-1 cursor-pointer"
+                                                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1 cursor-pointer"
                                                     onClick={() => selectTournament(tournament)}
                                                 >
                                                     <div className="flex flex-col">
-
                                                         <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                                             <Calendar className="w-4 h-4 text-blue-600" />
                                                             {formatGameDate(tournament.tournament_date || '')}
@@ -1339,7 +1338,7 @@ export function FullAdminScreen({
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
                                                         <div className="flex items-center gap-1">
                                                             <Users className="w-4 h-4" />
                                                             {tournament.player_count} players
@@ -1351,7 +1350,7 @@ export function FullAdminScreen({
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 self-start sm:self-center">
                                                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${tournament.status === 'in_progress'
                                                         ? 'bg-yellow-100 text-yellow-800'
                                                         : tournament.status === 'integrated'
