@@ -8,7 +8,7 @@ import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { Player } from "@/lib/realtime/types";
 import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
-import { QrCode, UserPlus, MessageSquare } from "lucide-react";
+import { QrCode, UserPlus } from "lucide-react";
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate, formatTime } from "@/lib/utils";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
@@ -148,7 +148,6 @@ export default function GameViewPage() {
   const [gettingToken, setGettingToken] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [checkInUrl, setCheckInUrl] = useState<string>(`/gameview/${token}`);
-  const [showFeed, setShowFeed] = useState(true);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -301,16 +300,16 @@ export default function GameViewPage() {
         </div>
 
         {/* Tournament Feed */}
-        {showFeed && (
-          <div className="mb-8">
-            <TournamentFeed
-              tournamentId={parseInt(token as string)}
-              maxHeight="450px"
-              totalPlayers={gameData.players.length}
-              startPoints={gameData.tournament.start_points}
-            />
-          </div>
-        )}
+
+        <div className="mb-8">
+          <TournamentFeed
+            tournamentId={parseInt(token as string)}
+            maxHeight="450px"
+            totalPlayers={gameData.players.length}
+            startPoints={gameData.tournament.start_points}
+          />
+        </div>
+
         {/* Active Players */}
         <div className="grid md:grid-cols-2 gap-8">
           <div>
