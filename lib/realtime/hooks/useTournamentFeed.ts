@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react';
 
 // Feed item type matching API response
 export interface FeedItem {
-  id: number;
+  id: number | string; // string for synthetic knockout IDs like "ko-123"
   tournament_draft_id: number;
   item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
@@ -168,7 +168,9 @@ export function useTournamentFeed(
       if (payload.tournament_id === tournamentIdNum) {
         setItems(prevItems => {
           // Check if item already exists (prevent duplicates)
-          const exists = prevItems.some(item => item.id === payload.item.id);
+          // Handle both number and string IDs (knockouts use synthetic string IDs like "ko-123")
+          const newId = payload.item.id;
+          const exists = prevItems.some(item => String(item.id) === String(newId));
           if (exists) {
             return prevItems;
           }
@@ -231,9 +233,10 @@ export function useTournamentFeed(
       const data = await fetchFeed(nextCursor);
       if (data) {
         // Deduplicate items (TD messages are always returned and may already exist)
+        // Handle both number and string IDs (knockouts use synthetic string IDs like "ko-123")
         setItems(prev => {
-          const existingIds = new Set(prev.map(item => item.id));
-          const newItems = data.items.filter(item => !existingIds.has(item.id));
+          const existingIds = new Set(prev.map(item => String(item.id)));
+          const newItems = data.items.filter(item => !existingIds.has(String(item.id)));
           return [...prev, ...newItems];
         });
         setHasMore(data.hasMore);
@@ -285,7 +288,8 @@ export function useTournamentFeed(
       // But we can also add it optimistically here for immediate feedback
       if (data.item) {
         setItems(prevItems => {
-          const exists = prevItems.some(item => item.id === data.item.id);
+          // Handle both number and string IDs
+          const exists = prevItems.some(item => String(item.id) === String(data.item.id));
           if (exists) return prevItems;
           return [data.item, ...prevItems];
         });
@@ -340,8 +344,8 @@ export function useTournamentFeed(
         return { success: false, error: data.error || 'Failed to delete item' };
       }
 
-      // Remove item from state
-      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      // Remove item from state (handle both number and string IDs)
+      setItems(prevItems => prevItems.filter(item => String(item.id) !== String(itemId)));
 
       return { success: true };
     } catch (err) {

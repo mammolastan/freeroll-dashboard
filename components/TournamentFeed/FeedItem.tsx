@@ -182,9 +182,9 @@ function MessageItem({ item, onDelete }: FeedItemProps) {
       </div>
 
       {/* Delete Button */}
-      {onDelete && (
+      {onDelete && typeof item.id === 'number' && (
         <button
-          onClick={() => onDelete(item.id)}
+          onClick={() => onDelete(item.id as number)}
           className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
           title="Delete message"
         >
@@ -279,9 +279,9 @@ function TDMessageItem({ item, onDelete }: FeedItemProps) {
       </div>
 
       {/* Delete Button */}
-      {onDelete && (
+      {onDelete && typeof item.id === 'number' && (
         <button
-          onClick={() => onDelete(item.id)}
+          onClick={() => onDelete(item.id as number)}
           className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
           title="Delete message"
         >

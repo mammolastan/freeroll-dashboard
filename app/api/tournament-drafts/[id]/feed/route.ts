@@ -8,7 +8,7 @@ import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 
 // Feed item type for response
 interface FeedItem {
-  id: number;
+  id: number | string; // string for synthetic knockout IDs like "ko-123"
   tournament_draft_id: number;
   item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
@@ -81,12 +81,48 @@ export async function GET(
       ORDER BY f.created_at DESC
     `;
 
-    // Fetch other feed items with pagination (knockouts, check-ins, system)
+    // Fetch knockouts dynamically from tournament_draft_players (not from tournament_feed_items)
+    // Order by knockedout_at ASC so first knockout has ko_position=1
+    const knockoutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT
+        id as player_id,
+        player_name,
+        player_nickname,
+        player_uid,
+        hitman_name,
+        knockedout_at
+      FROM tournament_draft_players
+      WHERE tournament_draft_id = ${tournamentId}
+        AND status = 'knockedout'
+        AND knockedout_at IS NOT NULL
+      ORDER BY knockedout_at ASC
+    `;
+
+    // Transform knockout players into FeedItem format with synthetic IDs
+    const knockoutFeedItems: FeedItem[] = knockoutPlayers.map((player, index) => ({
+      id: `ko-${player.player_id}`, // synthetic ID
+      tournament_draft_id: tournamentId,
+      item_type: 'knockout' as const,
+      author_uid: player.player_uid ? String(player.player_uid) : null,
+      author_name: null,
+      author_photo_url: null,
+      message_text: null,
+      eliminated_player_name: player.player_nickname
+        ? String(player.player_nickname)
+        : String(player.player_name),
+      hitman_name: player.hitman_name ? String(player.hitman_name) : null,
+      ko_position: index + 1, // 1-based position from knockedout_at order
+      created_at: player.knockedout_at instanceof Date
+        ? player.knockedout_at.toISOString()
+        : String(player.knockedout_at),
+    }));
+
+    // Fetch other feed items with pagination (check-ins, system - NOT knockouts)
     let otherItems: RawQueryResult[];
     const fetchLimit = limit + 1;
 
     if (before) {
-      // Cursor-based pagination: get items older than the cursor (excluding always-visible types)
+      // Cursor-based pagination: get items older than the cursor (excluding always-visible types and knockouts)
       otherItems = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           f.id,
@@ -103,13 +139,13 @@ export async function GET(
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
-          AND f.item_type NOT IN ('td_message', 'message')
+          AND f.item_type NOT IN ('td_message', 'message', 'knockout')
           AND f.created_at < ${new Date(before)}
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
     } else {
-      // Initial load: get most recent paginated items (knockouts, check-ins, system)
+      // Initial load: get most recent paginated items (check-ins, system - NOT knockouts)
       otherItems = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           f.id,
@@ -126,7 +162,7 @@ export async function GET(
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
-          AND f.item_type NOT IN ('td_message', 'message')
+          AND f.item_type NOT IN ('td_message', 'message', 'knockout')
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
@@ -141,7 +177,7 @@ export async function GET(
     }
 
     // Merge always-visible messages with other items and deduplicate by id
-    const seenIds = new Set<number>();
+    const seenIds = new Set<number | string>();
     const feedItems: RawQueryResult[] = [];
 
     for (const item of [...alwaysVisibleMessages, ...otherItems]) {
@@ -152,16 +188,8 @@ export async function GET(
       }
     }
 
-    // Sort by created_at DESC
-    feedItems.sort((a, b) => {
-      const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at as string);
-      const dateB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at as string);
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    // Serialize the response (handle BigInt and Date)
-    // Cast string fields explicitly since Prisma raw queries return {} for nullable fields
-    const serializedItems: FeedItem[] = feedItems.map((item) => ({
+    // Serialize DB items (handle BigInt and Date)
+    const serializedDbItems: FeedItem[] = feedItems.map((item) => ({
       id: Number(item.id),
       tournament_draft_id: Number(item.tournament_draft_id),
       item_type: item.item_type as FeedItem['item_type'],
@@ -176,6 +204,16 @@ export async function GET(
         ? item.created_at.toISOString()
         : String(item.created_at),
     }));
+
+    // Merge DB items with dynamically computed knockout items
+    const serializedItems: FeedItem[] = [...serializedDbItems, ...knockoutFeedItems];
+
+    // Sort all items by created_at DESC
+    serializedItems.sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return dateB.getTime() - dateA.getTime();
+    });
 
     // Determine the next cursor (timestamp of the oldest paginated item in this batch)
     // We use otherItems for the cursor since TD messages and chat messages are always fully returned

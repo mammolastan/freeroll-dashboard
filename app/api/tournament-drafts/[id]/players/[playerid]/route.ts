@@ -1,7 +1,7 @@
 // app/api/tournament-drafts/[id]/players/[playerid]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { emitPlayerJoined } from "@/lib/socketServer";
-import { createKnockoutFeedItem } from "@/lib/feed/feedService";
+import { broadcastKnockoutEvent } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 
@@ -63,7 +63,7 @@ export async function PUT(
           ko_position = ${ko_position || null},
           placement = ${placement || null},
           status = 'knockedout',
-          knockedout_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 5 HOUR),
+          knockedout_at = NOW(),
           updated_at = NOW()
         WHERE id = ${playerId}
       `;
@@ -125,7 +125,7 @@ export async function PUT(
         typeof ko_position === 'number';
 
       if (wasKnockedOut) {
-        // Create feed item for the knockout
+        // Broadcast knockout event (no DB write - knockouts are computed dynamically)
         try {
           // Use nickname for eliminated player if available
           const eliminatedPlayerName = String(
@@ -146,16 +146,23 @@ export async function PUT(
             }
           }
 
-          await createKnockoutFeedItem(
+          // Get the knockedout_at timestamp from the updated record
+          const knockedoutAt = updatedPlayer.knockedout_at instanceof Date
+            ? updatedPlayer.knockedout_at.toISOString()
+            : String(updatedPlayer.knockedout_at);
+
+          // Broadcast the knockout event for real-time feed updates
+          broadcastKnockoutEvent(
             draftId,
+            playerId,
             eliminatedPlayerName,
             hitmanDisplayName,
             ko_position,
-            currentPlayer.player_uid ? String(currentPlayer.player_uid) : null
+            knockedoutAt
           );
         } catch (feedError) {
-          // Log but don't fail the request if feed creation fails
-          console.error("Failed to create knockout feed item:", feedError);
+          // Log but don't fail the request if broadcast fails
+          console.error("Failed to broadcast knockout event:", feedError);
         }
       }
 

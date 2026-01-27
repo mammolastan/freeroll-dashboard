@@ -8,7 +8,7 @@ import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 import { RawQueryResult } from "@/types";
 
 export interface FeedItemData {
-  id: number;
+  id: number | string; // string for synthetic knockout IDs like "ko-123"
   tournament_draft_id: number;
   item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
   author_uid: string | null;
@@ -22,7 +22,43 @@ export interface FeedItemData {
 }
 
 /**
- * Create a knockout feed item and broadcast it to connected clients
+ * Broadcast a knockout event to connected clients (no database write)
+ * Knockouts are now computed dynamically from tournament_draft_players
+ */
+export function broadcastKnockoutEvent(
+  tournamentId: number,
+  playerId: number,
+  eliminatedPlayerName: string,
+  hitmanName: string | null,
+  koPosition: number,
+  knockedoutAt: string
+): void {
+  const feedItem: FeedItemData = {
+    id: `ko-${playerId}`, // synthetic ID
+    tournament_draft_id: tournamentId,
+    item_type: 'knockout',
+    author_uid: null,
+    author_name: null,
+    author_photo_url: null,
+    message_text: null,
+    eliminated_player_name: eliminatedPlayerName,
+    hitman_name: hitmanName,
+    ko_position: koPosition,
+    created_at: knockedoutAt,
+  };
+
+  try {
+    const broadcast = BroadcastManager.getInstance();
+    broadcast.broadcastFeedItem(tournamentId, feedItem);
+    console.log(`[FEED] Broadcast knockout event: ${eliminatedPlayerName} eliminated by ${hitmanName || 'unknown'} at position ${koPosition}`);
+  } catch (broadcastError) {
+    console.error("Failed to broadcast knockout event:", broadcastError);
+  }
+}
+
+/**
+ * @deprecated Use broadcastKnockoutEvent instead. Knockouts are now computed dynamically.
+ * This function is kept for backwards compatibility but no longer writes to DB.
  */
 export async function createKnockoutFeedItem(
   tournamentId: number,
@@ -31,70 +67,33 @@ export async function createKnockoutFeedItem(
   koPosition: number,
   eliminatedPlayerUid?: string | null
 ): Promise<FeedItemData | null> {
+  // No longer writes to DB - just broadcast the event
+  // The playerId is not available here, so we use a timestamp-based synthetic ID
+  const syntheticId = `ko-legacy-${Date.now()}`;
+
+  const feedItem: FeedItemData = {
+    id: syntheticId,
+    tournament_draft_id: tournamentId,
+    item_type: 'knockout',
+    author_uid: eliminatedPlayerUid || null,
+    author_name: null,
+    author_photo_url: null,
+    message_text: null,
+    eliminated_player_name: eliminatedPlayerName,
+    hitman_name: hitmanName,
+    ko_position: koPosition,
+    created_at: new Date().toISOString(),
+  };
+
   try {
-    // Insert the feed item
-    await prisma.$executeRaw`
-      INSERT INTO tournament_feed_items 
-      (tournament_draft_id, item_type, author_uid, eliminated_player_name, hitman_name, ko_position, created_at)
-      VALUES (${tournamentId}, 'knockout', ${eliminatedPlayerUid}, ${eliminatedPlayerName}, ${hitmanName}, ${koPosition}, NOW())
-    `;
-
-    // Get the inserted record
-    const newItem = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-        id,
-        tournament_draft_id,
-        item_type,
-        author_uid,
-        author_name,
-        message_text,
-        eliminated_player_name,
-        hitman_name,
-        ko_position,
-        created_at
-      FROM tournament_feed_items 
-      WHERE id = LAST_INSERT_ID()
-    `;
-
-    if (!newItem.length) {
-      console.error("Failed to retrieve created knockout feed item");
-      return null;
-    }
-
-    // Serialize the item
-    const item = newItem[0];
-    const serializedItem: FeedItemData = {
-      id: Number(item.id),
-      tournament_draft_id: Number(item.tournament_draft_id),
-      item_type: item.item_type as FeedItemData["item_type"],
-      author_uid: item.author_uid ? String(item.author_uid) : null,
-      author_name: item.author_name ? String(item.author_name) : null,
-      author_photo_url: null,
-      message_text: item.message_text ? String(item.message_text) : null,
-      eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
-      hitman_name: item.hitman_name ? String(item.hitman_name) : null,
-      ko_position: item.ko_position ? Number(item.ko_position) : null,
-      created_at: item.created_at instanceof Date
-        ? item.created_at.toISOString()
-        : String(item.created_at),
-    };
-
-    // Broadcast to connected clients
-    try {
-      const broadcast = BroadcastManager.getInstance();
-      broadcast.broadcastFeedItem(tournamentId, serializedItem);
-    } catch (broadcastError) {
-      console.error("Failed to broadcast knockout feed item:", broadcastError);
-      // Don't fail the operation if broadcast fails
-    }
-
-    console.log(`[FEED] Created knockout feed item: ${eliminatedPlayerName} eliminated by ${hitmanName || 'unknown'} at position ${koPosition}`);
-
-    return serializedItem;
-  } catch (error) {
-    console.error("Error creating knockout feed item:", error);
-    return null;
+    const broadcast = BroadcastManager.getInstance();
+    broadcast.broadcastFeedItem(tournamentId, feedItem);
+    console.log(`[FEED] Broadcast knockout (legacy): ${eliminatedPlayerName} eliminated by ${hitmanName || 'unknown'} at position ${koPosition}`);
+  } catch (broadcastError) {
+    console.error("Failed to broadcast knockout feed item:", broadcastError);
   }
+
+  return feedItem;
 }
 
 /**
