@@ -83,22 +83,28 @@ export async function GET(
 
     // Fetch knockouts dynamically from tournament_draft_players (not from tournament_feed_items)
     // Order by knockedout_at ASC so first knockout has ko_position=1
+    // Join to get the hitman's nickname by matching hitman_name to another player's player_name
     const knockoutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
-        id as player_id,
-        player_name,
-        player_nickname,
-        player_uid,
-        hitman_name,
-        knockedout_at
-      FROM tournament_draft_players
-      WHERE tournament_draft_id = ${tournamentId}
-        AND status = 'knockedout'
-        AND knockedout_at IS NOT NULL
-      ORDER BY knockedout_at ASC
+        ko.id as player_id,
+        ko.player_name,
+        ko.player_nickname,
+        ko.player_uid,
+        ko.hitman_name,
+        hitman.player_nickname as hitman_nickname,
+        ko.knockedout_at
+      FROM tournament_draft_players ko
+      LEFT JOIN tournament_draft_players hitman
+        ON hitman.tournament_draft_id = ko.tournament_draft_id
+        AND hitman.player_name = ko.hitman_name
+      WHERE ko.tournament_draft_id = ${tournamentId}
+        AND ko.status = 'knockedout'
+        AND ko.knockedout_at IS NOT NULL
+      ORDER BY ko.knockedout_at ASC
     `;
 
     // Transform knockout players into FeedItem format with synthetic IDs
+    // For hitman display: prefer hitman_nickname, fall back to hitman_name
     const knockoutFeedItems: FeedItem[] = knockoutPlayers.map((player, index) => ({
       id: `ko-${player.player_id}`, // synthetic ID
       tournament_draft_id: tournamentId,
@@ -110,7 +116,9 @@ export async function GET(
       eliminated_player_name: player.player_nickname
         ? String(player.player_nickname)
         : String(player.player_name),
-      hitman_name: player.hitman_name ? String(player.hitman_name) : null,
+      hitman_name: player.hitman_nickname
+        ? String(player.hitman_nickname)
+        : (player.hitman_name ? String(player.hitman_name) : null),
       ko_position: index + 1, // 1-based position from knockedout_at order
       created_at: player.knockedout_at instanceof Date
         ? player.knockedout_at.toISOString()
