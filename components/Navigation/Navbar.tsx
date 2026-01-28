@@ -41,6 +41,11 @@ const Navbar = () => {
     const [isRankingsOpen, setIsRankingsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+    // Hide navbar on fullscreen pages like tvscreen
+    if (pathname?.startsWith('/tvscreen')) {
+        return null;
+    }
+
     const toggleMenu = () => setIsOpen(!isOpen);
 
     const navLinks: NavItem[] = [
