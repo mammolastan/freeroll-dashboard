@@ -36,17 +36,23 @@ export async function PUT(
     const isKnockout = ko_position !== null && ko_position !== undefined && typeof ko_position === 'number';
     const isUndoKnockout = currentPlayer && currentPlayer.ko_position !== null && (ko_position === null || ko_position === undefined);
 
-    // Look up hitman's UID if this is a knockout with a hitman
+    // Look up hitman's UID and nickname if this is a knockout with a hitman
     let hitmanUid: string | null = null;
+    let hitmanDisplayName: string | null = hitman_name || null;
     if (isKnockout && hitman_name) {
       const hitmanPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT player_uid
+        SELECT player_uid, player_nickname
         FROM tournament_draft_players
         WHERE tournament_draft_id = ${draftId} AND player_name = ${hitman_name}
         LIMIT 1
       `;
-      if (hitmanPlayer.length > 0 && hitmanPlayer[0].player_uid) {
-        hitmanUid = String(hitmanPlayer[0].player_uid);
+      if (hitmanPlayer.length > 0) {
+        if (hitmanPlayer[0].player_uid) {
+          hitmanUid = String(hitmanPlayer[0].player_uid);
+        }
+        if (hitmanPlayer[0].player_nickname) {
+          hitmanDisplayName = String(hitmanPlayer[0].player_nickname);
+        }
       }
     }
 
@@ -54,11 +60,12 @@ export async function PUT(
     let updateResult: number;
     if (isKnockout) {
       // Setting knockout - update status, hitman_uid, and knockedout_at
+      // Store hitman's nickname (if exists) in hitman_name for display
       updateResult = await prisma.$executeRaw`
         UPDATE tournament_draft_players
         SET
           player_name = ${player_name || ""},
-          hitman_name = ${hitman_name || null},
+          hitman_name = ${hitmanDisplayName},
           hitman_uid = ${hitmanUid},
           ko_position = ${ko_position || null},
           placement = ${placement || null},
@@ -132,26 +139,13 @@ export async function PUT(
             currentPlayer.player_nickname || currentPlayer.player_name || player_name
           );
 
-          // Look up hitman's nickname if hitman exists
-          let hitmanDisplayName = hitman_name || null;
-          if (hitman_name) {
-            const hitmanPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-              SELECT player_nickname
-              FROM tournament_draft_players
-              WHERE tournament_draft_id = ${draftId} AND player_name = ${hitman_name}
-              LIMIT 1
-            `;
-            if (hitmanPlayer.length > 0 && hitmanPlayer[0].player_nickname) {
-              hitmanDisplayName = String(hitmanPlayer[0].player_nickname);
-            }
-          }
-
           // Get the knockedout_at timestamp from the updated record
           const knockedoutAt = updatedPlayer.knockedout_at instanceof Date
             ? updatedPlayer.knockedout_at.toISOString()
             : String(updatedPlayer.knockedout_at);
 
           // Broadcast the knockout event for real-time feed updates
+          // hitmanDisplayName already contains the hitman's nickname (if they have one)
           broadcastKnockoutEvent(
             draftId,
             playerId,
