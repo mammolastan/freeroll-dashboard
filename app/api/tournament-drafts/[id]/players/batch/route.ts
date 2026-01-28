@@ -101,10 +101,8 @@ export async function PUT(
             }
           }
           dataToUpdate.status = 'knockedout';
-          // Set knockedout_at to UTC-5
-          const now = new Date();
-          const utcMinus5 = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-          dataToUpdate.knockedout_at = utcMinus5;
+          // Store UTC time (same as other feed items like checkins)
+          dataToUpdate.knockedout_at = new Date();
         } else if (isUndoKnockout) {
           // Reset knockout-related fields
           dataToUpdate.status = 'active';
