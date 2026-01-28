@@ -1,12 +1,23 @@
 // components/Timer/GameTimer.tsx
 
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, Edit3, Check, X, Users } from 'lucide-react';
-import { socket } from '@/lib/socketClient';
-import './GameTimer.css';
-import fitty from 'fitty';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Edit3,
+  Check,
+  X,
+  Users,
+} from "lucide-react";
+import { socket } from "@/lib/socketClient";
+import "./GameTimer.css";
+import fitty from "fitty";
 
 interface BlindLevel {
   level: number;
@@ -33,19 +44,32 @@ interface GameTimerProps {
   playersRemaining?: number;
 }
 
-export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: GameTimerProps) {
+export function GameTimer({
+  tournamentId,
+  isAdmin = false,
+  playersRemaining,
+}: GameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [isEditingTime, setIsEditingTime] = useState(false);
-  const [editMinutes, setEditMinutes] = useState('');
-  const [editSeconds, setEditSeconds] = useState('');
+  const [editMinutes, setEditMinutes] = useState("");
+  const [editSeconds, setEditSeconds] = useState("");
   const [lastLevel, setLastLevel] = useState<number | null>(null);
-  const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
+  const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] =
+    useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const [oneMinuteAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/OneMinuteRemaining-RedAlert.mp3') : null);
-  const [levelChangeAudio] = useState(() => typeof window !== 'undefined' ? new Audio('/audio/homepod_timer.mp3') : null);
+  const [oneMinuteAudio] = useState(() =>
+    typeof window !== "undefined"
+      ? new Audio("/audio/OneMinuteRemaining-RedAlert.mp3")
+      : null,
+  );
+  const [levelChangeAudio] = useState(() =>
+    typeof window !== "undefined"
+      ? new Audio("/audio/homepod_timer.mp3")
+      : null,
+  );
   const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
-  const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
+  const wakeLockRef = React.useRef<WakeLockSentinel | null>(null);
   const blindsLandscapeRef = React.useRef<HTMLDivElement>(null);
 
   // Handle fullscreen and wake lock when entering/exiting min mode
@@ -54,10 +78,10 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       try {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
-          console.log('enterFullscreen: Entered fullscreen mode for min mode');
+          console.log("enterFullscreen: Entered fullscreen mode for min mode");
         }
       } catch (error) {
-        console.log('Fullscreen request failed:', error);
+        console.log("Fullscreen request failed:", error);
       }
     };
 
@@ -67,36 +91,37 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
           document.exitFullscreen();
         }
       } catch (error) {
-        console.log('Exit fullscreen failed:', error);
+        console.log("Exit fullscreen failed:", error);
       }
     };
 
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator) {
-          const lock = await navigator.wakeLock.request('screen');
-          setWakeLock(lock);
-          console.log('Wake lock acquired - screen will stay awake');
+        if ("wakeLock" in navigator && !wakeLockRef.current) {
+          const lock = await navigator.wakeLock.request("screen");
+          wakeLockRef.current = lock;
+          console.log("Wake lock acquired - screen will stay awake");
 
           // Listen for wake lock release
-          lock.addEventListener('release', () => {
-            console.log('Wake lock released');
+          lock.addEventListener("release", () => {
+            console.log("Wake lock released");
+            wakeLockRef.current = null;
           });
         }
       } catch (error) {
-        console.log('Wake lock request failed:', error);
+        console.log("Wake lock request failed:", error);
       }
     };
 
     const releaseWakeLock = async () => {
       try {
-        if (wakeLock) {
-          await wakeLock.release();
-          setWakeLock(null);
-          console.log('Wake lock released manually');
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+          console.log("Wake lock released manually");
         }
       } catch (error) {
-        console.log('Wake lock release failed:', error);
+        console.log("Wake lock release failed:", error);
       }
     };
 
@@ -113,34 +138,32 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       if (document.fullscreenElement) {
         exitFullscreen();
       }
-      if (wakeLock) {
-        releaseWakeLock();
-      }
+      releaseWakeLock();
     };
-  }, [isMinMode, wakeLock]);
+  }, [isMinMode]);
 
   // Re-acquire wake lock when page becomes visible again (if in min mode)
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (isMinMode && document.visibilityState === 'visible' && !wakeLock) {
+      if (isMinMode && document.visibilityState === "visible" && !wakeLockRef.current) {
         try {
-          if ('wakeLock' in navigator) {
-            const lock = await navigator.wakeLock.request('screen');
-            setWakeLock(lock);
-            console.log('Wake lock re-acquired after tab became visible');
+          if ("wakeLock" in navigator) {
+            const lock = await navigator.wakeLock.request("screen");
+            wakeLockRef.current = lock;
+            console.log("Wake lock re-acquired after tab became visible");
           }
         } catch (error) {
-          console.log('Wake lock re-acquisition failed:', error);
+          console.log("Wake lock re-acquisition failed:", error);
         }
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isMinMode, wakeLock]);
+  }, [isMinMode]);
 
   // Apply fitty to blinds landscape text in min mode (landscape orientation only)
   useEffect(() => {
@@ -149,7 +172,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     }
 
     let fittyInstance: FittyInstance | FittyInstance[] | null = null;
-    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+    const isLandscape = window.matchMedia("(orientation: landscape)").matches;
 
     if (isMinMode && isLandscape && blindsLandscapeRef.current) {
       // Small delay to ensure element is fully rendered
@@ -167,7 +190,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         if (fittyInstance) {
           // fitty returns single instance when passed single element
           if (Array.isArray(fittyInstance)) {
-            fittyInstance.forEach(instance => instance.unsubscribe());
+            fittyInstance.forEach((instance) => instance.unsubscribe());
           } else {
             fittyInstance.unsubscribe();
           }
@@ -179,12 +202,12 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   useEffect(() => {
     if (!tournamentId) return;
 
-    console.log('GameTimer: Setting up for tournament', tournamentId);
+    console.log("GameTimer: Setting up for tournament", tournamentId);
 
     // Setup function to join room and request sync
     const setupTimer = () => {
-      socket.emit('joinRoom', tournamentId.toString());
-      socket.emit('timer:requestSync', { tournamentId });
+      socket.emit("joinRoom", tournamentId.toString());
+      socket.emit("timer:requestSync", { tournamentId });
     };
 
     // Initial setup
@@ -194,41 +217,55 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     const handleTimerUpdate = (newState: TimerState) => {
       // CRITICAL: Only accept timer updates for THIS tournament
       if (newState.tournamentId !== tournamentId) {
-        console.log(`GameTimer: Ignoring timer update for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`);
+        console.log(
+          `GameTimer: Ignoring timer update for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`,
+        );
         return;
       }
-      console.log('GameTimer: Received timer update:', { tournamentId: newState.tournamentId, level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
+      console.log("GameTimer: Received timer update:", {
+        tournamentId: newState.tournamentId,
+        level: newState.currentLevel,
+        time: newState.timeRemaining,
+        isRunning: newState.isRunning,
+      });
       setTimerState(newState);
     };
 
     const handleTimerSync = (newState: TimerState) => {
       // CRITICAL: Only accept timer syncs for THIS tournament
       if (newState.tournamentId !== tournamentId) {
-        console.log(`GameTimer: Ignoring timer sync for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`);
+        console.log(
+          `GameTimer: Ignoring timer sync for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`,
+        );
         return;
       }
-      console.log('GameTimer: Received timer sync:', { tournamentId: newState.tournamentId, level: newState.currentLevel, time: newState.timeRemaining, isRunning: newState.isRunning });
+      console.log("GameTimer: Received timer sync:", {
+        tournamentId: newState.tournamentId,
+        level: newState.currentLevel,
+        time: newState.timeRemaining,
+        isRunning: newState.isRunning,
+      });
       setTimerState(newState);
     };
 
     // Handle reconnection - rejoin room when socket reconnects
     const handleReconnect = () => {
-      console.log('Socket reconnected, rejoining timer room...');
+      console.log("Socket reconnected, rejoining timer room...");
       setupTimer();
     };
 
-    socket.on('timer:update', handleTimerUpdate);
-    socket.on('timer:sync', handleTimerSync);
-    socket.on('connect', handleReconnect);
+    socket.on("timer:update", handleTimerUpdate);
+    socket.on("timer:sync", handleTimerSync);
+    socket.on("connect", handleReconnect);
 
     // Connection health monitoring
     const ensureConnection = () => {
       if (!socket.connected) {
-        console.log('Socket disconnected, attempting reconnection...');
+        console.log("Socket disconnected, attempting reconnection...");
         socket.connect();
       } else if (socket.connected) {
         // If connected but not receiving updates, rejoin room
-        socket.emit('timer:requestSync', { tournamentId });
+        socket.emit("timer:requestSync", { tournamentId });
       }
     };
 
@@ -236,10 +273,10 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     const syncInterval = setInterval(ensureConnection, 5000);
 
     return () => {
-      console.log('GameTimer: Cleaning up for tournament', tournamentId);
-      socket.off('timer:update', handleTimerUpdate);
-      socket.off('timer:sync', handleTimerSync);
-      socket.off('connect', handleReconnect);
+      console.log("GameTimer: Cleaning up for tournament", tournamentId);
+      socket.off("timer:update", handleTimerUpdate);
+      socket.off("timer:sync", handleTimerSync);
+      socket.off("connect", handleReconnect);
       clearInterval(syncInterval);
     };
   }, [tournamentId]);
@@ -255,17 +292,17 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       levelChangeAudio.load();
 
       setAudioEnabled(true);
-      console.log('Audio enabled for mobile browsers');
+      console.log("Audio enabled for mobile browsers");
     }
   };
 
   // Vibration function
   const vibrateDevice = (pattern: number | number[]) => {
-    if ('vibrate' in navigator) {
+    if ("vibrate" in navigator) {
       try {
         navigator.vibrate(pattern);
       } catch (error) {
-        console.log('Vibration not supported or failed:', error);
+        console.log("Vibration not supported or failed:", error);
       }
     }
   };
@@ -276,14 +313,14 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
     try {
       oneMinuteAudio.currentTime = 0;
-      oneMinuteAudio.play().catch(error => {
-        console.log('Audio playback failed:', error);
+      oneMinuteAudio.play().catch((error) => {
+        console.log("Audio playback failed:", error);
       });
       // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
       //
       vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
-      console.log('Audio not available: ' + error);
+      console.log("Audio not available: " + error);
     }
   }, [audioEnabled, oneMinuteAudio]);
 
@@ -292,14 +329,14 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
     try {
       levelChangeAudio.currentTime = 0;
-      levelChangeAudio.play().catch(error => {
-        console.log('Audio playback failed:', error);
+      levelChangeAudio.play().catch((error) => {
+        console.log("Audio playback failed:", error);
       });
       // Vibrate with a quick double pulse
       // 150ms vibrate, 50ms pause, 450ms vibrate
       vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
     } catch (error) {
-      console.log('Audio not available' + error);
+      console.log("Audio not available" + error);
     }
   }, [audioEnabled, levelChangeAudio]);
 
@@ -307,17 +344,17 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   // to prevent audio from playing when returning to a different level
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && timerState) {
+      if (document.visibilityState === "visible" && timerState) {
         // Update lastLevel to current level when page becomes visible
         // This prevents the level change sound from playing when user returns
         setLastLevel(timerState.currentLevel);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [timerState]);
 
@@ -329,7 +366,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
     // Check for level change - only play sound if page is visible
     if (lastLevel !== null && lastLevel !== timerState.currentLevel) {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         playLevelChangeSound();
       }
       setHasPlayedOneMinuteWarning(false); // Reset for new level
@@ -338,7 +375,7 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
     // Check for 1-minute warning - only play sound if page is visible
     if (timerState.timeRemaining === 60 && !hasPlayedOneMinuteWarning) {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         playOneMinuteWarning();
       }
       setHasPlayedOneMinuteWarning(true);
@@ -348,7 +385,13 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     if (timerState.timeRemaining > 60) {
       setHasPlayedOneMinuteWarning(false);
     }
-  }, [timerState, lastLevel, hasPlayedOneMinuteWarning, playLevelChangeSound, playOneMinuteWarning]);
+  }, [
+    timerState,
+    lastLevel,
+    hasPlayedOneMinuteWarning,
+    playLevelChangeSound,
+    playOneMinuteWarning,
+  ]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -356,46 +399,46 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     const remainingSeconds = seconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
     }
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   const handleStart = () => {
     enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
-      socket.emit('timer:start', { tournamentId });
+      socket.emit("timer:start", { tournamentId });
     }
   };
 
   const handlePause = () => {
     if (tournamentId) {
-      socket.emit('timer:pause', { tournamentId });
+      socket.emit("timer:pause", { tournamentId });
     }
   };
 
   const handleResume = () => {
     enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
-      socket.emit('timer:resume', { tournamentId });
+      socket.emit("timer:resume", { tournamentId });
     }
   };
 
   const handleReset = () => {
-    if (tournamentId && confirm('Are you sure you want to reset the timer?')) {
-      socket.emit('timer:reset', { tournamentId });
+    if (tournamentId && confirm("Are you sure you want to reset the timer?")) {
+      socket.emit("timer:reset", { tournamentId });
     }
   };
 
   const handleNextLevel = () => {
     if (tournamentId && timerState) {
-      socket.emit('timer:nextLevel', { tournamentId });
+      socket.emit("timer:nextLevel", { tournamentId });
     }
   };
 
   const handlePrevLevel = () => {
     if (tournamentId && timerState) {
-      socket.emit('timer:prevLevel', { tournamentId });
+      socket.emit("timer:prevLevel", { tournamentId });
     }
   };
 
@@ -413,7 +456,10 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     if (tournamentId && editMinutes && editSeconds) {
       const totalSeconds = parseInt(editMinutes) * 60 + parseInt(editSeconds);
       if (totalSeconds >= 0 && totalSeconds <= 99 * 60 + 59) {
-        socket.emit('timer:setTime', { tournamentId, timeInSeconds: totalSeconds });
+        socket.emit("timer:setTime", {
+          tournamentId,
+          timeInSeconds: totalSeconds,
+        });
         setIsEditingTime(false);
       }
     }
@@ -421,29 +467,29 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
 
   const handleCancelEdit = () => {
     setIsEditingTime(false);
-    setEditMinutes('');
-    setEditSeconds('');
+    setEditMinutes("");
+    setEditSeconds("");
   };
 
   const increaseFontSize = () => {
-    setFontSize(prev => Math.min(prev + 1, 9)); // Max text-9xl
+    setFontSize((prev) => Math.min(prev + 1, 9)); // Max text-9xl
   };
 
   const decreaseFontSize = () => {
-    setFontSize(prev => Math.max(prev - 1, 3)); // Min text-3xl
+    setFontSize((prev) => Math.max(prev - 1, 3)); // Min text-3xl
   };
 
   const getFontSizeClass = () => {
     const sizeMap: { [key: number]: string } = {
-      3: 'text-3xl',
-      4: 'text-4xl',
-      5: 'text-5xl',
-      6: 'text-6xl',
-      7: 'text-7xl',
-      8: 'text-8xl',
-      9: 'text-9xl',
+      3: "text-3xl",
+      4: "text-4xl",
+      5: "text-5xl",
+      6: "text-6xl",
+      7: "text-7xl",
+      8: "text-8xl",
+      9: "text-9xl",
     };
-    return sizeMap[fontSize] || 'text-5xl';
+    return sizeMap[fontSize] || "text-5xl";
   };
 
   if (!timerState) {
@@ -451,14 +497,15 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
       <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] rounded-lg border">
         <div className="p-6">
           <h3 className="text-2xl font-semibold flex items-center gap-2 text-cyan-300">
-            <Clock size={20} className="text-cyan-400" />
+            <Clock
+              size={20}
+              className="text-cyan-400"
+            />
             Game Timer
           </h3>
         </div>
         <div className="p-6 pt-0">
-          <div className="text-center text-gray-400">
-            Loading timer...
-          </div>
+          <div className="text-center text-gray-400">Loading timer...</div>
         </div>
       </div>
     );
@@ -467,15 +514,44 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
   const currentBlind = timerState.blindLevels?.[timerState.currentLevel - 1];
   const nextBlind = timerState.blindLevels?.[timerState.currentLevel];
 
+  // Calculate time until next break
+  const getTimeUntilNextBreak = (): number | null => {
+    if (!timerState.blindLevels) return null;
+
+    // If current level is a break, return 0
+    if (currentBlind?.isbreak) return 0;
+
+    let totalSeconds = timerState.timeRemaining;
+
+    // Look through remaining levels to find next break
+    for (
+      let i = timerState.currentLevel;
+      i < timerState.blindLevels.length;
+      i++
+    ) {
+      const level = timerState.blindLevels[i];
+      if (level.isbreak) {
+        return totalSeconds;
+      }
+      totalSeconds += level.duration * 60;
+    }
+
+    return null; // No break found
+  };
+
+  const timeUntilBreak = getTimeUntilNextBreak();
+  const minutesUntilBreak =
+    timeUntilBreak !== null ? Math.ceil(timeUntilBreak / 60) : null;
+
   // Min Mode Fullscreen Component
   if (isMinMode && timerState) {
     const getTimeStateClass = () => {
       if (timerState.timeRemaining < 60) {
-        return `minModeTime--red ${timerState.isPaused ? 'minModeTime--pulsing' : ''}`;
+        return `minModeTime--red ${timerState.isPaused ? "minModeTime--pulsing" : ""}`;
       } else if (timerState.timeRemaining < 300) {
-        return 'minModeTime--yellow';
+        return "minModeTime--yellow";
       } else {
-        return 'minModeTime--green';
+        return "minModeTime--green";
       }
     };
 
@@ -496,17 +572,20 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
           {currentBlind && (
             <>
               {currentBlind.isbreak ? (
-                <div className="minModeBreak">
-                  🔥 BREAK
-                </div>
+                <div className="minModeBreak">🔥 BREAK</div>
               ) : (
                 <>
                   {/* Portrait mode: stack vertically */}
                   <div className="minModeBlinds--portrait">
-                    {currentBlind.smallBlind}<br></br>{currentBlind.bigBlind}
+                    {currentBlind.smallBlind}
+                    <br></br>
+                    {currentBlind.bigBlind}
                   </div>
                   {/* Landscape mode: display on one line */}
-                  <div ref={blindsLandscapeRef} className="minModeBlinds--landscape">
+                  <div
+                    ref={blindsLandscapeRef}
+                    className="minModeBlinds--landscape"
+                  >
                     {currentBlind.smallBlind} {currentBlind.bigBlind}
                   </div>
                 </>
@@ -524,7 +603,6 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
             </div>
           )}
         </div>
-
       </div>
     );
   }
@@ -533,10 +611,6 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
     <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] rounded-lg border">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center justify-between text-cyan-300">
-          <div className="flex items-center gap-2">
-            <Clock size={20} className="text-cyan-400" />
-            <span className="text-cyan-700 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Game Timer</span>
-          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMinMode(true)}
@@ -558,160 +632,213 @@ export function GameTimer({ tournamentId, isAdmin = false, playersRemaining }: G
         </h3>
       </div>
       <div className="p-6 pt-0 space-y-4">
-        {/* Timer Display */}
-        <div className="text-center">
-          {isEditingTime && isAdmin && timerState.isPaused ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <input
-                  type="number"
-                  value={editMinutes}
-                  onChange={(e) => setEditMinutes(e.target.value)}
-                  className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  placeholder="MM"
-                  min="0"
-                  max="99"
-                />
-                <span className="text-2xl font-mono font-bold text-cyan-400">:</span>
-                <input
-                  type="number"
-                  value={editSeconds}
-                  onChange={(e) => setEditSeconds(e.target.value)}
-                  className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  placeholder="SS"
-                  min="0"
-                  max="59"
-                />
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={handleSaveEdit}
-                  className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-500 text-sm transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
-                >
-                  <Check size={14} />
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm transition-all border border-gray-600"
-                >
-                  <X size={14} />
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-center gap-2">
-                <div className={`${getFontSizeClass()} font-mono font-bold transition-all duration-300 ${timerState.timeRemaining < 60
-                  ? `text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] ${timerState.isPaused ? 'animate-pulse' : ''}`
-                  : timerState.timeRemaining < 300
-                    ? `text-yellow-400 drop-shadow-[0_0_12px_rgba(234,179,8,0.6)] ${timerState.isPaused ? 'animate-pulse' : ''}`
-                    : `text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)] ${timerState.isPaused ? 'animate-pulse' : ''}`
-                  }`}>
-                  {formatTime(timerState.timeRemaining || 0)}
+        {/* Main Timer Layout - responsive two-column */}
+        <div className="relative flex flex-col gap-4">
+          {/* Center: Main Timer Info (stacked) */}
+          <div className="text-center space-y-4">
+            {/* Timer Display */}
+            {isEditingTime && isAdmin && timerState.isPaused ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <input
+                    type="number"
+                    value={editMinutes}
+                    onChange={(e) => setEditMinutes(e.target.value)}
+                    className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    placeholder="MM"
+                    min="0"
+                    max="99"
+                  />
+                  <span className="text-2xl font-mono font-bold text-cyan-400">
+                    :
+                  </span>
+                  <input
+                    type="number"
+                    value={editSeconds}
+                    onChange={(e) => setEditSeconds(e.target.value)}
+                    className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    placeholder="SS"
+                    min="0"
+                    max="59"
+                  />
                 </div>
-                {isAdmin && timerState.isPaused && (
+                <div className="flex items-center justify-center gap-2">
                   <button
-                    onClick={handleStartEdit}
-                    className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                    title="Edit time"
+                    onClick={handleSaveEdit}
+                    className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-500 text-sm transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
                   >
-                    <Edit3 size={20} />
+                    <Check size={14} />
+                    Save
                   </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm transition-all border border-gray-600"
+                  >
+                    <X size={14} />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-center gap-2">
+                  <div
+                    className={`${getFontSizeClass()} font-mono font-bold transition-all duration-300 ${
+                      timerState.timeRemaining < 60
+                        ? `text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                        : timerState.timeRemaining < 300
+                          ? `text-yellow-400 drop-shadow-[0_0_12px_rgba(234,179,8,0.6)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                          : `text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                    }`}
+                  >
+                    {formatTime(timerState.timeRemaining || 0)}
+                  </div>
+                  {isAdmin && timerState.isPaused && (
+                    <button
+                      onClick={handleStartEdit}
+                      className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                      title="Edit time"
+                    >
+                      <Edit3 size={20} />
+                    </button>
+                  )}
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <button
+                      onClick={decreaseFontSize}
+                      disabled={fontSize <= 3}
+                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+                      title="Decrease size"
+                    >
+                      <span className="text-lg font-bold">−</span>
+                    </button>
+                    <span className="text-xs text-gray-500">Size</span>
+                    <button
+                      onClick={increaseFontSize}
+                      disabled={fontSize >= 9}
+                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+                      title="Increase size"
+                    >
+                      <span className="text-lg font-bold">+</span>
+                    </button>
+                  </div>
                 )}
               </div>
-              {isAdmin && (
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <button
-                    onClick={decreaseFontSize}
-                    disabled={fontSize <= 3}
-                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
-                    title="Decrease size"
-                  >
-                    <span className="text-lg font-bold">−</span>
-                  </button>
-                  <span className="text-xs text-gray-500">Size</span>
-                  <button
-                    onClick={increaseFontSize}
-                    disabled={fontSize >= 9}
-                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
-                    title="Increase size"
-                  >
-                    <span className="text-lg font-bold">+</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="text-sm text-gray-400 mt-2">
-            {timerState.isRunning && !timerState.isPaused ? (
-              <span className="text-green-400">● Running</span>
-            ) : timerState.isPaused ? (
-              <span className="text-yellow-400">⏸ Paused</span>
-            ) : (
-              <span className="text-gray-500">⏹ Stopped</span>
             )}
-          </div>
-        </div>
-
-        {/* Current Blind Level */}
-        <div className="text-center bg-gray-800/60 p-4 rounded-lg border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-          <div className="flex items-center justify-center gap-2">
-            {isAdmin && timerState.isPaused && timerState.currentLevel > 1 && (
-              <button
-                onClick={handlePrevLevel}
-                className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                title="Previous level"
-              >
-                <ChevronLeft size={20} />
-              </button>
-            )}
-            <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-              Level {timerState.currentLevel}
-            </div>
-            {isAdmin && timerState.isPaused && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
-              <button
-                onClick={handleNextLevel}
-                className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                title="Next level"
-              >
-                <ChevronRight size={20} />
-              </button>
-            )}
-          </div>
-          {currentBlind && (
-            <div className="text-sm text-gray-300 mt-2">
-              {currentBlind.isbreak ? (
-                <span className={`${getFontSizeClass()} font-bold text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]`}>🔥 BREAK</span>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-sm text-gray-400">Blinds:</span>
-                  <span className={`${getFontSizeClass()} font-mono font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]`}>
-                    {currentBlind.smallBlind}/{currentBlind.bigBlind}
-                  </span>
-                  {currentBlind.ante && <span className="text-sm text-gray-400">Ante: <span className="text-purple-400 font-semibold">{currentBlind.ante}</span></span>}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Next Blind Level */}
-        {nextBlind && (
-          <div className="text-center bg-gray-800/40 p-3 rounded border border-gray-700/50">
             <div className="text-sm text-gray-400">
-              {nextBlind.isbreak ? (
-                <span>Next: <span className="font-medium text-orange-400">BREAK</span></span>
+              {timerState.isRunning && !timerState.isPaused ? (
+                <span className="text-green-400">● Running</span>
+              ) : timerState.isPaused ? (
+                <span className="text-yellow-400">⏸ Paused</span>
               ) : (
-                <>
-                  <span className="text-gray-500">Next Level:</span> <span className="text-cyan-400">{nextBlind.smallBlind}/{nextBlind.bigBlind}</span>
-                  {nextBlind.ante && <span className="text-gray-500"> (Ante: <span className="text-purple-400">{nextBlind.ante}</span>)</span>}
-                </>
+                <span className="text-gray-500">⏹ Stopped</span>
               )}
             </div>
+
+            {/* Level Indicator */}
+            <div className="flex items-center justify-center gap-2">
+              {isAdmin &&
+                timerState.isPaused &&
+                timerState.currentLevel > 1 && (
+                  <button
+                    onClick={handlePrevLevel}
+                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                    title="Previous level"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                )}
+              <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                Level {timerState.currentLevel}
+              </div>
+              {isAdmin &&
+                timerState.isPaused &&
+                timerState.blindLevels &&
+                timerState.currentLevel < timerState.blindLevels.length && (
+                  <button
+                    onClick={handleNextLevel}
+                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                    title="Next level"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                )}
+            </div>
+
+            {/* Current Blinds */}
+            {currentBlind && (
+              <div className="text-sm text-gray-300">
+                {currentBlind.isbreak ? (
+                  <span
+                    className={`${getFontSizeClass()} font-bold text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]`}
+                  >
+                    🔥 BREAK
+                  </span>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-sm text-gray-400">Blinds:</span>
+                    <span
+                      className={`${getFontSizeClass()} font-mono font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]`}
+                    >
+                      {currentBlind.smallBlind}/{currentBlind.bigBlind}
+                    </span>
+                    {currentBlind.ante && (
+                      <span className="text-sm text-gray-400">
+                        Ante:{" "}
+                        <span className="text-purple-400 font-semibold">
+                          {currentBlind.ante}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Right: Next Level & Break Info */}
+          <div className="text-center md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2 md:text-right space-y-2">
+            {/* Next Blind Level */}
+            {nextBlind && (
+              <div className="text-sm text-gray-400">
+                {nextBlind.isbreak ? (
+                  <span>
+                    Next:{" "}
+                    <span className="font-medium text-orange-400">BREAK</span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-gray-500">Next Level:</span>{" "}
+                    <span className="text-cyan-400">
+                      {nextBlind.smallBlind}/{nextBlind.bigBlind}
+                    </span>
+                    {nextBlind.ante && (
+                      <span className="text-gray-500">
+                        {" "}
+                        (Ante:{" "}
+                        <span className="text-purple-400">
+                          {nextBlind.ante}
+                        </span>
+                        )
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Next Break */}
+            {minutesUntilBreak !== null && minutesUntilBreak > 0 && (
+              <div className="text-sm text-gray-400">
+                <span className="text-gray-500">Next Break:</span>{" "}
+                <span className="text-orange-400 font-medium">
+                  {minutesUntilBreak} min
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Admin Controls */}
         {isAdmin && (
