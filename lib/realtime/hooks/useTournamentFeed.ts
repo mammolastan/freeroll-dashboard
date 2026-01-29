@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { socket } from '@/lib/socketClient';
 import { useSession } from 'next-auth/react';
+import { SuitCounts, ReactionType, ReactionUpdatePayload } from '@/types';
 
 // Feed item type matching API response
 export interface FeedItem {
@@ -19,6 +20,10 @@ export interface FeedItem {
   hitman_name: string | null;
   ko_position: number | null;
   created_at: string;
+  reactions?: {
+    totals: SuitCounts;
+    mine?: SuitCounts;
+  };
 }
 
 interface FeedResponse {
@@ -62,6 +67,10 @@ interface UseTournamentFeedReturn {
   refresh: () => Promise<void>;
   /** Delete a feed item (admin only) */
   deleteItem: (itemId: number) => Promise<{ success: boolean; error?: string }>;
+  /** Add a reaction to a feed item */
+  addReaction: (itemId: string, reactionType: ReactionType, count?: number) => Promise<void>;
+  /** User's remaining reaction balance per suit */
+  reactionBalance: SuitCounts | null;
 }
 
 export function useTournamentFeed(
@@ -77,7 +86,8 @@ export function useTournamentFeed(
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
-  
+  const [reactionBalance, setReactionBalance] = useState<SuitCounts | null>(null);
+
   // Track if we've already fetched to avoid double-fetch in strict mode
   const hasFetched = useRef(false);
   
@@ -327,6 +337,133 @@ export function useTournamentFeed(
     }
   }, [fetchFeed]);
 
+  // Fetch reaction balance on mount (if authenticated)
+  useEffect(() => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum) || !canPost) return;
+
+    const fetchBalance = async () => {
+      try {
+        const response = await fetch(`/api/tournament-drafts/${tournamentIdNum}/reactions/balance`);
+        if (response.ok) {
+          const data = await response.json();
+          setReactionBalance(data);
+        }
+      } catch (err) {
+        console.error('Error fetching reaction balance:', err);
+      }
+    };
+
+    fetchBalance();
+  }, [tournamentIdNum, canPost]);
+
+  // Listen for reaction updates via Socket.IO
+  useEffect(() => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) return;
+
+    const handleReactionUpdate = (payload: ReactionUpdatePayload) => {
+      if (payload.tournament_id === tournamentIdNum) {
+        setItems(prevItems =>
+          prevItems.map(item => {
+            if (String(item.id) === payload.feed_item_id) {
+              return {
+                ...item,
+                reactions: {
+                  ...item.reactions,
+                  totals: payload.totals,
+                  mine: item.reactions?.mine,
+                },
+              };
+            }
+            return item;
+          })
+        );
+      }
+    };
+
+    socket.on('feed:reaction_update', handleReactionUpdate);
+
+    return () => {
+      socket.off('feed:reaction_update', handleReactionUpdate);
+    };
+  }, [tournamentIdNum]);
+
+  // Add a reaction to a feed item (with optimistic update)
+  const addReaction = useCallback(async (itemId: string, reactionType: ReactionType, count: number = 1) => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum) || !canPost) return;
+
+    // Optimistic update: increment totals and mine, decrement balance
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (String(item.id) === itemId) {
+          const currentTotals = item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
+          const currentMine = item.reactions?.mine || { heart: 0, diamond: 0, club: 0, spade: 0 };
+          return {
+            ...item,
+            reactions: {
+              totals: { ...currentTotals, [reactionType]: currentTotals[reactionType] + count },
+              mine: { ...currentMine, [reactionType]: currentMine[reactionType] + count },
+            },
+          };
+        }
+        return item;
+      })
+    );
+
+    setReactionBalance(prev => {
+      if (!prev) return prev;
+      return { ...prev, [reactionType]: Math.max(0, prev[reactionType] - count) };
+    });
+
+    try {
+      const response = await fetch(
+        `/api/tournament-drafts/${tournamentIdNum}/feed/${itemId}/reactions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reaction_type: reactionType, count }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update with server-confirmed values
+        if (data.balance) {
+          setReactionBalance(data.balance);
+        }
+      } else {
+        // Revert optimistic update on failure
+        setItems(prevItems =>
+          prevItems.map(item => {
+            if (String(item.id) === itemId) {
+              const currentTotals = item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
+              const currentMine = item.reactions?.mine || { heart: 0, diamond: 0, club: 0, spade: 0 };
+              return {
+                ...item,
+                reactions: {
+                  totals: { ...currentTotals, [reactionType]: Math.max(0, currentTotals[reactionType] - count) },
+                  mine: { ...currentMine, [reactionType]: Math.max(0, currentMine[reactionType] - count) },
+                },
+              };
+            }
+            return item;
+          })
+        );
+        // Use server-provided balance if available, otherwise revert
+        const errorData = await response.json().catch(() => null);
+        if (errorData?.balance) {
+          setReactionBalance(errorData.balance);
+        } else {
+          setReactionBalance(prev => {
+            if (!prev) return prev;
+            return { ...prev, [reactionType]: prev[reactionType] + count };
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error adding reaction:', err);
+    }
+  }, [tournamentIdNum, canPost]);
+
   // Delete a feed item
   const deleteItem = useCallback(async (itemId: number): Promise<{ success: boolean; error?: string }> => {
     if (!tournamentIdNum || isNaN(tournamentIdNum)) {
@@ -366,5 +503,7 @@ export function useTournamentFeed(
     canPost,
     refresh,
     deleteItem,
+    addReaction,
+    reactionBalance,
   };
 }

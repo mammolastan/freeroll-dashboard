@@ -7,7 +7,7 @@ import {
   Tournament
 } from "./types";
 import { TypedServer } from "@/types";
-import { FeedItemPayload } from "@/types";
+import { FeedItemPayload, ReactionUpdatePayload, SuitCounts } from "@/types";
 
 declare global {
   var socketIoInstance: TypedServer | undefined;
@@ -113,6 +113,31 @@ export class BroadcastManager {
       global.socketIoInstance.to(room).emit('feed:new_item', payload);
     } catch (error) {
       console.error("Error broadcasting feed item:", error);
+    }
+  }
+
+  /**
+   * Broadcast a reaction update to all clients viewing the tournament
+   */
+  broadcastReactionUpdate(tournamentId: number, feedItemId: string, totals: SuitCounts): void {
+    try {
+      if (!global.socketIoInstance) {
+        console.error("Socket.IO instance not available for broadcasting reaction update");
+        return;
+      }
+
+      const room = tournamentId.toString();
+      const payload: ReactionUpdatePayload = {
+        tournament_id: tournamentId,
+        feed_item_id: feedItemId,
+        totals,
+      };
+
+      console.log(`[BROADCAST] feed:reaction_update to room ${room}:`, payload);
+
+      global.socketIoInstance.to(room).emit('feed:reaction_update', payload);
+    } catch (error) {
+      console.error("Error broadcasting reaction update:", error);
     }
   }
 

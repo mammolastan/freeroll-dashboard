@@ -2,10 +2,12 @@
 
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { useTournamentFeed } from "@/lib/realtime/hooks/useTournamentFeed";
 import { FeedItem } from "./FeedItem";
 import { FeedInput } from "./FeedInput";
+import { ReactionBalance } from "./ReactionBalance";
+import { ReactionType } from "@/types";
 import {
   MessageSquare,
   Loader2,
@@ -51,7 +53,13 @@ export function TournamentFeed({
     canPost,
     refresh,
     deleteItem,
+    addReaction,
+    reactionBalance,
   } = useTournamentFeed(tournamentId);
+
+  const handleReact = useCallback((itemId: string, reactionType: ReactionType, count: number) => {
+    addReaction(itemId, reactionType, count);
+  }, [addReaction]);
 
   const [activeTab, setActiveTab] = useState<FeedTab>("all");
   const feedContainerRef = useRef<HTMLDivElement>(null);
@@ -208,7 +216,7 @@ export function TournamentFeed({
         </button>
       </div>
 
-      {/* Message Input */}
+      {/* Message Input + Reaction Balance */}
       {showInput && (
         <div className="border-b border-cyan-500/20">
           <FeedInput
@@ -216,6 +224,11 @@ export function TournamentFeed({
             posting={posting}
             canPost={canPost}
           />
+          {canPost && reactionBalance && (
+            <div className="border-t border-gray-800/50">
+              <ReactionBalance balance={reactionBalance} />
+            </div>
+          )}
         </div>
       )}
 
@@ -310,6 +323,9 @@ export function TournamentFeed({
                 onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
                 totalPlayers={totalPlayers}
                 startPoints={startPoints}
+                onReact={handleReact}
+                reactionBalance={reactionBalance}
+                canReact={canPost}
               />
             ))}
           </div>

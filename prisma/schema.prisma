@@ -250,6 +250,21 @@ model tournament_feed_items {
   @@index([tournament_draft_id, created_at(sort: Desc)], map: "idx_tournament_created")
 }
 
+model feed_item_reactions {
+  id                  Int                               @id @default(autoincrement())
+  feed_item_id        String                            @db.VarChar(255)
+  tournament_draft_id Int
+  user_uid            String                            @db.VarChar(50)
+  reaction_type       feed_item_reactions_reaction_type
+  count               Int                               @default(1)
+  created_at          DateTime?                         @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?                         @default(now()) @db.Timestamp(0)
+
+  @@unique([feed_item_id, user_uid, reaction_type], map: "uq_reaction")
+  @@index([feed_item_id], map: "idx_feed_item")
+  @@index([user_uid, tournament_draft_id], map: "idx_user_tournament")
+}
+
 enum Status {
   success
   error
@@ -282,4 +297,11 @@ enum tournament_feed_items_item_type {
 enum tournament_draft_players_status {
   active
   knockedout
+}
+
+enum feed_item_reactions_reaction_type {
+  heart
+  diamond
+  club
+  spade
 }

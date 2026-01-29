@@ -7,12 +7,17 @@ import Image from "next/image";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
 import { Skull, UserCheck, Info, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
+import { ReactionBar } from "./ReactionBar";
+import { SuitCounts, ReactionType } from "@/types";
 
 interface FeedItemProps {
   item: FeedItemType;
   totalPlayers?: number;
   onDelete?: (itemId: number) => void;
   startPoints?: number;
+  onReact?: (itemId: string, reactionType: ReactionType, count: number) => void;
+  reactionBalance?: SuitCounts | null;
+  canReact?: boolean;
 }
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -42,7 +47,7 @@ function calculatePlacementPoints(placement: number): number {
 }
 
 // Knockout Item
-function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
+function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBalance, canReact = false }: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -140,13 +145,23 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
             </span>
           )}
         </div>
+        {onReact && (
+          <ReactionBar
+            itemId={String(item.id)}
+            totals={item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 }}
+            mine={item.reactions?.mine}
+            balance={reactionBalance ?? null}
+            canReact={canReact}
+            onReact={onReact}
+          />
+        )}
       </div>
     </div>
   );
 }
 
 // Message Item
-function MessageItem({ item, onDelete }: FeedItemProps) {
+function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = false }: FeedItemProps) {
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors group">
       {/* Avatar/Icon */}
@@ -179,6 +194,16 @@ function MessageItem({ item, onDelete }: FeedItemProps) {
         <p className="text-gray-300 text-sm mt-0.5 break-words whitespace-pre-wrap">
           {item.message_text}
         </p>
+        {onReact && (
+          <ReactionBar
+            itemId={String(item.id)}
+            totals={item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 }}
+            mine={item.reactions?.mine}
+            balance={reactionBalance ?? null}
+            canReact={canReact}
+            onReact={onReact}
+          />
+        )}
       </div>
 
       {/* Delete Button */}
@@ -298,6 +323,9 @@ export function FeedItem({
   totalPlayers,
   onDelete,
   startPoints,
+  onReact,
+  reactionBalance,
+  canReact,
 }: FeedItemProps) {
   switch (item.item_type) {
     case "knockout":
@@ -306,6 +334,9 @@ export function FeedItem({
           item={item}
           totalPlayers={totalPlayers}
           startPoints={startPoints}
+          onReact={onReact}
+          reactionBalance={reactionBalance}
+          canReact={canReact}
         />
       );
     case "message":
@@ -313,6 +344,9 @@ export function FeedItem({
         <MessageItem
           item={item}
           onDelete={onDelete}
+          onReact={onReact}
+          reactionBalance={reactionBalance}
+          canReact={canReact}
         />
       );
     case "checkin":

@@ -118,6 +118,27 @@ export interface CheckInPayload {
 }
 
 /**
+ * Suit counts for reactions
+ */
+export interface SuitCounts {
+  heart: number;
+  diamond: number;
+  club: number;
+  spade: number;
+}
+
+export type ReactionType = 'heart' | 'diamond' | 'club' | 'spade';
+
+/**
+ * Reaction update payload for real-time reaction broadcasts
+ */
+export interface ReactionUpdatePayload {
+  tournament_id: number;
+  feed_item_id: string;
+  totals: SuitCounts;
+}
+
+/**
  * Feed item payload for real-time feed updates
  */
 export interface FeedItemPayload {
@@ -179,6 +200,7 @@ export interface ServerToClientEvents {
 
   // Feed events
   'feed:new_item': (payload: FeedItemPayload) => void;
+  'feed:reaction_update': (payload: ReactionUpdatePayload) => void;
 
   // Timer events
   'timer:updated': (payload: TimerUpdatePayload) => void;

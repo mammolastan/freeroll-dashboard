@@ -113,6 +113,9 @@ export type {
   TypedServer,
   TypedSocket,
   SocketCallback,
+  SuitCounts,
+  ReactionType,
+  ReactionUpdatePayload,
 } from './socket';
 
 export { SocketRooms } from './socket';

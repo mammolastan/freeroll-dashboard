@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { RawQueryResult } from "@/types";
+import { Prisma } from "@prisma/client";
+import { RawQueryResult, SuitCounts, ReactionType } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 
 // Feed item type for response
@@ -19,6 +20,10 @@ interface FeedItem {
   hitman_name: string | null;
   ko_position: number | null;
   created_at: string;
+  reactions?: {
+    totals: SuitCounts;
+    mine?: SuitCounts;
+  };
 }
 
 interface FeedResponse {
@@ -224,6 +229,67 @@ export async function GET(
           ? oldestOtherItem.created_at.toISOString()
           : String(oldestOtherItem.created_at))
       : null;
+
+    // Batch-load reactions for all feed items
+    const allItemIds = serializedItems.map(item => String(item.id));
+    if (allItemIds.length > 0) {
+      // Get aggregated totals for all items
+      const reactionTotals = await prisma.$queryRaw<RawQueryResult[]>`
+        SELECT feed_item_id, reaction_type, SUM(count) as total
+        FROM feed_item_reactions
+        WHERE feed_item_id IN (${Prisma.join(allItemIds)})
+          AND tournament_draft_id = ${tournamentId}
+        GROUP BY feed_item_id, reaction_type
+      `;
+
+      // Build a map of item_id -> SuitCounts
+      const totalsMap = new Map<string, SuitCounts>();
+      for (const row of reactionTotals) {
+        const fid = String(row.feed_item_id);
+        if (!totalsMap.has(fid)) {
+          totalsMap.set(fid, { heart: 0, diamond: 0, club: 0, spade: 0 });
+        }
+        const rt = String(row.reaction_type) as ReactionType;
+        const counts = totalsMap.get(fid)!;
+        counts[rt] = Number(row.total);
+      }
+
+      // If user is authenticated, also get their per-item counts
+      const session = await getServerSession(authOptions);
+      const mineMap = new Map<string, SuitCounts>();
+      if (session?.user?.uid) {
+        const myReactions = await prisma.$queryRaw<RawQueryResult[]>`
+          SELECT feed_item_id, reaction_type, count
+          FROM feed_item_reactions
+          WHERE feed_item_id IN (${Prisma.join(allItemIds)})
+            AND tournament_draft_id = ${tournamentId}
+            AND user_uid = ${session.user.uid}
+        `;
+
+        for (const row of myReactions) {
+          const fid = String(row.feed_item_id);
+          if (!mineMap.has(fid)) {
+            mineMap.set(fid, { heart: 0, diamond: 0, club: 0, spade: 0 });
+          }
+          const rt = String(row.reaction_type) as ReactionType;
+          const counts = mineMap.get(fid)!;
+          counts[rt] = Number(row.count);
+        }
+      }
+
+      // Attach reactions to each item
+      for (const item of serializedItems) {
+        const itemIdStr = String(item.id);
+        const totals = totalsMap.get(itemIdStr);
+        const mine = mineMap.get(itemIdStr);
+        if (totals || mine) {
+          item.reactions = {
+            totals: totals || { heart: 0, diamond: 0, club: 0, spade: 0 },
+            ...(mine ? { mine } : {}),
+          };
+        }
+      }
+    }
 
     const response: FeedResponse = {
       items: serializedItems,
