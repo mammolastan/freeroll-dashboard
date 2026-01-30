@@ -67,7 +67,6 @@ export function GameTimer({
       ? new Audio("/audio/homepod_timer.mp3")
       : null,
   );
-  const [fontSize, setFontSize] = useState(5); // Default size (text-5xl)
   const [isMinMode, setIsMinMode] = useState(false);
   const wakeLockRef = React.useRef<WakeLockSentinel | null>(null);
   const blindsLandscapeRef = React.useRef<HTMLDivElement>(null);
@@ -145,7 +144,11 @@ export function GameTimer({
   // Re-acquire wake lock when page becomes visible again (if in min mode)
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (isMinMode && document.visibilityState === "visible" && !wakeLockRef.current) {
+      if (
+        isMinMode &&
+        document.visibilityState === "visible" &&
+        !wakeLockRef.current
+      ) {
         try {
           if ("wakeLock" in navigator) {
             const lock = await navigator.wakeLock.request("screen");
@@ -471,27 +474,6 @@ export function GameTimer({
     setEditSeconds("");
   };
 
-  const increaseFontSize = () => {
-    setFontSize((prev) => Math.min(prev + 1, 9)); // Max text-9xl
-  };
-
-  const decreaseFontSize = () => {
-    setFontSize((prev) => Math.max(prev - 1, 3)); // Min text-3xl
-  };
-
-  const getFontSizeClass = () => {
-    const sizeMap: { [key: number]: string } = {
-      3: "text-3xl",
-      4: "text-4xl",
-      5: "text-5xl",
-      6: "text-6xl",
-      7: "text-7xl",
-      8: "text-8xl",
-      9: "text-9xl",
-    };
-    return sizeMap[fontSize] || "text-5xl";
-  };
-
   if (!timerState) {
     return (
       <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] rounded-lg border">
@@ -609,192 +591,154 @@ export function GameTimer({
 
   return (
     <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] rounded-lg border">
-      <div className="p-6">
-        <h3 className="text-2xl font-semibold flex items-center justify-between text-cyan-300">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMinMode(true)}
-              className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-full transition-all border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]"
-              title="Minimal fullscreen mode"
-            >
-              📺 Min Mode
-            </button>
-            {!audioEnabled && (
-              <button
-                onClick={enableAudio}
-                className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)]"
-                title="Enable sound notifications"
-              >
-                🔇 Enable Sound
-              </button>
-            )}
-          </div>
-        </h3>
-      </div>
-      <div className="p-6 pt-0 space-y-4">
-        {/* Main Timer Layout - responsive two-column */}
+      <div className="p-6 space-y-4">
+        {/* Main Timer Layout - buttons left on wide screens, timer always on top */}
         <div className="relative flex flex-col gap-4">
-          {/* Center: Main Timer Info (stacked) */}
-          <div className="text-center space-y-4">
-            {/* Timer Display */}
-            {isEditingTime && isAdmin && timerState.isPaused ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <input
-                    type="number"
-                    value={editMinutes}
-                    onChange={(e) => setEditMinutes(e.target.value)}
-                    className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    placeholder="MM"
-                    min="0"
-                    max="99"
-                  />
-                  <span className="text-2xl font-mono font-bold text-cyan-400">
-                    :
-                  </span>
-                  <input
-                    type="number"
-                    value={editSeconds}
-                    onChange={(e) => setEditSeconds(e.target.value)}
-                    className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    placeholder="SS"
-                    min="0"
-                    max="59"
-                  />
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={handleSaveEdit}
-                    className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-500 text-sm transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
-                  >
-                    <Check size={14} />
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm transition-all border border-gray-600"
-                  >
-                    <X size={14} />
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-center gap-2">
-                  <div
-                    className={`${getFontSizeClass()} font-mono font-bold transition-all duration-300 ${
-                      timerState.timeRemaining < 60
-                        ? `text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] ${timerState.isPaused ? "animate-pulse" : ""}`
-                        : timerState.timeRemaining < 300
-                          ? `text-yellow-400 drop-shadow-[0_0_12px_rgba(234,179,8,0.6)] ${timerState.isPaused ? "animate-pulse" : ""}`
-                          : `text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)] ${timerState.isPaused ? "animate-pulse" : ""}`
-                    }`}
-                  >
-                    {formatTime(timerState.timeRemaining || 0)}
-                  </div>
-                  {isAdmin && timerState.isPaused && (
-                    <button
-                      onClick={handleStartEdit}
-                      className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                      title="Edit time"
-                    >
-                      <Edit3 size={20} />
-                    </button>
-                  )}
-                </div>
-                {isAdmin && (
-                  <div className="flex items-center justify-center gap-2 mt-2">
-                    <button
-                      onClick={decreaseFontSize}
-                      disabled={fontSize <= 3}
-                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
-                      title="Decrease size"
-                    >
-                      <span className="text-lg font-bold">−</span>
-                    </button>
-                    <span className="text-xs text-gray-500">Size</span>
-                    <button
-                      onClick={increaseFontSize}
-                      disabled={fontSize >= 9}
-                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
-                      title="Increase size"
-                    >
-                      <span className="text-lg font-bold">+</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="text-sm text-gray-400">
-              {timerState.isRunning && !timerState.isPaused ? (
-                <span className="text-green-400">● Running</span>
-              ) : timerState.isPaused ? (
-                <span className="text-yellow-400">⏸ Paused</span>
-              ) : (
-                <span className="text-gray-500">⏹ Stopped</span>
+          {/* Buttons row on small screens, left column on wide screens */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex items-start gap-2 md:flex-col md:pt-2 md:shrink-0">
+              <button
+                onClick={() => setIsMinMode(true)}
+                className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-full transition-all border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)] whitespace-nowrap"
+                title="Minimal fullscreen mode"
+              >
+                📺 Min Mode
+              </button>
+              {!audioEnabled && (
+                <button
+                  onClick={enableAudio}
+                  className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
+                  title="Enable sound notifications"
+                >
+                  🔇 Enable Sound
+                </button>
               )}
             </div>
-
-            {/* Level Indicator */}
-            <div className="flex items-center justify-center gap-2">
-              {isAdmin &&
-                timerState.isPaused &&
-                timerState.currentLevel > 1 && (
-                  <button
-                    onClick={handlePrevLevel}
-                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                    title="Previous level"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                )}
-              <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-                Level {timerState.currentLevel}
-              </div>
-              {isAdmin &&
-                timerState.isPaused &&
-                timerState.blindLevels &&
-                timerState.currentLevel < timerState.blindLevels.length && (
-                  <button
-                    onClick={handleNextLevel}
-                    className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
-                    title="Next level"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                )}
-            </div>
-
-            {/* Current Blinds */}
-            {currentBlind && (
-              <div className="text-sm text-gray-300">
-                {currentBlind.isbreak ? (
-                  <span
-                    className={`${getFontSizeClass()} font-bold text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]`}
-                  >
-                    🔥 BREAK
-                  </span>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-sm text-gray-400">Blinds:</span>
-                    <span
-                      className={`${getFontSizeClass()} font-mono font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]`}
-                    >
-                      {currentBlind.smallBlind}/{currentBlind.bigBlind}
+            {/* Center: Main Timer Info (stacked) */}
+            <div className="text-center space-y-4 md:flex-1">
+              {/* Timer Display */}
+              {isEditingTime && isAdmin && timerState.isPaused ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <input
+                      type="number"
+                      value={editMinutes}
+                      onChange={(e) => setEditMinutes(e.target.value)}
+                      className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                      placeholder="MM"
+                      min="0"
+                      max="99"
+                    />
+                    <span className="text-2xl font-mono font-bold text-cyan-400">
+                      :
                     </span>
-                    {currentBlind.ante && (
-                      <span className="text-sm text-gray-400">
-                        Ante:{" "}
-                        <span className="text-purple-400 font-semibold">
-                          {currentBlind.ante}
-                        </span>
-                      </span>
+                    <input
+                      type="number"
+                      value={editSeconds}
+                      onChange={(e) => setEditSeconds(e.target.value)}
+                      className="w-16 px-2 py-1 text-2xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                      placeholder="SS"
+                      min="0"
+                      max="59"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-500 text-sm transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
+                    >
+                      <Check size={14} />
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm transition-all border border-gray-600"
+                    >
+                      <X size={14} />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div
+                      className={`text-8xl md:text-[12rem] font-mono font-bold transition-all duration-300 ${
+                        timerState.timeRemaining < 60
+                          ? `text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                          : timerState.timeRemaining < 300
+                            ? `text-yellow-400 drop-shadow-[0_0_12px_rgba(234,179,8,0.6)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                            : `text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)] ${timerState.isPaused ? "animate-pulse" : ""}`
+                      }`}
+                    >
+                      {formatTime(timerState.timeRemaining || 0)}
+                    </div>
+                    {isAdmin && timerState.isPaused && (
+                      <button
+                        onClick={handleStartEdit}
+                        className="ml-2 p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                        title="Edit time"
+                      >
+                        <Edit3 size={20} />
+                      </button>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Level + Blinds Row */}
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                {isAdmin &&
+                  timerState.isPaused &&
+                  timerState.currentLevel > 1 && (
+                    <button
+                      onClick={handlePrevLevel}
+                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                      title="Previous level"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                  )}
+                <div className="text-xl font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                  Level {timerState.currentLevel}
+                </div>
+                {isAdmin &&
+                  timerState.isPaused &&
+                  timerState.blindLevels &&
+                  timerState.currentLevel < timerState.blindLevels.length && (
+                    <button
+                      onClick={handleNextLevel}
+                      className="p-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                      title="Next level"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  )}
+                {currentBlind && (
+                  <>
+                    {currentBlind.isbreak ? (
+                      <span className="text-5xl font-bold text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+                        🔥 BREAK
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-[3.15rem] font-mono font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                          {currentBlind.smallBlind}/{currentBlind.bigBlind}
+                        </span>
+                        {currentBlind.ante && (
+                          <span className="text-sm text-gray-400">
+                            Ante:{" "}
+                            <span className="text-purple-400 font-semibold">
+                              {currentBlind.ante}
+                            </span>
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Right: Next Level & Break Info */}
