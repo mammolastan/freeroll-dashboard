@@ -3,7 +3,9 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Layers } from 'lucide-react';
 import { SuitCounts, ReactionType } from '@/types';
+import { ReactionDetailsModal } from './ReactionDetailsModal';
 
 interface ReactionBarProps {
   itemId: string;
@@ -12,6 +14,7 @@ interface ReactionBarProps {
   balance: SuitCounts | null;
   canReact: boolean;
   onReact: (itemId: string, reactionType: ReactionType, count: number) => void;
+  tournamentId?: number;
 }
 
 const SUITS: { type: ReactionType; filled: string; hollow: string; color: string }[] = [
@@ -50,7 +53,8 @@ function FlyawayParticle({ suit, count, onDone }: { suit: typeof SUITS[number]; 
   );
 }
 
-export function ReactionBar({ itemId, totals, mine, balance, canReact, onReact }: ReactionBarProps) {
+export function ReactionBar({ itemId, totals, mine, balance, canReact, onReact, tournamentId }: ReactionBarProps) {
+  const [modalOpen, setModalOpen] = useState(false);
   // Track pending (not yet submitted) taps per suit
   const [pendingCounts, setPendingCounts] = useState<Partial<Record<ReactionType, number>>>({});
   // Track timer progress for the countdown indicator (0 to 1)
@@ -150,6 +154,9 @@ export function ReactionBar({ itemId, totals, mine, balance, canReact, onReact }
     setFlyaways(prev => ({ ...prev, [suit]: undefined }));
   }, []);
 
+  const totalEmotes = (totals.heart || 0) + (totals.diamond || 0) + (totals.club || 0) + (totals.spade || 0)
+    + Object.values(pendingCounts).reduce((sum, v) => sum + (v || 0), 0);
+
   return (
     <div className="flex items-center gap-3 pt-1.5">
       {SUITS.map(suit => {
@@ -221,6 +228,29 @@ export function ReactionBar({ itemId, totals, mine, balance, canReact, onReact }
           </button>
         );
       })}
+
+      {/* Deck icon - visible when there are reactions */}
+      {totalEmotes > 0 && tournamentId != null && (
+        <>
+          <button
+            onClick={() => setModalOpen(true)}
+            className={`ml-auto p-1 rounded transition-all hover:bg-gray-800/40 active:scale-95 ${
+              totalEmotes >= 52
+                ? 'text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+            title="View reaction details"
+          >
+            <Layers className="h-4 w-4" />
+          </button>
+          <ReactionDetailsModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            tournamentId={tournamentId}
+            feedItemId={itemId}
+          />
+        </>
+      )}
     </div>
   );
 }

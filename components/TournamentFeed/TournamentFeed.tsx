@@ -326,6 +326,7 @@ export function TournamentFeed({
                 onReact={handleReact}
                 reactionBalance={reactionBalance}
                 canReact={canPost}
+                tournamentId={tournamentId}
               />
             ))}
           </div>
@@ -420,6 +421,7 @@ export function TournamentFeed({
                     onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    tournamentId={tournamentId}
                   />
                 ))}
               </div>
@@ -476,6 +478,7 @@ export function TournamentFeed({
                     onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    tournamentId={tournamentId}
                   />
                 ))}
               </div>
@@ -527,6 +530,7 @@ export function TournamentFeed({
                     onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    tournamentId={tournamentId}
                   />
                 ))}
               </div>

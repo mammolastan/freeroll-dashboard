@@ -18,6 +18,7 @@ interface FeedItemProps {
   onReact?: (itemId: string, reactionType: ReactionType, count: number) => void;
   reactionBalance?: SuitCounts | null;
   canReact?: boolean;
+  tournamentId?: number;
 }
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -47,7 +48,7 @@ function calculatePlacementPoints(placement: number): number {
 }
 
 // Knockout Item
-function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBalance, canReact = false }: FeedItemProps) {
+function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBalance, canReact = false, tournamentId }: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -153,6 +154,7 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBa
             balance={reactionBalance ?? null}
             canReact={canReact}
             onReact={onReact}
+            tournamentId={tournamentId}
           />
         )}
       </div>
@@ -161,7 +163,7 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBa
 }
 
 // Message Item
-function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = false }: FeedItemProps) {
+function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = false, tournamentId }: FeedItemProps) {
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors group">
       {/* Avatar/Icon */}
@@ -202,6 +204,7 @@ function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = fals
             balance={reactionBalance ?? null}
             canReact={canReact}
             onReact={onReact}
+            tournamentId={tournamentId}
           />
         )}
       </div>
@@ -326,6 +329,7 @@ export function FeedItem({
   onReact,
   reactionBalance,
   canReact,
+  tournamentId,
 }: FeedItemProps) {
   switch (item.item_type) {
     case "knockout":
@@ -337,6 +341,7 @@ export function FeedItem({
           onReact={onReact}
           reactionBalance={reactionBalance}
           canReact={canReact}
+          tournamentId={tournamentId}
         />
       );
     case "message":
@@ -347,6 +352,7 @@ export function FeedItem({
           onReact={onReact}
           reactionBalance={reactionBalance}
           canReact={canReact}
+          tournamentId={tournamentId}
         />
       );
     case "checkin":
