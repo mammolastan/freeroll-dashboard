@@ -3,6 +3,7 @@
 'use client';
 
 import React from 'react';
+import { ClipboardList, Timer, UserCheck, X, MessageSquare } from 'lucide-react';
 import { ScreenNumber } from '../hooks/useScreenRouter';
 
 interface ScreenTabsProps {
@@ -16,6 +17,14 @@ const SCREEN_LABELS: Record<ScreenNumber, string> = {
   3: 'Check-In',
   4: 'Control',
   5: 'Messages',
+};
+
+const SCREEN_ICONS: Record<ScreenNumber, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = {
+  1: ClipboardList,
+  2: Timer,
+  3: UserCheck,
+  4: X,
+  5: MessageSquare,
 };
 
 export function ScreenTabs({ currentScreen, onScreenChange }: ScreenTabsProps) {
@@ -55,7 +64,7 @@ export function ScreenTabs({ currentScreen, onScreenChange }: ScreenTabsProps) {
               key={screen}
               onClick={() => onScreenChange(screen)}
               className={`
-                relative h-24 transition-all duration-200 border border-gray-600 border-l-0
+                relative h-28 transition-all duration-200 border border-gray-600 border-l-0
                 ${isActive
                   ? 'w-10 bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 rounded-r-md'
                   : 'w-7 bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white hover:w-9 rounded-r-sm'
@@ -65,12 +74,17 @@ export function ScreenTabs({ currentScreen, onScreenChange }: ScreenTabsProps) {
               <span
                 className={`
                   absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                  whitespace-nowrap font-bold tracking-wide
+                  whitespace-nowrap font-bold tracking-wide inline-flex items-center gap-2
                   ${isActive ? 'text-xs' : 'text-[10px]'}
                 `}
                 style={{ writingMode: 'vertical-rl', transform: 'translate(-50%, -50%) rotate(180deg)' }}
               >
                 {SCREEN_LABELS[screen]}
+                {React.createElement(SCREEN_ICONS[screen], {
+                  size: isActive ? 36 : 30,
+                  className: 'shrink-0 inline',
+                  style: { transform: 'rotate(180deg)' },
+                })}
               </span>
             </button>
           );
