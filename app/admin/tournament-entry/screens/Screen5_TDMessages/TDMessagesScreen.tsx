@@ -1,12 +1,21 @@
 // app/admin/tournament-entry/screens/Screen5_TDMessages/TDMessagesScreen.tsx
 
-'use client';
+"use client";
 
-import React, { useState, useRef } from 'react';
-import { Megaphone, Send, Loader2, CheckCircle, AlertCircle, Sparkles, Shuffle } from 'lucide-react';
-import { TournamentFeed } from '@/components/TournamentFeed/TournamentFeed';
-import { ScreenTabs } from '../../components/ScreenTabs';
-import { ScreenNumber } from '../../hooks/useScreenRouter';
+import React, { useState, useRef } from "react";
+import {
+  Megaphone,
+  Send,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Sparkles,
+  Shuffle,
+  Target,
+} from "lucide-react";
+import { TournamentFeed } from "@/components/TournamentFeed/TournamentFeed";
+import { ScreenTabs } from "../../components/ScreenTabs";
+import { ScreenNumber } from "../../hooks/useScreenRouter";
 
 interface TournamentDraft {
   id: number;
@@ -14,7 +23,7 @@ interface TournamentDraft {
   director_name: string;
   venue: string;
   start_points: number;
-  status: 'in_progress' | 'finalized' | 'integrated';
+  status: "in_progress" | "finalized" | "integrated";
   created_at: string;
   updated_at: string;
   player_count: number;
@@ -27,16 +36,31 @@ interface TDMessagesScreenProps {
   onScreenChange: (screen: ScreenNumber) => void;
 }
 
-export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }: TDMessagesScreenProps) {
-  const [message, setMessage] = useState('');
+export function TDMessagesScreen({
+  currentDraft,
+  currentScreen,
+  onScreenChange,
+}: TDMessagesScreenProps) {
+  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Special hand generator state
-  const [specialHand, setSpecialHand] = useState<{ hand: string; playerName: string } | null>(null);
+  const [specialHand, setSpecialHand] = useState<{
+    hand: string;
+    playerName: string;
+  } | null>(null);
   const [isGeneratingHand, setIsGeneratingHand] = useState(false);
   const [handError, setHandError] = useState<string | null>(null);
+
+  // Bounty randomizer state
+  const [bountyPlayer, setBountyPlayer] = useState<string | null>(null);
+  const [isGeneratingBounty, setIsGeneratingBounty] = useState(false);
+  const [bountyError, setBountyError] = useState<string | null>(null);
 
   const handleSpecialsClick = () => {
     const specialsText = "Special hand: \nDrink specials: ";
@@ -61,24 +85,33 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
     setFeedback(null);
 
     try {
-      const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/td-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message.trim() }),
-      });
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/td-message`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: message.trim() }),
+        },
+      );
 
       const data = await response.json();
 
       if (response.ok) {
-        setFeedback({ type: 'success', text: 'Message sent!' });
-        setMessage('');
+        setFeedback({ type: "success", text: "Message sent!" });
+        setMessage("");
         setTimeout(() => setFeedback(null), 3000);
       } else {
-        setFeedback({ type: 'error', text: data.error || 'Failed to send message' });
+        setFeedback({
+          type: "error",
+          text: data.error || "Failed to send message",
+        });
       }
     } catch (error) {
-      console.error('Error sending TD message:', error);
-      setFeedback({ type: 'error', text: 'Failed to send message. Please try again.' });
+      console.error("Error sending TD message:", error);
+      setFeedback({
+        type: "error",
+        text: "Failed to send message. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -89,19 +122,43 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
     setHandError(null);
 
     try {
-      const response = await fetch('/api/random-favorite-hand');
+      const response = await fetch("/api/random-favorite-hand");
       const data = await response.json();
 
       if (response.ok) {
         setSpecialHand({ hand: data.hand, playerName: data.playerName });
       } else {
-        setHandError(data.error || 'Failed to generate special hand');
+        setHandError(data.error || "Failed to generate special hand");
       }
     } catch (error) {
-      console.error('Error generating special hand:', error);
-      setHandError('Failed to generate special hand');
+      console.error("Error generating special hand:", error);
+      setHandError("Failed to generate special hand");
     } finally {
       setIsGeneratingHand(false);
+    }
+  };
+
+  const handleGenerateBounty = async () => {
+    if (!currentDraft) return;
+    setIsGeneratingBounty(true);
+    setBountyError(null);
+
+    try {
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/random-bounty`,
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setBountyPlayer(data.playerName);
+      } else {
+        setBountyError(data.error || "Failed to generate bounty");
+      }
+    } catch (error) {
+      console.error("Error generating bounty:", error);
+      setBountyError("Failed to generate bounty");
+    } finally {
+      setIsGeneratingBounty(false);
     }
   };
 
@@ -113,7 +170,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-cyan-300 mb-4">No Active Tournament</h1>
+          <h1 className="text-4xl font-bold text-cyan-300 mb-4">
+            No Active Tournament
+          </h1>
           <p className="text-gray-400 text-lg">
             Please create or select a tournament on Screen 1 (Full Admin)
           </p>
@@ -128,7 +187,10 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       {/* Screen Navigation Tabs */}
-      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+      <ScreenTabs
+        currentScreen={currentScreen}
+        onScreenChange={onScreenChange}
+      />
 
       {/* Header */}
       <div className="mb-6 text-center">
@@ -136,7 +198,8 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
           Feed Management
         </h1>
         <p className="text-lg text-gray-400">
-          {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
+          {currentDraft.venue} -{" "}
+          {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
       </div>
 
@@ -150,7 +213,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
                 <Megaphone className="h-5 w-5 text-cyan-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-cyan-300">Send TD Message</h2>
+                <h2 className="text-xl font-bold text-cyan-300">
+                  Send TD Message
+                </h2>
                 <p className="text-gray-400 text-xs">
                   Appears in the &quot;From the TD&quot; tab
                 </p>
@@ -179,7 +244,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
                   disabled={isSubmitting}
                 />
                 <div className="flex justify-between items-center mt-1">
-                  <span className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-gray-500'}`}>
+                  <span
+                    className={`text-xs ${isOverLimit ? "text-red-400" : "text-gray-500"}`}
+                  >
                     {charCount} / {maxChars}
                   </span>
                   {isOverLimit && (
@@ -189,12 +256,14 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
               </div>
 
               {feedback && (
-                <div className={`mb-3 p-2 rounded-lg flex items-center gap-2 text-sm ${
-                  feedback.type === 'success'
-                    ? 'bg-green-500/20 border border-green-500/40 text-green-400'
-                    : 'bg-red-500/20 border border-red-500/40 text-red-400'
-                }`}>
-                  {feedback.type === 'success' ? (
+                <div
+                  className={`mb-3 p-2 rounded-lg flex items-center gap-2 text-sm ${
+                    feedback.type === "success"
+                      ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                      : "bg-red-500/20 border border-red-500/40 text-red-400"
+                  }`}
+                >
+                  {feedback.type === "success" ? (
                     <CheckCircle className="h-4 w-4" />
                   ) : (
                     <AlertCircle className="h-4 w-4" />
@@ -225,7 +294,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
 
           {/* Tips */}
           <div className="mt-4 bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-300 mb-2">Admin Tips</h3>
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">
+              Admin Tips
+            </h3>
             <ul className="space-y-1 text-gray-400 text-xs">
               <li>• Hover over messages to reveal the delete button</li>
               <li>• Only user messages and TD messages can be deleted</li>
@@ -240,7 +311,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
                 <Sparkles className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-purple-300">Special Hand Generator</h2>
+                <h2 className="text-xl font-bold text-purple-300">
+                  Special Hand Generator
+                </h2>
                 <p className="text-gray-400 text-xs">
                   Random hand from player favorites
                 </p>
@@ -281,6 +354,96 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
                   <div className="text-sm text-gray-400">
                     {specialHand.playerName}&apos;s favorite
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `Special hand: ${specialHand.hand}`;
+                      setMessage(text);
+                      setTimeout(() => {
+                        if (textareaRef.current) {
+                          textareaRef.current.focus();
+                          textareaRef.current.setSelectionRange(
+                            text.length,
+                            text.length,
+                          );
+                        }
+                      }, 0);
+                    }}
+                    className="mt-3 px-3 py-1 text-xs font-medium bg-amber-600/80 text-white rounded-md hover:bg-amber-500 transition-all border border-amber-500"
+                  >
+                    Post this as special hand
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bounty Randomizer */}
+          <div className="mt-4 bg-gray-900/80 border-2 border-rose-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(244,63,94,0.2)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center">
+                <Target className="h-5 w-5 text-rose-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-rose-300">
+                  Bounty Randomizer
+                </h2>
+                <p className="text-gray-400 text-xs">
+                  Random player from checked-in players
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleGenerateBounty}
+              disabled={isGeneratingBounty}
+              className="w-full px-4 py-3 text-base font-bold bg-rose-600 text-white rounded-lg hover:bg-rose-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
+            >
+              {isGeneratingBounty ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Selecting...
+                </>
+              ) : (
+                <>
+                  <Shuffle className="h-5 w-5" />
+                  Pick Random Bounty
+                </>
+              )}
+            </button>
+
+            {bountyError && (
+              <div className="mt-3 p-3 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{bountyError}</span>
+              </div>
+            )}
+
+            {bountyPlayer && !bountyError && (
+              <div className="mt-4 p-4 rounded-lg bg-rose-500/10 border border-rose-500/30">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-rose-200 mb-1">
+                    {bountyPlayer}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `Bounty: ${bountyPlayer}. Knock out this player before break and receive 10K chips`;
+                      setMessage(text);
+                      setTimeout(() => {
+                        if (textareaRef.current) {
+                          textareaRef.current.focus();
+                          textareaRef.current.setSelectionRange(
+                            text.length,
+                            text.length,
+                          );
+                        }
+                      }, 0);
+                    }}
+                    className="mt-3 px-3 py-1 text-xs font-medium bg-amber-600/80 text-white rounded-md hover:bg-amber-500 transition-all border border-amber-500"
+                  >
+                    Post this as bounty
+                  </button>
                 </div>
               </div>
             )}
