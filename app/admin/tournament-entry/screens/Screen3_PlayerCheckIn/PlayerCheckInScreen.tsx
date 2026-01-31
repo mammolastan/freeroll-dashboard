@@ -82,6 +82,9 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange, curre
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+      {/* Screen Navigation Tabs */}
+      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+
       {/* Header */}
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
@@ -95,9 +98,6 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange, curre
             {players.length} Players Registered
           </div>
         </div>
-
-        {/* Screen Navigation Tabs */}
-        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 
         <PlayerCheckInCore
           players={players}

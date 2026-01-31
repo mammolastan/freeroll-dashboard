@@ -1648,6 +1648,9 @@ export function FullAdminScreen({
                     </div>
                 </div>
             )}
+            {/* Screen Navigation Tabs */}
+            <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+
             <div className="max-w-6xl mx-auto">
                 <Card className="mb-6">
                     <CardHeader>
@@ -1727,9 +1730,6 @@ export function FullAdminScreen({
 
 
                                 </div>
-
-                                {/* Screen Navigation Tabs */}
-                                <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 
                                 {/* Status Banner */}
                                 {currentDraft && (

@@ -76,9 +76,7 @@ export function GameTimerScreen({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-8">
       {/* Screen Navigation Tabs */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
-        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
-      </div>
+      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 
       {/* Minimal Game Timer - Full Screen Display */}
       <div className="w-full flex-1 flex items-center justify-center">

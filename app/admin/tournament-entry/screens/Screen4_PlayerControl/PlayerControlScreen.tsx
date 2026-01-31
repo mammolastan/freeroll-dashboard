@@ -277,6 +277,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+      {/* Screen Navigation Tabs */}
+      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-5xl font-bold text-cyan-300 mb-2 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]">
@@ -285,11 +288,6 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
         <p className="text-xl text-gray-400">
           {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
-      </div>
-
-      {/* Screen Navigation Tabs */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
       </div>
 
       {/* Knockout Modal */}

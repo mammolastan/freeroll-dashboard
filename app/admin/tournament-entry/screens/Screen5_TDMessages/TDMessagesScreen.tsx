@@ -127,6 +127,9 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+      {/* Screen Navigation Tabs */}
+      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+
       {/* Header */}
       <div className="mb-6 text-center">
         <h1 className="text-4xl font-bold text-cyan-300 mb-1 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]">
@@ -135,11 +138,6 @@ export function TDMessagesScreen({ currentDraft, currentScreen, onScreenChange }
         <p className="text-lg text-gray-400">
           {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
-      </div>
-
-      {/* Screen Navigation Tabs */}
-      <div className="max-w-6xl mx-auto mb-4">
-        <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
       </div>
 
       {/* Two Column Layout */}
