@@ -334,6 +334,17 @@ export function MinimalGameTimer({
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-8">
+      {/* Enable Sound Button */}
+      {!audioEnabled && (
+        <button
+          onClick={enableAudio}
+          className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
+          title="Enable sound notifications"
+        >
+          🔇 Enable Sound
+        </button>
+      )}
+
       {/* Time Remaining */}
       <div className="relative flex items-center gap-4">
         {isEditingTime && timerState.isPaused ? (
@@ -444,6 +455,7 @@ export function MinimalGameTimer({
         <Users size={48} className="text-purple-400" />
         <span>{playersRemaining}</span>
       </div>
+
     </div>
   );
 }
