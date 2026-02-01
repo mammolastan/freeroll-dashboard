@@ -63,7 +63,7 @@ export function TDMessagesScreen({
   const [bountyError, setBountyError] = useState<string | null>(null);
 
   const handleSpecialsClick = () => {
-    const specialsText = "Special hand: \nDrink specials: ";
+    const specialsText = "Special hand: \nDrink specials: \nMayor: ";
     const cursorPosition = "Special hand: ".length;
     setMessage(specialsText);
 
