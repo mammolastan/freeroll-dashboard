@@ -11,6 +11,7 @@ interface TournamentRow {
   venue: string | null;
   status: string;
   start_points: number;
+  director_name: string | null;
 }
 
 interface PlayerRow {
@@ -51,7 +52,8 @@ export async function GET(
         tournament_time,
         venue,
         status,
-        start_points
+        start_points,
+        director_name
       FROM tournament_drafts
       WHERE id = ${tournamentId}
     `;
@@ -95,6 +97,7 @@ export async function GET(
       status: (tournamentRow.status as Tournament['status']) || 'active',
       max_players: null,
       start_points: Number(tournamentRow.start_points) || 0,
+      td: tournamentRow.director_name || null,
     };
 
     // Transform players data
@@ -117,10 +120,10 @@ export async function GET(
         photo_url: row.photo_url || null,
         hitman: row.hitman_name
           ? {
-              id: null,
-              name: row.hitman_name,
-              nickname: null,
-            }
+            id: null,
+            name: row.hitman_name,
+            nickname: null,
+          }
           : undefined,
       };
     });

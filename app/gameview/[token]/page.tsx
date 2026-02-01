@@ -101,6 +101,7 @@ interface TournamentHeaderData {
   date: string | Date;
   time?: string | null;
   venue?: string | null;
+  td?: string | null;
 }
 
 function TournamentHeader({
@@ -129,7 +130,10 @@ function TournamentHeader({
           </p>
           {tournament.venue && (
             <p className="text-cyan-400 flex items-center gap-2">
-              <span className="text-cyan-500">📍</span> {tournament.venue}
+              <span className="text-cyan-500">📍</span> {tournament.venue}{" "}
+              {tournament.td && (
+                <span className="text-cyan-300">| TD: {tournament.td}</span>
+              )}
             </p>
           )}
         </div>

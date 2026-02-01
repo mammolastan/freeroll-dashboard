@@ -30,6 +30,7 @@ export interface Tournament {
   status: 'draft' | 'active' | 'completed';
   max_players: number | null;
   start_points: number;
+  td: string | null; // tournament director name
 }
 
 export interface GameViewData {
@@ -47,7 +48,7 @@ export type RealtimeEventType =
   | 'player:eliminated'
   | 'player:added'
   | 'venue:updated'
-  | 'feed:new_item'; 
+  | 'feed:new_item';
 
 export interface RealtimeEvent<T = unknown> {
   type: RealtimeEventType;

@@ -449,7 +449,8 @@ async function getTournamentData(tournamentDraftId: number) {
         tournament_time,
         director_name,
         venue,
-        status
+        status,
+        start_points
       FROM tournament_drafts
       WHERE id = ${tournamentDraftId}
       LIMIT 1
@@ -477,6 +478,8 @@ async function getTournamentData(tournamentDraftId: number) {
       venue: String(data.venue),
       status: String(data.status),
       max_players: null,
+      start_points: Number(data.start_points) || 0,
+      td: data.director_name ? String(data.director_name) : null,
     };
   } catch (error) {
     console.error("Error fetching tournament data:", error);
