@@ -5,7 +5,7 @@
 import React from "react";
 import Image from "next/image";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
-import { Skull, UserCheck, Info, Megaphone, X, Star } from "lucide-react";
+import { Skull, UserCheck, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { ReactionBar } from "./ReactionBar";
 import { SuitCounts, ReactionType } from "@/types";
@@ -48,7 +48,15 @@ function calculatePlacementPoints(placement: number): number {
 }
 
 // Knockout Item
-function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBalance, canReact = false, tournamentId }: FeedItemProps) {
+function KnockoutItem({
+  item,
+  totalPlayers,
+  startPoints = 0,
+  onReact,
+  reactionBalance,
+  canReact = false,
+  tournamentId,
+}: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -149,7 +157,14 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBa
         {onReact && (
           <ReactionBar
             itemId={String(item.id)}
-            totals={item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 }}
+            totals={
+              item.reactions?.totals || {
+                heart: 0,
+                diamond: 0,
+                club: 0,
+                spade: 0,
+              }
+            }
             mine={item.reactions?.mine}
             balance={reactionBalance ?? null}
             canReact={canReact}
@@ -163,7 +178,14 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0, onReact, reactionBa
 }
 
 // Message Item
-function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = false, tournamentId }: FeedItemProps) {
+function MessageItem({
+  item,
+  onDelete,
+  onReact,
+  reactionBalance,
+  canReact = false,
+  tournamentId,
+}: FeedItemProps) {
   return (
     <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors group">
       {/* Avatar/Icon */}
@@ -199,7 +221,14 @@ function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = fals
         {onReact && (
           <ReactionBar
             itemId={String(item.id)}
-            totals={item.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 }}
+            totals={
+              item.reactions?.totals || {
+                heart: 0,
+                diamond: 0,
+                club: 0,
+                spade: 0,
+              }
+            }
             mine={item.reactions?.mine}
             balance={reactionBalance ?? null}
             canReact={canReact}
@@ -210,7 +239,7 @@ function MessageItem({ item, onDelete, onReact, reactionBalance, canReact = fals
       </div>
 
       {/* Delete Button */}
-      {onDelete && typeof item.id === 'number' && (
+      {onDelete && typeof item.id === "number" && (
         <button
           onClick={() => onDelete(item.id as number)}
           className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
@@ -265,18 +294,10 @@ function CheckInItem({ item }: FeedItemProps) {
 // System Message Item
 function SystemItem({ item }: FeedItemProps) {
   return (
-    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
-      {/* Icon */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
-        <Info className="h-4 w-4 text-purple-400" />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-purple-300">{item.message_text}</div>
-        <div className="text-xs text-gray-500 mt-1">
-          {formatRelativeTime(item.created_at)}
-        </div>
+    <div className="p-3 bg-orange-500/10 border-l-2 border-orange-500/50 transition-colors text-center">
+      <div className="text-sm text-orange-200">{item.message_text}</div>
+      <div className="text-xs text-orange-400/60 mt-1">
+        {formatRelativeTime(item.created_at)}
       </div>
     </div>
   );
@@ -307,7 +328,7 @@ function TDMessageItem({ item, onDelete }: FeedItemProps) {
       </div>
 
       {/* Delete Button */}
-      {onDelete && typeof item.id === 'number' && (
+      {onDelete && typeof item.id === "number" && (
         <button
           onClick={() => onDelete(item.id as number)}
           className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"

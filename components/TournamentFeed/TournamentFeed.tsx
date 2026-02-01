@@ -2,7 +2,13 @@
 
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import { useTournamentFeed } from "@/lib/realtime/hooks/useTournamentFeed";
 import { FeedItem } from "./FeedItem";
 import { FeedInput } from "./FeedInput";
@@ -57,9 +63,12 @@ export function TournamentFeed({
     reactionBalance,
   } = useTournamentFeed(tournamentId);
 
-  const handleReact = useCallback((itemId: string, reactionType: ReactionType, count: number) => {
-    addReaction(itemId, reactionType, count);
-  }, [addReaction]);
+  const handleReact = useCallback(
+    (itemId: string, reactionType: ReactionType, count: number) => {
+      addReaction(itemId, reactionType, count);
+    },
+    [addReaction],
+  );
 
   const [activeTab, setActiveTab] = useState<FeedTab>("all");
   const feedContainerRef = useRef<HTMLDivElement>(null);
@@ -84,7 +93,10 @@ export function TournamentFeed({
   // Checkins and knockouts for the left column on large screens
   const checkinKnockoutItems = useMemo(() => {
     return items.filter(
-      (item) => item.item_type === "checkin" || item.item_type === "knockout"
+      (item) =>
+        item.item_type === "checkin" ||
+        item.item_type === "knockout" ||
+        item.item_type === "system",
     );
   }, [items]);
 
@@ -153,9 +165,9 @@ export function TournamentFeed({
   };
 
   return (
-    <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden">
+    <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden">
       {/* Mobile Tabs - hidden on large screens (1300px+) */}
-      <div className="min-[1300px]:hidden flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
+      <div className="@[1000px]:hidden flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("all")}
@@ -239,7 +251,7 @@ export function TournamentFeed({
           handleScroll();
           handleLoadMore();
         }}
-        className="min-[1300px]:hidden overflow-y-auto"
+        className="@[1000px]:hidden overflow-y-auto"
         style={{ maxHeight }}
       >
         {/* Loading State */}
@@ -348,14 +360,19 @@ export function TournamentFeed({
       </div>
 
       {/* Desktop Feed Content - three column layout (1300px+) */}
-      <div className="hidden min-[1300px]:flex" style={{ maxHeight }}>
+      <div
+        className="hidden @[1000px]:flex"
+        style={{ maxHeight }}
+      >
         {/* Left Column - Checkins/Knockouts */}
         <div className="flex-1 overflow-y-auto border-r border-cyan-500/20 flex flex-col">
           {/* Column Header */}
           <div className="px-3 py-2 border-b border-cyan-500/20 bg-cyan-500/10">
             <div className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-medium text-cyan-300">Checkins / Knockouts</span>
+              <span className="text-sm font-medium text-cyan-300">
+                Checkins / Knockouts
+              </span>
             </div>
           </div>
 
@@ -418,7 +435,9 @@ export function TournamentFeed({
                   <FeedItem
                     key={item.id}
                     item={item}
-                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    onDelete={
+                      isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                    }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
                     tournamentId={tournamentId}
@@ -442,7 +461,9 @@ export function TournamentFeed({
           <div className="px-3 py-2 border-b border-cyan-500/20 bg-amber-500/10">
             <div className="flex items-center gap-2">
               <Megaphone className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-medium text-amber-300">TD Messages</span>
+              <span className="text-sm font-medium text-amber-300">
+                TD Messages
+              </span>
               {tdMessageCount > 0 && (
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
                   {tdMessageCount}
@@ -475,7 +496,9 @@ export function TournamentFeed({
                   <FeedItem
                     key={item.id}
                     item={item}
-                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    onDelete={
+                      isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                    }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
                     tournamentId={tournamentId}
@@ -527,7 +550,9 @@ export function TournamentFeed({
                   <FeedItem
                     key={item.id}
                     item={item}
-                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    onDelete={
+                      isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                    }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
                     tournamentId={tournamentId}

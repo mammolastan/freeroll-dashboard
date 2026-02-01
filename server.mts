@@ -26,8 +26,54 @@ type RawQueryResult = Record<string, unknown>;
 
 // Global type declaration for Socket.IO instance
 declare global {
-  // eslint-disable-next-line no-var
   var socketIoInstance: TypedServer | undefined;
+}
+
+// Helper: post blind level change to tournament feed
+async function postBlindLevelChangeFeedItem(
+  tournamentId: number,
+  level: number,
+  blindLevel: BlindLevel
+): Promise<void> {
+  try {
+    const message = blindLevel.isbreak
+      ? `Break time!`
+      : `Blinds up! Level ${level}: ${blindLevel.smallBlind}/${blindLevel.bigBlind}${blindLevel.ante ? ` (Ante: ${blindLevel.ante})` : ''}`;
+
+    await prisma.$executeRaw`
+      INSERT INTO tournament_feed_items
+      (tournament_draft_id, item_type, message_text, created_at)
+      VALUES (${tournamentId}, 'system', ${message}, NOW())
+    `;
+
+    const newItem = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT * FROM tournament_feed_items WHERE id = LAST_INSERT_ID()
+    `;
+
+    if (newItem.length > 0) {
+      const item = newItem[0];
+      global.socketIoInstance?.to(tournamentId.toString()).emit('feed:new_item', {
+        tournament_id: tournamentId,
+        item: {
+          id: Number(item.id),
+          item_type: 'system' as const,
+          author_uid: null,
+          author_name: null,
+          message_text: message,
+          eliminated_player_name: null,
+          hitman_name: null,
+          ko_position: null,
+          created_at: item.created_at instanceof Date
+            ? item.created_at.toISOString()
+            : String(item.created_at),
+        }
+      });
+    }
+
+    console.log(`[FEED] Posted blind level change: ${message}`);
+  } catch (error) {
+    console.error('Failed to post blind level change to feed:', error);
+  }
 }
 
 // Timer state management
@@ -102,8 +148,7 @@ async function getOrCreateTimerState(
     const currentLevel = 1;
     const currentBlindLevel = blindLevels[0];
     console.log(
-      `Creating timer state: level ${currentLevel}, time ${
-        currentBlindLevel.duration * 60
+      `Creating timer state: level ${currentLevel}, time ${currentBlindLevel.duration * 60
       }s`
     );
 
@@ -157,6 +202,7 @@ async function updateTimer(tournamentId: number): Promise<TimerState | null> {
         const nextLevel = timer.blindLevels[timer.currentLevel - 1];
         if (nextLevel) {
           timer.timeRemaining = nextLevel.duration * 60;
+          await postBlindLevelChangeFeedItem(tournamentId, timer.currentLevel, nextLevel);
 
           // If current level is a break, pause the timer after advancing to next level
           if (currentLevel?.isbreak) {
@@ -467,10 +513,10 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
       photo_url: p.photo_url ? String(p.photo_url) : null,
       hitman: p.hitman_name
         ? {
-            id: null,
-            name: String(p.hitman_name),
-            nickname: null,
-          }
+          id: null,
+          name: String(p.hitman_name),
+          nickname: null,
+        }
         : undefined,
     }));
   } catch (error) {
