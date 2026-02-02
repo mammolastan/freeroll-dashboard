@@ -266,6 +266,40 @@ export function formatTime(timeString?: string | null | unknown): string | null 
   }
 }
 
+export function formatCutoffTime(timeString?: string | null | unknown): string | null {
+  if (!timeString) return null;
+
+  try {
+    const timeStr = typeof timeString === 'string' ? timeString : String(timeString);
+
+    let hours: number;
+    let minutes: number;
+
+    if (timeStr.includes('T')) {
+      const date = new Date(timeStr);
+      hours = date.getUTCHours();
+      minutes = date.getUTCMinutes();
+    } else {
+      const parts = timeStr.split(':');
+      if (parts.length < 2) return null;
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+
+    // Add 100 minutes
+    const totalMinutes = hours * 60 + minutes + 100;
+    const cutoffHours = Math.floor(totalMinutes / 60) % 24;
+    const cutoffMinutes = totalMinutes % 60;
+
+    const ampm = cutoffHours >= 12 ? 'PM' : 'AM';
+    const displayHour = cutoffHours % 12 || 12;
+    return `${displayHour}:${cutoffMinutes.toString().padStart(2, '0')} ${ampm}`;
+  } catch (error) {
+    console.error('Error calculating cutoff time:', timeString, error);
+    return null;
+  }
+}
+
 // In TypeScript:
 // - The colon after a parameter (e.g., isoString: string) specifies the type of that parameter.
 //   Example: isoString: string  // isoString must be a string

@@ -10,7 +10,7 @@ import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
 import { QrCode, UserPlus } from "lucide-react";
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
-import { formatGameDate, formatTime } from "@/lib/utils";
+import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { TournamentFeed } from "@/components/TournamentFeed";
 
@@ -134,6 +134,11 @@ function TournamentHeader({
               {tournament.td && (
                 <span className="text-cyan-300">| TD: {tournament.td}</span>
               )}
+            </p>
+          )}
+          {formatCutoffTime(tournament.time) && (
+            <p className="text-yellow-400 text-sm mt-1">
+              Cutoff Time: {formatCutoffTime(tournament.time)}
             </p>
           )}
         </div>
