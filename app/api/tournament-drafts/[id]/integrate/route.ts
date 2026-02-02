@@ -308,11 +308,29 @@ export async function POST(
         WHERE id = ${draftId}
       `;
         // Delete existing check-in feed items
-        await tx.$executeRaw`                                                                                                                              
-        DELETE FROM tournament_feed_items                                                                                                                
-        WHERE tournament_draft_id = ${draftId}                                                                                                           
-        AND item_type = 'checkin'                                                                                                                        
+        await tx.$executeRaw`
+        DELETE FROM tournament_feed_items
+        WHERE tournament_draft_id = ${draftId}
+        AND item_type = 'checkin'
         `;
+
+        // Delete system feed items that occurred after the final knockout
+        const lastKnockout = await tx.$queryRaw<{ knockedout_at: Date }[]>`
+          SELECT knockedout_at FROM tournament_draft_players
+          WHERE tournament_draft_id = ${draftId}
+            AND knockedout_at IS NOT NULL
+          ORDER BY knockedout_at DESC
+          LIMIT 1
+        `;
+
+        if (lastKnockout.length > 0) {
+          await tx.$executeRaw`
+            DELETE FROM tournament_feed_items
+            WHERE tournament_draft_id = ${draftId}
+              AND item_type = 'system'
+              AND created_at > ${lastKnockout[0].knockedout_at}
+          `;
+        }
 
         return {
           success: true,
