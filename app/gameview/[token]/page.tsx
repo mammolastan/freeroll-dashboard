@@ -5,96 +5,12 @@
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
-import { Player } from "@/lib/realtime/types";
 import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
 import { QrCode, UserPlus } from "lucide-react";
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
-import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { TournamentFeed } from "@/components/TournamentFeed";
-
-// Helper function to calculate dynamic placement based on elimination_position
-function calculatePlacement(
-  player: Player,
-  totalPlayers: number,
-): number | null {
-  if (player.elimination_position === null) return null;
-  return totalPlayers - player.elimination_position + 1;
-}
-
-function PlayerCard({
-  player,
-  totalPlayers,
-}: {
-  player: Player;
-  totalPlayers: number;
-}) {
-  const dynamicPlacement = calculatePlacement(player, totalPlayers);
-
-  return (
-    <div
-      className={`p-4 border rounded-lg backdrop-blur-sm transition-all duration-300 ${
-        player.is_active
-          ? "bg-gray-900/80 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-          : "bg-gray-900/60 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
-      }`}
-    >
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-3">
-          {player.photo_url && (
-            <PlayerAvatar
-              photoUrl={player.photo_url}
-              name={player.nickname || player.name}
-              uid={player.uid}
-              size="sm"
-              showFallback={false}
-            />
-          )}
-          <div>
-            <h3
-              className={`font-semibold ${player.is_active ? "text-cyan-300" : "text-gray-400"}`}
-            >
-              {player.nickname ? <span>{player.nickname}</span> : player.name}
-            </h3>
-            {player.is_new_player ? (
-              <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-1 rounded-full border border-purple-500/50">
-                New Player
-              </span>
-            ) : (
-              ""
-            )}
-          </div>
-        </div>
-
-        <div className="text-right">
-          {player.is_active ? (
-            ""
-          ) : (
-            <div className="text-red-400">
-              <div className="font-medium">Eliminated</div>
-              {player.elimination_position && (
-                <div className="text-sm text-gray-500">
-                  KO order: {player.elimination_position}
-                </div>
-              )}
-              {dynamicPlacement !== null && (
-                <div className="text-sm text-gray-500">
-                  Final Placement: {dynamicPlacement}
-                </div>
-              )}
-              {player.hitman && (
-                <div className="text-sm text-gray-500">
-                  Eliminated by: {player.hitman.name}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface TournamentHeaderData {
   title: string;
@@ -225,9 +141,6 @@ export default function GameViewPage() {
     );
   }
 
-  const activePlayers = gameData.players.filter((p) => p.is_active);
-  const eliminatedPlayers = gameData.players.filter((p) => !p.is_active);
-
   return (
     <div className="min-h-screen bg-black py-8">
       <div className="max-w-6xl mx-auto">
@@ -313,69 +226,11 @@ export default function GameViewPage() {
         <div className="mb-8">
           <TournamentFeed
             tournamentId={parseInt(token as string)}
-            maxHeight="450px"
+            maxHeight="750px"
             totalPlayers={gameData.players.length}
             startPoints={gameData.tournament.start_points}
             players={gameData.players}
           />
-        </div>
-
-        {/* Active Players */}
-        <div className="grid md:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-2xl font-bold text-cyan-300 mb-4 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-              Active Players ({activePlayers.length})
-            </h2>
-            <div className="space-y-3">
-              {activePlayers.length > 0 ? (
-                activePlayers
-                  .sort(
-                    (a, b) =>
-                      new Date(b.checked_in_at || 0).getTime() -
-                      new Date(a.checked_in_at || 0).getTime(),
-                  )
-                  .map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={player}
-                      totalPlayers={gameData.players.length}
-                    />
-                  ))
-              ) : (
-                <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">
-                  No active players
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Eliminated Players */}
-          <div>
-            <h2 className="text-2xl font-bold text-red-400 mb-4 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]">
-              Eliminated Players ({eliminatedPlayers.length})
-            </h2>
-            <div className="space-y-3">
-              {eliminatedPlayers.length > 0 ? (
-                eliminatedPlayers
-                  .sort(
-                    (a, b) =>
-                      (b.elimination_position || 999) -
-                      (a.elimination_position || 999),
-                  )
-                  .map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={player}
-                      totalPlayers={gameData.players.length}
-                    />
-                  ))
-              ) : (
-                <p className="text-gray-500 text-center py-8 bg-gray-900/40 rounded-lg border border-gray-700">
-                  No eliminations yet
-                </p>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Real-time indicator */}

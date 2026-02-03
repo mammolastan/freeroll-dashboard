@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Trophy,
   Users,
+  Skull,
 } from "lucide-react";
 import { Player } from "@/lib/realtime/types";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
@@ -47,9 +48,11 @@ interface TournamentFeedProps {
 function PlayersGrid({
   players,
   variant = "active",
+  totalPlayers,
 }: {
   players: Player[];
   variant?: "active" | "eliminated";
+  totalPlayers?: number;
 }) {
   const isEliminated = variant === "eliminated";
   const emptyLabel = isEliminated ? "No eliminated players" : "No remaining players";
@@ -66,6 +69,51 @@ function PlayersGrid({
     );
   }
 
+  // For eliminated players, maintain sort order (most recent KO first)
+  // For active players, split by photo status for visual grouping
+  if (isEliminated) {
+    return (
+      <div className="p-3">
+        <div className="flex flex-wrap gap-1.5">
+          {players.map((player) => {
+            const hasPhoto = player.photo_url && player.photo_url.trim() !== "";
+            // Calculate placement: use stored value, or compute from ko_position
+            // placement = totalPlayers - ko_position + 1
+            const placement = player.placement ||
+              (totalPlayers && player.elimination_position
+                ? totalPlayers - player.elimination_position + 1
+                : null);
+            return (
+              <div
+                key={player.id}
+                className={`flex items-center gap-1.5 px-2 py-1 ${gridBg} rounded border ${gridBorder} opacity-75`}
+              >
+                {placement && (
+                  <span className="text-xs text-gray-500 font-medium min-w-[1.25rem] text-center">
+                    {placement}
+                  </span>
+                )}
+                {hasPhoto && (
+                  <PlayerAvatar
+                    photoUrl={player.photo_url}
+                    name={player.nickname || player.name}
+                    uid={player.uid}
+                    size="sm"
+                    showFallback={false}
+                  />
+                )}
+                <span className={`text-xs ${textColor}`}>
+                  {player.nickname || player.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Active players: group by photo status for visual appeal
   const withPhoto = players.filter((p) => p.photo_url && p.photo_url.trim() !== "");
   const withoutPhoto = players.filter((p) => !p.photo_url || p.photo_url.trim() === "");
 
@@ -76,7 +124,7 @@ function PlayersGrid({
           {withPhoto.map((player) => (
             <div
               key={player.id}
-              className={`flex items-center gap-2 px-2 py-1.5 ${gridBg} rounded border ${gridBorder} ${isEliminated ? "opacity-75" : ""}`}
+              className={`flex items-center gap-2 px-2 py-1.5 ${gridBg} rounded border ${gridBorder}`}
             >
               <PlayerAvatar
                 photoUrl={player.photo_url}
@@ -97,7 +145,7 @@ function PlayersGrid({
           {withoutPhoto.map((player) => (
             <span
               key={player.id}
-              className={`text-xs ${textColor} px-2 py-1 ${gridBg} rounded border ${gridBorder} ${isEliminated ? "opacity-75" : ""}`}
+              className={`text-xs ${textColor} px-2 py-1 ${gridBg} rounded border ${gridBorder}`}
             >
               {player.nickname || player.name}
             </span>
@@ -330,7 +378,7 @@ export function TournamentFeed({
                   : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
               }`}
             >
-              <Users className="h-5 w-5" />
+              <Skull className="h-5 w-5" />
               {eliminatedPlayers.length > 0 && (
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -377,7 +425,7 @@ export function TournamentFeed({
           handleScroll();
           handleLoadMore();
         }}
-        className="@[1000px]:hidden overflow-y-auto"
+        className="@[1000px]:hidden overflow-y-auto scrollbar-styled"
         style={{ maxHeight }}
       >
         {/* Loading State */}
@@ -403,26 +451,63 @@ export function TournamentFeed({
 
         {/* Players Tab Content */}
         {activeTab === "players" && (
-          <PlayersGrid players={activePlayers} variant="active" />
+          <div style={{ minHeight: maxHeight }}>
+            <div className="px-3 py-2 border-b border-cyan-500/20 bg-cyan-500/10">
+              <span className="text-sm font-medium text-cyan-300">Active Players</span>
+            </div>
+            <PlayersGrid players={activePlayers} variant="active" />
+          </div>
         )}
 
         {/* Eliminated Tab Content */}
         {activeTab === "eliminated" && (
-          <PlayersGrid players={eliminatedPlayers} variant="eliminated" />
+          <div style={{ minHeight: maxHeight }}>
+            <div className="px-3 py-2 border-b border-red-500/20 bg-red-500/10">
+              <span className="text-sm font-medium text-red-300">Eliminated Players</span>
+            </div>
+            <PlayersGrid players={eliminatedPlayers} variant="eliminated" totalPlayers={totalPlayers || players?.length} />
+          </div>
         )}
 
-        {/* Empty State */}
-        {activeTab !== "players" && activeTab !== "eliminated" && !loading && !error && filteredItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            {activeTab === "td" ? (
-              <>
+        {/* TD Tab Content */}
+        {activeTab === "td" && (
+          <div style={{ minHeight: maxHeight }}>
+            <div className="px-3 py-2 border-b border-amber-500/20 bg-amber-500/10">
+              <span className="text-sm font-medium text-amber-300">TD Messages</span>
+            </div>
+            {!loading && !error && filteredItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <Megaphone className="h-10 w-10 text-gray-600 mb-3" />
                 <p className="text-gray-500 text-sm">No TD messages yet</p>
                 <p className="text-gray-600 text-xs mt-1">
                   Messages from the Tournament Director will appear here
                 </p>
-              </>
-            ) : activeTab === "chat" ? (
+              </div>
+            )}
+            {!loading && !error && filteredItems.length > 0 && (
+              <div className="divide-y divide-gray-800/50">
+                {filteredItems.map((item) => (
+                  <FeedItem
+                    key={item.id}
+                    item={item}
+                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    totalPlayers={totalPlayers}
+                    startPoints={startPoints}
+                    onReact={handleReact}
+                    reactionBalance={reactionBalance}
+                    canReact={canPost}
+                    tournamentId={tournamentId}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty State for non-TD/non-player tabs */}
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !error && filteredItems.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            {activeTab === "chat" ? (
               <>
                 <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
                 <p className="text-gray-500 text-sm">No chat messages yet</p>
@@ -462,7 +547,7 @@ export function TournamentFeed({
         )}
 
         {/* Feed Items */}
-        {activeTab !== "players" && activeTab !== "eliminated" && !loading && !error && filteredItems.length > 0 && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !error && filteredItems.length > 0 && (
           <div className="divide-y divide-gray-800/50">
             {filteredItems.map((item) => (
               <FeedItem
@@ -481,14 +566,14 @@ export function TournamentFeed({
         )}
 
         {/* Load More Indicator */}
-        {activeTab !== "players" && activeTab !== "eliminated" && loadingMore && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && loadingMore && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
           </div>
         )}
 
         {/* End of Feed */}
-        {activeTab !== "players" && activeTab !== "eliminated" && !loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
           <div className="text-center py-4 text-gray-600 text-xs">
             — End of feed —
           </div>
@@ -501,7 +586,7 @@ export function TournamentFeed({
         style={{ maxHeight }}
       >
         {/* Left Column - Checkins/Knockouts */}
-        <div className="flex-1 overflow-y-auto border-r border-cyan-500/20 flex flex-col">
+        <div className="flex-1 overflow-y-auto scrollbar-styled border-r border-cyan-500/20 flex flex-col">
           {/* Column Header */}
           <div className="px-3 py-2 border-b border-cyan-500/20 bg-cyan-500/10">
             <div className="flex items-center gap-2">
@@ -512,7 +597,7 @@ export function TournamentFeed({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-styled">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">
@@ -592,7 +677,7 @@ export function TournamentFeed({
         </div>
 
         {/* Middle Column - TD Messages */}
-        <div className="flex-1 overflow-y-auto border-r border-cyan-500/20 flex flex-col bg-gray-900/40">
+        <div className="flex-1 overflow-y-auto scrollbar-styled border-r border-cyan-500/20 flex flex-col bg-gray-900/40">
           {/* TD Column Header */}
           <div className="px-3 py-2 border-b border-cyan-500/20 bg-amber-500/10">
             <div className="flex items-center gap-2">
@@ -609,7 +694,7 @@ export function TournamentFeed({
           </div>
 
           {/* TD Messages Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-styled">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-8">
@@ -660,7 +745,7 @@ export function TournamentFeed({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-styled">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">

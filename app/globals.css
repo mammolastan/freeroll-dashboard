@@ -59,3 +59,29 @@ a.freeroll-link:active {
 .stat5 {
   background: var(--stat5);
 }
+
+/* Custom scrollbar styling for dark/neon theme */
+.scrollbar-styled::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-styled::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.8);
+  border-radius: 4px;
+}
+
+.scrollbar-styled::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.4);
+  border-radius: 4px;
+}
+
+.scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.6);
+}
+
+/* Firefox scrollbar */
+.scrollbar-styled {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.4) rgba(17, 24, 39, 0.8);
+}
