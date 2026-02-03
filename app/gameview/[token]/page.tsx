@@ -316,6 +316,7 @@ export default function GameViewPage() {
             maxHeight="450px"
             totalPlayers={gameData.players.length}
             startPoints={gameData.tournament.start_points}
+            players={gameData.players}
           />
         </div>
 

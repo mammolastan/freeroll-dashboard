@@ -115,6 +115,7 @@ export default function TVScreenPage() {
           isAdmin={false}
           totalPlayers={gameData.players.length}
           startPoints={gameData.tournament.start_points}
+          players={gameData.players}
         />
       </div>
 
