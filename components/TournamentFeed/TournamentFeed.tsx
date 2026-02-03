@@ -297,9 +297,9 @@ export function TournamentFeed({
   };
 
   return (
-    <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden">
-      {/* Mobile Tabs - hidden on large screens (1300px+) */}
-      <div className="@[1000px]:hidden flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/50">
+    <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+      {/* Mobile Tabs - sticky header (hidden on large screens) */}
+      <div className="@[1000px]:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm">
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("all")}
@@ -351,44 +351,44 @@ export function TournamentFeed({
           </button>
           {players && (
             <>
-            <button
-              onClick={() => setActiveTab("players")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === "players"
-                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                  : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-              }`}
-            >
-              <Users className="h-5 w-5" />
-              {activePlayers.length > 0 && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    activeTab === "players" ? "bg-cyan-500/30" : "bg-gray-700"
-                  }`}
-                >
-                  {activePlayers.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("eliminated")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === "eliminated"
-                  ? "bg-red-500/20 text-red-300 border border-red-500/40"
-                  : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-              }`}
-            >
-              <Skull className="h-5 w-5" />
-              {eliminatedPlayers.length > 0 && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    activeTab === "eliminated" ? "bg-red-500/30" : "bg-gray-700"
-                  }`}
-                >
-                  {eliminatedPlayers.length}
-                </span>
-              )}
-            </button>
+              <button
+                onClick={() => setActiveTab("players")}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === "players"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                    : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
+                }`}
+              >
+                <Users className="h-5 w-5" />
+                {activePlayers.length > 0 && (
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      activeTab === "players" ? "bg-cyan-500/30" : "bg-gray-700"
+                    }`}
+                  >
+                    {activePlayers.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("eliminated")}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === "eliminated"
+                    ? "bg-red-500/20 text-red-300 border border-red-500/40"
+                    : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
+                }`}
+              >
+                <Skull className="h-5 w-5" />
+                {eliminatedPlayers.length > 0 && (
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      activeTab === "eliminated" ? "bg-red-500/30" : "bg-gray-700"
+                    }`}
+                  >
+                    {eliminatedPlayers.length}
+                  </span>
+                )}
+              </button>
             </>
           )}
         </div>
