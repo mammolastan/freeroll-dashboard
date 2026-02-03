@@ -39,9 +39,16 @@ const isBadgeExpiringSoon = (expiration: string | null | undefined): boolean => 
     return expirationDate <= thirtyDaysFromNow && expirationDate >= now;
 };
 
-// Helper function to sort badges by rarity (highest first)
+// Helper function to sort badges by rarity (highest first), with Mayor badge always first
 const sortBadgesByrarity = (badges: BadgeData[]): BadgeData[] => {
     return [...badges].sort((a, b) => {
+        // Mayor badge always comes first
+        const aIsMayor = a.short_description === 'Mayor';
+        const bIsMayor = b.short_description === 'Mayor';
+        if (aIsMayor && !bIsMayor) return -1;
+        if (!aIsMayor && bIsMayor) return 1;
+
+        // Then sort by rarity (highest first)
         if (b.rarity !== a.rarity) {
             return b.rarity - a.rarity;
         }
