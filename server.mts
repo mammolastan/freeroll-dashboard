@@ -36,9 +36,11 @@ async function postBlindLevelChangeFeedItem(
   blindLevel: BlindLevel
 ): Promise<void> {
   try {
-    const message = blindLevel.isbreak
-      ? `Break time!`
-      : `Blinds up! Level ${level}: ${blindLevel.smallBlind}/${blindLevel.bigBlind}${blindLevel.ante ? ` (Ante: ${blindLevel.ante})` : ''}`;
+    const message = level === 1
+      ? `Timer running, shuffle up and deal! Good luck to the winner.`
+      : blindLevel.isbreak
+        ? `Break time!`
+        : `Blinds up! Level ${level}: ${blindLevel.smallBlind}/${blindLevel.bigBlind}${blindLevel.ante ? ` (Ante: ${blindLevel.ante})` : ''}`;
 
     await prisma.$executeRaw`
       INSERT INTO tournament_feed_items
@@ -707,6 +709,11 @@ app.prepare().then(async () => {
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer started for tournament ${tournamentId}`);
+
+        // Post system message when timer first starts
+        if (timerState.currentLevel === 1 && timerState.blindLevels[0]) {
+          await postBlindLevelChangeFeedItem(tournamentId, 1, timerState.blindLevels[0]);
+        }
       });
 
       socket.on("timer:pause", async ({ tournamentId }) => {
