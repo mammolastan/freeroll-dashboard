@@ -51,6 +51,11 @@
   gap: 0.25rem;
 }
 
+.tvscreen-header-cutoff {
+  color: #facc15;
+  font-weight: 600;
+}
+
 /* Timer Row - Timer takes 75%, stats take 25% */
 .tvscreen-timer-row {
   display: flex;

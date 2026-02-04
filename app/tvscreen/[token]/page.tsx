@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { GameTimer } from "@/components/Timer/GameTimer";
 import { TournamentFeed } from "@/components/TournamentFeed";
-import { formatGameDate, formatTime } from "@/lib/utils";
+import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
 import "./tvscreen.css";
 
 export default function TVScreenPage() {
@@ -69,6 +69,11 @@ export default function TVScreenPage() {
           {gameData.tournament.venue && (
             <span className="tvscreen-header-venue">
               📍 {gameData.tournament.venue}
+            </span>
+          )}
+          {formatCutoffTime(gameData.tournament.time) && (
+            <span className="tvscreen-header-cutoff">
+              ⏰ Cutoff: {formatCutoffTime(gameData.tournament.time)}
             </span>
           )}
         </div>
