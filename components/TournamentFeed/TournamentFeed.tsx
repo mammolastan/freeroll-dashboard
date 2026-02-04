@@ -661,6 +661,9 @@ export function TournamentFeed({
                     }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    onReact={handleReact}
+                    reactionBalance={reactionBalance}
+                    canReact={canPost}
                     tournamentId={tournamentId}
                   />
                 ))}
@@ -722,6 +725,9 @@ export function TournamentFeed({
                     }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    onReact={handleReact}
+                    reactionBalance={reactionBalance}
+                    canReact={canPost}
                     tournamentId={tournamentId}
                   />
                 ))}
@@ -776,6 +782,9 @@ export function TournamentFeed({
                     }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
+                    onReact={handleReact}
+                    reactionBalance={reactionBalance}
+                    canReact={canPost}
                     tournamentId={tournamentId}
                   />
                 ))}
