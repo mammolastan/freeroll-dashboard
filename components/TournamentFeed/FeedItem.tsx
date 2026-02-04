@@ -322,7 +322,7 @@ function TDMessageItem({ item, onDelete }: FeedItemProps) {
             {formatRelativeTime(item.created_at)}
           </span>
         </div>
-        <p className="text-gray-200 text-sm mt-0.5 break-words whitespace-pre-wrap">
+        <p className="text-gray-200 text-xl mt-0.5 break-words whitespace-pre-wrap">
           {item.message_text}
         </p>
       </div>
