@@ -18,9 +18,10 @@ export default function TVScreenPage() {
 
   // Force desktop viewport for TV boxes that report scaled-down viewports
   useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute("content", "width=1920, initial-scale=1");
+    if (window.innerWidth <= 960 && window.devicePixelRatio === 2) {
+      document.body.style.width = "1920px";
+      document.body.style.transform = "scale(0.5)";
+      document.body.style.transformOrigin = "top left";
     }
   }, []);
 
