@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { GameTimer } from "@/components/Timer/GameTimer";
@@ -13,17 +13,8 @@ import "./tvscreen.css";
 export default function TVScreenPage() {
   const { token } = useParams();
   const { gameData, computedStats, loading, error } = useRealtimeGameData(
-    token as string,
+    token as string
   );
-
-  // Force desktop viewport for TV boxes that report scaled-down viewports
-  useEffect(() => {
-    if (window.innerWidth <= 960 && window.devicePixelRatio === 2) {
-      document.body.style.width = "1920px";
-      document.body.style.transform = "scale(0.5)";
-      document.body.style.transformOrigin = "top left";
-    }
-  }, []);
 
   if (loading) {
     return (
@@ -67,7 +58,7 @@ export default function TVScreenPage() {
             {formatGameDate(
               typeof gameData.tournament.date === "string"
                 ? gameData.tournament.date
-                : gameData.tournament.date.toISOString(),
+                : gameData.tournament.date.toISOString()
             )}
           </span>
           {formatTime(gameData.tournament.time) && (
