@@ -162,38 +162,72 @@
   }
 }
 
-/* Players remaining display */
-.minModePlayers {
+/* Player stats container */
+.minModeStats {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 3rem;
+}
+
+/* Individual stat */
+.minModeStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.minModeStat span:first-child {
   font-weight: 700;
-  color: rgb(192, 132, 252); /* text-purple-400 */
-  filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.6));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.minModePlayers svg {
-  color: rgb(192, 132, 252); /* text-purple-400 */
+.minModeStatLabel {
+  font-size: 0.875rem;
+  color: rgb(156, 163, 175); /* text-gray-400 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Portrait mode - smaller players text */
+/* Stat colors */
+.minModeStat--cyan {
+  color: rgb(103, 232, 249); /* text-cyan-300 */
+  filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.6));
+}
+
+.minModeStat--green {
+  color: rgb(74, 222, 128); /* text-green-400 */
+  filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.6));
+}
+
+.minModeStat--red {
+  color: rgb(248, 113, 113); /* text-red-400 */
+  filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6));
+}
+
+/* Portrait mode - smaller stats */
 @media (orientation: portrait) {
-  .minModePlayers {
-    font-size: 2rem; /* text-3xl */
+  .minModeStats {
+    gap: 2rem;
   }
-  .minModePlayers svg {
-    width: 24px;
-    height: 24px;
+  .minModeStat span:first-child {
+    font-size: 2rem;
+  }
+  .minModeStatLabel {
+    font-size: 0.75rem;
   }
 }
 
-/* Landscape mode - larger players text */
+/* Landscape mode - larger stats */
 @media (orientation: landscape) {
-  .minModePlayers {
-    font-size: 2.25rem; /* text-4xl */
+  .minModeStats {
+    gap: 4rem;
   }
-  .minModePlayers svg {
-    width: 30px;
-    height: 30px;
+  .minModeStat span:first-child {
+    font-size: 3rem;
+  }
+  .minModeStatLabel {
+    font-size: 1rem;
   }
 }

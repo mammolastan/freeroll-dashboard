@@ -13,7 +13,6 @@ import {
   Edit3,
   Check,
   X,
-  Users,
 } from "lucide-react";
 import { socket } from "@/lib/socketClient";
 import "./GameTimer.css";
@@ -42,12 +41,14 @@ interface GameTimerProps {
   tournamentId?: number;
   isAdmin?: boolean;
   playersRemaining?: number;
+  totalPlayers?: number;
 }
 
 export function GameTimer({
   tournamentId,
   isAdmin = false,
   playersRemaining,
+  totalPlayers,
 }: GameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -576,12 +577,22 @@ export function GameTimer({
           )}
         </div>
 
-        {/* Players Remaining  */}
+        {/* Player Stats */}
         <div className="minModePlayersContainer">
-          {playersRemaining !== undefined && (
-            <div className="minModePlayers">
-              <Users size={30} />
-              <span>{playersRemaining}</span>
+          {totalPlayers !== undefined && playersRemaining !== undefined && (
+            <div className="minModeStats">
+              <div className="minModeStat">
+                <span className="minModeStat--cyan">{totalPlayers}</span>
+                <span className="minModeStatLabel">Total</span>
+              </div>
+              <div className="minModeStat">
+                <span className="minModeStat--green">{playersRemaining}</span>
+                <span className="minModeStatLabel">Remaining</span>
+              </div>
+              <div className="minModeStat">
+                <span className="minModeStat--red">{totalPlayers - playersRemaining}</span>
+                <span className="minModeStatLabel">Eliminated</span>
+              </div>
             </div>
           )}
         </div>
@@ -592,30 +603,29 @@ export function GameTimer({
   return (
     <div className="bg-slate-900/90 backdrop-blur-sm border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.25)] rounded-lg border">
       <div className="p-6 space-y-4">
-        {/* Main Timer Layout - buttons left on wide screens, timer always on top */}
+        {/* Main Timer Layout */}
         <div className="relative flex flex-col gap-4">
-          {/* Buttons row on small screens, left column on wide screens */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex items-start gap-2 md:flex-col md:pt-2 md:shrink-0">
+          {/* Buttons - absolutely positioned to not affect timer centering */}
+          <div className="absolute top-0 left-0 z-10 flex gap-2">
+            <button
+              onClick={() => setIsMinMode(true)}
+              className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-full transition-all border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)] whitespace-nowrap"
+              title="Minimal fullscreen mode"
+            >
+              📺 Min Mode
+            </button>
+            {!audioEnabled && (
               <button
-                onClick={() => setIsMinMode(true)}
-                className="text-xs px-3 py-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-full transition-all border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)] whitespace-nowrap"
-                title="Minimal fullscreen mode"
+                onClick={enableAudio}
+                className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
+                title="Enable sound notifications"
               >
-                📺 Min Mode
+                🔇 Enable Sound
               </button>
-              {!audioEnabled && (
-                <button
-                  onClick={enableAudio}
-                  className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
-                  title="Enable sound notifications"
-                >
-                  🔇 Enable Sound
-                </button>
-              )}
-            </div>
-            {/* Center: Main Timer Info (stacked) */}
-            <div className="text-center space-y-4 md:flex-1">
+            )}
+          </div>
+          {/* Center: Main Timer Info (stacked) */}
+          <div className="text-center space-y-4 w-full pt-8">
               {/* Timer Display */}
               {isEditingTime && isAdmin && timerState.isPaused ? (
                 <div className="space-y-2">
@@ -739,7 +749,6 @@ export function GameTimer({
                 )}
               </div>
             </div>
-          </div>
 
           {/* Right: Next Level & Break Info */}
           <div className="text-center md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2 md:text-right space-y-2">

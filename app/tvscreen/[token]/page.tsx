@@ -85,6 +85,7 @@ export default function TVScreenPage() {
           <GameTimer
             tournamentId={parseInt(token as string)}
             playersRemaining={computedStats.playersRemaining}
+            totalPlayers={computedStats.totalPlayers}
             isAdmin={false}
           />
         </div>
