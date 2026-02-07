@@ -249,23 +249,16 @@ export function TournamentFeed({
 
   // Determine if tournament is over and who won
   const winner = useMemo(() => {
-    if (!totalPlayers || totalPlayers < 2) return null;
+    if (!players || players.length < 2) return null;
 
-    const knockouts = items.filter((item) => item.item_type === "knockout");
-    // Tournament is over when all but one player is knocked out
-    if (knockouts.length !== totalPlayers - 1) return null;
+    // Tournament is over when exactly one player remains active
+    const remainingPlayers = players.filter((p) => p.is_active);
+    if (remainingPlayers.length !== 1) return null;
 
-    // Find the final knockout (highest ko_position)
-    const finalKnockout = knockouts.reduce((latest, current) => {
-      if (!latest) return current;
-      return (current.ko_position || 0) > (latest.ko_position || 0)
-        ? current
-        : latest;
-    }, knockouts[0]);
-
-    // The winner is the hitman of the final knockout
-    return finalKnockout?.hitman_name || null;
-  }, [items, totalPlayers]);
+    // Use nickname if available, otherwise use name
+    const winnerPlayer = remainingPlayers[0];
+    return winnerPlayer.nickname || winnerPlayer.name;
+  }, [players]);
 
   // Track scroll position to auto-scroll for new items
   const handleScroll = () => {
