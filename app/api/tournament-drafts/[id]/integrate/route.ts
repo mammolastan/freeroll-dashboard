@@ -21,6 +21,7 @@ interface DraftPlayer {
   player_uid: string | null;
   is_new_player: boolean;
   hitman_name: string | null;
+  hitman_uid: string | null;
   ko_position: number | null;
   placement: number | null;
   knockouts: number | null;
@@ -262,12 +263,22 @@ export async function POST(
           );
           const totalPoints = draft.start_points + placementPoints;
 
+          // Look up hitman's UID - prefer the stored hitman_uid, fall back to finding by name
+          let hitmanUid: string | null = player.hitman_uid;
+          if (!hitmanUid && player.hitman_name) {
+            const hitmanPlayer = playersWithPlacements.find(
+              (p) => p.player_name === player.hitman_name
+            );
+            hitmanUid = hitmanPlayer?.player_uid || null;
+          }
+
           // Insert into poker_tournaments table
           await tx.pokerTournament.create({
             data: {
               name: player.player_name,
               uid: player.player_uid,
               hitman: player.hitman_name,
+              Hitman_UID: hitmanUid,
               placement: player.placement,
               knockouts: player.knockouts || 0,
               startPoints: draft.start_points,
