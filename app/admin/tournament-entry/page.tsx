@@ -36,6 +36,7 @@ interface Player {
   added_by?: "admin" | "self_checkin";
   checked_in_at?: string;
   player_nickname?: string | null;
+  knockedout_at?: string | null;
 }
 
 export default function TournamentEntryPage() {
@@ -184,6 +185,7 @@ export default function TournamentEntryPage() {
             hitman_name: null,
             ko_position: null,
             placement: null,
+            knockedout_at: null,
           };
         }
 
@@ -216,6 +218,9 @@ export default function TournamentEntryPage() {
           checked_in_at: player.checked_in_at
             ? String(player.checked_in_at)
             : undefined,
+          knockedout_at: player.knockedout_at
+            ? String(player.knockedout_at)
+            : null,
         };
       });
 

@@ -130,6 +130,31 @@ export async function PUT(
         }
       }
 
+      // If any knockouts or undo knockouts occurred, recalculate all ko_positions
+      const anyKnockoutChanges = playersToUpdate.some(p => 'ko_position' in p);
+      if (anyKnockoutChanges) {
+        // Recalculate ko_positions for all knocked out players based on knockedout_at order
+        const knockedOutPlayers = await tx.tournamentDraftPlayer.findMany({
+          where: {
+            tournament_draft_id: draftId,
+            knockedout_at: { not: null }
+          },
+          orderBy: [
+            { knockedout_at: 'asc' },
+            { id: 'asc' }
+          ],
+          select: { id: true }
+        });
+
+        // Update each player's ko_position based on their order
+        for (let i = 0; i < knockedOutPlayers.length; i++) {
+          await tx.tournamentDraftPlayer.update({
+            where: { id: knockedOutPlayers[i].id },
+            data: { ko_position: i + 1 }
+          });
+        }
+      }
+
       return updatedPlayers;
     });
 

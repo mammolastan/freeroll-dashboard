@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, ArrowRightLeft } from 'lucide-react';
 
 interface Player {
     id: number;
@@ -16,6 +16,7 @@ interface Player {
     added_by?: 'admin' | 'self_checkin';
     checked_in_at?: string;
     player_nickname?: string | null;
+    knockedout_at?: string | null;
 }
 
 interface PlayerRowProps {
@@ -25,15 +26,14 @@ interface PlayerRowProps {
     hitmanDropdownVisible: boolean;
     hitmanHighlightedIndex: number;
     hitmanCandidates: Player[];
+    calculatedKoPosition: number | null;
     onHitmanSearchChange: (value: string) => void;
     onHitmanFocus: () => void;
     onHitmanBlur: () => void;
     onHitmanKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
     onHitmanSelect: (hitmanName: string) => void;
     onCrosshairClick: () => void;
-    onKOPositionChange: (koPosition: number | null) => void;
-    onKOInputFocus: () => void;
-    onKOInputBlur: () => void;
+    onMoveKnockout: () => void;
     onRemove: () => void;
     renderPlayerIndicator: (player: Player) => React.ReactNode;
 }
@@ -45,15 +45,14 @@ export function PlayerRow({
     hitmanDropdownVisible,
     hitmanHighlightedIndex,
     hitmanCandidates,
+    calculatedKoPosition,
     onHitmanSearchChange,
     onHitmanFocus,
     onHitmanBlur,
     onHitmanKeyDown,
     onHitmanSelect,
     onCrosshairClick,
-    onKOPositionChange,
-    onKOInputFocus,
-    onKOInputBlur,
+    onMoveKnockout,
     onRemove,
     renderPlayerIndicator
 }: PlayerRowProps) {
@@ -74,7 +73,7 @@ export function PlayerRow({
 
     return (
         <div
-            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && player.ko_position !== null
+            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && calculatedKoPosition !== null
                     ? 'bg-red-50 border-red-100'
                     : 'bg-white'
                 }`}
@@ -109,13 +108,13 @@ export function PlayerRow({
                 {!isIntegrated && (
                     <button
                         onClick={onCrosshairClick}
-                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && player.ko_position !== null
+                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && calculatedKoPosition !== null
                                 ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
                                 : 'text-red-600 hover:text-red-800 hover:bg-red-50'
                             }`}
                         title={
-                            player.hitman_name && player.ko_position !== null
-                                ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${player.ko_position})`
+                            player.hitman_name && calculatedKoPosition !== null
+                                ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${calculatedKoPosition})`
                                 : `Knockout ${player.player_name}`
                         }
                     >
@@ -184,18 +183,25 @@ export function PlayerRow({
             </div>
 
             {/* KO Position Column */}
-            <div>
-                <input
-                    type="number"
-                    value={player.ko_position || ''}
-                    onChange={(e) => onKOPositionChange(parseInt(e.target.value) || null)}
-                    onFocus={onKOInputFocus}
-                    onBlur={onKOInputBlur}
-                    className="w-full px-2 py-1 border rounded text-black text-sm"
-                    placeholder="KO #"
-                    min={0}
-                    disabled={isIntegrated}
-                />
+            <div className="flex items-center gap-1">
+                {calculatedKoPosition !== null ? (
+                    <>
+                        <span className="px-2 py-1 text-black text-sm font-medium">
+                            #{calculatedKoPosition}
+                        </span>
+                        {!isIntegrated && (
+                            <button
+                                onClick={onMoveKnockout}
+                                className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title={`Move ${player.player_name}'s knockout position`}
+                            >
+                                <ArrowRightLeft size={14} />
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    <span className="px-2 py-1 text-gray-400 text-sm">-</span>
+                )}
             </div>
 
             {/* Remove Button Column */}

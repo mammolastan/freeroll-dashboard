@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Users, Trophy, Calendar, MapPin, User, Plus, ArrowLeft, Check, X, ChevronDown, Download, QrCode } from 'lucide-react';
 import { formatGameDate, formatTime } from '@/lib/utils';
@@ -50,7 +50,29 @@ interface Player {
     placement: number | null;
     added_by?: 'admin' | 'self_checkin';
     checked_in_at?: string;
-    player_nickname?: string | null; // Optional field for nickname
+    player_nickname?: string | null;
+    knockedout_at?: string | null;
+}
+
+// Calculate ko_position based on knockedout_at timestamp order
+// Oldest knockedout_at = position 1, second oldest = position 2, etc.
+function calculateKoPositions(players: Player[]): Map<number, number> {
+    const knockedOutPlayers = players
+        .filter(p => p.knockedout_at)
+        .sort((a, b) => {
+            const timeA = new Date(a.knockedout_at!).getTime();
+            const timeB = new Date(b.knockedout_at!).getTime();
+            if (timeA !== timeB) return timeA - timeB;
+            // Tie-breaker: use player id
+            return a.id - b.id;
+        });
+
+    const positionMap = new Map<number, number>();
+    knockedOutPlayers.forEach((player, index) => {
+        positionMap.set(player.id, index + 1);
+    });
+
+    return positionMap;
 }
 
 interface FullAdminScreenProps {
@@ -141,8 +163,11 @@ export function FullAdminScreen({
     const onDataChangeRef = useRef<() => void>(() => { });
 
 
-    // UI state for editing KO positions
-    const [editingKOPlayers, setEditingKOPlayers] = useState(new Set());
+    // Move knockout modal state
+    const [moveKnockoutModal, setMoveKnockoutModal] = useState<{
+        playerId: number;
+        playerName: string;
+    } | null>(null);
 
     const [skipNextAutoRefresh, setSkipNextAutoRefresh] = useState(false);
     const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -156,6 +181,9 @@ export function FullAdminScreen({
         type: 'info' | 'success' | 'warning';
         undoAction?: () => void;
     } | null>(null);
+
+    // Calculate ko_positions based on knockedout_at timestamps
+    const koPositionsMap = useMemo(() => calculateKoPositions(players), [players]);
 
     // Sync currentDraft with parent prop
     useEffect(() => {
@@ -393,12 +421,6 @@ export function FullAdminScreen({
     const getFilteredAndSortedPlayers = () => {
         const filteredPlayers = players;
 
-        // If we're in KO edit mode and there are players being edited, don't sort
-        if (sortBy === 'ko_position' && editingKOPlayers.size > 0) {
-            // Keep current order but still filter
-            return filteredPlayers;
-        }
-
         // Apply sorting
         return filteredPlayers.sort((a, b) => {
             if (sortBy === 'name') {
@@ -409,8 +431,9 @@ export function FullAdminScreen({
             }
 
             if (sortBy === 'ko_position') {
-                const koA = a.ko_position;
-                const koB = b.ko_position;
+                // Use calculated ko_position from knockedout_at order
+                const koA = koPositionsMap.get(a.id) ?? null;
+                const koB = koPositionsMap.get(b.id) ?? null;
 
                 if (koA === null && koB === null) return 0;
                 if (koA === null) return sortOrder === 'desc' ? -1 : 1;
@@ -435,24 +458,6 @@ export function FullAdminScreen({
             return 0;
         });
     };
-
-    // Handlers for KO input focus/blur
-    const handleKOInputFocus = (playerId: number) => {
-        if (sortBy === 'ko_position') {
-            setEditingKOPlayers(prev => new Set([...prev, playerId]));
-        }
-    };
-
-    const handleKOInputBlur = (playerId: number) => {
-        setEditingKOPlayers(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(playerId);
-            return newSet;
-        });
-
-
-    };
-
 
     // Handle column header click for sorting
     const handleSort = (column: 'name' | 'ko_position' | 'checked_in_at') => {
@@ -827,8 +832,8 @@ export function FullAdminScreen({
         const player = players.find(p => p.id === playerId);
         if (!player) return;
 
-        // If player is already knocked out, clear knockout
-        if (player.hitman_name && player.ko_position !== null) {
+        // If player is already knocked out (has knockedout_at), clear knockout
+        if (player.knockedout_at) {
             clearPlayerKnockout(playerId);
         } else {
             // if player is NOT knocked out, set hitman to "unknown" and trigger KO assignment
@@ -872,6 +877,37 @@ export function FullAdminScreen({
         } catch (error) {
             console.error('Error clearing player knockout data:', error);
             alert(`Error clearing knockout data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    // Handle moving a knockout to a new position
+    const handleMoveKnockout = async (playerId: number, afterPlayerId: number | null) => {
+        try {
+            const player = players.find(p => p.id === playerId);
+            if (!player || !player.knockedout_at) {
+                console.error('Player not found or not knocked out:', playerId);
+                return;
+            }
+
+            // Call API to move knockout - the server handles all timestamp calculations
+            // including shifting other players if they share the same timestamp
+            const response = await fetch(`/api/tournament-drafts/${currentDraft?.id}/players/${playerId}/move-knockout`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ afterPlayerId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to move knockout');
+            }
+
+            // Close modal and refresh data
+            setMoveKnockoutModal(null);
+            onDataChange();
+
+        } catch (error) {
+            console.error('Error moving knockout:', error);
+            alert(`Error moving knockout: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
@@ -1637,15 +1673,7 @@ export function FullAdminScreen({
 
             {hasPendingChanges && (
                 <div className="text-yellow-600 fixed text-sm">
-                    ⏳ Saving changes...
-                </div>
-            )}
-            {editingKOPlayers.size > 0 && sortBy === 'ko_position' && (
-                <div className="mb-2 p-2 bg-amber-50 border border-amber-200 fixed rounded-lg">
-                    <div className="flex items-center gap-2 text-amber-700">
-                        <span className="text-sm">✏️ Edit Mode:</span>
-                        <span className="text-sm">List sorting paused while editing KO positions</span>
-                    </div>
+                    Saving changes...
                 </div>
             )}
             {/* Screen Navigation Tabs */}
@@ -1820,6 +1848,58 @@ export function FullAdminScreen({
                         {showQRCode && (
                             <QRCodeModal checkInUrl={checkInUrl} showQRCode={showQRCode} setShowQRCode={setShowQRCode} currentDraft={currentDraft} />
                         )}
+
+                        {/* Move Knockout Modal */}
+                        {moveKnockoutModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                        Move Knockout Position
+                                    </h3>
+                                    <p className="text-gray-600 mb-4">
+                                        Select the player after which <span className="font-medium">{moveKnockoutModal.playerName}</span> should be knocked out:
+                                    </p>
+                                    <div className="max-h-64 overflow-y-auto border rounded mb-4">
+                                        {/* Option to be first knockout */}
+                                        <button
+                                            onClick={() => handleMoveKnockout(moveKnockoutModal.playerId, null)}
+                                            className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
+                                        >
+                                            <span className="font-medium">Be the first knockout</span>
+                                        </button>
+                                        {/* List all knocked out players except the one being moved */}
+                                        {players
+                                            .filter(p => p.knockedout_at && p.id !== moveKnockoutModal.playerId)
+                                            .sort((a, b) => {
+                                                const timeA = new Date(a.knockedout_at!).getTime();
+                                                const timeB = new Date(b.knockedout_at!).getTime();
+                                                if (timeA !== timeB) return timeA - timeB;
+                                                return a.id - b.id;
+                                            })
+                                            .map((p) => {
+                                                const position = koPositionsMap.get(p.id);
+                                                return (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => handleMoveKnockout(moveKnockoutModal.playerId, p.id)}
+                                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
+                                                    >
+                                                        <span className="font-medium">#{position}</span> - {p.player_name}
+                                                        {p.player_nickname && ` (${p.player_nickname})`}
+                                                    </button>
+                                                );
+                                            })}
+                                    </div>
+                                    <button
+                                        onClick={() => setMoveKnockoutModal(null)}
+                                        className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Tournament Metadata */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div>
@@ -2113,15 +2193,14 @@ export function FullAdminScreen({
                                             hitmanDropdownVisible={hitmanDropdownVisible[player.id] ?? false}
                                             hitmanHighlightedIndex={hitmanHighlightedIndex[player.id] ?? -1}
                                             hitmanCandidates={getHitmanCandidates(player.id, hitmanSearchValues[player.id] || '')}
+                                            calculatedKoPosition={koPositionsMap.get(player.id) ?? null}
                                             onHitmanSearchChange={(value) => handleHitmanSearchChange(player.id, value)}
                                             onHitmanFocus={() => handleHitmanFocus(player.id)}
                                             onHitmanBlur={() => handleHitmanBlur(player.id)}
                                             onHitmanKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
                                             onHitmanSelect={(hitmanName) => selectHitman(player.id, hitmanName)}
                                             onCrosshairClick={() => handleCrosshairClick(player.id)}
-                                            onKOPositionChange={(koPosition) => updatePlayer(player.id, 'ko_position', koPosition)}
-                                            onKOInputFocus={() => handleKOInputFocus(player.id)}
-                                            onKOInputBlur={() => handleKOInputBlur(player.id)}
+                                            onMoveKnockout={() => setMoveKnockoutModal({ playerId: player.id, playerName: player.player_name })}
                                             onRemove={() => {
                                                 if (confirm(`Remove ${player.player_name} from tournament?`)) {
                                                     removePlayer(player.id);

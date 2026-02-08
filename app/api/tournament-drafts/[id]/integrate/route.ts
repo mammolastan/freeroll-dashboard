@@ -24,28 +24,51 @@ interface DraftPlayer {
   ko_position: number | null;
   placement: number | null;
   knockouts: number | null;
+  knockedout_at: Date | null;
 }
 
 // KO-based placement calculation functions
+// Calculates ko_position from knockedout_at timestamps, then derives placements
 function calculatePlacements(players: DraftPlayer[]): DraftPlayer[] {
-  const knockedOutPlayers = players.filter((p) => p.ko_position !== null);
-  const survivorPlayers = players.filter((p) => p.ko_position === null);
+  const knockedOutPlayers = players.filter((p) => p.knockedout_at !== null);
+  const survivorPlayers = players.filter((p) => p.knockedout_at === null);
 
   // Validation: There should be exactly one survivor (the winner)
   if (survivorPlayers.length !== 1) {
     throw new Error(
-      `Invalid tournament state: Expected exactly 1 survivor (winner), found ${survivorPlayers.length}. All players except the winner must have a KO position.`
+      `Invalid tournament state: Expected exactly 1 survivor (winner), found ${survivorPlayers.length}. All players except the winner must have been knocked out.`
     );
   }
 
+  // Sort knocked out players by knockedout_at timestamp (oldest first = ko_position 1)
+  const sortedKnockedOut = [...knockedOutPlayers].sort((a, b) => {
+    const timeA = new Date(a.knockedout_at!).getTime();
+    const timeB = new Date(b.knockedout_at!).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    // Tie-breaker: use player id
+    return a.id - b.id;
+  });
+
+  // Create a map of player id to calculated ko_position
+  const koPositionMap = new Map<number, number>();
+  sortedKnockedOut.forEach((player, index) => {
+    koPositionMap.set(player.id, index + 1);
+  });
+
   // Calculate placements and knockouts
   const updatedPlayers = players.map((player) => {
-    // Placement logic (unchanged)
     let placement: number;
-    if (player.ko_position === null) {
+    let calculatedKoPosition: number | null = null;
+
+    if (player.knockedout_at === null) {
+      // Survivor (winner)
       placement = 1;
     } else {
-      placement = knockedOutPlayers.length - player.ko_position + 2;
+      // Knocked out player - get ko_position from our calculated map
+      calculatedKoPosition = koPositionMap.get(player.id) || null;
+      // Placement = total knocked out - ko_position + 2
+      // (first knocked out = last place, last knocked out = 2nd place)
+      placement = knockedOutPlayers.length - calculatedKoPosition! + 2;
     }
 
     // Knockouts: count how many players have this player's name as their hitman_name
@@ -53,7 +76,7 @@ function calculatePlacements(players: DraftPlayer[]): DraftPlayer[] {
       (p) => p.hitman_name && p.hitman_name === player.player_name
     ).length;
 
-    return { ...player, placement, knockouts };
+    return { ...player, ko_position: calculatedKoPosition, placement, knockouts };
   });
 
   return updatedPlayers;
@@ -70,9 +93,9 @@ function validateTournamentForIntegration(players: DraftPlayer[]): {
     errors.push("Tournament must have at least 2 players");
   }
 
-  // Check that all players have either a KO position or are the survivor
-  const playersWithKoPosition = players.filter((p) => p.ko_position !== null);
-  const survivorPlayers = players.filter((p) => p.ko_position === null);
+  // Check that all players have either been knocked out or are the survivor
+  const knockedOutPlayers = players.filter((p) => p.knockedout_at !== null);
+  const survivorPlayers = players.filter((p) => p.knockedout_at === null);
 
   // Must have exactly one survivor
   if (survivorPlayers.length !== 1) {
@@ -81,44 +104,11 @@ function validateTournamentForIntegration(players: DraftPlayer[]): {
     );
   }
 
-  // All other players must have KO positions
-  if (playersWithKoPosition.length !== players.length - 1) {
+  // All other players must have been knocked out
+  if (knockedOutPlayers.length !== players.length - 1) {
     errors.push(
-      "All players except the winner must have a KO position assigned"
+      "All players except the winner must have been knocked out"
     );
-  }
-
-  // KO positions must be sequential starting from 1
-  if (playersWithKoPosition.length > 0) {
-    const koPositions = playersWithKoPosition
-      .map((p) => p.ko_position!)
-      .sort((a, b) => a - b);
-    const expectedPositions = Array.from(
-      { length: koPositions.length },
-      (_, i) => i + 1
-    );
-
-    if (!koPositions.every((pos, index) => pos === expectedPositions[index])) {
-      errors.push(
-        `KO positions must be sequential from 1 to ${koPositions.length
-        }. Current positions: ${koPositions.join(", ")}`
-      );
-    }
-  }
-
-  // Check for duplicate KO positions
-  const koPositionCounts = new Map<number, number>();
-  playersWithKoPosition.forEach((p) => {
-    const count = koPositionCounts.get(p.ko_position!) || 0;
-    koPositionCounts.set(p.ko_position!, count + 1);
-  });
-
-  for (const [position, count] of koPositionCounts) {
-    if (count > 1) {
-      errors.push(
-        `Duplicate KO position ${position} found on ${count} players`
-      );
-    }
   }
 
   return {

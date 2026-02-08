@@ -61,19 +61,39 @@ export async function PUT(
     if (isKnockout) {
       // Setting knockout - update status, hitman_uid, and knockedout_at
       // Store hitman's nickname (if exists) in hitman_name for display
+      // First, set knockedout_at to NOW() - ko_position will be calculated after
       updateResult = await prisma.$executeRaw`
         UPDATE tournament_draft_players
         SET
           player_name = ${player_name || ""},
           hitman_name = ${hitmanDisplayName},
           hitman_uid = ${hitmanUid},
-          ko_position = ${ko_position || null},
           placement = ${placement || null},
           status = 'knockedout',
           knockedout_at = NOW(),
           updated_at = NOW()
         WHERE id = ${playerId}
       `;
+
+      // Now recalculate ko_positions for all knocked out players based on knockedout_at order
+      const knockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
+        SELECT id, knockedout_at
+        FROM tournament_draft_players
+        WHERE tournament_draft_id = ${draftId}
+          AND knockedout_at IS NOT NULL
+        ORDER BY knockedout_at ASC, id ASC
+      `;
+
+      // Update each player's ko_position based on their order
+      for (let i = 0; i < knockedOutPlayers.length; i++) {
+        const p = knockedOutPlayers[i];
+        const newKoPosition = i + 1;
+        await prisma.$executeRaw`
+          UPDATE tournament_draft_players
+          SET ko_position = ${newKoPosition}
+          WHERE id = ${p.id}
+        `;
+      }
     } else if (isUndoKnockout) {
       // Undoing knockout - reset status and clear knockout fields
       updateResult = await prisma.$executeRaw`
@@ -82,13 +102,32 @@ export async function PUT(
           player_name = ${player_name || ""},
           hitman_name = ${hitman_name || null},
           hitman_uid = NULL,
-          ko_position = ${ko_position || null},
+          ko_position = NULL,
           placement = ${placement || null},
           status = 'active',
           knockedout_at = NULL,
           updated_at = NOW()
         WHERE id = ${playerId}
       `;
+
+      // Recalculate ko_positions for remaining knocked out players
+      const knockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
+        SELECT id, knockedout_at
+        FROM tournament_draft_players
+        WHERE tournament_draft_id = ${draftId}
+          AND knockedout_at IS NOT NULL
+        ORDER BY knockedout_at ASC, id ASC
+      `;
+
+      for (let i = 0; i < knockedOutPlayers.length; i++) {
+        const p = knockedOutPlayers[i];
+        const newKoPosition = i + 1;
+        await prisma.$executeRaw`
+          UPDATE tournament_draft_players
+          SET ko_position = ${newKoPosition}
+          WHERE id = ${p.id}
+        `;
+      }
     } else {
       // Normal update without knockout change
       updateResult = await prisma.$executeRaw`
