@@ -292,11 +292,11 @@ export function TournamentFeed({
   return (
     <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
       {/* Mobile Tabs - sticky header (hidden on large screens) */}
-      <div className="@[1000px]:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm">
-        <div className="flex gap-2">
+      <div className="@[1000px]:hidden sticky top-0 z-10 flex items-center justify-between px-2 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm">
+        <div className="flex gap-1 min-w-0 flex-1">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`px-2 py-1.5 text-xs font-medium transition-colors shrink-0 ${
               activeTab === "all"
                 ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                 : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
@@ -306,16 +306,16 @@ export function TournamentFeed({
           </button>
           <button
             onClick={() => setActiveTab("td")}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
               activeTab === "td"
                 ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                 : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
             }`}
           >
-            <Megaphone className="h-5 w-5" />
+            <Megaphone className="h-4 w-4" />
             {tdMessageCount > 0 && (
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
+                className={`text-xs px-1 py-0.5 rounded-full ${
                   activeTab === "td" ? "bg-cyan-500/30" : "bg-gray-700"
                 }`}
               >
@@ -325,16 +325,16 @@ export function TournamentFeed({
           </button>
           <button
             onClick={() => setActiveTab("chat")}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
               activeTab === "chat"
                 ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                 : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
             }`}
           >
-            <MessageCircle className="h-5 w-5" />
+            <MessageCircle className="h-4 w-4" />
             {chatMessageCount > 0 && (
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
+                className={`text-xs px-1 py-0.5 rounded-full ${
                   activeTab === "chat" ? "bg-cyan-500/30" : "bg-gray-700"
                 }`}
               >
@@ -346,16 +346,16 @@ export function TournamentFeed({
             <>
               <button
                 onClick={() => setActiveTab("players")}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
                   activeTab === "players"
                     ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                     : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
                 }`}
               >
-                <Users className="h-5 w-5" />
+                <Users className="h-4 w-4" />
                 {activePlayers.length > 0 && (
                   <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    className={`text-xs px-1 py-0.5 rounded-full ${
                       activeTab === "players" ? "bg-cyan-500/30" : "bg-gray-700"
                     }`}
                   >
@@ -365,16 +365,16 @@ export function TournamentFeed({
               </button>
               <button
                 onClick={() => setActiveTab("eliminated")}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
                   activeTab === "eliminated"
                     ? "bg-red-500/20 text-red-300 border border-red-500/40"
                     : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
                 }`}
               >
-                <Skull className="h-5 w-5" />
+                <Skull className="h-4 w-4" />
                 {eliminatedPlayers.length > 0 && (
                   <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    className={`text-xs px-1 py-0.5 rounded-full ${
                       activeTab === "eliminated" ? "bg-red-500/30" : "bg-gray-700"
                     }`}
                   >
