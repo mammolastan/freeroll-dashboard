@@ -56,10 +56,9 @@ export function PlayerRow({
     onRemove,
     renderPlayerIndicator
 }: PlayerRowProps) {
-    const unknownOption = hitmanSearchValue && hitmanSearchValue.toLowerCase().includes('unknown');
-    const allOptions = [...hitmanCandidates];
-    if (unknownOption) {
-        allOptions.push({
+    // Always include "unknown" option at the start
+    const allOptions = [
+        {
             id: -1,
             player_name: 'unknown',
             player_uid: null,
@@ -68,8 +67,9 @@ export function PlayerRow({
             ko_position: null,
             placement: null,
             player_nickname: null
-        });
-    }
+        },
+        ...hitmanCandidates
+    ];
 
     return (
         <div
@@ -154,30 +154,27 @@ export function PlayerRow({
                 {/* Hitman dropdown */}
                 {hitmanDropdownVisible && !isIntegrated && (
                     <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-md shadow-lg z-10 max-h-32 overflow-y-auto">
-                        {hitmanCandidates.map((candidate, index) => (
+                        {allOptions.map((candidate, index) => (
                             <div
                                 key={candidate.id}
                                 onClick={() => onHitmanSelect(candidate.player_name)}
                                 className={`px-2 py-1 cursor-pointer text-black text-sm ${index === hitmanHighlightedIndex
                                         ? 'bg-blue-200 text-blue-900'
                                         : 'hover:bg-blue-100'
-                                    }`}
+                                    } ${candidate.id === -1 ? 'border-b' : ''}`}
                             >
-                                {candidate.player_name}
+                                {candidate.id === -1 ? (
+                                    <em>unknown hitman</em>
+                                ) : (
+                                    <>
+                                        {candidate.player_nickname || candidate.player_name}
+                                        {candidate.player_nickname && (
+                                            <span className="text-gray-500 text-xs ml-1">({candidate.player_name})</span>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         ))}
-                        {/* Add "unknown" option if user is typing */}
-                        {unknownOption && (
-                            <div
-                                onClick={() => onHitmanSelect('unknown')}
-                                className={`px-2 py-1 cursor-pointer text-black text-sm border-t ${hitmanCandidates.length === hitmanHighlightedIndex
-                                        ? 'bg-blue-200 text-blue-900'
-                                        : 'hover:bg-blue-100'
-                                    }`}
-                            >
-                                <em>unknown hitman</em>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
