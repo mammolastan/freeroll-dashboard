@@ -5,6 +5,7 @@
 import React, {
   useRef,
   useEffect,
+  useLayoutEffect,
   useState,
   useMemo,
   useCallback,
@@ -192,6 +193,72 @@ export function TournamentFeed({
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
 
+  // Refs for the unified sliding indicator
+  const headerContainerRef = useRef<HTMLDivElement>(null);
+  const totalPlayersRef = useRef<HTMLButtonElement>(null);
+  const remainingRef = useRef<HTMLButtonElement>(null);
+  const eliminatedRef = useRef<HTMLButtonElement>(null);
+  const feedTabRef = useRef<HTMLButtonElement>(null);
+  const chatTabRef = useRef<HTMLButtonElement>(null);
+  const tdTabRef = useRef<HTMLButtonElement>(null);
+
+  // State for unified sliding indicator position
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    color: "cyan" | "green" | "red";
+  } | null>(null);
+
+  // Measure and update the unified sliding indicator position
+  useLayoutEffect(() => {
+    const headerContainer = headerContainerRef.current;
+    if (!headerContainer) return;
+
+    // Determine which ref to measure based on active tab
+    let targetRef: React.RefObject<HTMLButtonElement | null>;
+    let color: "cyan" | "green" | "red";
+
+    if (activeTab === "allPlayers") {
+      targetRef = totalPlayersRef;
+      color = "cyan";
+    } else if (activeTab === "players") {
+      targetRef = remainingRef;
+      color = "green";
+    } else if (activeTab === "eliminated") {
+      targetRef = eliminatedRef;
+      color = "red";
+    } else if (activeTab === "all") {
+      targetRef = feedTabRef;
+      color = "cyan";
+    } else if (activeTab === "chat") {
+      targetRef = chatTabRef;
+      color = "cyan";
+    } else if (activeTab === "td") {
+      targetRef = tdTabRef;
+      color = "cyan";
+    } else {
+      setIndicatorStyle(null);
+      return;
+    }
+
+    const targetButton = targetRef.current;
+    if (!targetButton) return;
+
+    // Get positions relative to the header container
+    const containerRect = headerContainer.getBoundingClientRect();
+    const buttonRect = targetButton.getBoundingClientRect();
+
+    setIndicatorStyle({
+      top: buttonRect.top - containerRect.top,
+      left: buttonRect.left - containerRect.left,
+      width: buttonRect.width,
+      height: buttonRect.height,
+      color,
+    });
+  }, [activeTab, players]);
+
   // Filter items based on active tab (for mobile view)
   const filteredItems = useMemo(() => {
     if (activeTab === "td") {
@@ -291,114 +358,133 @@ export function TournamentFeed({
 
   return (
     <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-      {/* Player Stats Row - above tabs (hidden on large screens) */}
-      {players && (
-        <div className="@[1000px]:hidden sticky top-0 z-20 flex items-center justify-between px-3 py-2 bg-gray-900/95 backdrop-blur-sm">
-          {/* Total Players - clickable */}
-          <button
-            onClick={() => setActiveTab("allPlayers")}
-            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
-              activeTab === "allPlayers"
-                ? "bg-cyan-500/20 border border-cyan-500/40"
-                : "hover:bg-gray-800"
-            }`}
-          >
-            <span className={`text-lg font-bold ${activeTab === "allPlayers" ? "text-cyan-300" : "text-cyan-400"}`}>
-              {totalPlayers || players.length}
-            </span>
-            <span className={`text-xs ${activeTab === "allPlayers" ? "text-cyan-300" : "text-gray-400"}`}>Total Players</span>
-          </button>
-          {/* Remaining - clickable */}
-          <button
-            onClick={() => setActiveTab("players")}
-            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
-              activeTab === "players"
-                ? "bg-green-500/20 border border-green-500/40"
-                : "hover:bg-gray-800"
-            }`}
-          >
-            <span className={`text-lg font-bold ${activeTab === "players" ? "text-green-300" : "text-green-400"}`}>
-              {activePlayers.length}
-            </span>
-            <span className={`text-xs ${activeTab === "players" ? "text-green-300" : "text-gray-400"}`}>Remaining</span>
-          </button>
-          {/* Eliminated - clickable */}
-          <button
-            onClick={() => setActiveTab("eliminated")}
-            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
-              activeTab === "eliminated"
-                ? "bg-red-500/20 border border-red-500/40"
-                : "hover:bg-gray-800"
-            }`}
-          >
-            <span className={`text-lg font-bold ${activeTab === "eliminated" ? "text-red-300" : "text-red-400"}`}>
-              {eliminatedPlayers.length}
-            </span>
-            <span className={`text-xs ${activeTab === "eliminated" ? "text-red-300" : "text-gray-400"}`}>Eliminated</span>
-          </button>
-        </div>
-      )}
+      {/* Combined Header - Player Stats + Tabs (hidden on large screens) */}
+      <div className="@[1000px]:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur-sm border-b border-cyan-500/20">
+        <div ref={headerContainerRef} className="relative">
+          {/* Unified Sliding indicator */}
+          {indicatorStyle && (
+            <div
+              className={`absolute rounded border pointer-events-none ${
+                indicatorStyle.color === "cyan"
+                  ? "bg-cyan-500/20 border-cyan-500/40"
+                  : indicatorStyle.color === "green"
+                  ? "bg-green-500/20 border-green-500/40"
+                  : "bg-red-500/20 border-red-500/40"
+              }`}
+              style={{
+                top: indicatorStyle.top,
+                left: indicatorStyle.left,
+                width: indicatorStyle.width,
+                height: indicatorStyle.height,
+                transition: "all 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            />
+          )}
 
-      {/* Mobile Tabs - sticky header (hidden on large screens) */}
-      <div className={`@[1000px]:hidden sticky ${players ? "top-[60px]" : "top-0"} z-10 flex items-center justify-between px-2 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm`}>
-        <div className="flex gap-1 min-w-0 flex-1">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`px-2 py-1.5 text-xs font-medium transition-colors shrink-0 ${
-              activeTab === "all"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-            }`}
-          >
-            Feed
-          </button>
-          <button
-            onClick={() => setActiveTab("chat")}
-            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
-              activeTab === "chat"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-            }`}
-          >
-            <MessageCircle className="h-4 w-4" />
-            {chatMessageCount > 0 && (
-              <span
-                className={`text-xs px-1 py-0.5 rounded-full ${
-                  activeTab === "chat" ? "bg-cyan-500/30" : "bg-gray-700"
+          {/* Player Stats Row */}
+          {players && (
+            <div className="flex items-center justify-between px-3 py-2">
+              {/* Total Players - clickable */}
+              <button
+                ref={totalPlayersRef}
+                onClick={() => setActiveTab("allPlayers")}
+                className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
+              >
+                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-cyan-400"}`}>
+                  {totalPlayers || players.length}
+                </span>
+                <span className={`text-xs transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-gray-400"}`}>Total Players</span>
+              </button>
+              {/* Remaining - clickable */}
+              <button
+                ref={remainingRef}
+                onClick={() => setActiveTab("players")}
+                className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
+              >
+                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-green-400"}`}>
+                  {activePlayers.length}
+                </span>
+                <span className={`text-xs transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-gray-400"}`}>Remaining</span>
+              </button>
+              {/* Eliminated - clickable */}
+              <button
+                ref={eliminatedRef}
+                onClick={() => setActiveTab("eliminated")}
+                className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
+              >
+                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-red-400"}`}>
+                  {eliminatedPlayers.length}
+                </span>
+                <span className={`text-xs transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-gray-400"}`}>Eliminated</span>
+              </button>
+            </div>
+          )}
+
+          {/* Feed Tabs Row */}
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="flex gap-1 min-w-0 flex-1">
+              <button
+                ref={feedTabRef}
+                onClick={() => setActiveTab("all")}
+                className={`px-2 py-1.5 text-xs font-medium transition-colors duration-300 shrink-0 relative z-10 border border-transparent rounded ${
+                  activeTab === "all"
+                    ? "text-cyan-300"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-600"
                 }`}
               >
-                {chatMessageCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("td")}
-            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
-              activeTab === "td"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-            }`}
-          >
-            <Megaphone className="h-4 w-4" />
-            {tdMessageCount > 0 && (
-              <span
-                className={`text-xs px-1 py-0.5 rounded-full ${
-                  activeTab === "td" ? "bg-cyan-500/30" : "bg-gray-700"
+                Feed
+              </button>
+              <button
+                ref={chatTabRef}
+                onClick={() => setActiveTab("chat")}
+                className={`px-2 py-1.5 text-xs font-medium transition-colors duration-300 flex items-center gap-1 shrink-0 relative z-10 border border-transparent rounded ${
+                  activeTab === "chat"
+                    ? "text-cyan-300"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-600"
                 }`}
               >
-                {tdMessageCount}
-              </span>
-            )}
-          </button>
+                <MessageCircle className="h-4 w-4" />
+                {chatMessageCount > 0 && (
+                  <span
+                    className={`text-xs px-1 py-0.5 rounded-full transition-colors duration-300 ${
+                      activeTab === "chat" ? "bg-cyan-500/30" : "bg-gray-700"
+                    }`}
+                  >
+                    {chatMessageCount}
+                  </span>
+                )}
+              </button>
+              <button
+                ref={tdTabRef}
+                onClick={() => setActiveTab("td")}
+                className={`px-2 py-1.5 text-xs font-medium transition-colors duration-300 flex items-center gap-1 shrink-0 relative z-10 border border-transparent rounded ${
+                  activeTab === "td"
+                    ? "text-cyan-300"
+                    : "text-gray-400 hover:text-gray-300 hover:border-gray-600"
+                }`}
+              >
+                <Megaphone className="h-4 w-4" />
+                {tdMessageCount > 0 && (
+                  <span
+                    className={`text-xs px-1 py-0.5 rounded-full transition-colors duration-300 ${
+                      activeTab === "td" ? "bg-cyan-500/30" : "bg-gray-700"
+                    }`}
+                  >
+                    {tdMessageCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="p-1.5 text-gray-400 hover:text-cyan-400 hover:bg-gray-800 rounded transition-colors disabled:opacity-50"
+              title="Refresh feed"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="p-1.5 text-gray-400 hover:text-cyan-400 hover:bg-gray-800 rounded transition-colors disabled:opacity-50"
-          title="Refresh feed"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </button>
       </div>
 
       {/* Message Input + Reaction Balance */}
