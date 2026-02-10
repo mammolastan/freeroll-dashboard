@@ -17,7 +17,11 @@ interface FeedItem {
   author_photo_url: string | null;
   message_text: string | null;
   eliminated_player_name: string | null;
+  eliminated_player_uid: string | null;
+  eliminated_player_photo_url: string | null;
   hitman_name: string | null;
+  hitman_uid: string | null;
+  hitman_photo_url: string | null;
   ko_position: number | null;
   created_at: string;
   reactions?: {
@@ -89,6 +93,9 @@ export async function GET(
     // Fetch knockouts dynamically from tournament_draft_players (not from tournament_feed_items)
     // Order by knockedout_at ASC so first knockout has ko_position=1
     // Left join against same table to get hitman's nickname if they have one
+    // Left join against players table to get photo URLs using player_uid
+    // Note: hitman_name might match player_name OR player_nickname, so check both
+    // Also join hitman directly by name to players table as fallback for photo/uid
     const knockoutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         ko.id as player_id,
@@ -97,11 +104,20 @@ export async function GET(
         ko.player_uid,
         ko.hitman_name,
         hitman.player_nickname as hitman_nickname,
-        ko.knockedout_at
+        COALESCE(hitman.player_uid, hitman_by_name.uid) as hitman_uid,
+        ko.knockedout_at,
+        eliminated_player.photo_url as eliminated_player_photo_url,
+        COALESCE(hitman_player.photo_url, hitman_by_name.photo_url) as hitman_photo_url
       FROM tournament_draft_players ko
       LEFT JOIN tournament_draft_players hitman
         ON hitman.tournament_draft_id = ko.tournament_draft_id
-        AND hitman.player_name = ko.hitman_name
+        AND (hitman.player_name = ko.hitman_name OR hitman.player_nickname = ko.hitman_name)
+      LEFT JOIN players eliminated_player
+        ON ko.player_uid COLLATE utf8mb4_unicode_ci = eliminated_player.uid COLLATE utf8mb4_unicode_ci
+      LEFT JOIN players hitman_player
+        ON hitman.player_uid COLLATE utf8mb4_unicode_ci = hitman_player.uid COLLATE utf8mb4_unicode_ci
+      LEFT JOIN players hitman_by_name
+        ON hitman_by_name.name COLLATE utf8mb4_unicode_ci = ko.hitman_name COLLATE utf8mb4_unicode_ci
       WHERE ko.tournament_draft_id = ${tournamentId}
         AND ko.status = 'knockedout'
         AND ko.knockedout_at IS NOT NULL
@@ -120,9 +136,13 @@ export async function GET(
       eliminated_player_name: player.player_nickname
         ? String(player.player_nickname)
         : String(player.player_name),
+      eliminated_player_uid: player.player_uid ? String(player.player_uid) : null,
+      eliminated_player_photo_url: player.eliminated_player_photo_url ? String(player.eliminated_player_photo_url) : null,
       hitman_name: player.hitman_nickname
         ? String(player.hitman_nickname)
         : player.hitman_name ? String(player.hitman_name) : null,
+      hitman_uid: player.hitman_uid ? String(player.hitman_uid) : null,
+      hitman_photo_url: player.hitman_photo_url ? String(player.hitman_photo_url) : null,
       ko_position: index + 1, // 1-based position from knockedout_at order
       created_at: player.knockedout_at instanceof Date
         ? player.knockedout_at.toISOString()
@@ -210,7 +230,11 @@ export async function GET(
       author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
+      eliminated_player_uid: null,
+      eliminated_player_photo_url: null,
       hitman_name: item.hitman_name ? String(item.hitman_name) : null,
+      hitman_uid: null,
+      hitman_photo_url: null,
       ko_position: item.ko_position ? Number(item.ko_position) : null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
@@ -434,7 +458,11 @@ export async function POST(
       author_photo_url: item.author_photo_url ? String(item.author_photo_url) : null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: item.eliminated_player_name ? String(item.eliminated_player_name) : null,
+      eliminated_player_uid: null,
+      eliminated_player_photo_url: null,
       hitman_name: item.hitman_name ? String(item.hitman_name) : null,
+      hitman_uid: null,
+      hitman_photo_url: null,
       ko_position: item.ko_position ? Number(item.ko_position) : null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()

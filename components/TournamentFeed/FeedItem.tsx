@@ -3,7 +3,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
 import { Skull, UserCheck, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
@@ -47,7 +46,49 @@ function calculatePlacementPoints(placement: number): number {
   return 0;
 }
 
-// Knockout Item
+// VS Card Avatar component for knockout display
+function KnockoutAvatar({
+  photoUrl,
+  name,
+  uid,
+  isEliminated,
+}: {
+  photoUrl?: string | null;
+  name: string;
+  uid?: string | null;
+  isEliminated: boolean;
+}) {
+  const initial = name.charAt(0).toUpperCase();
+
+  if (photoUrl) {
+    return (
+      <PlayerAvatar
+        photoUrl={photoUrl}
+        name={name}
+        uid={uid}
+        size="sm"
+        showFallback={false}
+        className={`rounded-full`}
+      />
+    );
+  }
+
+  // Fallback when no photo
+  return (
+    <div
+      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
+        ${isEliminated ? "bg-red-500/30" : "bg-cyan-500/30"}`}
+    >
+      <span
+        className={`text-sm font-bold ${isEliminated ? "text-red-300" : "text-cyan-300"}`}
+      >
+        {initial}
+      </span>
+    </div>
+  );
+}
+
+// Knockout Item - VS Card Style
 function KnockoutItem({
   item,
   totalPlayers,
@@ -82,97 +123,97 @@ function KnockoutItem({
   const isFirstBlood = item.ko_position === 1;
 
   return (
-    <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors">
-      {isBubble ? (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
-          <Image
-            src="/images/sad-bubble.png"
-            alt="Bubble"
-            width={128}
-            height={128}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
-          <Skull className="h-4 w-4 text-red-400" />
-        </div>
-      )}
+    <div className="flex flex-col gap-2 p-3 hover:bg-gray-800/30 transition-colors">
+      {/* VS Card Layout */}
+      <div className="flex items-center gap-2">
+        {/* Eliminated Player Avatar */}
+        <KnockoutAvatar
+          photoUrl={item.eliminated_player_photo_url}
+          name={item.eliminated_player_name || "Unknown"}
+          uid={item.eliminated_player_uid}
+          isEliminated={true}
+        />
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm">
+        {/* Eliminated Player Name */}
+        <span className="text-sm font-medium text-red-400">
+          {item.eliminated_player_name}
+        </span>
+
+        {/* Icon */}
+        <div className="flex-shrink-0 px-1">
           {isFirstBlood ? (
-            <>
-              <span className="font-medium text-cyan-400">
-                {hitmanDisplay ? hitmanDisplay : "Somebody"}
-              </span>
-              <span className="text-gray-400"> drew first blood! </span>
-              <span className="font-medium text-red-400">
-                {item.eliminated_player_name}
-              </span>
-              <span className="text-gray-400"> eliminated</span>
-            </>
+            <span className="text-red-500 text-base">🩸</span>
+          ) : isBubble ? (
+            <span className="text-yellow-500 text-base">🫧</span>
           ) : (
-            <>
-              <span className="font-medium text-red-400">
-                {item.eliminated_player_name}
-              </span>
-              {isBubble ? (
-                <span className="text-gray-400"> burst the bubble!</span>
-              ) : (
-                <span className="text-gray-400"> was eliminated</span>
-              )}
-              {hitmanDisplay && !isBubble && (
-                <>
-                  <span className="text-gray-400"> by </span>
-                  <span className="font-medium text-cyan-400">
-                    {hitmanDisplay}
-                  </span>
-                </>
-              )}
-            </>
+            <Skull className="h-4 w-4 text-red-400/80" />
           )}
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs text-gray-500">
-            {formatRelativeTime(item.created_at)}
+
+        {/* Hitman / Action text */}
+        {isBubble ? (
+          <span className="text-xs text-gray-500">burst the bubble</span>
+        ) : (
+          <span className="text-sm">
+            <span className="text-gray-500 text-xs">
+              {isFirstBlood ? "1st blood by " : "KO'd by "}
+            </span>
+            <span className="text-cyan-400 font-medium">
+              {hitmanDisplay || "unknown"}
+            </span>
           </span>
-          {placement !== null && (
-            <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
-              {placement}
-              {getOrdinalSuffix(placement)} place
-            </span>
-          )}
-          {totalPoints > 0 && (
-            <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
-              <Star
-                size={10}
-                className="fill-current"
-              />
-              {totalPoints} point{totalPoints !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-        {onReact && (
-          <ReactionBar
-            itemId={String(item.id)}
-            totals={
-              item.reactions?.totals || {
-                heart: 0,
-                diamond: 0,
-                club: 0,
-                spade: 0,
-              }
-            }
-            mine={item.reactions?.mine}
-            balance={reactionBalance ?? null}
-            canReact={canReact}
-            onReact={onReact}
-            tournamentId={tournamentId}
-          />
+        )}
+
+        {/* Spacer to push meta to the right */}
+        <div className="flex-1" />
+      </div>
+
+      {/* Meta info row */}
+      <div className="flex items-center gap-2">
+        {totalPoints > 0 && (
+          <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <Star
+              size={10}
+              className="fill-current"
+            />
+            {totalPoints} point{totalPoints !== 1 ? "s" : ""}
+          </span>
+        )}
+        <span className="text-xs text-gray-500">
+          {formatRelativeTime(item.created_at)}
+        </span>
+        {isFirstBlood && (
+          <span className="text-xs text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
+            First Blood
+          </span>
+        )}
+        {placement !== null && (
+          <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
+            {placement}
+            {getOrdinalSuffix(placement)} place
+          </span>
         )}
       </div>
+
+      {/* Reactions */}
+      {onReact && (
+        <ReactionBar
+          itemId={String(item.id)}
+          totals={
+            item.reactions?.totals || {
+              heart: 0,
+              diamond: 0,
+              club: 0,
+              spade: 0,
+            }
+          }
+          mine={item.reactions?.mine}
+          balance={reactionBalance ?? null}
+          canReact={canReact}
+          onReact={onReact}
+          tournamentId={tournamentId}
+        />
+      )}
     </div>
   );
 }

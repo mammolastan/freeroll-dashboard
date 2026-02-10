@@ -17,7 +17,11 @@ export interface FeedItem {
   author_photo_url: string | null;
   message_text: string | null;
   eliminated_player_name: string | null;
+  eliminated_player_uid: string | null;
+  eliminated_player_photo_url: string | null;
   hitman_name: string | null;
+  hitman_uid: string | null;
+  hitman_photo_url: string | null;
   ko_position: number | null;
   created_at: string;
   reactions?: {

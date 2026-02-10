@@ -16,7 +16,11 @@ export interface FeedItemData {
   author_photo_url: string | null;
   message_text: string | null;
   eliminated_player_name: string | null;
+  eliminated_player_uid: string | null;
+  eliminated_player_photo_url: string | null;
   hitman_name: string | null;
+  hitman_uid: string | null;
+  hitman_photo_url: string | null;
   ko_position: number | null;
   created_at: string;
 }
@@ -31,7 +35,11 @@ export function broadcastKnockoutEvent(
   eliminatedPlayerName: string,
   hitmanName: string | null,
   koPosition: number,
-  knockedoutAt: string
+  knockedoutAt: string,
+  eliminatedPlayerUid?: string | null,
+  eliminatedPlayerPhotoUrl?: string | null,
+  hitmanUid?: string | null,
+  hitmanPhotoUrl?: string | null
 ): void {
   const feedItem: FeedItemData = {
     id: `ko-${playerId}`, // synthetic ID
@@ -42,7 +50,11 @@ export function broadcastKnockoutEvent(
     author_photo_url: null,
     message_text: null,
     eliminated_player_name: eliminatedPlayerName,
+    eliminated_player_uid: eliminatedPlayerUid || null,
+    eliminated_player_photo_url: eliminatedPlayerPhotoUrl || null,
     hitman_name: hitmanName,
+    hitman_uid: hitmanUid || null,
+    hitman_photo_url: hitmanPhotoUrl || null,
     ko_position: koPosition,
     created_at: knockedoutAt,
   };
@@ -80,7 +92,11 @@ export async function createKnockoutFeedItem(
     author_photo_url: null,
     message_text: null,
     eliminated_player_name: eliminatedPlayerName,
+    eliminated_player_uid: eliminatedPlayerUid || null,
+    eliminated_player_photo_url: null,
     hitman_name: hitmanName,
+    hitman_uid: null,
+    hitman_photo_url: null,
     ko_position: koPosition,
     created_at: new Date().toISOString(),
   };
@@ -144,7 +160,11 @@ export async function createCheckInFeedItem(
       author_photo_url: photoUrl,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
+      eliminated_player_uid: null,
+      eliminated_player_photo_url: null,
       hitman_name: null,
+      hitman_uid: null,
+      hitman_photo_url: null,
       ko_position: null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
@@ -195,7 +215,11 @@ export async function createSystemFeedItem(
       author_photo_url: null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
+      eliminated_player_uid: null,
+      eliminated_player_photo_url: null,
       hitman_name: null,
+      hitman_uid: null,
+      hitman_photo_url: null,
       ko_position: null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
@@ -246,7 +270,11 @@ export async function createTDMessageFeedItem(
       author_photo_url: null,
       message_text: item.message_text ? String(item.message_text) : null,
       eliminated_player_name: null,
+      eliminated_player_uid: null,
+      eliminated_player_photo_url: null,
       hitman_name: null,
+      hitman_uid: null,
+      hitman_photo_url: null,
       ko_position: null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
