@@ -28,7 +28,7 @@ import {
 import { Player } from "@/lib/realtime/types";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 
-type FeedTab = "all" | "td" | "chat" | "players" | "eliminated";
+type FeedTab = "all" | "td" | "chat" | "players" | "eliminated" | "allPlayers";
 
 interface TournamentFeedProps {
   tournamentId: number;
@@ -291,8 +291,56 @@ export function TournamentFeed({
 
   return (
     <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+      {/* Player Stats Row - above tabs (hidden on large screens) */}
+      {players && (
+        <div className="@[1000px]:hidden sticky top-0 z-20 flex items-center justify-between px-3 py-2 bg-gray-900/95 backdrop-blur-sm">
+          {/* Total Players - clickable */}
+          <button
+            onClick={() => setActiveTab("allPlayers")}
+            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
+              activeTab === "allPlayers"
+                ? "bg-cyan-500/20 border border-cyan-500/40"
+                : "hover:bg-gray-800"
+            }`}
+          >
+            <span className={`text-lg font-bold ${activeTab === "allPlayers" ? "text-cyan-300" : "text-cyan-400"}`}>
+              {totalPlayers || players.length}
+            </span>
+            <span className={`text-xs ${activeTab === "allPlayers" ? "text-cyan-300" : "text-gray-400"}`}>Total Players</span>
+          </button>
+          {/* Remaining - clickable */}
+          <button
+            onClick={() => setActiveTab("players")}
+            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
+              activeTab === "players"
+                ? "bg-green-500/20 border border-green-500/40"
+                : "hover:bg-gray-800"
+            }`}
+          >
+            <span className={`text-lg font-bold ${activeTab === "players" ? "text-green-300" : "text-green-400"}`}>
+              {activePlayers.length}
+            </span>
+            <span className={`text-xs ${activeTab === "players" ? "text-green-300" : "text-gray-400"}`}>Remaining</span>
+          </button>
+          {/* Eliminated - clickable */}
+          <button
+            onClick={() => setActiveTab("eliminated")}
+            className={`flex flex-col items-center px-3 py-1 rounded transition-colors ${
+              activeTab === "eliminated"
+                ? "bg-red-500/20 border border-red-500/40"
+                : "hover:bg-gray-800"
+            }`}
+          >
+            <span className={`text-lg font-bold ${activeTab === "eliminated" ? "text-red-300" : "text-red-400"}`}>
+              {eliminatedPlayers.length}
+            </span>
+            <span className={`text-xs ${activeTab === "eliminated" ? "text-red-300" : "text-gray-400"}`}>Eliminated</span>
+          </button>
+        </div>
+      )}
+
       {/* Mobile Tabs - sticky header (hidden on large screens) */}
-      <div className="@[1000px]:hidden sticky top-0 z-10 flex items-center justify-between px-2 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm">
+      <div className={`@[1000px]:hidden sticky ${players ? "top-[60px]" : "top-0"} z-10 flex items-center justify-between px-2 py-2 border-b border-cyan-500/20 bg-gray-900/95 backdrop-blur-sm`}>
         <div className="flex gap-1 min-w-0 flex-1">
           <button
             onClick={() => setActiveTab("all")}
@@ -303,25 +351,6 @@ export function TournamentFeed({
             }`}
           >
             Feed
-          </button>
-          <button
-            onClick={() => setActiveTab("td")}
-            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
-              activeTab === "td"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-            }`}
-          >
-            <Megaphone className="h-4 w-4" />
-            {tdMessageCount > 0 && (
-              <span
-                className={`text-xs px-1 py-0.5 rounded-full ${
-                  activeTab === "td" ? "bg-cyan-500/30" : "bg-gray-700"
-                }`}
-              >
-                {tdMessageCount}
-              </span>
-            )}
           </button>
           <button
             onClick={() => setActiveTab("chat")}
@@ -342,48 +371,25 @@ export function TournamentFeed({
               </span>
             )}
           </button>
-          {players && (
-            <>
-              <button
-                onClick={() => setActiveTab("players")}
-                className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
-                  activeTab === "players"
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                    : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
+          <button
+            onClick={() => setActiveTab("td")}
+            className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
+              activeTab === "td"
+                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
+            }`}
+          >
+            <Megaphone className="h-4 w-4" />
+            {tdMessageCount > 0 && (
+              <span
+                className={`text-xs px-1 py-0.5 rounded-full ${
+                  activeTab === "td" ? "bg-cyan-500/30" : "bg-gray-700"
                 }`}
               >
-                <Users className="h-4 w-4" />
-                {activePlayers.length > 0 && (
-                  <span
-                    className={`text-xs px-1 py-0.5 rounded-full ${
-                      activeTab === "players" ? "bg-cyan-500/30" : "bg-gray-700"
-                    }`}
-                  >
-                    {activePlayers.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab("eliminated")}
-                className={`px-2 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 ${
-                  activeTab === "eliminated"
-                    ? "bg-red-500/20 text-red-300 border border-red-500/40"
-                    : "text-gray-400 hover:text-gray-300 border border-transparent hover:border-gray-600"
-                }`}
-              >
-                <Skull className="h-4 w-4" />
-                {eliminatedPlayers.length > 0 && (
-                  <span
-                    className={`text-xs px-1 py-0.5 rounded-full ${
-                      activeTab === "eliminated" ? "bg-red-500/30" : "bg-gray-700"
-                    }`}
-                  >
-                    {eliminatedPlayers.length}
-                  </span>
-                )}
-              </button>
-            </>
-          )}
+                {tdMessageCount}
+              </span>
+            )}
+          </button>
         </div>
         <button
           onClick={refresh}
@@ -462,6 +468,23 @@ export function TournamentFeed({
           </div>
         )}
 
+        {/* All Players Tab Content */}
+        {activeTab === "allPlayers" && (
+          <div style={{ minHeight: maxHeight }}>
+            {/* Remaining Players Section */}
+            <div className="px-3 py-2 border-b border-green-500/20 bg-green-500/10">
+              <span className="text-sm font-medium text-green-300">Remaining ({activePlayers.length})</span>
+            </div>
+            <PlayersGrid players={activePlayers} variant="active" />
+
+            {/* Eliminated Players Section */}
+            <div className="px-3 py-2 border-b border-red-500/20 bg-red-500/10 mt-2">
+              <span className="text-sm font-medium text-red-300">Eliminated ({eliminatedPlayers.length})</span>
+            </div>
+            <PlayersGrid players={eliminatedPlayers} variant="eliminated" totalPlayers={totalPlayers || players?.length} />
+          </div>
+        )}
+
         {/* TD Tab Content */}
         {activeTab === "td" && (
           <div style={{ minHeight: maxHeight }}>
@@ -498,7 +521,7 @@ export function TournamentFeed({
         )}
 
         {/* Empty State for non-TD/non-player tabs */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !error && filteredItems.length === 0 && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !error && filteredItems.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             {activeTab === "chat" ? (
               <>
@@ -540,7 +563,7 @@ export function TournamentFeed({
         )}
 
         {/* Feed Items */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !error && filteredItems.length > 0 && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !error && filteredItems.length > 0 && (
           <div className="divide-y divide-gray-800/50">
             {filteredItems.map((item) => (
               <FeedItem
@@ -559,14 +582,14 @@ export function TournamentFeed({
         )}
 
         {/* Load More Indicator */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && loadingMore && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && loadingMore && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
           </div>
         )}
 
         {/* End of Feed */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "td" && !loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
+        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
           <div className="text-center py-4 text-gray-600 text-xs">
             — End of feed —
           </div>

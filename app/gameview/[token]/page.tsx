@@ -191,36 +191,6 @@ export default function GameViewPage() {
           />
         </div>
 
-        {/* Players summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="text-center p-4 bg-gray-900/80 border border-cyan-500/30 rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-            <div className="text-3xl font-bold text-cyan-400">
-              {computedStats.totalPlayers}
-            </div>
-            <div className="text-sm text-gray-400 mt-1">Total Players</div>
-          </div>
-          <div className="text-center p-4 bg-gray-900/80 border border-green-500/30 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-            <div className="text-3xl font-bold text-green-400">
-              {computedStats.playersRemaining}
-            </div>
-            <div className="text-sm text-gray-400 mt-1">Remaining</div>
-          </div>
-          <div className="text-center p-4 bg-gray-900/80 border border-red-500/30 rounded-lg shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-            <div className="text-3xl font-bold text-red-400">
-              {computedStats.eliminatedPlayers}
-            </div>
-            <div className="text-sm text-gray-400 mt-1">Eliminated</div>
-          </div>
-          {gameData.tournament.max_players && (
-            <div className="text-center p-4 bg-gray-900/80 border border-purple-500/30 rounded-lg shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-              <div className="text-3xl font-bold text-purple-400">
-                {gameData.tournament.max_players}
-              </div>
-              <div className="text-sm text-gray-400 mt-1">Max Players</div>
-            </div>
-          )}
-        </div>
-
         {/* Tournament Feed */}
 
         <div className="mb-8">
