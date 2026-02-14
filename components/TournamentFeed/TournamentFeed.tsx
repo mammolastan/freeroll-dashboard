@@ -24,7 +24,6 @@ import {
   MessageCircle,
   Trophy,
   Users,
-  Skull,
 } from "lucide-react";
 import { Player } from "@/lib/realtime/types";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
@@ -56,7 +55,9 @@ function PlayersGrid({
   totalPlayers?: number;
 }) {
   const isEliminated = variant === "eliminated";
-  const emptyLabel = isEliminated ? "No eliminated players" : "No remaining players";
+  const emptyLabel = isEliminated
+    ? "No eliminated players"
+    : "No remaining players";
   const gridBorder = isEliminated ? "border-red-500/20" : "border-cyan-500/20";
   const gridBg = isEliminated ? "bg-gray-800/40" : "bg-gray-800/60";
   const textColor = isEliminated ? "text-red-300" : "text-cyan-200";
@@ -80,7 +81,8 @@ function PlayersGrid({
             const hasPhoto = player.photo_url && player.photo_url.trim() !== "";
             // Calculate placement: use stored value, or compute from ko_position
             // placement = totalPlayers - ko_position + 1
-            const placement = player.placement ||
+            const placement =
+              player.placement ||
               (totalPlayers && player.elimination_position
                 ? totalPlayers - player.elimination_position + 1
                 : null);
@@ -115,8 +117,12 @@ function PlayersGrid({
   }
 
   // Active players: group by photo status for visual appeal
-  const withPhoto = players.filter((p) => p.photo_url && p.photo_url.trim() !== "");
-  const withoutPhoto = players.filter((p) => !p.photo_url || p.photo_url.trim() === "");
+  const withPhoto = players.filter(
+    (p) => p.photo_url && p.photo_url.trim() !== "",
+  );
+  const withoutPhoto = players.filter(
+    (p) => !p.photo_url || p.photo_url.trim() === "",
+  );
 
   return (
     <div className="p-3 space-y-3">
@@ -311,7 +317,9 @@ export function TournamentFeed({
     if (!players) return [];
     return players
       .filter((p) => !p.is_active)
-      .sort((a, b) => (b.elimination_position || 0) - (a.elimination_position || 0));
+      .sort(
+        (a, b) => (b.elimination_position || 0) - (a.elimination_position || 0),
+      );
   }, [players]);
 
   // Determine if tournament is over and who won
@@ -360,7 +368,10 @@ export function TournamentFeed({
     <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
       {/* Combined Header - Player Stats + Tabs (hidden on large screens) */}
       <div className="@[1000px]:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur-sm border-b border-cyan-500/20">
-        <div ref={headerContainerRef} className="relative">
+        <div
+          ref={headerContainerRef}
+          className="relative"
+        >
           {/* Unified Sliding indicator */}
           {indicatorStyle && (
             <div
@@ -368,8 +379,8 @@ export function TournamentFeed({
                 indicatorStyle.color === "cyan"
                   ? "bg-cyan-500/20 border-cyan-500/40"
                   : indicatorStyle.color === "green"
-                  ? "bg-green-500/20 border-green-500/40"
-                  : "bg-red-500/20 border-red-500/40"
+                    ? "bg-green-500/20 border-green-500/40"
+                    : "bg-red-500/20 border-red-500/40"
               }`}
               style={{
                 top: indicatorStyle.top,
@@ -390,10 +401,16 @@ export function TournamentFeed({
                 onClick={() => setActiveTab("allPlayers")}
                 className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
               >
-                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-cyan-400"}`}>
+                <span
+                  className={`text-lg font-bold transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-cyan-400"}`}
+                >
                   {totalPlayers || players.length}
                 </span>
-                <span className={`text-xs transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-gray-400"}`}>Total Players</span>
+                <span
+                  className={`text-xs transition-colors duration-300 ${activeTab === "allPlayers" ? "text-cyan-300" : "text-gray-400"}`}
+                >
+                  Total Players
+                </span>
               </button>
               {/* Remaining - clickable */}
               <button
@@ -401,10 +418,16 @@ export function TournamentFeed({
                 onClick={() => setActiveTab("players")}
                 className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
               >
-                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-green-400"}`}>
+                <span
+                  className={`text-lg font-bold transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-green-400"}`}
+                >
                   {activePlayers.length}
                 </span>
-                <span className={`text-xs transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-gray-400"}`}>Remaining</span>
+                <span
+                  className={`text-xs transition-colors duration-300 ${activeTab === "players" ? "text-green-300" : "text-gray-400"}`}
+                >
+                  Remaining
+                </span>
               </button>
               {/* Eliminated - clickable */}
               <button
@@ -412,10 +435,16 @@ export function TournamentFeed({
                 onClick={() => setActiveTab("eliminated")}
                 className="flex flex-col items-center px-3 py-1 rounded transition-colors hover:bg-gray-800/50 relative z-10"
               >
-                <span className={`text-lg font-bold transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-red-400"}`}>
+                <span
+                  className={`text-lg font-bold transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-red-400"}`}
+                >
                   {eliminatedPlayers.length}
                 </span>
-                <span className={`text-xs transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-gray-400"}`}>Eliminated</span>
+                <span
+                  className={`text-xs transition-colors duration-300 ${activeTab === "eliminated" ? "text-red-300" : "text-gray-400"}`}
+                >
+                  Eliminated
+                </span>
               </button>
             </div>
           )}
@@ -481,7 +510,9 @@ export function TournamentFeed({
               className="p-1.5 text-gray-400 hover:text-cyan-400 hover:bg-gray-800 rounded transition-colors disabled:opacity-50"
               title="Refresh feed"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
             </button>
           </div>
         </div>
@@ -538,9 +569,14 @@ export function TournamentFeed({
         {activeTab === "players" && (
           <div style={{ minHeight: maxHeight }}>
             <div className="px-3 py-2 border-b border-cyan-500/20 bg-cyan-500/10">
-              <span className="text-sm font-medium text-cyan-300">Active Players</span>
+              <span className="text-sm font-medium text-cyan-300">
+                Active Players
+              </span>
             </div>
-            <PlayersGrid players={activePlayers} variant="active" />
+            <PlayersGrid
+              players={activePlayers}
+              variant="active"
+            />
           </div>
         )}
 
@@ -548,9 +584,15 @@ export function TournamentFeed({
         {activeTab === "eliminated" && (
           <div style={{ minHeight: maxHeight }}>
             <div className="px-3 py-2 border-b border-red-500/20 bg-red-500/10">
-              <span className="text-sm font-medium text-red-300">Eliminated Players</span>
+              <span className="text-sm font-medium text-red-300">
+                Eliminated Players
+              </span>
             </div>
-            <PlayersGrid players={eliminatedPlayers} variant="eliminated" totalPlayers={totalPlayers || players?.length} />
+            <PlayersGrid
+              players={eliminatedPlayers}
+              variant="eliminated"
+              totalPlayers={totalPlayers || players?.length}
+            />
           </div>
         )}
 
@@ -559,15 +601,26 @@ export function TournamentFeed({
           <div style={{ minHeight: maxHeight }}>
             {/* Remaining Players Section */}
             <div className="px-3 py-2 border-b border-green-500/20 bg-green-500/10">
-              <span className="text-sm font-medium text-green-300">Remaining ({activePlayers.length})</span>
+              <span className="text-sm font-medium text-green-300">
+                Remaining ({activePlayers.length})
+              </span>
             </div>
-            <PlayersGrid players={activePlayers} variant="active" />
+            <PlayersGrid
+              players={activePlayers}
+              variant="active"
+            />
 
             {/* Eliminated Players Section */}
             <div className="px-3 py-2 border-b border-red-500/20 bg-red-500/10 mt-2">
-              <span className="text-sm font-medium text-red-300">Eliminated ({eliminatedPlayers.length})</span>
+              <span className="text-sm font-medium text-red-300">
+                Eliminated ({eliminatedPlayers.length})
+              </span>
             </div>
-            <PlayersGrid players={eliminatedPlayers} variant="eliminated" totalPlayers={totalPlayers || players?.length} />
+            <PlayersGrid
+              players={eliminatedPlayers}
+              variant="eliminated"
+              totalPlayers={totalPlayers || players?.length}
+            />
           </div>
         )}
 
@@ -575,7 +628,9 @@ export function TournamentFeed({
         {activeTab === "td" && (
           <div style={{ minHeight: maxHeight }}>
             <div className="px-3 py-2 border-b border-amber-500/20 bg-amber-500/10">
-              <span className="text-sm font-medium text-amber-300">TD Messages</span>
+              <span className="text-sm font-medium text-amber-300">
+                TD Messages
+              </span>
             </div>
             {!loading && !error && filteredItems.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -592,7 +647,9 @@ export function TournamentFeed({
                   <FeedItem
                     key={item.id}
                     item={item}
-                    onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
+                    onDelete={
+                      isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                    }
                     totalPlayers={totalPlayers}
                     startPoints={startPoints}
                     onReact={handleReact}
@@ -607,27 +664,33 @@ export function TournamentFeed({
         )}
 
         {/* Empty State for non-TD/non-player tabs */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !error && filteredItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            {activeTab === "chat" ? (
-              <>
-                <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
-                <p className="text-gray-500 text-sm">No chat messages yet</p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Player messages will appear here
-                </p>
-              </>
-            ) : (
-              <>
-                <MessageSquare className="h-10 w-10 text-gray-600 mb-3" />
-                <p className="text-gray-500 text-sm">No activity yet</p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Knockouts and messages will appear here
-                </p>
-              </>
-            )}
-          </div>
-        )}
+        {activeTab !== "players" &&
+          activeTab !== "eliminated" &&
+          activeTab !== "allPlayers" &&
+          activeTab !== "td" &&
+          !loading &&
+          !error &&
+          filteredItems.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              {activeTab === "chat" ? (
+                <>
+                  <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
+                  <p className="text-gray-500 text-sm">No chat messages yet</p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Player messages will appear here
+                  </p>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="h-10 w-10 text-gray-600 mb-3" />
+                  <p className="text-gray-500 text-sm">No activity yet</p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Knockouts and messages will appear here
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
         {/* Victory Announcement */}
         {winner && activeTab === "all" && (
@@ -649,37 +712,56 @@ export function TournamentFeed({
         )}
 
         {/* Feed Items */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !error && filteredItems.length > 0 && (
-          <div className="divide-y divide-gray-800/50">
-            {filteredItems.map((item) => (
-              <FeedItem
-                key={item.id}
-                item={item}
-                onDelete={isAdmin ? (itemId) => deleteItem(itemId) : undefined}
-                totalPlayers={totalPlayers}
-                startPoints={startPoints}
-                onReact={handleReact}
-                reactionBalance={reactionBalance}
-                canReact={canPost}
-                tournamentId={tournamentId}
-              />
-            ))}
-          </div>
-        )}
+        {activeTab !== "players" &&
+          activeTab !== "eliminated" &&
+          activeTab !== "allPlayers" &&
+          activeTab !== "td" &&
+          !loading &&
+          !error &&
+          filteredItems.length > 0 && (
+            <div className="divide-y divide-gray-800/50">
+              {filteredItems.map((item) => (
+                <FeedItem
+                  key={item.id}
+                  item={item}
+                  onDelete={
+                    isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                  }
+                  totalPlayers={totalPlayers}
+                  startPoints={startPoints}
+                  onReact={handleReact}
+                  reactionBalance={reactionBalance}
+                  canReact={canPost}
+                  tournamentId={tournamentId}
+                />
+              ))}
+            </div>
+          )}
 
         {/* Load More Indicator */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && loadingMore && (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
-          </div>
-        )}
+        {activeTab !== "players" &&
+          activeTab !== "eliminated" &&
+          activeTab !== "allPlayers" &&
+          activeTab !== "td" &&
+          loadingMore && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
+            </div>
+          )}
 
         {/* End of Feed */}
-        {activeTab !== "players" && activeTab !== "eliminated" && activeTab !== "allPlayers" && activeTab !== "td" && !loading && !loadingMore && !hasMore && filteredItems.length > 0 && (
-          <div className="text-center py-4 text-gray-600 text-xs">
-            — End of feed —
-          </div>
-        )}
+        {activeTab !== "players" &&
+          activeTab !== "eliminated" &&
+          activeTab !== "allPlayers" &&
+          activeTab !== "td" &&
+          !loading &&
+          !loadingMore &&
+          !hasMore &&
+          filteredItems.length > 0 && (
+            <div className="text-center py-4 text-gray-600 text-xs">
+              — End of feed —
+            </div>
+          )}
       </div>
 
       {/* Desktop Feed Content - three column layout (1300px+) */}

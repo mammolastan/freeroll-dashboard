@@ -8,6 +8,7 @@ import { Skull, UserCheck, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { ReactionBar } from "./ReactionBar";
 import { SuitCounts, ReactionType } from "@/types";
+import Image from "next/image";
 
 interface FeedItemProps {
   item: FeedItemType;
@@ -125,43 +126,92 @@ function KnockoutItem({
   return (
     <div className="flex flex-col gap-2 p-3 hover:bg-gray-800/30 transition-colors">
       {/* VS Card Layout */}
-      <div className="flex items-center gap-2">
-        {/* Eliminated Player Avatar */}
-        <KnockoutAvatar
-          photoUrl={item.eliminated_player_photo_url}
-          name={item.eliminated_player_name || "Unknown"}
-          uid={item.eliminated_player_uid}
-          isEliminated={true}
-        />
+      <div className="flex items-center gap-1">
+        {/* First Blood: Show hitman first */}
+        {isFirstBlood ? (
+          <>
+            {/* Blood Icon */}
+            <div className="flex-shrink-0 px-1">
+              <span className="text-red-500 text-base">🩸</span>
+            </div>
+            {/* Hitman Avatar */}
+            <KnockoutAvatar
+              photoUrl={item.hitman_photo_url}
+              name={hitmanDisplay || "Unknown"}
+              uid={item.hitman_uid}
+              isEliminated={false}
+            />
 
-        {/* Eliminated Player Name */}
-        <span className="text-sm font-medium text-red-400">
-          {item.eliminated_player_name}
-        </span>
+            {/* Hitman Name */}
+            <span className="text-sm font-medium text-cyan-400">
+              {hitmanDisplay || "Unknown"}
+            </span>
 
-        {/* Icon */}
-        <div className="flex-shrink-0 px-1">
-          {isFirstBlood ? (
-            <span className="text-red-500 text-base">🩸</span>
-          ) : isBubble ? (
-            <span className="text-yellow-500 text-base">🫧</span>
-          ) : (
-            <Skull className="h-4 w-4 text-red-400/80" />
-          )}
-        </div>
+            {/* Action text */}
+            <span className="text-sm">
+              <span className="text-gray-500 text-xs">drew 1st blood. </span>
+              <span className="text-red-400 font-medium">
+                {item.eliminated_player_name}
+              </span>
+              <span className="text-gray-500 text-xs"> eliminated.</span>
+            </span>
+          </>
+        ) : isBubble ? (
+          <>
+            {/* Bubble Icon */}
+            <div className="flex-shrink-0">
+              <Image
+                src="/images/sad-bubble.png"
+                alt="Bubble"
+                width={48}
+                height={48}
+                className="!h-12 !w-12"
+              />
+            </div>
 
-        {/* Hitman / Action text */}
-        {isBubble ? (
-          <span className="text-xs text-gray-500">burst the bubble</span>
+            {/* Eliminated Player Avatar */}
+            <KnockoutAvatar
+              photoUrl={item.eliminated_player_photo_url}
+              name={item.eliminated_player_name || "Unknown"}
+              uid={item.eliminated_player_uid}
+              isEliminated={true}
+            />
+
+            {/* Eliminated Player Name */}
+            <span className="text-sm font-medium text-red-400">
+              {item.eliminated_player_name}
+            </span>
+
+            {/* Action text */}
+            <span className="text-gray-500 text-xs">burst the bubble!</span>
+          </>
         ) : (
-          <span className="text-sm">
-            <span className="text-gray-500 text-xs">
-              {isFirstBlood ? "1st blood by " : "KO'd by "}
+          <>
+            {/* Regular knockout: Eliminated Player Avatar */}
+            {/* Skull Icon */}
+            <div className="flex-shrink-0 px-1">
+              <Skull className="h-5 w-5 text-red-400/80" />
+            </div>
+            <KnockoutAvatar
+              photoUrl={item.eliminated_player_photo_url}
+              name={item.eliminated_player_name || "Unknown"}
+              uid={item.eliminated_player_uid}
+              isEliminated={true}
+            />
+
+            {/* Eliminated Player Name */}
+            <span className="text-sm font-medium text-red-400">
+              {item.eliminated_player_name}
             </span>
-            <span className="text-cyan-400 font-medium">
-              {hitmanDisplay || "unknown"}
+
+            {/* Hitman / Action text */}
+            <span className="text-sm">
+              <span className="text-gray-500 text-xs">KO&apos;d by </span>
+              <span className="text-cyan-400 font-medium">
+                {hitmanDisplay || "unknown"}
+              </span>
             </span>
-          </span>
+          </>
         )}
 
         {/* Spacer to push meta to the right */}
