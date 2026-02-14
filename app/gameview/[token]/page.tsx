@@ -20,6 +20,40 @@ interface TournamentHeaderData {
   td?: string | null;
 }
 
+function isPastCutoff(date: string | Date, time?: string | null): boolean {
+  if (!time) return false;
+
+  try {
+    const dateStr = typeof date === "string" ? date : date.toISOString();
+    const timeStr = typeof time === "string" ? time : String(time);
+
+    // Parse the date (just the date part)
+    const dateOnly = dateStr.split("T")[0];
+
+    let hours: number;
+    let minutes: number;
+
+    if (timeStr.includes("T")) {
+      const d = new Date(timeStr);
+      hours = d.getUTCHours();
+      minutes = d.getUTCMinutes();
+    } else {
+      const parts = timeStr.split(":");
+      if (parts.length < 2) return false;
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+
+    // Create cutoff datetime (start time + 100 minutes)
+    const cutoffDate = new Date(`${dateOnly}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`);
+    cutoffDate.setMinutes(cutoffDate.getMinutes() + 100);
+
+    return new Date() > cutoffDate;
+  } catch {
+    return false;
+  }
+}
+
 function TournamentHeader({
   tournament,
 }: {
@@ -73,12 +107,31 @@ export default function GameViewPage() {
   const [gettingToken, setGettingToken] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [checkInUrl, setCheckInUrl] = useState<string>(`/gameview/${token}`);
+  const [checkInDisabled, setCheckInDisabled] = useState(false);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       setCheckInUrl(`${window.location.origin}/gameview/${token}`);
     }
   }, [token]);
+
+  // Check if past cutoff time and update periodically
+  React.useEffect(() => {
+    if (!gameData?.tournament) return;
+
+    const checkCutoff = () => {
+      const pastCutoff = isPastCutoff(
+        gameData.tournament.date,
+        gameData.tournament.time
+      );
+      setCheckInDisabled(pastCutoff);
+    };
+
+    checkCutoff();
+    const interval = setInterval(checkCutoff, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [gameData?.tournament]);
 
   const handleCheckInClick = async () => {
     if (checkInToken) {
@@ -150,11 +203,19 @@ export default function GameViewPage() {
         <div className="mb-6 flex justify-center gap-4">
           <button
             onClick={handleCheckInClick}
-            disabled={gettingToken}
-            className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-900 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-500/50"
+            disabled={gettingToken || checkInDisabled}
+            className={`${
+              checkInDisabled
+                ? "bg-gray-700 cursor-not-allowed border-gray-600"
+                : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+            } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
           >
             <UserPlus size={20} />
-            {gettingToken ? "Getting Ready..." : "Check In"}
+            {checkInDisabled
+              ? "Check-In Closed"
+              : gettingToken
+                ? "Getting Ready..."
+                : "Check In"}
           </button>
 
           {/* Share Button */}
