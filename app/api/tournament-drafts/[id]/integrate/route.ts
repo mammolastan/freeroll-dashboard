@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent, getClientIP } from "@/lib/auditLog";
+import { logAuditEvent, getClientIP } from "@/lib/auditlog";
 
 interface DraftTournament {
   id: number;

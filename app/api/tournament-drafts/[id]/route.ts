@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
-import { logAuditEvent, getClientIP } from "@/lib/auditLog";
+import { logAuditEvent, getClientIP } from "@/lib/auditlog";
 
 export async function GET(
   request: NextRequest,
