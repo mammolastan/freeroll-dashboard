@@ -367,7 +367,7 @@ export function TournamentFeed({
   return (
     <div className="@container bg-gray-900/80 backdrop-blur-sm rounded-lg border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
       {/* Combined Header - Player Stats + Tabs (hidden on large screens) */}
-      <div className="@[1000px]:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur-sm border-b border-cyan-500/20">
+      <div className="@[900px]:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur-sm border-b border-cyan-500/20">
         <div
           ref={headerContainerRef}
           className="relative"
@@ -541,7 +541,7 @@ export function TournamentFeed({
           handleScroll();
           handleLoadMore();
         }}
-        className="@[1000px]:hidden overflow-y-auto scrollbar-styled"
+        className="@[900px]:hidden overflow-y-auto scrollbar-styled"
         style={{ maxHeight }}
       >
         {/* Loading State */}
@@ -766,7 +766,7 @@ export function TournamentFeed({
 
       {/* Desktop Feed Content - three column layout (1300px+) */}
       <div
-        className="hidden @[1000px]:flex"
+        className="hidden @[900px]:flex"
         style={{ maxHeight }}
       >
         {/* Left Column - Checkins/Knockouts */}

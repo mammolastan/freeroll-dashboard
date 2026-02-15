@@ -5,7 +5,7 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
-import { GameTimer } from "@/components/Timer/GameTimer";
+import { TVScreenTimer } from "./TVScreenTimer";
 import { TournamentFeed } from "@/components/TournamentFeed";
 import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
 import "./tvscreen.css";
@@ -82,12 +82,7 @@ export default function TVScreenPage() {
       {/* Timer Row: Timer (75%) + Stats (25%) */}
       <div className="tvscreen-timer-row">
         <div className="tvscreen-timer-wrapper">
-          <GameTimer
-            tournamentId={parseInt(token as string)}
-            playersRemaining={computedStats.playersRemaining}
-            totalPlayers={computedStats.totalPlayers}
-            isAdmin={false}
-          />
+          <TVScreenTimer tournamentId={parseInt(token as string)} />
         </div>
 
         <div className="tvscreen-stats-wrapper">

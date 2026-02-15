@@ -14,10 +14,7 @@
 /* Tournament Header - small and compact */
 .tvscreen-header {
   background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  border-radius: 0.5rem;
-  padding: 0.4rem 1rem;
-  margin-bottom: 0.5rem;
+  padding: 2px;
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
   flex: 0 0 auto;
 }
@@ -229,4 +226,135 @@
   50% {
     opacity: 0.7;
   }
+}
+
+/* ===========================================
+   TV SCREEN TIMER COMPONENT
+   =========================================== */
+
+.tvscreen-timer {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.25);
+}
+
+.tvscreen-timer-loading {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+/* Time Display */
+.tvscreen-timer-time-container {
+  text-align: center;
+}
+
+.tvscreen-timer-time {
+  font-family: monospace;
+  font-size: 10rem;
+  font-weight: 700;
+  line-height: 0.8;
+  transition: all 0.3s ease;
+}
+
+.tvscreen-timer-time--normal {
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+.tvscreen-timer-time--warning {
+  color: #facc15;
+  text-shadow: 0 0 12px rgba(234, 179, 8, 0.6);
+}
+
+.tvscreen-timer-time--critical {
+  color: #f87171;
+  text-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+}
+
+.tvscreen-timer-time--paused {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Level and Blinds Info */
+.tvscreen-timer-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tvscreen-timer-level {
+  color: #67e8f9;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.tvscreen-timer-blinds {
+  color: #22d3ee;
+  font-family: monospace;
+  font-size: 3rem;
+  line-height: 0.8;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+.tvscreen-timer-ante {
+  color: #c084fc;
+  font-size: 1rem;
+  margin-left: 0.5rem;
+}
+
+.tvscreen-timer-break {
+  color: #fb923c;
+  font-size: 3rem;
+  font-weight: 700;
+  text-shadow: 0 0 15px rgba(249, 115, 22, 0.5);
+}
+
+/* Next Level Info */
+.tvscreen-timer-next {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.tvscreen-timer-next-level,
+.tvscreen-timer-break-countdown {
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.tvscreen-timer-next-label,
+.tvscreen-timer-break-label {
+  color: #6b7280;
+  margin-right: 0.25rem;
+}
+
+.tvscreen-timer-next-blinds {
+  color: #22d3ee;
+}
+
+.tvscreen-timer-next-break {
+  color: #fb923c;
+  font-weight: 500;
+}
+
+.tvscreen-timer-next-ante {
+  color: #6b7280;
+  margin-left: 0.25rem;
+}
+
+.tvscreen-timer-break-time {
+  color: #fb923c;
+  font-weight: 500;
 }
