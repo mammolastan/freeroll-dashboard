@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { emitPlayerJoined } from "@/lib/socketServer";
+import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -14,6 +15,23 @@ export async function PUT(
     const playerId = parseInt(playerid);
     const draftId = parseInt(id);
     const { afterPlayerId } = body; // null = move to first, otherwise the player id to move after
+
+    // Get the player's current state for audit logging
+    const currentPlayerState = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT id, player_name, player_nickname, ko_position
+      FROM tournament_draft_players
+      WHERE id = ${playerId} AND tournament_draft_id = ${draftId}
+    `;
+
+    if (currentPlayerState.length === 0) {
+      return NextResponse.json(
+        { error: "Player not found" },
+        { status: 404 }
+      );
+    }
+
+    const originalKoPosition = currentPlayerState[0].ko_position;
+    const playerName = String(currentPlayerState[0].player_nickname || currentPlayerState[0].player_name);
 
     // Get all knocked out players ordered by knockedout_at, then id
     const knockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
@@ -154,6 +172,36 @@ export async function PUT(
         player_nickname: updatedPlayer.player_nickname ? String(updatedPlayer.player_nickname) : null,
         ...updatedPlayer,
       });
+
+      // Audit logging for knockout order change
+      const newKoPosition = updatedPlayer.ko_position;
+      if (originalKoPosition !== newKoPosition) {
+        try {
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'KNOCKOUT_ORDER_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: playerName,
+            previousValue: {
+              koPosition: typeof originalKoPosition === 'number' ? originalKoPosition : null,
+            },
+            newValue: {
+              koPosition: typeof newKoPosition === 'number' ? newKoPosition : null,
+            },
+            metadata: {
+              afterPlayerId: afterPlayerId,
+              shiftedCount: playersToShift.length,
+              adminScreen: getAdminScreen(request),
+            },
+            ipAddress: getClientIP(request),
+          });
+        } catch (auditError) {
+          console.error('Audit logging failed:', auditError);
+        }
+      }
     }
 
     return NextResponse.json({

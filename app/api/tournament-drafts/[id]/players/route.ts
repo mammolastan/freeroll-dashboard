@@ -6,6 +6,7 @@ import { RealtimeAPI } from "@/lib/realtime";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
+import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 
 export async function GET(
   request: NextRequest,
@@ -86,6 +87,40 @@ export async function POST(
       const playerId = newPlayer[0].id;
       if (typeof playerId === 'number') {
         await RealtimeAPI.playerAdded(draftId, playerId);
+      }
+    }
+
+    // Audit logging for player addition
+    if (Array.isArray(newPlayer) && newPlayer.length > 0) {
+      try {
+        const newPlayerId = newPlayer[0].id;
+        const playerId = typeof newPlayerId === 'number' ? newPlayerId : null;
+        await logAuditEvent({
+          tournamentId: draftId,
+          actionType: 'PLAYER_ADDED',
+          actionCategory: validAddedBy === 'admin' ? 'ADMIN' : 'PLAYER',
+          actorId: null,
+          actorName: validAddedBy === 'admin' ? 'Admin' : null,
+          targetPlayerId: playerId,
+          targetPlayerName: player_name,
+          previousValue: null,
+          newValue: {
+            playerId: playerId,
+            playerName: player_name,
+            playerUid: player_uid || null,
+            isNewPlayer: is_new_player || false,
+            checkedIn: true,
+          },
+          metadata: {
+            addedBy: validAddedBy,
+            tournamentDraftEntryId: playerId,
+            playerNickname: player_nickname || null,
+            adminScreen: getAdminScreen(request),
+          },
+          ipAddress: getClientIP(request),
+        });
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
       }
     }
 

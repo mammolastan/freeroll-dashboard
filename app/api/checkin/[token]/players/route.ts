@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult, PlayerSearchResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
+import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -217,6 +218,40 @@ export async function POST(
       // Don't fail the check-in if real-time update fails
     }
 
+    // Audit logging for self check-in
+    if (newPlayer.length > 0) {
+      try {
+        const newPlayerId = newPlayer[0].id;
+        await logAuditEvent({
+          tournamentId: Number(tournamentId),
+          actionType: 'PLAYER_CHECKED_IN',
+          actionCategory: 'PLAYER',
+          actorId: typeof newPlayerId === 'number' ? newPlayerId : null,
+          actorName: cleanPlayerName,
+          targetPlayerId: typeof newPlayerId === 'number' ? newPlayerId : null,
+          targetPlayerName: cleanPlayerName,
+          previousValue: null,
+          newValue: {
+            playerId: typeof newPlayerId === 'number' ? newPlayerId : null,
+            playerName: cleanPlayerName,
+            playerUid: player_uid,
+            playerNickname: player_nickname,
+            checkedIn: true,
+          },
+          metadata: {
+            addedBy: 'self_checkin',
+            isNewPlayer: is_new_player,
+            forceNewPlayer: force_new_player || false,
+            token: token,
+            adminScreen: getAdminScreen(request),
+          },
+          ipAddress: getClientIP(request),
+        });
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+    }
+
     return NextResponse.json({
       type: "success",
       player: newPlayer[0],
@@ -334,6 +369,42 @@ export async function PUT(
     } catch (error) {
       console.error("Failed to trigger real-time update:", error);
       // Don't fail the check-in if real-time update fails
+    }
+
+    // Audit logging for self check-in via suggestion selection
+    if (newPlayer.length > 0) {
+      try {
+        const newPlayerId = newPlayer[0].id;
+        await logAuditEvent({
+          tournamentId: Number(tournamentId),
+          actionType: 'PLAYER_CHECKED_IN',
+          actionCategory: 'PLAYER',
+          actorId: typeof newPlayerId === 'number' ? newPlayerId : null,
+          actorName: player_name,
+          targetPlayerId: typeof newPlayerId === 'number' ? newPlayerId : null,
+          targetPlayerName: player_name,
+          previousValue: null,
+          newValue: {
+            playerId: typeof newPlayerId === 'number' ? newPlayerId : null,
+            playerName: player_name,
+            playerUid: player_uid,
+            playerNickname: player_nickname,
+            checkedIn: true,
+          },
+          metadata: {
+            addedBy: 'self_checkin',
+            isNewPlayer: is_new_player,
+            selectedFromSuggestions: selected_player_uid !== 'new_player',
+            selectedPlayerUid: selected_player_uid,
+            enteredName: entered_name,
+            token: token,
+            adminScreen: getAdminScreen(request),
+          },
+          ipAddress: getClientIP(request),
+        });
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
     }
 
     return NextResponse.json({

@@ -148,21 +148,6 @@ model poker_tournaments_test {
   game_uid         String?   @db.VarChar(100)
 }
 
-model processed_files_test {
-  id                  Int                         @id @default(autoincrement())
-  filename            String                      @unique(map: "filename") @db.VarChar(255)
-  processed_at        DateTime                    @default(now()) @db.Timestamp(0)
-  status              processed_files_test_status
-  error_message       String?                     @db.Text
-  drive_file_id       String                      @db.VarChar(255)
-  md5_checksum        String?                     @db.VarChar(32)
-  drive_modified_time DateTime                    @db.DateTime(0)
-  game_uid            String?                     @db.VarChar(100)
-  game_date           DateTime?                   @db.Date
-
-  @@index([md5_checksum], map: "idx_md5_checksum")
-}
-
 model TournamentDraft {
   id                      Int                     @id @default(autoincrement())
   tournament_date         DateTime                @db.Date
@@ -183,6 +168,7 @@ model TournamentDraft {
   timer_is_running        Boolean?                @default(false)
   timer_is_paused         Boolean?                @default(false)
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
+  TournamentAuditLog      TournamentAuditLog[]
   players                 TournamentDraftPlayer[]
   tournament_feed_items   tournament_feed_items[]
 
@@ -267,12 +253,28 @@ model feed_item_reactions {
   @@index([user_uid, tournament_draft_id], map: "idx_user_tournament")
 }
 
-enum Status {
-  success
-  error
+model TournamentAuditLog {
+  id                 Int                                @id @default(autoincrement())
+  tournament_id      Int
+  action_type        String                             @db.VarChar(50)
+  action_category    TournamentAuditLog_action_category
+  actor_id           Int?
+  actor_name         String?                            @db.VarChar(100)
+  target_player_id   Int?
+  target_player_name String?                            @db.VarChar(100)
+  previous_value     String?                            @db.LongText
+  new_value          String?                            @db.LongText
+  metadata           String?                            @db.LongText
+  ip_address         String?                            @db.VarChar(45)
+  created_at         DateTime?                          @default(now()) @db.DateTime(0)
+  tournament_drafts  TournamentDraft                    @relation(fields: [tournament_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "TournamentAuditLog_ibfk_1")
+
+  @@index([action_type], map: "idx_action_type")
+  @@index([created_at], map: "idx_created_at")
+  @@index([tournament_id], map: "idx_tournament_id")
 }
 
-enum processed_files_test_status {
+enum Status {
   success
   error
 }
@@ -307,4 +309,10 @@ enum tournament_draft_players_added_by {
   admin
   self_checkin
   kiosk
+}
+
+enum TournamentAuditLog_action_category {
+  ADMIN
+  PLAYER
+  SYSTEM
 }

@@ -4,6 +4,7 @@ import { emitPlayerJoined } from "@/lib/socketServer";
 import { broadcastKnockoutEvent } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -25,7 +26,7 @@ export async function PUT(
 
     // FIRST: Get the current player state to detect knockout
     const currentPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT player_name, player_nickname, player_uid, ko_position, hitman_name
+      SELECT player_name, player_nickname, player_uid, ko_position, hitman_name, hitman_uid, placement
       FROM tournament_draft_players
       WHERE id = ${playerId}
     `;
@@ -199,6 +200,125 @@ export async function PUT(
         }
       }
 
+      // Audit logging for player updates
+      const ipAddress = getClientIP(request);
+      const adminScreen = getAdminScreen(request);
+      const targetPlayerName = String(currentPlayer?.player_nickname || currentPlayer?.player_name || player_name);
+
+      // Helper to safely convert raw query values to AuditValue compatible types
+      const toAuditValue = (val: unknown): string | number | boolean | null => {
+        if (val === null || val === undefined) return null;
+        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+        return String(val);
+      };
+
+      try {
+        // Detect knockout state change
+        const wasKO = currentPlayer && currentPlayer.ko_position !== null;
+        const isNowKO = updatedPlayer.ko_position !== null;
+
+        if (!wasKO && isNowKO) {
+          // Knockout was recorded
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'KNOCKOUT_RECORDED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: targetPlayerName,
+            previousValue: {
+              placement: toAuditValue(currentPlayer?.placement),
+              knockedOutBy: null,
+              knockedOutByName: null,
+            },
+            newValue: {
+              placement: toAuditValue(updatedPlayer.placement),
+              knockedOutBy: toAuditValue(updatedPlayer.hitman_uid),
+              knockedOutByName: hitmanDisplayName,
+              koPosition: toAuditValue(updatedPlayer.ko_position),
+            },
+            metadata: {
+              knockedOutAt: updatedPlayer.knockedout_at instanceof Date
+                ? updatedPlayer.knockedout_at.toISOString()
+                : toAuditValue(updatedPlayer.knockedout_at),
+              adminScreen,
+            },
+            ipAddress,
+          });
+        } else if (wasKO && !isNowKO) {
+          // Knockout was removed (undo)
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'KNOCKOUT_REMOVED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: targetPlayerName,
+            previousValue: {
+              placement: toAuditValue(currentPlayer?.placement),
+              knockedOutBy: toAuditValue(currentPlayer?.hitman_uid),
+              knockedOutByName: toAuditValue(currentPlayer?.hitman_name),
+              koPosition: toAuditValue(currentPlayer?.ko_position),
+            },
+            newValue: {
+              placement: null,
+              knockedOutBy: null,
+              koPosition: null,
+            },
+            metadata: { adminScreen },
+            ipAddress,
+          });
+        }
+
+        // Detect hitman change (only if not part of knockout/undo)
+        if (wasKO && isNowKO && currentPlayer?.hitman_name !== updatedPlayer.hitman_name) {
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'HITMAN_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: targetPlayerName,
+            previousValue: {
+              hitman: toAuditValue(currentPlayer?.hitman_name),
+              hitmanUid: toAuditValue(currentPlayer?.hitman_uid),
+            },
+            newValue: {
+              hitman: toAuditValue(updatedPlayer.hitman_name),
+              hitmanUid: toAuditValue(updatedPlayer.hitman_uid),
+            },
+            metadata: { adminScreen },
+            ipAddress,
+          });
+        }
+
+        // Detect placement change (manual placement, not from knockout)
+        if (currentPlayer?.placement !== updatedPlayer.placement && !isNowKO) {
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'PLACEMENT_SET',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: targetPlayerName,
+            previousValue: {
+              placement: toAuditValue(currentPlayer?.placement),
+            },
+            newValue: {
+              placement: toAuditValue(updatedPlayer.placement),
+            },
+            metadata: { adminScreen },
+            ipAddress,
+          });
+        }
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+
       return NextResponse.json(updatedPlayer);
     } else {
       return NextResponse.json(
@@ -220,12 +340,18 @@ export async function PUT(
 
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string; playerid: string }> }
 ) {
   try {
     const { id, playerid } = await params;
     const playerId = parseInt(playerid);
+    const draftId = parseInt(id);
+
+    // Fetch player data before deletion for audit logging
+    const entryToDelete = await prisma.$queryRaw<RawQueryResult[]>`
+      SELECT * FROM tournament_draft_players WHERE id = ${playerId}
+    `;
 
     const deleteResult = await prisma.$executeRaw`
       DELETE FROM tournament_draft_players WHERE id = ${playerId}
@@ -233,8 +359,47 @@ export async function DELETE(
 
     if (deleteResult === 1) {
       // Emit Socket.IO event for real-time updates
-      const draftId = parseInt(id);
       emitPlayerJoined(draftId, { deleted: true, playerId });
+
+      // Audit logging for player removal
+      if (entryToDelete.length > 0) {
+        const deletedPlayer = entryToDelete[0];
+        // Helper to safely convert raw query values to AuditValue compatible types
+        const toAuditValue = (val: unknown): string | number | boolean | null => {
+          if (val === null || val === undefined) return null;
+          if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+          return String(val);
+        };
+        try {
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: 'PLAYER_REMOVED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: 'Admin',
+            targetPlayerId: playerId,
+            targetPlayerName: String(deletedPlayer.player_nickname || deletedPlayer.player_name),
+            previousValue: {
+              playerId: toAuditValue(deletedPlayer.id),
+              playerName: toAuditValue(deletedPlayer.player_name),
+              playerUid: toAuditValue(deletedPlayer.player_uid),
+              playerNickname: toAuditValue(deletedPlayer.player_nickname),
+              placement: toAuditValue(deletedPlayer.placement),
+              knockedOutBy: toAuditValue(deletedPlayer.hitman_name),
+              koPosition: toAuditValue(deletedPlayer.ko_position),
+              checkedIn: deletedPlayer.checked_in_at !== null,
+            },
+            newValue: null,
+            metadata: {
+              tournamentDraftEntryId: toAuditValue(deletedPlayer.id),
+              adminScreen: getAdminScreen(request),
+            },
+            ipAddress: getClientIP(request),
+          });
+        } catch (auditError) {
+          console.error('Audit logging failed:', auditError);
+        }
+      }
 
       return NextResponse.json({ success: true });
     } else {

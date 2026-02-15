@@ -95,7 +95,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
       const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Screen': 'PlayerControl',
+        },
         body: JSON.stringify({
           player_name: player.player_name,
           hitman_name: hitmanName || null,
@@ -237,7 +240,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
     try {
       const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Screen': 'PlayerControl',
+        },
         body: JSON.stringify({
           player_name: player.player_name,
           hitman_name: null,

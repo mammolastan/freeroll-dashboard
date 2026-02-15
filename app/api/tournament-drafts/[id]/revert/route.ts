@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logAuditEvent, getClientIP } from "@/lib/auditLog";
 
 interface DraftTournament {
   id: number;
@@ -17,9 +18,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const draftId = parseInt(id);
+  const ipAddress = getClientIP(request);
+
   try {
-    const { id } = await params;
-    const draftId = parseInt(id);
 
     if (isNaN(draftId)) {
       return NextResponse.json(
@@ -189,11 +192,75 @@ export async function POST(
           gameUID: draft.game_uid,
           fileName: draft.file_name,
         },
+        // Additional data for audit logging
+        _auditData: {
+          integratedEntries,
+          newPlayersRemoved: newPlayersToRemove,
+        },
       };
     });
 
     console.log("Tournament revert completed successfully:", result);
-    return NextResponse.json(result);
+
+    // Audit logging - run after transaction succeeds
+    try {
+      // Build the list of players that were removed
+      const playersRemoved = result._auditData.integratedEntries.map(
+        (e: { id: number; name: string; uid: string; placement: number; knockouts: number }) => ({
+          playerUid: e.uid,
+          playerName: e.name,
+          placement: e.placement,
+          knockouts: e.knockouts,
+        })
+      );
+
+      // Calculate total points that were removed (approximate based on placement points)
+      const totalPointsRemoved = playersRemoved.reduce(
+        (sum: number, p: { placement: number }) => {
+          // Replicate points calculation
+          let points = 0;
+          if (p.placement === 1) points = 10;
+          else if (p.placement === 2) points = 7;
+          else if (p.placement >= 3 && p.placement <= 8) points = 9 - p.placement;
+          return sum + points;
+        },
+        0
+      );
+
+      await logAuditEvent({
+        tournamentId: draftId,
+        actionType: "TOURNAMENT_REVERTED",
+        actionCategory: "ADMIN",
+        actorId: null,
+        actorName: "Admin",
+        targetPlayerId: null,
+        targetPlayerName: null,
+        previousValue: {
+          status: "integrated",
+          gameUid: result.revertedFrom.gameUID,
+          fileName: result.revertedFrom.fileName,
+          playerCount: playersRemoved.length,
+          totalPointsAwarded: totalPointsRemoved,
+        },
+        newValue: {
+          status: "in_progress",
+          gameUid: null,
+        },
+        metadata: {
+          playersRemoved,
+          newPlayersDeleted: result._auditData.newPlayersRemoved,
+          entriesDeleted: result.entriesDeleted,
+        },
+        ipAddress,
+      });
+    } catch (auditError) {
+      console.error("Audit logging failed:", auditError);
+      // Don't throw - allow main operation to succeed
+    }
+
+    // Remove internal audit data before returning response
+    const { _auditData, ...responseData } = result;
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Revert error:", error);
     return NextResponse.json(

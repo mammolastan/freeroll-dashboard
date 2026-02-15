@@ -4,6 +4,7 @@ import { emitPlayerJoined } from "@/lib/socketServer";
 import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { TournamentDraftPlayerUpdateInput } from "@/types";
+import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -33,6 +34,19 @@ export async function PUT(
       hitmanName: string | null;
       koPosition: number;
     }> = [];
+
+    // Track audit events to log after transaction completes
+    const auditEventsToLog: Array<{
+      playerId: number;
+      playerName: string;
+      actionType: 'KNOCKOUT_RECORDED' | 'KNOCKOUT_REMOVED' | 'HITMAN_CHANGED' | 'PLACEMENT_SET';
+      previousValue: Record<string, unknown>;
+      newValue: Record<string, unknown>;
+      metadata?: Record<string, unknown> | null;
+    }> = [];
+
+    const ipAddress = getClientIP(request);
+    const adminScreen = getAdminScreen(request);
 
     // Use Prisma transaction to update all players atomically
     const results = await prisma.$transaction(async (tx) => {
@@ -127,6 +141,50 @@ export async function PUT(
             hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
             koPosition: updateData.ko_position as number,
           });
+
+          // Track audit event for knockout
+          auditEventsToLog.push({
+            playerId,
+            playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+            actionType: 'KNOCKOUT_RECORDED',
+            previousValue: {
+              placement: currentPlayer.ko_position,
+              knockedOutBy: null,
+              knockedOutByName: null,
+            },
+            newValue: {
+              placement: updateData.ko_position,
+              knockedOutBy: dataToUpdate.hitman_uid ?? null,
+              knockedOutByName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
+              koPosition: updateData.ko_position,
+            },
+            metadata: {
+              knockedOutAt: dataToUpdate.knockedout_at instanceof Date
+                ? dataToUpdate.knockedout_at.toISOString()
+                : null,
+              adminScreen,
+            },
+          });
+        }
+
+        if (isUndoKnockout) {
+          // Track audit event for knockout removal
+          auditEventsToLog.push({
+            playerId,
+            playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+            actionType: 'KNOCKOUT_REMOVED',
+            previousValue: {
+              placement: currentPlayer.ko_position,
+              knockedOutBy: currentPlayer.hitman_name,
+              koPosition: currentPlayer.ko_position,
+            },
+            newValue: {
+              placement: null,
+              knockedOutBy: null,
+              koPosition: null,
+            },
+            metadata: { adminScreen },
+          });
         }
       }
 
@@ -196,6 +254,27 @@ export async function PUT(
       } catch (feedError) {
         // Log but don't fail the request if feed creation fails
         console.error("Failed to create knockout feed item:", feedError);
+      }
+    }
+
+    // Log audit events for all tracked changes
+    for (const auditEvent of auditEventsToLog) {
+      try {
+        await logAuditEvent({
+          tournamentId: draftId,
+          actionType: auditEvent.actionType,
+          actionCategory: 'ADMIN',
+          actorId: null,
+          actorName: 'Admin',
+          targetPlayerId: auditEvent.playerId,
+          targetPlayerName: auditEvent.playerName,
+          previousValue: auditEvent.previousValue as Record<string, string | number | boolean | null>,
+          newValue: auditEvent.newValue as Record<string, string | number | boolean | null>,
+          metadata: auditEvent.metadata as Record<string, string | number | boolean | null> | null,
+          ipAddress,
+        });
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
       }
     }
 

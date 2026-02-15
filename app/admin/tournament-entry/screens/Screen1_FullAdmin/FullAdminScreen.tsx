@@ -612,7 +612,10 @@ export function FullAdminScreen({
         `/api/tournament-drafts/${currentDraft.id}/players`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Screen": "FullAdmin",
+          },
           body: JSON.stringify({
             player_name: playerData.name,
             player_nickname: playerData.nickname || null,
@@ -722,7 +725,10 @@ export function FullAdminScreen({
               `/api/tournament-drafts/${currentDraft?.id}/players/batch`,
               {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Admin-Screen": "FullAdmin",
+                },
                 body: JSON.stringify({
                   players: updateArray,
                 }),
@@ -868,6 +874,9 @@ export function FullAdminScreen({
         `/api/tournament-drafts/${currentDraft?.id}/players/${playerId}`,
         {
           method: "DELETE",
+          headers: {
+            "X-Admin-Screen": "FullAdmin",
+          },
         },
       );
 
@@ -1009,7 +1018,10 @@ export function FullAdminScreen({
         `/api/tournament-drafts/${currentDraft?.id}/players/${playerId}/move-knockout`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Screen": "FullAdmin",
+          },
           body: JSON.stringify({ afterPlayerId }),
         },
       );

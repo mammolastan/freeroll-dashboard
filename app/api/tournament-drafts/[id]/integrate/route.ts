@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
 import { prisma } from "@/lib/prisma";
+import { logAuditEvent, getClientIP } from "@/lib/auditLog";
 
 interface DraftTournament {
   id: number;
@@ -183,6 +184,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const draftId = parseInt(id);
+  const ipAddress = getClientIP(request);
 
   try {
     const result = await prisma.$transaction(
@@ -333,9 +335,34 @@ export async function POST(
           `;
         }
 
+        // Track new players that were created for audit logging
+        const newPlayersCreated = playersWithPlacements
+          .filter((p) => p.is_new_player)
+          .map((p) => ({
+            playerUid: p.player_uid,
+            playerName: p.player_name,
+          }));
+
+        // Build detailed player data for audit logging
+        const playerDetails = playersWithPlacements.map((p) => {
+          const placementPoints = calculatePlacementPoints(p.placement!);
+          const totalPoints = draft.start_points + placementPoints;
+          return {
+            playerUid: p.player_uid,
+            playerName: p.player_name,
+            placement: p.placement,
+            knockouts: p.knockouts,
+            hitmanName: p.hitman_name,
+            placementPoints,
+            totalPoints,
+            isNewPlayer: p.is_new_player,
+          };
+        });
+
         return {
           success: true,
           fileName,
+          gameUID,
           playersIntegrated: playersWithPlacements.length,
           playersWithPlacements: playersWithPlacements.map((p) => ({
             name: p.player_name,
@@ -343,6 +370,12 @@ export async function POST(
             final_placement: p.placement,
             hitman: p.hitman_name,
           })),
+          // Additional data for audit logging (not exposed in response)
+          _auditData: {
+            playerDetails,
+            newPlayersCreated,
+            startPoints: draft.start_points,
+          },
         };
       },
       {
@@ -352,7 +385,124 @@ export async function POST(
     );
 
     console.log("Tournament integration completed successfully:", result);
-    return NextResponse.json(result);
+
+    // Audit logging - run after transaction succeeds
+    const baseAuditData = {
+      tournamentId: draftId,
+      actorId: null as number | null,
+      actorName: "Admin",
+      ipAddress,
+    };
+
+    try {
+      // 1. Log the main finalization event
+      await logAuditEvent({
+        ...baseAuditData,
+        actionType: "TOURNAMENT_FINALIZED",
+        actionCategory: "ADMIN",
+        targetPlayerId: null,
+        targetPlayerName: null,
+        previousValue: {
+          status: "in_progress",
+          gameUid: null,
+        },
+        newValue: {
+          status: "integrated",
+          gameUid: result.gameUID,
+          fileName: result.fileName,
+        },
+        metadata: {
+          tournamentDraftId: draftId,
+          totalPlayers: result.playersIntegrated,
+        },
+      });
+
+      // 2. Log placements assignment
+      const placementAssignments = result._auditData.playerDetails.map(
+        (p: { playerUid: string | null; playerName: string; placement: number | null }) => ({
+          playerUid: p.playerUid,
+          playerName: p.playerName,
+          placement: p.placement,
+        })
+      );
+
+      await logAuditEvent({
+        ...baseAuditData,
+        actionType: "PLACEMENTS_AUTO_ASSIGNED",
+        actionCategory: "SYSTEM",
+        targetPlayerId: null,
+        targetPlayerName: null,
+        previousValue: null,
+        newValue: {
+          playersProcessed: placementAssignments.length,
+          placements: placementAssignments,
+        },
+        metadata: {
+          gameUid: result.gameUID,
+        },
+      });
+
+      // 3. Log points calculation
+      const pointsAwarded = result._auditData.playerDetails
+        .filter((p: { totalPoints: number }) => p.totalPoints > 0)
+        .map((p: { playerUid: string | null; playerName: string; placement: number | null; totalPoints: number; placementPoints: number }) => ({
+          playerUid: p.playerUid,
+          playerName: p.playerName,
+          placement: p.placement,
+          totalPoints: p.totalPoints,
+          placementPoints: p.placementPoints,
+        }));
+
+      await logAuditEvent({
+        ...baseAuditData,
+        actionType: "POINTS_CALCULATED",
+        actionCategory: "SYSTEM",
+        targetPlayerId: null,
+        targetPlayerName: null,
+        previousValue: null,
+        newValue: {
+          playersAwarded: pointsAwarded.length,
+          totalPointsAwarded: pointsAwarded.reduce(
+            (sum: number, p: { totalPoints: number }) => sum + p.totalPoints,
+            0
+          ),
+          startPoints: result._auditData.startPoints,
+          pointsBreakdown: pointsAwarded,
+        },
+        metadata: {
+          gameUid: result.gameUID,
+          pointsStructure: "standard",
+        },
+      });
+
+      // 4. Log new players created during integration
+      for (const newPlayer of result._auditData.newPlayersCreated) {
+        await logAuditEvent({
+          ...baseAuditData,
+          actionType: "PLAYER_ADDED",
+          actionCategory: "SYSTEM",
+          targetPlayerId: null,
+          targetPlayerName: newPlayer.playerName,
+          previousValue: null,
+          newValue: {
+            playerUid: newPlayer.playerUid,
+            playerName: newPlayer.playerName,
+            isNewPlayer: true,
+          },
+          metadata: {
+            createdDuringIntegration: true,
+            gameUid: result.gameUID,
+          },
+        });
+      }
+    } catch (auditError) {
+      console.error("Audit logging failed:", auditError);
+      // Don't throw - allow main operation to succeed
+    }
+
+    // Remove internal audit data before returning response
+    const { _auditData, ...responseData } = result;
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Integration error:", error);
     return NextResponse.json(
