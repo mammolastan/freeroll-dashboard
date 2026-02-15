@@ -43,7 +43,10 @@ export async function POST(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const { player_name, player_nickname, player_uid, is_new_player } = body;
+    const { player_name, player_nickname, player_uid, is_new_player, added_by } = body;
+
+    // Validate added_by value, default to 'admin'
+    const validAddedBy = ['admin', 'self_checkin', 'kiosk'].includes(added_by) ? added_by : 'admin';
 
     // Check for duplicate player in same tournament
     const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
@@ -59,11 +62,11 @@ export async function POST(
     }
 
     await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players 
+      INSERT INTO tournament_draft_players
       (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, added_by, checked_in_at)
           VALUES (${draftId}, ${player_name}, ${player_nickname}, ${player_uid}, ${
       is_new_player || false
-    }, 'admin', UTC_TIMESTAMP())
+    }, ${validAddedBy}, UTC_TIMESTAMP())
       `;
 
     const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`

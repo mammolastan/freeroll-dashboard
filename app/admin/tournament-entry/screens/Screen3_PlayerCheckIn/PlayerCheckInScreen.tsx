@@ -53,7 +53,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange, curre
     const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(playerData),
+      body: JSON.stringify({ ...playerData, added_by: 'kiosk' }),
     });
 
     if (!response.ok) {

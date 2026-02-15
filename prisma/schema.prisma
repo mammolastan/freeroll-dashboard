@@ -283,11 +283,6 @@ enum TournamentDraftStatus {
   integrated
 }
 
-enum tournament_draft_players_added_by {
-  admin
-  self_checkin
-}
-
 enum tournament_feed_items_item_type {
   knockout
   message
@@ -306,4 +301,10 @@ enum feed_item_reactions_reaction_type {
   diamond
   club
   spade
+}
+
+enum tournament_draft_players_added_by {
+  admin
+  self_checkin
+  kiosk
 }
