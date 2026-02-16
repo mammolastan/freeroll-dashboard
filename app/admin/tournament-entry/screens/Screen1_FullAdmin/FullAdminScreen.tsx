@@ -23,7 +23,9 @@ import {
   ChevronDown,
   Download,
   QrCode,
+  ClipboardList,
 } from "lucide-react";
+import Link from "next/link";
 import { formatGameDate, formatTime } from "@/lib/utils";
 import { QRCodeModal } from "../../QRCodeModal";
 import { GameTimer } from "@/components/Timer/GameTimer";
@@ -1903,6 +1905,15 @@ export function FullAdminScreen({
                       {generatingQR ? "Generating..." : "QR"}
                     </button>
                   )}
+
+                  {/* Audit Log */}
+                  <Link
+                    href={`/admin/audit/${currentDraft?.id}`}
+                    className="flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-700 border border-gray-300 rounded hover:bg-gray-200 text-sm"
+                  >
+                    <ClipboardList size={16} />
+                    Audit Log
+                  </Link>
                 </div>
 
                 {/* Tournament Info Header */}
