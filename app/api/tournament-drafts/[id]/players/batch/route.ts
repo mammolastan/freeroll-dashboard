@@ -1,5 +1,6 @@
 // app/api/tournament-drafts/[id]/players/batch/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
@@ -39,14 +40,16 @@ export async function PUT(
     const auditEventsToLog: Array<{
       playerId: number;
       playerName: string;
-      actionType: 'KNOCKOUT_RECORDED' | 'KNOCKOUT_REMOVED' | 'HITMAN_CHANGED' | 'PLACEMENT_SET';
+      actionType: 'KNOCKOUT_RECORDED' | 'KNOCKOUT_REMOVED' | 'HITMAN_CHANGED' | 'PLACEMENT_SET' | 'ENTRY_FIELD_UPDATED';
       previousValue: Record<string, unknown>;
       newValue: Record<string, unknown>;
       metadata?: Record<string, unknown> | null;
     }> = [];
 
+    const batchId = randomUUID();
     const ipAddress = getClientIP(request);
     const adminScreen = getAdminScreen(request);
+    const totalInBatch = playersToUpdate.length;
 
     // Use Prisma transaction to update all players atomically
     const results = await prisma.$transaction(async (tx) => {
@@ -159,6 +162,9 @@ export async function PUT(
               koPosition: updateData.ko_position,
             },
             metadata: {
+              batchId,
+              batchOperation: true,
+              totalInBatch,
               knockedOutAt: dataToUpdate.knockedout_at instanceof Date
                 ? dataToUpdate.knockedout_at.toISOString()
                 : null,
@@ -183,8 +189,77 @@ export async function PUT(
               knockedOutBy: null,
               koPosition: null,
             },
-            metadata: { adminScreen },
+            metadata: {
+              batchId,
+              batchOperation: true,
+              totalInBatch,
+              adminScreen,
+            },
           });
+        }
+
+        // Track hitman change (when no knockout state change)
+        if (!isKnockout && !isUndoKnockout && currentPlayer && 'hitman_name' in updateData) {
+          const oldHitman = currentPlayer.hitman_name;
+          const newHitman = updateData.hitman_name;
+          if (oldHitman !== newHitman) {
+            auditEventsToLog.push({
+              playerId,
+              playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+              actionType: 'HITMAN_CHANGED',
+              previousValue: {
+                hitmanName: oldHitman,
+              },
+              newValue: {
+                hitmanName: newHitman,
+              },
+              metadata: {
+                batchId,
+                batchOperation: true,
+                totalInBatch,
+                adminScreen,
+              },
+            });
+          }
+        }
+
+        // Track other field changes (when not a knockout event)
+        if (!isKnockout && !isUndoKnockout && currentPlayer) {
+          const fieldChanges: string[] = [];
+          const previousValue: Record<string, unknown> = {};
+          const newValue: Record<string, unknown> = {};
+
+          // Check player_name change
+          if ('player_name' in updateData && updateData.player_name !== currentPlayer.player_name) {
+            fieldChanges.push('player_name');
+            previousValue.player_name = currentPlayer.player_name;
+            newValue.player_name = updateData.player_name;
+          }
+
+          // Check player_nickname change
+          if ('player_nickname' in updateData && updateData.player_nickname !== currentPlayer.player_nickname) {
+            fieldChanges.push('player_nickname');
+            previousValue.player_nickname = currentPlayer.player_nickname;
+            newValue.player_nickname = updateData.player_nickname;
+          }
+
+          // Log if there are field changes (excluding hitman which is logged separately)
+          if (fieldChanges.length > 0) {
+            auditEventsToLog.push({
+              playerId,
+              playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+              actionType: 'ENTRY_FIELD_UPDATED',
+              previousValue,
+              newValue,
+              metadata: {
+                batchId,
+                batchOperation: true,
+                totalInBatch,
+                fieldsChanged: fieldChanges,
+                adminScreen,
+              },
+            });
+          }
         }
       }
 

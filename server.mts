@@ -11,6 +11,7 @@ import {
   getBlindSchedule,
 } from "./lib/blindLevels.mjs";
 import { TypedServer } from "./types/socket.js";
+import { AuditActionType, AuditActionCategory, AuditLogValue, AuditValue } from "./types/audit.js";
 
 // Initialize Prisma Client
 const globalForPrisma = globalThis as unknown as {
@@ -20,6 +21,44 @@ const globalForPrisma = globalThis as unknown as {
 const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+// Socket audit logging helper
+interface SocketAuditParams {
+  tournamentId: number;
+  actionType: AuditActionType;
+  actionCategory: AuditActionCategory;
+  actorId?: number | null;
+  actorName?: string | null;
+  previousValue?: AuditLogValue | null;
+  newValue?: AuditLogValue | null;
+  metadata?: Record<string, AuditValue> | null;
+  ipAddress?: string | null;
+}
+
+async function logSocketAuditEvent(params: SocketAuditParams): Promise<void> {
+  try {
+    await prisma.tournamentAuditLog.create({
+      data: {
+        tournament_id: params.tournamentId,
+        action_type: params.actionType,
+        action_category: params.actionCategory,
+        actor_id: params.actorId ?? null,
+        actor_name: params.actorName ?? null,
+        target_player_id: null,
+        target_player_name: null,
+        previous_value: params.previousValue !== null && params.previousValue !== undefined
+          ? JSON.stringify(params.previousValue) : null,
+        new_value: params.newValue !== null && params.newValue !== undefined
+          ? JSON.stringify(params.newValue) : null,
+        metadata: params.metadata !== null && params.metadata !== undefined
+          ? JSON.stringify(params.metadata) : null,
+        ip_address: params.ipAddress ?? null,
+      },
+    });
+  } catch (error) {
+    console.error('Socket audit logging failed:', error);
+  }
+}
 
 // Type for raw query results from Prisma
 type RawQueryResult = Record<string, unknown>;
@@ -199,19 +238,90 @@ async function updateTimer(tournamentId: number): Promise<TimerState | null> {
         timer.timeRemaining === 0 &&
         timer.currentLevel < timer.blindLevels.length
       ) {
-        const currentLevel = timer.blindLevels[timer.currentLevel - 1];
+        const previousLevel = timer.currentLevel;
+        const currentLevelData = timer.blindLevels[timer.currentLevel - 1];
         timer.currentLevel++;
         const nextLevel = timer.blindLevels[timer.currentLevel - 1];
         if (nextLevel) {
           timer.timeRemaining = nextLevel.duration * 60;
           await postBlindLevelChangeFeedItem(tournamentId, timer.currentLevel, nextLevel);
 
+          // Audit log: AUTO_BLIND_ADVANCE (System action)
+          await logSocketAuditEvent({
+            tournamentId,
+            actionType: 'AUTO_BLIND_ADVANCE',
+            actionCategory: 'SYSTEM',
+            actorId: null,
+            actorName: null,
+            previousValue: {
+              blindLevel: previousLevel,
+              timeRemaining: 0,
+            },
+            newValue: {
+              blindLevel: timer.currentLevel,
+              timeRemaining: timer.timeRemaining,
+              isBreak: nextLevel.isbreak ?? false,
+            },
+            metadata: {
+              auto: true,
+              previousLevelDuration: currentLevelData?.duration ?? null,
+            },
+            ipAddress: null,
+          });
+
           // If current level is a break, pause the timer after advancing to next level
-          if (currentLevel?.isbreak) {
+          if (currentLevelData?.isbreak) {
             timer.isPaused = true;
             console.log(
               `Break ended for tournament ${tournamentId}, pausing at level ${timer.currentLevel}`
             );
+
+            // Audit log: BREAK_ENDED (System action)
+            await logSocketAuditEvent({
+              tournamentId,
+              actionType: 'BREAK_ENDED',
+              actionCategory: 'SYSTEM',
+              actorId: null,
+              actorName: null,
+              previousValue: {
+                isBreak: true,
+                blindLevel: previousLevel,
+              },
+              newValue: {
+                isBreak: false,
+                blindLevel: timer.currentLevel,
+                isPaused: true,
+              },
+              metadata: {
+                breakLevelNumber: previousLevel,
+                resumingAtLevel: timer.currentLevel,
+              },
+              ipAddress: null,
+            });
+          }
+
+          // If new level is a break, log BREAK_STARTED
+          if (nextLevel.isbreak) {
+            await logSocketAuditEvent({
+              tournamentId,
+              actionType: 'BREAK_STARTED',
+              actionCategory: 'SYSTEM',
+              actorId: null,
+              actorName: null,
+              previousValue: {
+                isBreak: false,
+                blindLevel: previousLevel,
+              },
+              newValue: {
+                isBreak: true,
+                blindLevel: timer.currentLevel,
+                breakDuration: nextLevel.duration,
+              },
+              metadata: {
+                breakAfterLevel: previousLevel,
+              },
+              ipAddress: null,
+            });
           }
         }
         stateChanged = true;
@@ -609,6 +719,12 @@ app.prepare().then(async () => {
     }, 30000); // 30 seconds
 
     io.on("connection", (socket) => {
+      // Store client IP for audit logging
+      const forwardedFor = socket.handshake.headers['x-forwarded-for'];
+      const clientIP = typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0].trim()
+        : socket.handshake.address || null;
+      socket.data.clientIP = clientIP;
 
       socket.on("joinRoom", async (room) => {
         try {
@@ -683,8 +799,18 @@ app.prepare().then(async () => {
       });
 
       // Timer event handlers
-      socket.on("timer:start", async ({ tournamentId }) => {
+      socket.on("timer:start", async ({ tournamentId, actor }) => {
         console.log(`Timer start requested for tournament ${tournamentId}`);
+
+        // Capture state before starting for audit log
+        const previousState = timerStates.get(tournamentId);
+        const previousValue = previousState ? {
+          isRunning: previousState.isRunning,
+          isPaused: previousState.isPaused,
+          blindLevel: previousState.currentLevel,
+          timeRemaining: previousState.timeRemaining,
+        } : null;
+
         const timerState = await startTimer(tournamentId);
 
         if (!timerState) {
@@ -714,9 +840,38 @@ app.prepare().then(async () => {
         if (timerState.currentLevel === 1 && timerState.blindLevels[0]) {
           await postBlindLevelChangeFeedItem(tournamentId, 1, timerState.blindLevels[0]);
         }
+
+        // Audit log: TIMER_STARTED
+        await logSocketAuditEvent({
+          tournamentId,
+          actionType: 'TIMER_STARTED',
+          actionCategory: 'ADMIN',
+          actorId: actor?.id ?? null,
+          actorName: actor?.name ?? 'Admin',
+          previousValue,
+          newValue: {
+            isRunning: true,
+            isPaused: false,
+            blindLevel: timerState.currentLevel,
+            timeRemaining: timerState.timeRemaining,
+          },
+          metadata: {
+            firstStart: timerState.currentLevel === 1,
+          },
+          ipAddress: socket.data.clientIP,
+        });
       });
 
-      socket.on("timer:pause", async ({ tournamentId }) => {
+      socket.on("timer:pause", async ({ tournamentId, actor }) => {
+        // Capture state before pausing for audit log
+        const previousState = timerStates.get(tournamentId);
+        const previousValue = previousState ? {
+          isRunning: previousState.isRunning,
+          isPaused: previousState.isPaused,
+          blindLevel: previousState.currentLevel,
+          timeRemaining: previousState.timeRemaining,
+        } : null;
+
         const timerState = await pauseTimer(tournamentId);
         if (!timerState) {
           console.error(`Cannot pause timer - tournament ${tournamentId} not found`);
@@ -733,9 +888,38 @@ app.prepare().then(async () => {
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer paused for tournament ${tournamentId}`);
+
+        // Audit log: TIMER_PAUSED
+        await logSocketAuditEvent({
+          tournamentId,
+          actionType: 'TIMER_PAUSED',
+          actionCategory: 'ADMIN',
+          actorId: actor?.id ?? null,
+          actorName: actor?.name ?? 'Admin',
+          previousValue,
+          newValue: {
+            isRunning: timerState.isRunning,
+            isPaused: true,
+            blindLevel: timerState.currentLevel,
+            timeRemaining: timerState.timeRemaining,
+          },
+          metadata: {
+            pausedAtLevel: timerState.currentLevel,
+          },
+          ipAddress: socket.data.clientIP,
+        });
       });
 
-      socket.on("timer:resume", async ({ tournamentId }) => {
+      socket.on("timer:resume", async ({ tournamentId, actor }) => {
+        // Capture state before resuming for audit log
+        const previousState = timerStates.get(tournamentId);
+        const previousValue = previousState ? {
+          isRunning: previousState.isRunning,
+          isPaused: previousState.isPaused,
+          blindLevel: previousState.currentLevel,
+          timeRemaining: previousState.timeRemaining,
+        } : null;
+
         const timerState = await resumeTimer(tournamentId);
         if (!timerState) {
           console.error(`Cannot resume timer - tournament ${tournamentId} not found`);
@@ -752,9 +936,38 @@ app.prepare().then(async () => {
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer resumed for tournament ${tournamentId}`);
+
+        // Audit log: TIMER_RESUMED
+        await logSocketAuditEvent({
+          tournamentId,
+          actionType: 'TIMER_RESUMED',
+          actionCategory: 'ADMIN',
+          actorId: actor?.id ?? null,
+          actorName: actor?.name ?? 'Admin',
+          previousValue,
+          newValue: {
+            isRunning: true,
+            isPaused: false,
+            blindLevel: timerState.currentLevel,
+            timeRemaining: timerState.timeRemaining,
+          },
+          metadata: {
+            resumedFromPause: true,
+          },
+          ipAddress: socket.data.clientIP,
+        });
       });
 
-      socket.on("timer:reset", async ({ tournamentId }) => {
+      socket.on("timer:reset", async ({ tournamentId, actor }) => {
+        // Capture state before resetting for audit log
+        const previousState = timerStates.get(tournamentId);
+        const previousValue = previousState ? {
+          isRunning: previousState.isRunning,
+          isPaused: previousState.isPaused,
+          blindLevel: previousState.currentLevel,
+          timeRemaining: previousState.timeRemaining,
+        } : null;
+
         const timerState = await resetTimer(tournamentId);
         if (!timerState) {
           console.error(`Cannot reset timer - tournament ${tournamentId} not found`);
@@ -771,6 +984,26 @@ app.prepare().then(async () => {
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer reset for tournament ${tournamentId}`);
+
+        // Audit log: TIMER_RESET
+        await logSocketAuditEvent({
+          tournamentId,
+          actionType: 'TIMER_RESET',
+          actionCategory: 'ADMIN',
+          actorId: actor?.id ?? null,
+          actorName: actor?.name ?? 'Admin',
+          previousValue,
+          newValue: {
+            isRunning: false,
+            isPaused: false,
+            blindLevel: 1,
+            timeRemaining: timerState.timeRemaining,
+          },
+          metadata: {
+            resetToLevel: 1,
+          },
+          ipAddress: socket.data.clientIP,
+        });
       });
 
       socket.on("timer:requestSync", async ({ tournamentId }) => {
@@ -799,13 +1032,16 @@ app.prepare().then(async () => {
         socket.emit("timer:sync", timerPayload);
       });
 
-      socket.on("timer:nextLevel", async ({ tournamentId }) => {
+      socket.on("timer:nextLevel", async ({ tournamentId, actor }) => {
         const timer = await getOrCreateTimerState(tournamentId);
         if (!timer) {
           console.error(`Cannot advance timer - tournament ${tournamentId} not found`);
           return;
         }
         if (timer.currentLevel < timer.blindLevels.length) {
+          const previousLevel = timer.currentLevel;
+          const previousTimeRemaining = timer.timeRemaining;
+
           timer.currentLevel++;
           const nextLevel = timer.blindLevels[timer.currentLevel - 1];
           if (nextLevel) {
@@ -829,16 +1065,42 @@ app.prepare().then(async () => {
           console.log(
             `Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId}`
           );
+
+          // Audit log: BLIND_LEVEL_CHANGED
+          await logSocketAuditEvent({
+            tournamentId,
+            actionType: 'BLIND_LEVEL_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: actor?.id ?? null,
+            actorName: actor?.name ?? 'Admin',
+            previousValue: {
+              blindLevel: previousLevel,
+              timeRemaining: previousTimeRemaining,
+            },
+            newValue: {
+              blindLevel: timer.currentLevel,
+              timeRemaining: timer.timeRemaining,
+            },
+            metadata: {
+              direction: 'next',
+              manualChange: true,
+              isBreak: nextLevel?.isbreak ?? false,
+            },
+            ipAddress: socket.data.clientIP,
+          });
         }
       });
 
-      socket.on("timer:prevLevel", async ({ tournamentId }) => {
+      socket.on("timer:prevLevel", async ({ tournamentId, actor }) => {
         const timer = await getOrCreateTimerState(tournamentId);
         if (!timer) {
           console.error(`Cannot go to previous level - tournament ${tournamentId} not found`);
           return;
         }
         if (timer.currentLevel > 1) {
+          const previousLevel = timer.currentLevel;
+          const previousTimeRemaining = timer.timeRemaining;
+
           timer.currentLevel--;
           const prevLevel = timer.blindLevels[timer.currentLevel - 1];
           if (prevLevel) {
@@ -862,15 +1124,41 @@ app.prepare().then(async () => {
           console.log(
             `Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId}`
           );
+
+          // Audit log: BLIND_LEVEL_CHANGED
+          await logSocketAuditEvent({
+            tournamentId,
+            actionType: 'BLIND_LEVEL_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: actor?.id ?? null,
+            actorName: actor?.name ?? 'Admin',
+            previousValue: {
+              blindLevel: previousLevel,
+              timeRemaining: previousTimeRemaining,
+            },
+            newValue: {
+              blindLevel: timer.currentLevel,
+              timeRemaining: timer.timeRemaining,
+            },
+            metadata: {
+              direction: 'previous',
+              manualChange: true,
+              isBreak: prevLevel?.isbreak ?? false,
+            },
+            ipAddress: socket.data.clientIP,
+          });
         }
       });
 
-      socket.on("timer:setTime", async ({ tournamentId, timeInSeconds }) => {
+      socket.on("timer:setTime", async ({ tournamentId, timeInSeconds, actor }) => {
         const timer = await getOrCreateTimerState(tournamentId);
         if (!timer) {
           console.error(`Cannot set time - tournament ${tournamentId} not found`);
           return;
         }
+
+        const previousTimeRemaining = timer.timeRemaining;
+
         timer.timeRemaining = Math.max(0, timeInSeconds);
         timer.lastUpdate = Date.now();
 
@@ -890,9 +1178,29 @@ app.prepare().then(async () => {
         console.log(
           `Timer set to ${timeInSeconds} seconds for tournament ${tournamentId}`
         );
+
+        // Audit log: TIMER_TIME_SET
+        await logSocketAuditEvent({
+          tournamentId,
+          actionType: 'TIMER_TIME_SET',
+          actionCategory: 'ADMIN',
+          actorId: actor?.id ?? null,
+          actorName: actor?.name ?? 'Admin',
+          previousValue: {
+            timeRemaining: previousTimeRemaining,
+          },
+          newValue: {
+            timeRemaining: timer.timeRemaining,
+          },
+          metadata: {
+            blindLevel: timer.currentLevel,
+            manualTimeAdjustment: true,
+          },
+          ipAddress: socket.data.clientIP,
+        });
       });
 
-      socket.on("timer:setSchedule", async ({ tournamentId, scheduleId }) => {
+      socket.on("timer:setSchedule", async ({ tournamentId, scheduleId, actor }) => {
         if (!timerStates.has(tournamentId)) {
           return; // Timer not initialized yet
         }
@@ -906,6 +1214,9 @@ app.prepare().then(async () => {
           });
           return;
         }
+
+        // Capture previous state for audit log
+        const previousLevelCount = timer.blindLevels.length;
 
         try {
           // Update the timer with new blind levels
@@ -928,6 +1239,24 @@ app.prepare().then(async () => {
           console.log(
             `Timer schedule changed to ${scheduleId} for tournament ${tournamentId}`
           );
+
+          // Audit log: BLIND_SCHEDULE_CHANGED
+          await logSocketAuditEvent({
+            tournamentId,
+            actionType: 'BLIND_SCHEDULE_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: actor?.id ?? null,
+            actorName: actor?.name ?? 'Admin',
+            previousValue: {
+              levelCount: previousLevelCount,
+            },
+            newValue: {
+              scheduleName: scheduleId,
+              levelCount: newBlindLevels.length,
+            },
+            metadata: null,
+            ipAddress: socket.data.clientIP,
+          });
         } catch (error) {
           console.error("Error changing timer schedule:", error);
           socket.emit("timer:error", { message: "Failed to change schedule" });

@@ -219,20 +219,20 @@ export function MinimalGameTimer({
   const handleStart = useCallback(() => {
     enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
-      socket.emit('timer:start', { tournamentId });
+      socket.emit('timer:start', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
   }, [tournamentId, enableAudio]);
 
   const handlePause = useCallback(() => {
     if (tournamentId) {
-      socket.emit('timer:pause', { tournamentId });
+      socket.emit('timer:pause', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
   }, [tournamentId]);
 
   const handleResume = useCallback(() => {
     enableAudio(); // Enable audio on user interaction
     if (tournamentId) {
-      socket.emit('timer:resume', { tournamentId });
+      socket.emit('timer:resume', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
   }, [tournamentId, enableAudio]);
 
@@ -266,13 +266,13 @@ export function MinimalGameTimer({
 
   const handleNextLevel = () => {
     if (tournamentId && timerState) {
-      socket.emit('timer:nextLevel', { tournamentId });
+      socket.emit('timer:nextLevel', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
   };
 
   const handlePrevLevel = () => {
     if (tournamentId && timerState) {
-      socket.emit('timer:prevLevel', { tournamentId });
+      socket.emit('timer:prevLevel', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
   };
 
@@ -298,7 +298,7 @@ export function MinimalGameTimer({
     if (tournamentId && editMinutes && editSeconds) {
       const totalSeconds = parseInt(editMinutes) * 60 + parseInt(editSeconds);
       if (totalSeconds >= 0 && totalSeconds <= 99 * 60 + 59) {
-        socket.emit('timer:setTime', { tournamentId, timeInSeconds: totalSeconds });
+        socket.emit('timer:setTime', { tournamentId, timeInSeconds: totalSeconds, actor: { id: null, name: 'Admin' } });
         setIsEditingTime(false);
       }
     }

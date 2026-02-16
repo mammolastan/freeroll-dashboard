@@ -33,14 +33,21 @@ export async function PUT(
     const originalKoPosition = currentPlayerState[0].ko_position;
     const playerName = String(currentPlayerState[0].player_nickname || currentPlayerState[0].player_name);
 
-    // Get all knocked out players ordered by knockedout_at, then id
+    // Get all knocked out players ordered by knockedout_at, then id (include player_name for audit)
     const knockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, knockedout_at
+      SELECT id, knockedout_at, player_name, player_nickname
       FROM tournament_draft_players
       WHERE tournament_draft_id = ${draftId}
         AND knockedout_at IS NOT NULL
       ORDER BY knockedout_at ASC, id ASC
     `;
+
+    // Capture previous order for audit logging
+    const previousOrder = knockedOutPlayers.map((p, i) => ({
+      playerId: Number(p.id),
+      playerName: String(p.player_nickname || p.player_name),
+      koPosition: i + 1,
+    }));
 
     // Find the player being moved
     const movingPlayer = knockedOutPlayers.find(p => Number(p.id) === playerId);
@@ -176,6 +183,34 @@ export async function PUT(
       // Audit logging for knockout order change
       const newKoPosition = updatedPlayer.ko_position;
       if (originalKoPosition !== newKoPosition) {
+        // Fetch new order for audit snapshot
+        const newKnockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
+          SELECT id, player_name, player_nickname
+          FROM tournament_draft_players
+          WHERE tournament_draft_id = ${draftId}
+            AND knockedout_at IS NOT NULL
+          ORDER BY knockedout_at ASC, id ASC
+        `;
+
+        const newOrder = newKnockedOutPlayers.map((p, i) => ({
+          playerId: Number(p.id),
+          playerName: String(p.player_nickname || p.player_name),
+          koPosition: i + 1,
+        }));
+
+        // Calculate direction and affected players
+        const oldPos = typeof originalKoPosition === 'number' ? originalKoPosition : 0;
+        const newPos = typeof newKoPosition === 'number' ? newKoPosition : 0;
+        const direction = newPos < oldPos ? 'up' : 'down';
+
+        // Count affected players by comparing old and new orders
+        let affectedPlayers = 0;
+        for (let i = 0; i < Math.max(previousOrder.length, newOrder.length); i++) {
+          if (previousOrder[i]?.playerId !== newOrder[i]?.playerId) {
+            affectedPlayers++;
+          }
+        }
+
         try {
           await logAuditEvent({
             tournamentId: draftId,
@@ -192,8 +227,12 @@ export async function PUT(
               koPosition: typeof newKoPosition === 'number' ? newKoPosition : null,
             },
             metadata: {
+              direction,
               afterPlayerId: afterPlayerId,
               shiftedCount: playersToShift.length,
+              affectedPlayers,
+              previousOrder,
+              newOrder,
               adminScreen: getAdminScreen(request),
             },
             ipAddress: getClientIP(request),
