@@ -90,15 +90,7 @@ function KnockoutAvatar({
 }
 
 // Knockout Item - VS Card Style
-function KnockoutItem({
-  item,
-  totalPlayers,
-  startPoints = 0,
-  onReact,
-  reactionBalance,
-  canReact = false,
-  tournamentId,
-}: FeedItemProps) {
+function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -123,147 +115,143 @@ function KnockoutItem({
   const isBubble = placement === 9;
   const isFirstBlood = item.ko_position === 1;
 
+  // Determine the left icon based on knockout type
+  const LeftIcon = () => {
+    if (isFirstBlood) {
+      return <span className="text-red-500 text-3xl">🩸</span>;
+    }
+    if (isBubble) {
+      return (
+        <Image
+          src="/images/sad-bubble.png"
+          alt="Bubble"
+          width={32}
+          height={32}
+          className="!h-12 !w-12"
+        />
+      );
+    }
+    return <Skull className="h-8 w-8 text-red-400/80" />;
+  };
+
   return (
-    <div className="flex flex-col gap-2 p-3 hover:bg-gray-800/30 transition-colors">
-      {/* VS Card Layout */}
-      <div className="flex items-center gap-1">
-        {/* First Blood: Show hitman first */}
-        {isFirstBlood ? (
-          <>
-            {/* Blood Icon */}
-            <div className="flex-shrink-0 px-1">
-              <span className="text-red-500 text-base">🩸</span>
-            </div>
-            {/* Hitman Avatar */}
-            <KnockoutAvatar
-              photoUrl={item.hitman_photo_url}
-              name={hitmanDisplay || "Unknown"}
-              uid={item.hitman_uid}
-              isEliminated={false}
-            />
+    <div className="flex hover:bg-gray-800/30 transition-colors">
+      {/* Full-height flush-left icon column with diagonal stripes */}
+      <div
+        className="flex-shrink-0 w-12 flex items-center justify-center"
+        style={{
+          background: `repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 4px,
+            rgba(75, 85, 99, 0.3) 4px,
+            rgba(75, 85, 99, 0.3) 5px
+          )`,
+        }}
+      >
+        <LeftIcon />
+      </div>
 
-            {/* Hitman Name */}
-            <span className="text-sm font-medium text-cyan-400">
-              {hitmanDisplay || "Unknown"}
-            </span>
+      {/* Content column */}
+      <div className="flex-1 flex flex-col gap-1 p-3">
+        {/* VS Card Layout */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* First Blood: Show hitman first */}
+          {isFirstBlood ? (
+            <>
+              {/* Hitman Avatar */}
+              <KnockoutAvatar
+                photoUrl={item.hitman_photo_url}
+                name={hitmanDisplay || "Unknown"}
+                uid={item.hitman_uid}
+                isEliminated={false}
+              />
 
-            {/* Action text */}
-            <span className="text-sm">
-              <span className="text-gray-500 text-xs">drew 1st blood. </span>
-              <span className="text-red-400 font-medium">
+              {/* Hitman Name */}
+              <span className="text-sm font-medium text-cyan-400">
+                {hitmanDisplay || "Unknown"}
+              </span>
+
+              {/* Action text */}
+              <span className="text-sm">
+                <span className="text-gray-500 text-xs">drew 1st blood. </span>
+                <span className="text-red-400 font-medium">
+                  {item.eliminated_player_name}
+                </span>
+                <span className="text-gray-500 text-xs"> eliminated.</span>
+              </span>
+            </>
+          ) : isBubble ? (
+            <>
+              {/* Eliminated Player Avatar */}
+              <KnockoutAvatar
+                photoUrl={item.eliminated_player_photo_url}
+                name={item.eliminated_player_name || "Unknown"}
+                uid={item.eliminated_player_uid}
+                isEliminated={true}
+              />
+
+              {/* Eliminated Player Name */}
+              <span className="text-sm font-medium text-red-400">
                 {item.eliminated_player_name}
               </span>
-              <span className="text-gray-500 text-xs"> eliminated.</span>
-            </span>
-          </>
-        ) : isBubble ? (
-          <>
-            {/* Bubble Icon */}
-            <div className="flex-shrink-0">
-              <Image
-                src="/images/sad-bubble.png"
-                alt="Bubble"
-                width={48}
-                height={48}
-                className="!h-12 !w-12"
+
+              {/* Action text */}
+              <span className="text-gray-500 text-xs">burst the bubble!</span>
+            </>
+          ) : (
+            <>
+              {/* Regular knockout: Eliminated Player Avatar */}
+              <KnockoutAvatar
+                photoUrl={item.eliminated_player_photo_url}
+                name={item.eliminated_player_name || "Unknown"}
+                uid={item.eliminated_player_uid}
+                isEliminated={true}
               />
-            </div>
 
-            {/* Eliminated Player Avatar */}
-            <KnockoutAvatar
-              photoUrl={item.eliminated_player_photo_url}
-              name={item.eliminated_player_name || "Unknown"}
-              uid={item.eliminated_player_uid}
-              isEliminated={true}
-            />
-
-            {/* Eliminated Player Name */}
-            <span className="text-sm font-medium text-red-400">
-              {item.eliminated_player_name}
-            </span>
-
-            {/* Action text */}
-            <span className="text-gray-500 text-xs">burst the bubble!</span>
-          </>
-        ) : (
-          <>
-            {/* Regular knockout: Eliminated Player Avatar */}
-            {/* Skull Icon */}
-            <div className="flex-shrink-0 px-1">
-              <Skull className="h-5 w-5 text-red-400/80" />
-            </div>
-            <KnockoutAvatar
-              photoUrl={item.eliminated_player_photo_url}
-              name={item.eliminated_player_name || "Unknown"}
-              uid={item.eliminated_player_uid}
-              isEliminated={true}
-            />
-
-            {/* Eliminated Player Name */}
-            <span className="text-sm font-medium text-red-400">
-              {item.eliminated_player_name}
-            </span>
-
-            {/* Hitman / Action text */}
-            <span className="text-sm">
-              <span className="text-gray-500 text-xs">KO&apos;d by </span>
-              <span className="text-cyan-400 font-medium">
-                {hitmanDisplay || "unknown"}
+              {/* Eliminated Player Name */}
+              <span className="text-sm font-medium text-red-400">
+                {item.eliminated_player_name}
               </span>
+
+              {/* Hitman / Action text */}
+              <span className="text-sm">
+                <span className="text-gray-500 text-xs">KO&apos;d by </span>
+                <span className="text-cyan-400 font-medium">
+                  {hitmanDisplay || "unknown"}
+                </span>
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Meta info row */}
+        <div className="flex items-center gap-2">
+          {totalPoints > 0 && (
+            <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+              <Star
+                size={10}
+                className="fill-current"
+              />
+              {totalPoints} point{totalPoints !== 1 ? "s" : ""}
             </span>
-          </>
-        )}
-
-        {/* Spacer to push meta to the right */}
-        <div className="flex-1" />
+          )}
+          <span className="text-xs text-gray-500">
+            {formatRelativeTime(item.created_at)}
+          </span>
+          {isFirstBlood && (
+            <span className="text-xs text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
+              First Blood
+            </span>
+          )}
+          {placement !== null && (
+            <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
+              {placement}
+              {getOrdinalSuffix(placement)} place
+            </span>
+          )}
+        </div>
       </div>
-
-      {/* Meta info row */}
-      <div className="flex items-center gap-2">
-        {totalPoints > 0 && (
-          <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
-            <Star
-              size={10}
-              className="fill-current"
-            />
-            {totalPoints} point{totalPoints !== 1 ? "s" : ""}
-          </span>
-        )}
-        <span className="text-xs text-gray-500">
-          {formatRelativeTime(item.created_at)}
-        </span>
-        {isFirstBlood && (
-          <span className="text-xs text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
-            First Blood
-          </span>
-        )}
-        {placement !== null && (
-          <span className="text-xs text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">
-            {placement}
-            {getOrdinalSuffix(placement)} place
-          </span>
-        )}
-      </div>
-
-      {/* Reactions */}
-      {onReact && (
-        <ReactionBar
-          itemId={String(item.id)}
-          totals={
-            item.reactions?.totals || {
-              heart: 0,
-              diamond: 0,
-              club: 0,
-              spade: 0,
-            }
-          }
-          mine={item.reactions?.mine}
-          balance={reactionBalance ?? null}
-          canReact={canReact}
-          onReact={onReact}
-          tournamentId={tournamentId}
-        />
-      )}
     </div>
   );
 }
