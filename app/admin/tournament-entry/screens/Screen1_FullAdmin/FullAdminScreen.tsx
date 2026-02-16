@@ -2130,7 +2130,7 @@ export function FullAdminScreen({
             )}
 
             {/* Tournament Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   Date
@@ -2142,6 +2142,20 @@ export function FullAdminScreen({
                   )}
                   onChange={(e) =>
                     updateTournamentField("tournament_date", e.target.value)
+                  }
+                  className="w-full px-3 py-2 border rounded text-black"
+                  disabled={currentDraft?.status === "integrated"}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={currentDraft?.tournament_time || ""}
+                  onChange={(e) =>
+                    updateTournamentField("tournament_time", e.target.value)
                   }
                   className="w-full px-3 py-2 border rounded text-black"
                   disabled={currentDraft?.status === "integrated"}
