@@ -12,8 +12,15 @@ import { v4 as uuidv4 } from "uuid";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "feed-photos");
 
-// Allowed file types
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+// Allowed file types (including HEIC/HEIF for iPhone photos)
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
 
 // Max file size before compression (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;

@@ -181,12 +181,19 @@ export function TDMessagesScreen({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    // Validate file type (including HEIC/HEIF for iPhone photos)
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/heic",
+      "image/heif",
+    ];
     if (!validTypes.includes(file.type)) {
       setPhotoFeedback({
         type: "error",
-        text: "Invalid file type. Use JPG, PNG, GIF, or WebP.",
+        text: "Invalid file type. Use JPG, PNG, GIF, WebP, or HEIC.",
       });
       return;
     }
