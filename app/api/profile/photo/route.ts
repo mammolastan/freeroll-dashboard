@@ -4,13 +4,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, unlink, mkdir } from "fs/promises";
+import { unlink, mkdir } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import sharp from "sharp";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
+
+// Sharp processing settings
+const MAX_DIMENSION = 800;
+const WEBP_QUALITY = 80;
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
@@ -38,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type. Allowed: JPG, PNG, GIF, WebP" },
+        { error: "Invalid file type. Allowed: JPG, PNG, GIF, WebP, HEIC" },
         { status: 400 }
       );
     }
@@ -53,12 +65,11 @@ export async function POST(request: NextRequest) {
 
     await ensureUploadDir();
 
-    // Get file extension
-    const ext = file.type.split("/")[1].replace("jpeg", "jpg");
-    const filename = `${session.user.uid}.${ext}`;
+    // Always save as WebP for consistency and transparency support
+    const filename = `${session.user.uid}.webp`;
     const filepath = path.join(UPLOAD_DIR, filename);
 
-    // Delete old photo if it exists (might have different extension)
+    // Delete old photo if it exists (might have different extension from before)
     const player = await prisma.player.findUnique({
       where: { uid: session.user.uid },
       select: { photo_url: true },
@@ -76,10 +87,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Write new file
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    // Read file buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Process and compress image with Sharp
+    // Resize to max dimension while maintaining aspect ratio, convert to WebP
+    await sharp(buffer)
+      .resize(MAX_DIMENSION, MAX_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: WEBP_QUALITY })
+      .toFile(filepath);
 
     // Update database with cache-busting timestamp
     const timestamp = Date.now();
@@ -114,8 +134,8 @@ export async function DELETE() {
     });
 
     if (player?.photo_url) {
-      // Delete file
-      const filename = player.photo_url.split("/").pop();
+      // Delete file (strip query string from filename)
+      const filename = player.photo_url.split("/").pop()?.split("?")[0];
       if (filename) {
         const filepath = path.join(UPLOAD_DIR, filename);
         try {
