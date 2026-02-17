@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
+import { logAuditEvent, getClientIP } from "@/lib/auditlog";
 import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -184,6 +185,19 @@ export async function POST(
     } catch (broadcastError) {
       console.error("Failed to broadcast photo feed item:", broadcastError);
     }
+
+    // Log audit event
+    await logAuditEvent({
+      tournamentId,
+      actionType: "PHOTO_UPLOADED",
+      actionCategory: "ADMIN",
+      newValue: {
+        filename,
+        caption: finalCaption,
+        feedItemId: serializedItem.id,
+      },
+      ipAddress: getClientIP(request),
+    });
 
     return NextResponse.json({ item: serializedItem });
   } catch (error) {

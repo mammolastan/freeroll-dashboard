@@ -40,7 +40,10 @@ export type AuditActionType =
     | 'AUTO_CALCULATE_TRIGGERED'
     | 'PLACEMENTS_AUTO_ASSIGNED'
     | 'POINTS_CALCULATED'
-    | 'AUTO_BLIND_ADVANCE';
+    | 'AUTO_BLIND_ADVANCE'
+
+    // Feed Actions
+    | 'PHOTO_UPLOADED';
 
 export type AuditActionCategory = 'ADMIN' | 'PLAYER' | 'SYSTEM';
 
