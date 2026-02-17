@@ -19,4 +19,10 @@ const getSocketUrl = () => {
   return "http://localhost:3000";
 };
 
-export const socket = io(getSocketUrl());
+export const socket = io(getSocketUrl(), {
+  reconnection: true,
+  reconnectionAttempts: Infinity, // Keep trying forever
+  reconnectionDelay: 1000, // Start with 1 second
+  reconnectionDelayMax: 10000, // Max 10 seconds between attempts
+  timeout: 20000, // Connection timeout
+});

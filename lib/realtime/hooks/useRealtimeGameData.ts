@@ -6,11 +6,16 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { socket } from '@/lib/socketClient';
 import { Tournament, Player, GameViewData } from '../types';
 
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+
 export function useRealtimeGameData(tournamentId: string | number) {
   const [gameData, setGameData] = useState<GameViewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const hasFetched = useRef(false);
+  const reconnectIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const tournamentIdNum = typeof tournamentId === 'string' ? parseInt(tournamentId) : tournamentId;
 
@@ -84,20 +89,103 @@ export function useRealtimeGameData(tournamentId: string | number) {
     };
   }, [tournamentIdNum, fetchGameData]);
 
+  // Manual reconnect function
+  const manualReconnect = useCallback(() => {
+    console.log('[Socket] Manual reconnect triggered');
+    setConnectionStatus('reconnecting');
+
+    // Force disconnect and reconnect
+    if (socket.connected) {
+      socket.disconnect();
+    }
+    socket.connect();
+  }, []);
+
   // Socket.IO real-time updates
   useEffect(() => {
     if (!tournamentIdNum) return;
 
+    // Clear any existing fallback interval
+    if (reconnectIntervalRef.current) {
+      clearInterval(reconnectIntervalRef.current);
+      reconnectIntervalRef.current = null;
+    }
+
     // Connect and join room
     socket.on("connect", () => {
       console.log("Connected to server with ID:", socket.id);
+      setConnectionStatus('connected');
+      setError(null); // Clear any previous errors
+      setReconnectAttempt(0);
+
+      // Clear fallback reconnect interval on successful connection
+      if (reconnectIntervalRef.current) {
+        clearInterval(reconnectIntervalRef.current);
+        reconnectIntervalRef.current = null;
+      }
+
       socket.emit("joinRoom", tournamentIdNum.toString());
+
+      // Refresh data on reconnect to catch any missed updates
+      fetchGameData().then(data => {
+        if (data) setGameData(data);
+      }).catch(err => {
+        console.error('[GameData] Error refreshing after reconnect:', err);
+      });
+    });
+
+    // Handle disconnection
+    socket.on("disconnect", (reason) => {
+      console.log("Disconnected from server:", reason);
+      setConnectionStatus('disconnected');
+
+      // Start fallback reconnection polling every 10 seconds
+      // This catches cases where Socket.IO's built-in reconnection fails
+      if (!reconnectIntervalRef.current) {
+        reconnectIntervalRef.current = setInterval(() => {
+          if (!socket.connected) {
+            console.log('[Socket] Fallback reconnection attempt...');
+            setReconnectAttempt(prev => prev + 1);
+            socket.connect();
+          } else {
+            // Connected, clear the interval
+            if (reconnectIntervalRef.current) {
+              clearInterval(reconnectIntervalRef.current);
+              reconnectIntervalRef.current = null;
+            }
+          }
+        }, 10000); // Try every 10 seconds
+      }
+    });
+
+    // Handle reconnection attempts (from Socket.IO's built-in reconnection)
+    socket.io.on("reconnect_attempt", (attempt) => {
+      console.log(`Reconnection attempt ${attempt}...`);
+      setConnectionStatus('reconnecting');
+      setReconnectAttempt(attempt);
+    });
+
+    // Handle successful reconnection
+    socket.io.on("reconnect", () => {
+      console.log('[Socket] Reconnected successfully');
+      setConnectionStatus('connected');
+      setReconnectAttempt(0);
+    });
+
+    // Handle reconnection failure - but don't give up, our fallback will keep trying
+    socket.io.on("reconnect_failed", () => {
+      console.error("Socket.IO reconnect failed, fallback will keep trying...");
+      // Don't set error - our fallback interval will keep trying
     });
 
     // If already connected, join room immediately
     if (socket.connected) {
       console.log("Already connected, joining room immediately");
+      setConnectionStatus('connected');
       socket.emit("joinRoom", tournamentIdNum.toString());
+    } else {
+      // Not connected, try to connect
+      socket.connect();
     }
 
     // Handle initial data load (backwards compatibility)
@@ -165,12 +253,14 @@ export function useRealtimeGameData(tournamentId: string | number) {
     // Error handling
     socket.on("connect_error", (err) => {
       console.error("Socket connection error:", err);
-      setError("Failed to connect to real-time updates");
-      setLoading(false);
+      // Socket.IO will auto-reconnect, so just update status
+      // The initial load error is handled separately via HTTP fetch
+      setConnectionStatus('reconnecting');
     });
 
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
       socket.off("updatePlayers");
       socket.off("tournament:updated");
       socket.off("players:updated");
@@ -178,8 +268,17 @@ export function useRealtimeGameData(tournamentId: string | number) {
       socket.off("player:added");
       socket.off("venue:updated");
       socket.off("connect_error");
+      socket.io.off("reconnect_attempt");
+      socket.io.off("reconnect");
+      socket.io.off("reconnect_failed");
+
+      // Clear fallback interval on cleanup
+      if (reconnectIntervalRef.current) {
+        clearInterval(reconnectIntervalRef.current);
+        reconnectIntervalRef.current = null;
+      }
     };
-  }, [tournamentIdNum]);
+  }, [tournamentIdNum, fetchGameData]);
 
   // Computed values (calculated locally)
   const computedStats = gameData ? {
@@ -193,6 +292,9 @@ export function useRealtimeGameData(tournamentId: string | number) {
     gameData,
     computedStats,
     loading,
-    error
+    error,
+    connectionStatus,
+    reconnectAttempt,
+    manualReconnect,
   };
 }
