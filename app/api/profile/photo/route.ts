@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { unlink, mkdir } from "fs/promises";
+import { unlink, mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import sharp from "sharp";
@@ -23,6 +23,7 @@ const ALLOWED_TYPES = [
 // Sharp processing settings
 const MAX_DIMENSION = 800;
 const WEBP_QUALITY = 80;
+const MAX_GIF_OUTPUT_SIZE = 150 * 1024; // 150KB max for animated GIFs
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
@@ -90,16 +91,30 @@ export async function POST(request: NextRequest) {
     // Read file buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const isGif = file.type === "image/gif";
 
     // Process and compress image with Sharp
     // Resize to max dimension while maintaining aspect ratio, convert to WebP
-    await sharp(buffer)
+    // animated: true preserves GIF animations as animated WebP
+    const processedBuffer = await sharp(buffer, { animated: true })
       .resize(MAX_DIMENSION, MAX_DIMENSION, {
         fit: "inside",
         withoutEnlargement: true,
       })
       .webp({ quality: WEBP_QUALITY })
-      .toFile(filepath);
+      .toBuffer();
+
+    // Check file size limit for animated GIFs
+    if (isGif && processedBuffer.length > MAX_GIF_OUTPUT_SIZE) {
+      const sizeKB = Math.round(processedBuffer.length / 1024);
+      return NextResponse.json(
+        { error: `Animated GIF too large after processing (${sizeKB}KB). Maximum is 150KB. Try a smaller or shorter GIF.` },
+        { status: 400 }
+      );
+    }
+
+    // Write processed image to file
+    await writeFile(filepath, processedBuffer);
 
     // Update database with cache-busting timestamp
     const timestamp = Date.now();

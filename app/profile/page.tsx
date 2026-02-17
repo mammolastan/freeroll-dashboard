@@ -121,7 +121,18 @@ export default function ProfilePage() {
 
     setMessage(null);
 
-    // Read the file and show crop modal
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    // GIFs: skip crop modal to preserve animation, upload directly
+    if (file.type === "image/gif") {
+      await uploadPhotoDirect(file);
+      return;
+    }
+
+    // Other formats: show crop modal
     const reader = new FileReader();
     reader.onload = () => {
       setSelectedImage(reader.result as string);
@@ -129,10 +140,44 @@ export default function ProfilePage() {
       setShowCropModal(true);
     };
     reader.readAsDataURL(file);
+  };
 
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const uploadPhotoDirect = async (file: File) => {
+    setIsUploadingPhoto(true);
+    setMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("photo", file, file.name);
+
+      const res = await fetch("/api/profile/photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPhotoUrl(data.photo_url);
+        setMessage({ type: "success", text: "Photo updated!" });
+
+        updateSession({
+          name: session?.user?.name,
+          nickname: session?.user?.nickname,
+          image: data.photo_url,
+        }).catch(() => {
+          // Ignore session update errors - photo is already uploaded
+        });
+      } else {
+        const error = await res.json();
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to upload photo",
+        });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Failed to upload photo" });
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
