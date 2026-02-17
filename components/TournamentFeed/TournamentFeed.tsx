@@ -268,7 +268,8 @@ export function TournamentFeed({
   // Filter items based on active tab (for mobile view)
   const filteredItems = useMemo(() => {
     if (activeTab === "td") {
-      return items.filter((item) => item.item_type === "td_message");
+      // Include both TD messages and photos in the TD tab
+      return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo");
     }
     if (activeTab === "chat") {
       return items.filter((item) => item.item_type === "message");
@@ -276,9 +277,9 @@ export function TournamentFeed({
     return items;
   }, [items, activeTab]);
 
-  // TD messages for the right column on large screens
+  // TD messages and photos for the middle column on large screens
   const tdMessages = useMemo(() => {
-    return items.filter((item) => item.item_type === "td_message");
+    return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo");
   }, [items]);
 
   // Checkins and knockouts for the left column on large screens
@@ -296,9 +297,9 @@ export function TournamentFeed({
     return items.filter((item) => item.item_type === "message");
   }, [items]);
 
-  // Count TD messages for the tab badge
+  // Count TD messages and photos for the tab badge
   const tdMessageCount = useMemo(() => {
-    return items.filter((item) => item.item_type === "td_message").length;
+    return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo").length;
   }, [items]);
 
   // Count chat messages for the tab badge

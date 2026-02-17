@@ -11,7 +11,7 @@ import { SuitCounts, ReactionType, ReactionUpdatePayload } from '@/types';
 export interface FeedItem {
   id: number | string; // string for synthetic knockout IDs like "ko-123"
   tournament_draft_id: number;
-  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
+  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message' | 'photo';
   author_uid: string | null;
   author_name: string | null;
   author_photo_url: string | null;
@@ -23,6 +23,7 @@ export interface FeedItem {
   hitman_uid: string | null;
   hitman_photo_url: string | null;
   ko_position: number | null;
+  photo_url: string | null;
   created_at: string;
   reactions?: {
     totals: SuitCounts;

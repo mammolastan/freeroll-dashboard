@@ -2,9 +2,10 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
-import { Skull, UserCheck, Megaphone, X, Star } from "lucide-react";
+import { Skull, UserCheck, Megaphone, X, Star, Camera } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { ReactionBar } from "./ReactionBar";
 import { SuitCounts, ReactionType } from "@/types";
@@ -420,6 +421,150 @@ function TDMessageItem({ item, onDelete }: FeedItemProps) {
   );
 }
 
+// Photo Modal Component (renders via portal)
+function PhotoModal({
+  photoUrl,
+  caption,
+  isOpen,
+  onClose,
+}: {
+  photoUrl: string;
+  caption?: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  // Handle escape key and body scroll
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 bg-black/90 flex items-center justify-center z-[9999] p-4 animate-fadeIn"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-all backdrop-blur-sm"
+        aria-label="Close"
+      >
+        <X size={24} />
+      </button>
+
+      {/* Image */}
+      <div onClick={(e) => e.stopPropagation()} className="relative">
+        <Image
+          src={photoUrl}
+          alt="Tournament photo"
+          width={1200}
+          height={800}
+          className="max-w-full max-h-[85vh] object-contain rounded-lg"
+          unoptimized
+        />
+      </div>
+
+      {/* Caption */}
+      {caption && (
+        <div className="absolute bottom-4 left-4 right-4 text-center">
+          <p className="text-white/90 text-lg bg-black/60 px-4 py-2 rounded-lg inline-block backdrop-blur-sm">
+            {caption}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
+}
+
+// Photo Item
+function PhotoItem({ item, onDelete }: FeedItemProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  if (!item.photo_url) return null;
+
+  return (
+    <>
+      <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors bg-amber-500/5 group">
+        {/* Icon */}
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+          <Camera className="h-4 w-4 text-amber-400" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="font-medium text-amber-300 text-sm">
+              Tournament Photo
+            </span>
+            <span className="text-xs text-gray-500">
+              {formatRelativeTime(item.created_at)}
+            </span>
+          </div>
+
+          {/* Photo thumbnail - click to enlarge */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="block relative overflow-hidden rounded-lg border border-amber-500/30 hover:border-amber-500/60 transition-colors cursor-pointer"
+          >
+            <Image
+              src={item.photo_url}
+              alt="Tournament photo"
+              width={300}
+              height={200}
+              className="object-cover max-h-48 w-auto"
+              unoptimized
+            />
+          </button>
+
+          {/* Caption */}
+          {item.message_text && (
+            <p className="text-gray-300 text-sm mt-2 break-words whitespace-pre-wrap">
+              {item.message_text}
+            </p>
+          )}
+        </div>
+
+        {/* Delete Button */}
+        {onDelete && typeof item.id === "number" && (
+          <button
+            onClick={() => onDelete(item.id as number)}
+            className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete photo"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Fullscreen Modal (rendered via portal) */}
+      <PhotoModal
+        photoUrl={item.photo_url}
+        caption={item.message_text}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
+  );
+}
+
 // Main FeedItem Component (polymorphic)
 export function FeedItem({
   item,
@@ -462,6 +607,13 @@ export function FeedItem({
     case "td_message":
       return (
         <TDMessageItem
+          item={item}
+          onDelete={onDelete}
+        />
+      );
+    case "photo":
+      return (
+        <PhotoItem
           item={item}
           onDelete={onDelete}
         />

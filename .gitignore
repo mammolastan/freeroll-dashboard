@@ -22,10 +22,9 @@
 # production
 /build
 /dist
-/public/uploads/avatars
 
 # User uploads
-public/uploads/avatars/*
+public/uploads/*
 !public/uploads/avatars/.gitkeep
 
 # misc

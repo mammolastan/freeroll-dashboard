@@ -11,7 +11,7 @@ import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 interface FeedItem {
   id: number | string; // string for synthetic knockout IDs like "ko-123"
   tournament_draft_id: number;
-  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message';
+  item_type: 'knockout' | 'message' | 'checkin' | 'system' | 'td_message' | 'photo';
   author_uid: string | null;
   author_name: string | null;
   author_photo_url: string | null;
@@ -23,6 +23,7 @@ interface FeedItem {
   hitman_uid: string | null;
   hitman_photo_url: string | null;
   ko_position: number | null;
+  photo_url: string | null;
   created_at: string;
   reactions?: {
     totals: SuitCounts;
@@ -69,7 +70,7 @@ export async function GET(
       );
     }
 
-    // Always fetch ALL TD messages and chat messages (they should always be visible)
+    // Always fetch ALL TD messages, chat messages, and photos (they should always be visible)
     const alwaysVisibleMessages = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         f.id,
@@ -82,11 +83,12 @@ export async function GET(
         f.eliminated_player_name,
         f.hitman_name,
         f.ko_position,
+        f.photo_filename,
         f.created_at
       FROM tournament_feed_items f
       LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
       WHERE f.tournament_draft_id = ${tournamentId}
-        AND f.item_type IN ('td_message', 'message')
+        AND f.item_type IN ('td_message', 'message', 'photo')
       ORDER BY f.created_at DESC
     `;
 
@@ -144,6 +146,7 @@ export async function GET(
       hitman_uid: player.hitman_uid ? String(player.hitman_uid) : null,
       hitman_photo_url: player.hitman_photo_url ? String(player.hitman_photo_url) : null,
       ko_position: index + 1, // 1-based position from knockedout_at order
+      photo_url: null,
       created_at: player.knockedout_at instanceof Date
         ? player.knockedout_at.toISOString()
         : String(player.knockedout_at),
@@ -167,17 +170,18 @@ export async function GET(
           f.eliminated_player_name,
           f.hitman_name,
           f.ko_position,
+          f.photo_filename,
           f.created_at
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
-          AND f.item_type NOT IN ('td_message', 'message', 'knockout')
+          AND f.item_type NOT IN ('td_message', 'message', 'knockout', 'photo')
           AND f.created_at < ${new Date(before)}
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
     } else {
-      // Initial load: get most recent paginated items (check-ins, system - NOT knockouts)
+      // Initial load: get most recent paginated items (check-ins, system - NOT knockouts or photos)
       otherItems = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           f.id,
@@ -190,11 +194,12 @@ export async function GET(
           f.eliminated_player_name,
           f.hitman_name,
           f.ko_position,
+          f.photo_filename,
           f.created_at
         FROM tournament_feed_items f
         LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
-          AND f.item_type NOT IN ('td_message', 'message', 'knockout')
+          AND f.item_type NOT IN ('td_message', 'message', 'knockout', 'photo')
         ORDER BY f.created_at DESC
         LIMIT ${fetchLimit}
       `;
@@ -236,6 +241,7 @@ export async function GET(
       hitman_uid: null,
       hitman_photo_url: null,
       ko_position: item.ko_position ? Number(item.ko_position) : null,
+      photo_url: item.photo_filename ? `/api/uploads/feed-photos/${String(item.photo_filename)}` : null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
         : String(item.created_at),
@@ -464,6 +470,7 @@ export async function POST(
       hitman_uid: null,
       hitman_photo_url: null,
       ko_position: item.ko_position ? Number(item.ko_position) : null,
+      photo_url: null,
       created_at: item.created_at instanceof Date
         ? item.created_at.toISOString()
         : String(item.created_at),

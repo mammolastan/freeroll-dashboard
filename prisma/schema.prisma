@@ -223,17 +223,18 @@ model bonus_points {
 }
 
 model tournament_feed_items {
-  id                     Int                             @id @default(autoincrement())
+  id                     Int                              @id @default(autoincrement())
   tournament_draft_id    Int
-  item_type              tournament_feed_items_item_type
-  author_uid             String?                         @db.VarChar(50)
-  author_name            String?                         @db.VarChar(255)
-  message_text           String?                         @db.Text
-  eliminated_player_name String?                         @db.VarChar(255)
-  hitman_name            String?                         @db.VarChar(255)
+  item_type              tournament_feed_items_item_type?
+  author_uid             String?                          @db.VarChar(50)
+  author_name            String?                          @db.VarChar(255)
+  message_text           String?                          @db.Text
+  eliminated_player_name String?                          @db.VarChar(255)
+  hitman_name            String?                          @db.VarChar(255)
   ko_position            Int?
-  created_at             DateTime?                       @default(now()) @db.Timestamp(0)
-  tournament_drafts      TournamentDraft                 @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_feed_items_ibfk_1")
+  created_at             DateTime?                        @default(now()) @db.Timestamp(0)
+  photo_filename         String?                          @db.VarChar(255)
+  tournament_drafts      TournamentDraft                  @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_feed_items_ibfk_1")
 
   @@index([tournament_draft_id, created_at(sort: Desc)], map: "idx_tournament_created")
 }
@@ -285,14 +286,6 @@ enum TournamentDraftStatus {
   integrated
 }
 
-enum tournament_feed_items_item_type {
-  knockout
-  message
-  checkin
-  system
-  td_message
-}
-
 enum tournament_draft_players_status {
   active
   knockedout
@@ -315,4 +308,13 @@ enum TournamentAuditLog_action_category {
   ADMIN
   PLAYER
   SYSTEM
+}
+
+enum tournament_feed_items_item_type {
+  knockout
+  message
+  checkin
+  system
+  td_message
+  photo
 }
