@@ -26,6 +26,7 @@
 # User uploads
 public/uploads/*
 !public/uploads/avatars/.gitkeep
+!public/uploads/feed-photos/.gitkeep
 
 # misc
 .DS_Store
