@@ -101,7 +101,7 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
         },
         body: JSON.stringify({
           player_name: player.player_name,
-          hitman_name: hitmanName || null,
+          hitman_name: hitmanName || 'unknown',
           ko_position: nextKoPosition,
         }),
       });

@@ -922,8 +922,8 @@ export function FullAdminScreen({
 
   // Handle hitman selection
   const selectHitman = (playerId: number, hitmanName: string) => {
-    const finalHitmanName = hitmanName === "unknown" ? "unknown" : hitmanName;
-    updatePlayer(playerId, "hitman_name", finalHitmanName || null);
+    const finalHitmanName = hitmanName || "unknown";
+    updatePlayer(playerId, "hitman_name", finalHitmanName);
     setHitmanSearchValues((prev) => ({ ...prev, [playerId]: finalHitmanName }));
     setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
   };
