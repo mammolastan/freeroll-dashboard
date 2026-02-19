@@ -126,8 +126,8 @@ const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
     levels: TURBO_SPEED_LEVELS,
   },
   freeroll: {
-    id: "freeroll",
-    name: "Freeroll",
+    id: "No300600",
+    name: "No300600",
     description: "20-min, no 300/600, break after 1k/2k",
     levels: No300600,
   },
