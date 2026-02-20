@@ -1,9 +1,9 @@
 // components/PlayerCheckIn/PlayerCheckInCore.tsx
 
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Check, UserPlus, Search, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import { Check, UserPlus, Search, X } from "lucide-react";
 
 interface Player {
   id: number;
@@ -13,7 +13,7 @@ interface Player {
   hitman_name: string | null;
   ko_position: number | null;
   placement: number | null;
-  added_by?: 'admin' | 'self_checkin';
+  added_by?: "admin" | "self_checkin";
   checked_in_at?: string;
   player_nickname?: string | null;
 }
@@ -42,16 +42,16 @@ export function PlayerCheckInCore({
   players,
   onCheckIn,
   onSuccess,
-  showRecentlyCheckedIn = true
+  showRecentlyCheckedIn = true,
 }: PlayerCheckInCoreProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewPlayerForm, setShowNewPlayerForm] = useState(false);
-  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerName, setNewPlayerName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -69,7 +69,7 @@ export function PlayerCheckInCore({
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => {
-        setSuccessMessage('');
+        setSuccessMessage("");
       }, 4000);
 
       successTimeoutRef.current = timer;
@@ -98,7 +98,7 @@ export function PlayerCheckInCore({
     try {
       const response = await fetch(
         `/api/players/search?q=${encodeURIComponent(query)}&name=true`,
-        { signal: abortController.signal }
+        { signal: abortController.signal },
       );
       if (response.ok) {
         const data = await response.json();
@@ -114,10 +114,10 @@ export function PlayerCheckInCore({
       }
     } catch (error) {
       // Ignore abort errors - these are expected when canceling stale requests
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         return;
       }
-      console.error('Error searching players:', error);
+      console.error("Error searching players:", error);
       setSearchResults([]);
       setShowDropdown(false);
     } finally {
@@ -157,10 +157,10 @@ export function PlayerCheckInCore({
       setShowDropdown(false);
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showDropdown]);
 
@@ -182,14 +182,14 @@ export function PlayerCheckInCore({
 
       // Show success message
       setSuccessMessage(`Welcome ${welcomeName}!`);
-      setSearchQuery('');
+      setSearchQuery("");
       setSearchResults([]);
 
       // Call onSuccess after check-in completes
       onSuccess?.();
     } catch (error) {
-      console.error('Error checking in player:', error);
-      alert('Error checking in player. Please try again.');
+      console.error("Error checking in player:", error);
+      alert("Error checking in player. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -212,14 +212,14 @@ export function PlayerCheckInCore({
 
       // Show success message
       setSuccessMessage(`Welcome ${newPlayerName.trim()}!`);
-      setNewPlayerName('');
+      setNewPlayerName("");
       setShowNewPlayerForm(false);
 
       // Call onSuccess after check-in completes
       onSuccess?.();
     } catch (error) {
-      console.error('Error checking in new player:', error);
-      alert('Error checking in new player. Please try again.');
+      console.error("Error checking in new player:", error);
+      alert("Error checking in new player. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -231,7 +231,10 @@ export function PlayerCheckInCore({
       {successMessage && (
         <div className="p-3 md:p-6 bg-green-600/20 border-2 border-green-500 rounded-xl">
           <div className="flex items-center gap-2 md:gap-3 text-lg md:text-2xl font-bold text-green-400">
-            <Check size={20} className="md:w-8 md:h-8" />
+            <Check
+              size={20}
+              className="md:w-8 md:h-8"
+            />
             {successMessage}
           </div>
         </div>
@@ -251,7 +254,7 @@ export function PlayerCheckInCore({
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') {
+                if (e.key === "Escape") {
                   e.currentTarget.blur();
                 }
               }}
@@ -262,19 +265,25 @@ export function PlayerCheckInCore({
 
             {/* Dropdown with Search Results */}
             {showDropdown && searchResults.length > 0 && (
-              <div ref={dropdownRef} className="absolute z-50 w-full mt-2 bg-gray-800 border-2 border-cyan-500/50 rounded-xl shadow-2xl max-h-[300px] md:max-h-[400px] overflow-y-auto">
+              <div
+                ref={dropdownRef}
+                className="absolute z-50 w-full mt-2 bg-gray-800 border-2 border-cyan-500/50 rounded-xl shadow-2xl max-h-[300px] md:max-h-[400px] overflow-y-auto"
+              >
                 {searchResults.map((result) => {
-                  const alreadyCheckedIn = players.some(p => p.player_uid === result.UID);
+                  const alreadyCheckedIn = players.some(
+                    (p) => p.player_uid === result.UID,
+                  );
 
                   return (
                     <button
                       key={result.UID}
                       onClick={() => !alreadyCheckedIn && handleCheckIn(result)}
                       disabled={alreadyCheckedIn || isSubmitting}
-                      className={`w-full p-3 md:p-6 text-left transition-all border-b-2 border-gray-700/50 last:border-b-0 ${alreadyCheckedIn
-                        ? 'bg-gray-900/40 cursor-not-allowed opacity-60'
-                        : 'hover:bg-gray-700/80 cursor-pointer'
-                        }`}
+                      className={`w-full p-3 md:p-6 text-left transition-all border-b-2 border-gray-700/50 last:border-b-0 ${
+                        alreadyCheckedIn
+                          ? "bg-red-900/40 cursor-not-allowed opacity-60"
+                          : "hover:bg-gray-700/80 cursor-pointer"
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -288,19 +297,29 @@ export function PlayerCheckInCore({
                           )}
                           {result.TotalGames && (
                             <div className="text-xs md:text-sm text-gray-400 mt-1 md:mt-2">
-                              {result.TotalGames > 100 ? '100+' : result.TotalGames} games
+                              {result.TotalGames > 100
+                                ? "100+"
+                                : result.TotalGames}{" "}
+                              games
                             </div>
                           )}
                         </div>
                         <div className="text-right">
                           {alreadyCheckedIn ? (
                             <div className="flex items-center gap-1 md:gap-2 text-green-400 text-sm md:text-xl font-bold">
-                              <Check size={16} className="md:w-7 md:h-7" />
-                              <span className="hidden sm:inline">Checked In</span>
+                              <Check
+                                size={16}
+                                className="md:w-7 md:h-7"
+                              />
+                              <span className="hidden sm:inline">
+                                Checked In
+                              </span>
                             </div>
                           ) : (
                             <div className="text-cyan-400 text-sm md:text-xl font-bold">
-                              <span className="hidden sm:inline">Tap to Check In</span>
+                              <span className="hidden sm:inline">
+                                Tap to Check In
+                              </span>
                               <span className="sm:hidden">Check In</span>
                             </div>
                           )}
@@ -314,23 +333,25 @@ export function PlayerCheckInCore({
           </div>
 
           {/* No Results */}
-          {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
-            <div className="text-center py-4 md:py-8">
-              <p className="text-sm md:text-xl text-gray-400 mb-3 md:mb-6">
-                No players found matching &quot;{searchQuery}&quot;
-              </p>
-              <button
-                onClick={() => {
-                  setNewPlayerName(searchQuery);
-                  setShowNewPlayerForm(true);
-                }}
-                className="px-4 md:px-8 py-2 md:py-4 text-base md:text-xl font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-500 transition-all border-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
-              >
-                <UserPlus className="inline mr-1 md:mr-2 w-5 h-5 md:w-6 md:h-6" />
-                Register as New Player
-              </button>
-            </div>
-          )}
+          {searchQuery.length >= 2 &&
+            !isSearching &&
+            searchResults.length === 0 && (
+              <div className="text-center py-4 md:py-8">
+                <p className="text-sm md:text-xl text-gray-400 mb-3 md:mb-6">
+                  No players found matching &quot;{searchQuery}&quot;
+                </p>
+                <button
+                  onClick={() => {
+                    setNewPlayerName(searchQuery);
+                    setShowNewPlayerForm(true);
+                  }}
+                  className="px-4 md:px-8 py-2 md:py-4 text-base md:text-xl font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-500 transition-all border-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
+                >
+                  <UserPlus className="inline mr-1 md:mr-2 w-5 h-5 md:w-6 md:h-6" />
+                  Register as New Player
+                </button>
+              </div>
+            )}
 
           {/* New Player Button */}
           {searchQuery.length === 0 && (
@@ -360,7 +381,7 @@ export function PlayerCheckInCore({
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') {
+                if (e.key === "Escape") {
                   e.currentTarget.blur();
                 }
               }}
@@ -382,7 +403,7 @@ export function PlayerCheckInCore({
               <button
                 onClick={() => {
                   setShowNewPlayerForm(false);
-                  setNewPlayerName('');
+                  setNewPlayerName("");
                 }}
                 className="px-3 md:px-8 py-2 md:py-4 text-base md:text-xl font-bold bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-all border-2 border-gray-600"
               >
@@ -402,8 +423,12 @@ export function PlayerCheckInCore({
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
             {players
-              .filter(p => p.checked_in_at)
-              .sort((a, b) => new Date(b.checked_in_at!).getTime() - new Date(a.checked_in_at!).getTime())
+              .filter((p) => p.checked_in_at)
+              .sort(
+                (a, b) =>
+                  new Date(b.checked_in_at!).getTime() -
+                  new Date(a.checked_in_at!).getTime(),
+              )
               .slice(0, 12)
               .map((player) => (
                 <div
@@ -411,7 +436,10 @@ export function PlayerCheckInCore({
                   className="p-2 md:p-4 bg-gray-800/60 border border-green-500/30 rounded-lg"
                 >
                   <div className="flex items-center gap-1 md:gap-2">
-                    <Check size={14} className="md:w-4 md:h-4 text-green-400 flex-shrink-0" />
+                    <Check
+                      size={14}
+                      className="md:w-4 md:h-4 text-green-400 flex-shrink-0"
+                    />
                     <div className="text-sm md:text-base text-white font-medium truncate">
                       {player.player_nickname || player.player_name}
                     </div>
