@@ -62,13 +62,8 @@ const STANDARD_SPEED_LEVELS: BlindLevel[] = [
     bigBlind: 50000,
     isbreak: false,
   },
-  {
-    level: 17,
-    duration: 20,
-    smallBlind: 50000,
-    bigBlind: 100000,
-    isbreak: false,
-  },
+  { level: 17, duration: 20, smallBlind: 50000, bigBlind: 100000, isbreak: false },
+  { level: 18, duration: 20, smallBlind: 100000, bigBlind: 200000, isbreak: false },
 ];
 
 // Medium - 15 minute levels (same blind structure)
@@ -103,6 +98,7 @@ const No300600: BlindLevel[] = [
   { level: 14, duration: 20, smallBlind: 20000, bigBlind: 40000, isbreak: false },
   { level: 15, duration: 20, smallBlind: 25000, bigBlind: 50000, isbreak: false },
   { level: 16, duration: 20, smallBlind: 50000, bigBlind: 100000, isbreak: false },
+  { level: 17, duration: 20, smallBlind: 100000, bigBlind: 200000, isbreak: false },
 ];
 
 // Blind schedule definitions

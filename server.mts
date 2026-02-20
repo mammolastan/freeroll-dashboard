@@ -159,7 +159,7 @@ async function getOrCreateTimerState(
     try {
       const tournament = await prisma.tournamentDraft.findUnique({
         where: { id: tournamentId },
-        select: { blind_schedule: true },
+        select: { blind_schedule: true, custom_blind_levels: true },
       });
 
       // If tournament doesn't exist, don't create a timer state for it
@@ -170,10 +170,23 @@ async function getOrCreateTimerState(
 
       console.log(
         `Tournament ${tournamentId} blind_schedule:`,
-        tournament?.blind_schedule
+        tournament?.blind_schedule,
+        `has custom levels:`,
+        !!tournament?.custom_blind_levels
       );
 
-      if (tournament?.blind_schedule) {
+      // Check for custom blind levels first, then fall back to preset schedule
+      if (tournament?.custom_blind_levels) {
+        try {
+          blindLevels = JSON.parse(tournament.custom_blind_levels as string);
+          console.log(
+            `Using custom blind levels with ${blindLevels.length} levels`
+          );
+        } catch (parseError) {
+          console.error("Error parsing custom_blind_levels, falling back to preset:", parseError);
+          blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+        }
+      } else if (tournament?.blind_schedule) {
         blindLevels = getBlindSchedule(tournament.blind_schedule);
         console.log(
           `Using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
@@ -382,10 +395,21 @@ async function resetTimer(tournamentId: number): Promise<TimerState | null> {
   try {
     const tournament = await prisma.tournamentDraft.findUnique({
       where: { id: tournamentId },
-      select: { blind_schedule: true },
+      select: { blind_schedule: true, custom_blind_levels: true },
     });
 
-    if (tournament?.blind_schedule) {
+    // Check for custom blind levels first, then fall back to preset schedule
+    if (tournament?.custom_blind_levels) {
+      try {
+        blindLevels = JSON.parse(tournament.custom_blind_levels as string);
+        console.log(
+          `Reset timer: using custom blind levels with ${blindLevels.length} levels`
+        );
+      } catch (parseError) {
+        console.error("Error parsing custom_blind_levels during reset, falling back to preset:", parseError);
+        blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+      }
+    } else if (tournament?.blind_schedule) {
       blindLevels = getBlindSchedule(tournament.blind_schedule);
       console.log(
         `Reset timer: using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
@@ -429,6 +453,7 @@ async function recoverActiveTimers(): Promise<void> {
         timer_is_paused: true,
         timer_last_updated: true,
         blind_schedule: true,
+        custom_blind_levels: true,
       },
     });
 
@@ -489,6 +514,7 @@ async function loadTimerStateFromDB(
       where: { id: tournamentId },
       select: {
         blind_schedule: true,
+        custom_blind_levels: true,
         timer_current_level: true,
         timer_remaining_seconds: true,
         timer_is_running: true,
@@ -529,10 +555,19 @@ async function loadTimerStateFromDB(
         );
       }
 
-      // Get blind levels for the schedule
-      const blindLevels = getBlindSchedule(
-        tournament.blind_schedule || "standard"
-      );
+      // Get blind levels - check for custom levels first, then fall back to preset
+      let blindLevels;
+      if (tournament.custom_blind_levels) {
+        try {
+          blindLevels = JSON.parse(tournament.custom_blind_levels as string);
+          console.log(`Loading custom blind levels with ${blindLevels.length} levels`);
+        } catch (parseError) {
+          console.error("Error parsing custom_blind_levels, falling back to preset:", parseError);
+          blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+        }
+      } else {
+        blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+      }
 
       return {
         tournamentId,

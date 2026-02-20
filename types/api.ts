@@ -137,6 +137,7 @@ export interface UpdateTournamentRequest {
   start_points?: number;
   status?: 'in_progress' | 'finalized' | 'integrated';
   blind_schedule?: string;
+  custom_blind_levels?: string | null;
 }
 
 /**

@@ -162,6 +162,7 @@ model TournamentDraft {
   game_uid                String?                 @db.VarChar(100)
   file_name               String?                 @db.VarChar(255)
   blind_schedule          String?                 @default("standard") @db.VarChar(50)
+  custom_blind_levels     String?                 @db.LongText
   check_in_token          String?                 @db.VarChar(36)
   timer_current_level     Int?                    @default(1)
   timer_remaining_seconds Int?                    @default(1200)

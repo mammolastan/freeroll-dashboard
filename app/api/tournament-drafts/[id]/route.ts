@@ -167,17 +167,17 @@ export async function PATCH(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const { blind_schedule } = body;
+    const { blind_schedule, custom_blind_levels } = body;
 
-    // Validate blind_schedule value
+    // Validate blind_schedule value if provided
     if (
       blind_schedule &&
-      !["standard", "medium", "turbo"].includes(blind_schedule)
+      !["standard", "medium", "turbo", "freeroll", "No300600"].includes(blind_schedule)
     ) {
       return NextResponse.json(
         {
           error:
-            "Invalid blind schedule. Must be 'standard', 'medium', or 'turbo'",
+            "Invalid blind schedule. Must be 'standard', 'medium', 'turbo', or 'freeroll'",
         },
         { status: 400 }
       );
@@ -185,26 +185,55 @@ export async function PATCH(
 
     // Get current state before updating
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT blind_schedule FROM tournament_drafts WHERE id = ${draftId}
+      SELECT blind_schedule, custom_blind_levels FROM tournament_drafts WHERE id = ${draftId}
     `;
     const currentSchedule = currentDraftResult[0]?.blind_schedule;
+    const currentCustomLevels = currentDraftResult[0]?.custom_blind_levels;
 
-    await prisma.$queryRaw`
-      UPDATE tournament_drafts
-      SET
-        blind_schedule = ${blind_schedule},
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${draftId}
-    `;
+    // Build the update query based on what fields are provided
+    if (blind_schedule !== undefined && custom_blind_levels !== undefined) {
+      // Both fields provided - update both
+      await prisma.$queryRaw`
+        UPDATE tournament_drafts
+        SET
+          blind_schedule = ${blind_schedule},
+          custom_blind_levels = ${custom_blind_levels},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${draftId}
+      `;
+    } else if (blind_schedule !== undefined) {
+      // Only blind_schedule provided - update it and clear custom levels
+      await prisma.$queryRaw`
+        UPDATE tournament_drafts
+        SET
+          blind_schedule = ${blind_schedule},
+          custom_blind_levels = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${draftId}
+      `;
+    } else if (custom_blind_levels !== undefined) {
+      // Only custom_blind_levels provided
+      await prisma.$queryRaw`
+        UPDATE tournament_drafts
+        SET
+          custom_blind_levels = ${custom_blind_levels},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${draftId}
+      `;
+    }
 
     const updatedDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_drafts WHERE id = ${draftId}
     `;
     const updatedDraft = updatedDraftResult[0];
 
-    // Audit logging - only if schedule actually changed
+    // Audit logging
     try {
-      if (currentSchedule !== blind_schedule) {
+      const scheduleChanged = blind_schedule !== undefined && currentSchedule !== blind_schedule;
+      const customLevelsChanged = custom_blind_levels !== undefined &&
+        JSON.stringify(currentCustomLevels) !== JSON.stringify(custom_blind_levels);
+
+      if (scheduleChanged || customLevelsChanged) {
         await logAuditEvent({
           tournamentId: draftId,
           actionType: "BLIND_SCHEDULE_CHANGED",
@@ -214,13 +243,16 @@ export async function PATCH(
           targetPlayerId: null,
           targetPlayerName: null,
           previousValue: {
-            blindSchedule: currentSchedule,
+            blindSchedule: currentSchedule as string,
+            hasCustomLevels: !!currentCustomLevels,
           },
           newValue: {
-            blindSchedule: blind_schedule,
+            blindSchedule: (blind_schedule || currentSchedule) as string,
+            hasCustomLevels: !!custom_blind_levels,
           },
           metadata: {
-            scheduleType: blind_schedule,
+            scheduleType: (blind_schedule || currentSchedule) as string,
+            customized: !!custom_blind_levels,
           },
           ipAddress,
         });

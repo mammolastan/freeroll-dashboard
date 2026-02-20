@@ -38,9 +38,10 @@ import {
   validateTournamentForIntegration,
   exportTournamentAsText,
 } from "@/lib/tournamentValidation";
-import { BLIND_SCHEDULES } from "@/lib/blindLevels";
+import { BLIND_SCHEDULES, BlindLevel } from "@/lib/blindLevels";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
+import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
 
 interface TournamentDraft {
   id: number;
@@ -54,6 +55,7 @@ interface TournamentDraft {
   updated_at: string;
   player_count: number;
   blind_schedule?: string;
+  custom_blind_levels?: string | null;
 }
 
 interface PlayerSearchResult {
@@ -190,6 +192,9 @@ export function FullAdminScreen({
   const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<
     Record<number, number>
   >({});
+
+  // Blind schedule edit modal
+  const [showBlindEditModal, setShowBlindEditModal] = useState(false);
 
   // Refs
   const globalUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2285,7 +2290,7 @@ export function FullAdminScreen({
                     <CardTitle className="text-lg">Blind Schedule</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                       <label className="text-sm font-medium text-gray-700">
                         Schedule Type:
                       </label>
@@ -2310,6 +2315,7 @@ export function FullAdminScreen({
                                 updateCurrentDraft({
                                   ...currentDraft,
                                   blind_schedule: newSchedule,
+                                  custom_blind_levels: null, // Clear custom levels when switching presets
                                 });
                               }
                               // Reset timer when schedule changes
@@ -2338,6 +2344,18 @@ export function FullAdminScreen({
                           </option>
                         ))}
                       </select>
+                      <button
+                        onClick={() => setShowBlindEditModal(true)}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+                        disabled={currentDraft.status === "integrated"}
+                      >
+                        Edit Blind Schedule
+                      </button>
+                      {currentDraft.custom_blind_levels && (
+                        <span className="text-sm text-blue-600 font-medium">
+                          (Customized)
+                        </span>
+                      )}
                       {currentDraft.status === "integrated" && (
                         <span className="text-sm text-gray-500">
                           Cannot change schedule for integrated tournaments
@@ -2346,6 +2364,50 @@ export function FullAdminScreen({
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Blind Schedule Edit Modal */}
+                <BlindScheduleEditModal
+                  isOpen={showBlindEditModal}
+                  onClose={() => setShowBlindEditModal(false)}
+                  tournamentId={currentDraft.id}
+                  currentScheduleId={currentDraft.blind_schedule || "standard"}
+                  customLevels={
+                    currentDraft.custom_blind_levels
+                      ? JSON.parse(currentDraft.custom_blind_levels)
+                      : null
+                  }
+                  onSave={async (levels: BlindLevel[]) => {
+                    const customLevelsJson = JSON.stringify(levels);
+                    try {
+                      const response = await fetch(
+                        `/api/tournament-drafts/${currentDraft.id}`,
+                        {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            custom_blind_levels: customLevelsJson,
+                          }),
+                        }
+                      );
+
+                      if (response.ok) {
+                        updateCurrentDraft({
+                          ...currentDraft,
+                          custom_blind_levels: customLevelsJson,
+                        });
+                        // Reset timer to apply new levels
+                        socket.emit("timer:reset", {
+                          tournamentId: currentDraft.id,
+                        });
+                      } else {
+                        throw new Error("Failed to save custom blind levels");
+                      }
+                    } catch (error) {
+                      console.error("Error saving blind schedule:", error);
+                      throw error;
+                    }
+                  }}
+                />
 
                 {/* Game Timer */}
                 <GameTimer
