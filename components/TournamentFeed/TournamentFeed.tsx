@@ -297,6 +297,42 @@ export function TournamentFeed({
     return items.filter((item) => item.item_type === "message");
   }, [items]);
 
+  // Chat messages with two-tier sorting for large screen view:
+  // 1. New posts (< 3 min) pinned at top, sorted by recency
+  // 2. Older posts below, sorted by total reactions
+  const chatItemsSortedByReactions = useMemo(() => {
+    const now = Date.now();
+    const newPostThresholdMs = 3 * 60 * 1000; // 3 minutes
+
+    const newPosts: typeof chatItems = [];
+    const olderPosts: typeof chatItems = [];
+
+    chatItems.forEach((item) => {
+      const itemAge = now - new Date(item.created_at).getTime();
+      if (itemAge < newPostThresholdMs) {
+        newPosts.push(item);
+      } else {
+        olderPosts.push(item);
+      }
+    });
+
+    // New posts: sorted by recency (newest first)
+    newPosts.sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    // Older posts: sorted by total reactions (most reactions first)
+    olderPosts.sort((a, b) => {
+      const aTotals = a.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
+      const bTotals = b.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
+      const aTotal = aTotals.heart + aTotals.diamond + aTotals.club + aTotals.spade;
+      const bTotal = bTotals.heart + bTotals.diamond + bTotals.club + bTotals.spade;
+      return bTotal - aTotal;
+    });
+
+    return [...newPosts, ...olderPosts];
+  }, [chatItems]);
+
   // Count TD messages and photos for the tab badge
   const tdMessageCount = useMemo(() => {
     return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo").length;
@@ -945,7 +981,7 @@ export function TournamentFeed({
             )}
 
             {/* Empty State */}
-            {!loading && !error && chatItems.length === 0 && (
+            {!loading && !error && chatItemsSortedByReactions.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
                 <p className="text-gray-500 text-sm">No chat messages yet</p>
@@ -955,24 +991,31 @@ export function TournamentFeed({
               </div>
             )}
 
-            {/* Feed Items */}
-            {!loading && !error && chatItems.length > 0 && (
+            {/* Feed Items - sorted by reaction count */}
+            {!loading && !error && chatItemsSortedByReactions.length > 0 && (
               <div className="divide-y divide-gray-800/50">
-                {chatItems.map((item) => (
-                  <FeedItem
-                    key={item.id}
-                    item={item}
-                    onDelete={
-                      isAdmin ? (itemId) => deleteItem(itemId) : undefined
-                    }
-                    totalPlayers={totalPlayers}
-                    startPoints={startPoints}
-                    onReact={handleReact}
-                    reactionBalance={reactionBalance}
-                    canReact={canPost}
-                    tournamentId={tournamentId}
-                  />
-                ))}
+                {chatItemsSortedByReactions.map((item) => {
+                  const isNew = Date.now() - new Date(item.created_at).getTime() < 3 * 60 * 1000;
+                  return (
+                    <div
+                      key={item.id}
+                      className={isNew ? "border-l-2 border-l-emerald-400" : ""}
+                    >
+                      <FeedItem
+                        item={item}
+                        onDelete={
+                          isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                        }
+                        totalPlayers={totalPlayers}
+                        startPoints={startPoints}
+                        onReact={handleReact}
+                        reactionBalance={reactionBalance}
+                        canReact={canPost}
+                        tournamentId={tournamentId}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
 
