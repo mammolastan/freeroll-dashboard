@@ -54,6 +54,7 @@ export function PlayerCheckInCore({
   const [successMessage, setSuccessMessage] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,9 +85,21 @@ export function PlayerCheckInCore({
       return;
     }
 
+    // Cancel any previous in-flight request to prevent race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/players/search?q=${encodeURIComponent(query)}&name=true`);
+      const response = await fetch(
+        `/api/players/search?q=${encodeURIComponent(query)}&name=true`,
+        { signal: abortController.signal }
+      );
       if (response.ok) {
         const data = await response.json();
         setSearchResults(data);
@@ -100,6 +113,10 @@ export function PlayerCheckInCore({
         setShowDropdown(false);
       }
     } catch (error) {
+      // Ignore abort errors - these are expected when canceling stale requests
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       console.error('Error searching players:', error);
       setSearchResults([]);
       setShowDropdown(false);
@@ -117,10 +134,10 @@ export function PlayerCheckInCore({
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Set new timeout
+    // Set new timeout (150ms debounce reduces unnecessary requests)
     searchTimeoutRef.current = setTimeout(() => {
       searchPlayers(value);
-    }, 50);
+    }, 150);
   };
 
   // Handle clicking outside dropdown to close it
