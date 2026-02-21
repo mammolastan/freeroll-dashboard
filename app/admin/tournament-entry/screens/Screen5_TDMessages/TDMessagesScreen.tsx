@@ -413,6 +413,117 @@ export function TDMessagesScreen({
               <li>• Knockouts and check-ins cannot be removed</li>
             </ul>
           </div>
+          {/* Photo Upload */}
+          <div className="mt-4 bg-gray-900/80 border-2 border-amber-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                <Camera className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-amber-300">
+                  Photo Upload
+                </h2>
+                <p className="text-gray-400 text-xs">
+                  Share photos in the TD feed
+                </p>
+              </div>
+            </div>
+
+            {/* Photo Preview or Upload Button */}
+            {photoPreview ? (
+              <div className="relative mb-4">
+                <Image
+                  src={photoPreview}
+                  alt="Preview"
+                  width={400}
+                  height={300}
+                  className="w-full max-h-48 object-cover rounded-lg border border-amber-500/30"
+                  unoptimized
+                />
+                <button
+                  onClick={handleClearPhoto}
+                  className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
+                  title="Remove photo"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <label
+                  htmlFor="photo-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-amber-500/40 rounded-lg cursor-pointer hover:border-amber-500/60 hover:bg-amber-500/5 transition-colors"
+                >
+                  <Upload className="h-8 w-8 text-amber-400/60 mb-2" />
+                  <span className="text-sm text-amber-300/80">
+                    Click to select a photo
+                  </span>
+                  <span className="text-xs text-gray-500 mt-1">
+                    JPG, PNG, GIF, WebP (max 10MB)
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Caption Input */}
+            {selectedPhoto && (
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={photoCaption}
+                  onChange={(e) => setPhotoCaption(e.target.value)}
+                  placeholder="Add a caption (optional)"
+                  className="w-full px-3 py-2 text-sm bg-gray-800 border-2 border-amber-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder-gray-500"
+                  maxLength={500}
+                />
+              </div>
+            )}
+
+            {/* Feedback */}
+            {photoFeedback && (
+              <div
+                className={`mb-4 p-2 rounded-lg flex items-center gap-2 text-sm ${
+                  photoFeedback.type === "success"
+                    ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                    : "bg-red-500/20 border border-red-500/40 text-red-400"
+                }`}
+              >
+                {photoFeedback.type === "success" ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <span>{photoFeedback.text}</span>
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <button
+              onClick={handleUploadPhoto}
+              disabled={!selectedPhoto || isUploadingPhoto}
+              className="w-full px-4 py-3 text-base font-bold bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2"
+            >
+              {isUploadingPhoto ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  Upload Photo
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Special Hand Generator */}
           <div className="mt-4 bg-gray-900/80 border-2 border-purple-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
@@ -557,118 +668,6 @@ export function TDMessagesScreen({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Photo Upload */}
-          <div className="mt-4 bg-gray-900/80 border-2 border-amber-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                <Camera className="h-5 w-5 text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-amber-300">
-                  Photo Upload
-                </h2>
-                <p className="text-gray-400 text-xs">
-                  Share photos in the TD feed
-                </p>
-              </div>
-            </div>
-
-            {/* Photo Preview or Upload Button */}
-            {photoPreview ? (
-              <div className="relative mb-4">
-                <Image
-                  src={photoPreview}
-                  alt="Preview"
-                  width={400}
-                  height={300}
-                  className="w-full max-h-48 object-cover rounded-lg border border-amber-500/30"
-                  unoptimized
-                />
-                <button
-                  onClick={handleClearPhoto}
-                  className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
-                  title="Remove photo"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="mb-4">
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handlePhotoSelect}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label
-                  htmlFor="photo-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-amber-500/40 rounded-lg cursor-pointer hover:border-amber-500/60 hover:bg-amber-500/5 transition-colors"
-                >
-                  <Upload className="h-8 w-8 text-amber-400/60 mb-2" />
-                  <span className="text-sm text-amber-300/80">
-                    Click to select a photo
-                  </span>
-                  <span className="text-xs text-gray-500 mt-1">
-                    JPG, PNG, GIF, WebP (max 10MB)
-                  </span>
-                </label>
-              </div>
-            )}
-
-            {/* Caption Input */}
-            {selectedPhoto && (
-              <div className="mb-4">
-                <input
-                  type="text"
-                  value={photoCaption}
-                  onChange={(e) => setPhotoCaption(e.target.value)}
-                  placeholder="Add a caption (optional)"
-                  className="w-full px-3 py-2 text-sm bg-gray-800 border-2 border-amber-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder-gray-500"
-                  maxLength={500}
-                />
-              </div>
-            )}
-
-            {/* Feedback */}
-            {photoFeedback && (
-              <div
-                className={`mb-4 p-2 rounded-lg flex items-center gap-2 text-sm ${
-                  photoFeedback.type === "success"
-                    ? "bg-green-500/20 border border-green-500/40 text-green-400"
-                    : "bg-red-500/20 border border-red-500/40 text-red-400"
-                }`}
-              >
-                {photoFeedback.type === "success" ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" />
-                )}
-                <span>{photoFeedback.text}</span>
-              </div>
-            )}
-
-            {/* Upload Button */}
-            <button
-              onClick={handleUploadPhoto}
-              disabled={!selectedPhoto || isUploadingPhoto}
-              className="w-full px-4 py-3 text-base font-bold bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2"
-            >
-              {isUploadingPhoto ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-5 w-5" />
-                  Upload Photo
-                </>
-              )}
-            </button>
           </div>
         </div>
 

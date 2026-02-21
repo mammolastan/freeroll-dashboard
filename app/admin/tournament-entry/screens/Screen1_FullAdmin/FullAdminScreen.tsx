@@ -1462,30 +1462,23 @@ export function FullAdminScreen({
         <div className="max-w-6xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-6 h-6 text-blue-600" />
-                  <span>Tournament Entry System</span>
+              <CardTitle className="">
+                <div className="">
+                  <span style={{ margin: "auto" }}>
+                    Tournament Entry System
+                  </span>
                 </div>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  <Plus size={16} />
-                  Create New Tournament
-                </button>
               </CardTitle>
             </CardHeader>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mx-auto"
+            >
+              <Plus size={16} />
+              Create New Tournament
+            </button>
             <CardContent>
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Select a Tournament or Create New
-                </h2>
-                <p className="text-gray-600">
-                  Choose an existing tournament draft to continue working on, or
-                  create a new tournament.
-                </p>
-              </div>
+              <div className="mb-6"></div>
 
               {loadingTournaments ? (
                 <div className="text-center py-8">
@@ -1910,19 +1903,10 @@ export function FullAdminScreen({
                       {generatingQR ? "Generating..." : "QR"}
                     </button>
                   )}
-
-                  {/* Audit Log */}
-                  <Link
-                    href={`/admin/audit/${currentDraft?.id}`}
-                    className="flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-700 border border-gray-300 rounded hover:bg-gray-200 text-sm"
-                  >
-                    <ClipboardList size={16} />
-                    Audit Log
-                  </Link>
                 </div>
 
                 {/* Tournament Info Header */}
-                <div className="flex items-center justify-between my-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between my-5 gap-3">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
                       {currentDraft?.venue} <br />{" "}
@@ -1959,7 +1943,7 @@ export function FullAdminScreen({
                 {/* Status Banner */}
                 {currentDraft && (
                   <div
-                    className={`p-3 flex flex-row justify-between gap-11 rounded-lg mb-4 ${
+                    className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
                       currentDraft.status === "integrated"
                         ? "bg-green-50 border border-green-200"
                         : "bg-blue-50 border border-blue-200"
@@ -2112,10 +2096,10 @@ export function FullAdminScreen({
                       .sort((a, b) => {
                         const timeA = new Date(a.knockedout_at!).getTime();
                         const timeB = new Date(b.knockedout_at!).getTime();
-                        if (timeA !== timeB) return timeA - timeB;
+                        if (timeA !== timeB) return timeB - timeA;
                         return a.id - b.id;
                       })
-                      .map((p) => {
+                      .map((p, index) => {
                         const position = koPositionsMap.get(p.id);
                         return (
                           <button
@@ -2128,8 +2112,10 @@ export function FullAdminScreen({
                             }
                             className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
                           >
-                            <span className="font-medium">#{position}</span> -{" "}
-                            {p.player_name}
+                            <span className="font-medium">
+                              {index === 0 ? "Latest KO" : `#${position} KO`}
+                            </span>{" "}
+                            - {p.player_name}
                             {p.player_nickname && ` (${p.player_nickname})`}
                           </button>
                         );
@@ -2290,7 +2276,7 @@ export function FullAdminScreen({
                     <CardTitle className="text-lg">Blind Schedule</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:flex-wrap">
                       <label className="text-sm font-medium text-gray-700">
                         Schedule Type:
                       </label>
@@ -2332,7 +2318,7 @@ export function FullAdminScreen({
                             );
                           }
                         }}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={currentDraft.status === "integrated"}
                       >
                         {Object.values(BLIND_SCHEDULES).map((schedule) => (
@@ -2387,7 +2373,7 @@ export function FullAdminScreen({
                           body: JSON.stringify({
                             custom_blind_levels: customLevelsJson,
                           }),
-                        }
+                        },
                       );
 
                       if (response.ok) {

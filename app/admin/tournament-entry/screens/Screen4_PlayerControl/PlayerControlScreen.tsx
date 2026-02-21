@@ -1,11 +1,11 @@
 // app/admin/tournament-entry/screens/Screen4_PlayerControl/PlayerControlScreen.tsx
 
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Target, Users, Trophy, X } from 'lucide-react';
-import { ScreenTabs } from '../../components/ScreenTabs';
-import { ScreenNumber } from '../../hooks/useScreenRouter';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Target, Users, Trophy, X } from "lucide-react";
+import { ScreenTabs } from "../../components/ScreenTabs";
+import { ScreenNumber } from "../../hooks/useScreenRouter";
 
 interface TournamentDraft {
   id: number;
@@ -13,7 +13,7 @@ interface TournamentDraft {
   director_name: string;
   venue: string;
   start_points: number;
-  status: 'in_progress' | 'finalized' | 'integrated';
+  status: "in_progress" | "finalized" | "integrated";
   created_at: string;
   updated_at: string;
   player_count: number;
@@ -28,7 +28,7 @@ interface Player {
   hitman_name: string | null;
   ko_position: number | null;
   placement: number | null;
-  added_by?: 'admin' | 'self_checkin';
+  added_by?: "admin" | "self_checkin";
   checked_in_at?: string;
   player_nickname?: string | null;
 }
@@ -42,86 +42,106 @@ interface PlayerControlScreenProps {
 }
 
 // Helper function to calculate dynamic placement based on ko_position
-function calculatePlacement(player: Player, totalPlayers: number): number | null {
+function calculatePlacement(
+  player: Player,
+  totalPlayers: number,
+): number | null {
   if (player.ko_position === null) return null;
   return totalPlayers - player.ko_position + 1;
 }
 
-export function PlayerControlScreen({ currentDraft, players, onDataChange, currentScreen, onScreenChange }: PlayerControlScreenProps) {
+export function PlayerControlScreen({
+  currentDraft,
+  players,
+  onDataChange,
+  currentScreen,
+  onScreenChange,
+}: PlayerControlScreenProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [selectedHitman, setSelectedHitman] = useState<string>('');
+  const [selectedHitman, setSelectedHitman] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [filterText, setFilterText] = useState('');
+  const [filterText, setFilterText] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-  const [hitmanSearchText, setHitmanSearchText] = useState('');
-  const [highlightedHitmanIndex, setHighlightedHitmanIndex] = useState<number>(-1);
+  const [hitmanSearchText, setHitmanSearchText] = useState("");
+  const [highlightedHitmanIndex, setHighlightedHitmanIndex] =
+    useState<number>(-1);
   const filterInputRef = useRef<HTMLInputElement>(null);
   const hitmanInputRef = useRef<HTMLInputElement>(null);
 
   // Players are knocked out when they have a ko_position (not null)
-  const allRemainingPlayers = players.filter(p => p.ko_position === null);
+  const allRemainingPlayers = players.filter((p) => p.ko_position === null);
 
   // Filter remaining players based on filter text
-  const remainingPlayers = allRemainingPlayers.filter(p => {
+  const remainingPlayers = allRemainingPlayers.filter((p) => {
     if (!filterText.trim()) return true;
     const searchText = filterText.toLowerCase();
     return (
       p.player_name.toLowerCase().includes(searchText) ||
-      (p.player_nickname && p.player_nickname.toLowerCase().includes(searchText))
+      (p.player_nickname &&
+        p.player_nickname.toLowerCase().includes(searchText))
     );
   });
 
   // Filter hitman options based on search text
   const filteredHitmanOptions = allRemainingPlayers
-    .filter(p => selectedPlayer && p.id !== selectedPlayer.id)
-    .filter(p => {
+    .filter((p) => selectedPlayer && p.id !== selectedPlayer.id)
+    .filter((p) => {
       if (!hitmanSearchText.trim()) return true;
       const searchText = hitmanSearchText.toLowerCase();
       return p.player_name.toLowerCase().includes(searchText);
     });
 
   const knockedOutPlayers = players
-    .filter(p => p.ko_position !== null)
+    .filter((p) => p.ko_position !== null)
     .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
 
-  const handleKnockout = useCallback(async (player: Player, hitmanName: string) => {
-    if (!currentDraft || isSubmitting) return;
+  const handleKnockout = useCallback(
+    async (player: Player, hitmanName: string) => {
+      if (!currentDraft || isSubmitting) return;
 
-    setIsSubmitting(true);
-    try {
-      // Calculate next knockout position
-      const maxKoPosition = Math.max(0, ...players.map(p => p.ko_position || 0));
-      const nextKoPosition = maxKoPosition + 1;
+      setIsSubmitting(true);
+      try {
+        // Calculate next knockout position
+        const maxKoPosition = Math.max(
+          0,
+          ...players.map((p) => p.ko_position || 0),
+        );
+        const nextKoPosition = maxKoPosition + 1;
 
-      const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Screen': 'PlayerControl',
-        },
-        body: JSON.stringify({
-          player_name: player.player_name,
-          hitman_name: hitmanName || 'unknown',
-          ko_position: nextKoPosition,
-        }),
-      });
+        const response = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/players/${player.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Admin-Screen": "PlayerControl",
+            },
+            body: JSON.stringify({
+              player_name: player.player_name,
+              hitman_name: hitmanName || "unknown",
+              ko_position: nextKoPosition,
+            }),
+          },
+        );
 
-      if (response.ok) {
-        setSelectedPlayer(null);
-        setSelectedHitman('');
-        setFilterText('');
-        onDataChange();
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to record knockout');
+        if (response.ok) {
+          setSelectedPlayer(null);
+          setSelectedHitman("");
+          setFilterText("");
+          onDataChange();
+        } else {
+          const errorData = await response.json();
+          alert(errorData.error || "Failed to record knockout");
+        }
+      } catch (error) {
+        console.error("Error recording knockout:", error);
+        alert("Error recording knockout. Please try again.");
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error('Error recording knockout:', error);
-      alert('Error recording knockout. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [currentDraft, isSubmitting, players, onDataChange]);
+    },
+    [currentDraft, isSubmitting, players, onDataChange],
+  );
 
   // Reset highlighted index when filter changes
   useEffect(() => {
@@ -131,10 +151,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
   // Reset hitman search when modal opens/closes
   useEffect(() => {
     if (selectedPlayer) {
-      setHitmanSearchText('');
-      setSelectedHitman('');
+      setHitmanSearchText("");
+      setSelectedHitman("");
       setHighlightedHitmanIndex(-1);
-      hitmanInputRef.current?.focus()
+      hitmanInputRef.current?.focus();
     }
   }, [selectedPlayer]);
 
@@ -144,12 +164,12 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
       const target = event.target as HTMLElement;
 
       // ESC to close modal or blur filter input
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         if (selectedPlayer) {
           event.preventDefault();
           setSelectedPlayer(null);
-          setSelectedHitman('');
-          setHitmanSearchText('');
+          setSelectedHitman("");
+          setHitmanSearchText("");
           setHighlightedHitmanIndex(-1);
           return;
         } else if (target === filterInputRef.current) {
@@ -160,13 +180,11 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
       }
 
       // Global shortcut: Press 'x' to focus filter (only when not in an input and modal is closed)
-      if (
-        (event.key === 'x' || event.key === 'X') && !selectedPlayer
-      ) {
+      if ((event.key === "x" || event.key === "X") && !selectedPlayer) {
         if (
-          target.tagName !== 'INPUT' &&
-          target.tagName !== 'TEXTAREA' &&
-          target.tagName !== 'SELECT'
+          target.tagName !== "INPUT" &&
+          target.tagName !== "TEXTAREA" &&
+          target.tagName !== "SELECT"
         ) {
           event.preventDefault();
           filterInputRef.current?.focus();
@@ -176,15 +194,15 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
       // Arrow key navigation when filter input is focused
       if (target === filterInputRef.current) {
-        if (event.key === 'ArrowDown') {
+        if (event.key === "ArrowDown") {
           event.preventDefault();
-          setHighlightedIndex(prev =>
-            prev < remainingPlayers.length - 1 ? prev + 1 : prev
+          setHighlightedIndex((prev) =>
+            prev < remainingPlayers.length - 1 ? prev + 1 : prev,
           );
-        } else if (event.key === 'ArrowUp') {
+        } else if (event.key === "ArrowUp") {
           event.preventDefault();
-          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
-        } else if (event.key === 'Enter' && highlightedIndex >= 0) {
+          setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        } else if (event.key === "Enter" && highlightedIndex >= 0) {
           event.preventDefault();
           const player = remainingPlayers[highlightedIndex];
           if (player) {
@@ -198,17 +216,25 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
       // Arrow key navigation and Enter when hitman input is focused
       if (target === hitmanInputRef.current && selectedPlayer) {
-        if (event.key === 'ArrowDown' && filteredHitmanOptions.length > 0) {
+        if (event.key === "ArrowDown" && filteredHitmanOptions.length > 0) {
           event.preventDefault();
-          setHighlightedHitmanIndex(prev =>
-            prev < filteredHitmanOptions.length - 1 ? prev + 1 : 0
+          setHighlightedHitmanIndex((prev) =>
+            prev < filteredHitmanOptions.length - 1 ? prev + 1 : 0,
           );
-        } else if (event.key === 'ArrowUp' && filteredHitmanOptions.length > 0) {
+        } else if (
+          event.key === "ArrowUp" &&
+          filteredHitmanOptions.length > 0
+        ) {
           event.preventDefault();
-          setHighlightedHitmanIndex(prev => (prev > 0 ? prev - 1 : filteredHitmanOptions.length - 1));
-        } else if (event.key === 'Enter') {
+          setHighlightedHitmanIndex((prev) =>
+            prev > 0 ? prev - 1 : filteredHitmanOptions.length - 1,
+          );
+        } else if (event.key === "Enter") {
           event.preventDefault();
-          if (highlightedHitmanIndex >= 0 && filteredHitmanOptions[highlightedHitmanIndex]) {
+          if (
+            highlightedHitmanIndex >= 0 &&
+            filteredHitmanOptions[highlightedHitmanIndex]
+          ) {
             // Select highlighted hitman
             const hitman = filteredHitmanOptions[highlightedHitmanIndex];
             setSelectedHitman(hitman.player_name);
@@ -218,18 +244,24 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
             handleKnockout(selectedPlayer, hitman.player_name);
           } else {
             // No selection or no filter - use "unknown"
-            const hitmanName = hitmanSearchText.trim() || 'unknown';
+            const hitmanName = hitmanSearchText.trim() || "unknown";
             handleKnockout(selectedPlayer, hitmanName);
           }
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [highlightedIndex, remainingPlayers, selectedPlayer, hitmanSearchText, highlightedHitmanIndex, filteredHitmanOptions, handleKnockout]);
-
-
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
+  }, [
+    highlightedIndex,
+    remainingPlayers,
+    selectedPlayer,
+    hitmanSearchText,
+    highlightedHitmanIndex,
+    filteredHitmanOptions,
+    handleKnockout,
+  ]);
 
   const handleUndoKnockout = async (player: Player) => {
     if (!currentDraft || isSubmitting) return;
@@ -238,28 +270,31 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/tournament-drafts/${currentDraft.id}/players/${player.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Screen': 'PlayerControl',
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/players/${player.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Screen": "PlayerControl",
+          },
+          body: JSON.stringify({
+            player_name: player.player_name,
+            hitman_name: null,
+            ko_position: null,
+          }),
         },
-        body: JSON.stringify({
-          player_name: player.player_name,
-          hitman_name: null,
-          ko_position: null,
-        }),
-      });
+      );
 
       if (response.ok) {
         onDataChange();
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to undo knockout');
+        alert(errorData.error || "Failed to undo knockout");
       }
     } catch (error) {
-      console.error('Error undoing knockout:', error);
-      alert('Error undoing knockout. Please try again.');
+      console.error("Error undoing knockout:", error);
+      alert("Error undoing knockout. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -269,7 +304,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-cyan-300 mb-4">No Active Tournament</h1>
+          <h1 className="text-4xl font-bold text-cyan-300 mb-4">
+            No Active Tournament
+          </h1>
           <p className="text-gray-400 text-lg">
             Please create or select a tournament on Screen 1 (Full Admin)
           </p>
@@ -284,7 +321,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
       {/* Screen Navigation Tabs */}
-      <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
+      <ScreenTabs
+        currentScreen={currentScreen}
+        onScreenChange={onScreenChange}
+      />
 
       {/* Header */}
       <div className="mb-8 text-center">
@@ -292,7 +332,8 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
           Player Control
         </h1>
         <p className="text-xl text-gray-400">
-          {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
+          {currentDraft.venue} -{" "}
+          {new Date(currentDraft.tournament_date).toLocaleDateString()}
         </p>
       </div>
 
@@ -315,7 +356,8 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
 
             <div className="mb-6">
               <label className="block text-gray-300 text-lg mb-3">
-                Who knocked them out? (Type to search, or press Enter for &quot;unknown&quot;)
+                Who knocked them out? (Type to search, or press Enter for
+                &quot;unknown&quot;)
               </label>
               <input
                 ref={hitmanInputRef}
@@ -339,10 +381,11 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
                         setHighlightedHitmanIndex(-1);
                         handleKnockout(selectedPlayer, p.player_name);
                       }}
-                      className={`w-full px-4 py-3 text-left text-lg transition-all ${highlightedHitmanIndex === index
-                        ? 'bg-cyan-500/30 text-cyan-300'
-                        : 'text-white hover:bg-gray-700'
-                        }`}
+                      className={`w-full px-4 py-3 text-left text-lg transition-all ${
+                        highlightedHitmanIndex === index
+                          ? "bg-cyan-500/30 text-cyan-300"
+                          : "text-white hover:bg-gray-700"
+                      }`}
                     >
                       {p.player_name}
                     </button>
@@ -357,18 +400,24 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
                 disabled={isSubmitting}
                 className="flex-1 px-6 py-3 text-xl font-bold bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
               >
-                <Target className="inline mr-2" size={24} />
+                <Target
+                  className="inline mr-2"
+                  size={24}
+                />
                 Confirm Knockout
               </button>
               <button
                 onClick={() => {
                   setSelectedPlayer(null);
-                  setSelectedHitman('');
+                  setSelectedHitman("");
                 }}
                 disabled={isSubmitting}
                 className="px-6 py-3 text-xl font-bold bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all border-2 border-gray-600"
               >
-                <X className="inline mr-2" size={24} />
+                <X
+                  className="inline mr-2"
+                  size={24}
+                />
                 Cancel
               </button>
             </div>
@@ -381,7 +430,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
         {/* Remaining Players */}
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <Users className="text-green-400" size={32} />
+            <Users
+              className="text-green-400"
+              size={32}
+            />
             <h2 className="text-3xl font-bold text-green-400">
               Remaining ({allRemainingPlayers.length})
             </h2>
@@ -402,7 +454,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
           <div className="space-y-3">
             {remainingPlayers.length === 0 ? (
               <div className="text-center py-12 text-gray-500 text-xl">
-                {filterText.trim() ? 'No players match your filter' : 'No players remaining'}
+                {filterText.trim()
+                  ? "No players match your filter"
+                  : "No players remaining"}
               </div>
             ) : (
               remainingPlayers.map((player, index) => (
@@ -410,10 +464,11 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}
                   disabled={isSubmitting}
-                  className={`w-full p-6 border-2 rounded-xl transition-all text-left group ${highlightedIndex === index
-                    ? 'bg-green-500/20 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]'
-                    : 'bg-gray-800/80 border-green-500/50 hover:border-green-500 hover:bg-gray-700/80'
-                    }`}
+                  className={`w-full p-6 border-2 rounded-xl transition-all text-left group ${
+                    highlightedIndex === index
+                      ? "bg-green-500/20 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                      : "bg-gray-800/80 border-green-500/50 hover:border-green-500 hover:bg-gray-700/80"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -429,7 +484,9 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
                         <div className="text-sm text-yellow-400 mt-1">
                           New Player
                         </div>
-                      ) : ''}
+                      ) : (
+                        ""
+                      )}
                     </div>
                     <div className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Target size={32} />
@@ -444,7 +501,10 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
         {/* Knocked Out Players */}
         <div>
           <div className="flex items-center gap-3 mb-6">
-            <Trophy className="text-red-400" size={32} />
+            <Trophy
+              className="text-red-400"
+              size={32}
+            />
             <h2 className="text-3xl font-bold text-red-400">
               Knocked Out ({knockedOutPlayers.length})
             </h2>
@@ -473,13 +533,20 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
                       </div>
                       {player.hitman_name && (
                         <div className="text-gray-400 ml-16">
-                          <Target size={16} className="inline mr-1" />
-                          Knocked out by: <span className="text-cyan-400 font-semibold">{player.hitman_name}</span>
+                          <Target
+                            size={16}
+                            className="inline mr-1"
+                          />
+                          Knocked out by:{" "}
+                          <span className="text-cyan-400 font-semibold">
+                            {player.hitman_name}
+                          </span>
                         </div>
                       )}
                       {calculatePlacement(player, players.length) !== null && (
                         <div className="text-gray-500 text-sm ml-16 mt-1">
-                          Final Placement: #{calculatePlacement(player, players.length)}
+                          Final Placement: #
+                          {calculatePlacement(player, players.length)}
                         </div>
                       )}
                     </div>
@@ -496,28 +563,6 @@ export function PlayerControlScreen({ currentDraft, players, onDataChange, curre
               ))
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="max-w-7xl mx-auto mt-12 grid grid-cols-3 gap-6">
-        <div className="bg-gray-800/60 border border-cyan-500/30 rounded-xl p-6 text-center">
-          <div className="text-4xl font-bold text-cyan-400 mb-2">
-            {players.length}
-          </div>
-          <div className="text-gray-400">Total Players</div>
-        </div>
-        <div className="bg-gray-800/60 border border-green-500/30 rounded-xl p-6 text-center">
-          <div className="text-4xl font-bold text-green-400 mb-2">
-            {allRemainingPlayers.length}
-          </div>
-          <div className="text-gray-400">Still In</div>
-        </div>
-        <div className="bg-gray-800/60 border border-red-500/30 rounded-xl p-6 text-center">
-          <div className="text-4xl font-bold text-red-400 mb-2">
-            {knockedOutPlayers.length}
-          </div>
-          <div className="text-gray-400">Knocked Out</div>
         </div>
       </div>
     </div>

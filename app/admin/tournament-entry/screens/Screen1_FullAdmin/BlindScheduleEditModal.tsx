@@ -100,15 +100,15 @@ export function BlindScheduleEditModal({
     BLIND_SCHEDULES[currentScheduleId]?.name || currentScheduleId;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               Edit Blind Schedule
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500">
               Based on: {currentScheduleName}
               {customLevels && " (customized)"}
             </p>
@@ -125,8 +125,9 @@ export function BlindScheduleEditModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="overflow-x-auto">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -255,18 +256,138 @@ export function BlindScheduleEditModal({
             </table>
           </div>
 
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {levels.map((level, index) => (
+              <div
+                key={index}
+                className={`border rounded-lg p-3 ${level.isbreak ? "bg-yellow-50 border-yellow-200" : "bg-white border-gray-200"}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-gray-900">
+                    {level.isbreak ? `Break` : `Level ${level.level}`}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteLevel(index)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Delete level"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Duration (min)
+                    </label>
+                    <input
+                      type="number"
+                      value={level.duration}
+                      onChange={(e) =>
+                        handleLevelChange(
+                          index,
+                          "duration",
+                          parseInt(e.target.value) || 0,
+                        )
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center"
+                      min="1"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`break-${index}`}
+                      checked={level.isbreak || false}
+                      onChange={(e) =>
+                        handleLevelChange(index, "isbreak", e.target.checked)
+                      }
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={`break-${index}`} className="text-sm text-gray-700">
+                      Break
+                    </label>
+                  </div>
+                </div>
+
+                {!level.isbreak && (
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Small
+                      </label>
+                      <input
+                        type="number"
+                        step={50}
+                        value={level.smallBlind}
+                        onChange={(e) =>
+                          handleLevelChange(
+                            index,
+                            "smallBlind",
+                            parseInt(e.target.value) || 0,
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Big
+                      </label>
+                      <input
+                        type="number"
+                        step={50}
+                        value={level.bigBlind}
+                        onChange={(e) =>
+                          handleLevelChange(
+                            index,
+                            "bigBlind",
+                            parseInt(e.target.value) || 0,
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Ante
+                      </label>
+                      <input
+                        type="number"
+                        step={50}
+                        value={level.ante || 0}
+                        onChange={(e) =>
+                          handleLevelChange(
+                            index,
+                            "ante",
+                            parseInt(e.target.value) || 0,
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
           {/* Add buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
             <button
               onClick={handleAddLevel}
-              className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               <Plus size={16} />
               Add Level
             </button>
             <button
               onClick={handleAddBreak}
-              className="flex items-center gap-1 px-3 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+              className="flex items-center justify-center gap-1 px-3 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
             >
               <Plus size={16} />
               Add Break
@@ -275,7 +396,7 @@ export function BlindScheduleEditModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-gray-200">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"

@@ -255,6 +255,8 @@ export function PlayerCheckInCore({
               }}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
+                  setSearchQuery("");
+                  setShowDropdown(false);
                   e.currentTarget.blur();
                 }
               }}
@@ -382,6 +384,7 @@ export function PlayerCheckInCore({
               onChange={(e) => setNewPlayerName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
+                  setNewPlayerName("");
                   e.currentTarget.blur();
                 }
               }}
