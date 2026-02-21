@@ -99,32 +99,36 @@ export async function GET(
     // Note: hitman_name might match player_name OR player_nickname, so check both
     // Also join hitman directly by name to players table as fallback for photo/uid
     const knockoutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT
-        ko.id as player_id,
-        ko.player_name,
-        ko.player_nickname,
-        ko.player_uid,
-        ko.hitman_name,
-        hitman.player_nickname as hitman_nickname,
-        COALESCE(hitman.player_uid, hitman_by_name.uid) as hitman_uid,
-        ko.knockedout_at,
-        eliminated_player.photo_url as eliminated_player_photo_url,
-        COALESCE(hitman_player.photo_url, hitman_by_name.photo_url) as hitman_photo_url
-      FROM tournament_draft_players ko
-      LEFT JOIN tournament_draft_players hitman
-        ON hitman.tournament_draft_id = ko.tournament_draft_id
-        AND (hitman.player_name = ko.hitman_name OR hitman.player_nickname = ko.hitman_name)
-      LEFT JOIN players eliminated_player
-        ON ko.player_uid COLLATE utf8mb4_unicode_ci = eliminated_player.uid COLLATE utf8mb4_unicode_ci
-      LEFT JOIN players hitman_player
-        ON hitman.player_uid COLLATE utf8mb4_unicode_ci = hitman_player.uid COLLATE utf8mb4_unicode_ci
-      LEFT JOIN players hitman_by_name
-        ON hitman_by_name.name COLLATE utf8mb4_unicode_ci = ko.hitman_name COLLATE utf8mb4_unicode_ci
-      WHERE ko.tournament_draft_id = ${tournamentId}
-        AND ko.status = 'knockedout'
-        AND ko.knockedout_at IS NOT NULL
-      ORDER BY ko.knockedout_at ASC
-    `;
+  SELECT
+    ko.id as player_id,
+    ko.player_name,
+    ko.player_nickname,
+    ko.player_uid,
+    ko.hitman_name,
+    hitman.player_nickname as hitman_nickname,
+    COALESCE(hitman.player_uid, hitman_by_name.uid) as hitman_uid,
+    ko.knockedout_at,
+    eliminated_player.photo_url as eliminated_player_photo_url,
+    COALESCE(hitman_player.photo_url, hitman_by_name.photo_url) as hitman_photo_url
+  FROM tournament_draft_players ko
+  LEFT JOIN tournament_draft_players hitman
+    ON hitman.tournament_draft_id = ko.tournament_draft_id
+    AND (hitman.player_name = ko.hitman_name OR hitman.player_nickname = ko.hitman_name)
+  LEFT JOIN players eliminated_player
+    ON ko.player_uid COLLATE utf8mb4_unicode_ci = eliminated_player.uid COLLATE utf8mb4_unicode_ci
+  LEFT JOIN players hitman_player
+    ON hitman.player_uid COLLATE utf8mb4_unicode_ci = hitman_player.uid COLLATE utf8mb4_unicode_ci
+  LEFT JOIN (
+    SELECT MIN(id) as id, name, uid, photo_url
+    FROM players
+    GROUP BY name
+  ) hitman_by_name
+    ON hitman_by_name.name COLLATE utf8mb4_unicode_ci = ko.hitman_name COLLATE utf8mb4_unicode_ci
+  WHERE ko.tournament_draft_id = ${tournamentId}
+    AND ko.status = 'knockedout'
+    AND ko.knockedout_at IS NOT NULL
+  ORDER BY ko.knockedout_at ASC
+`;
 
     // Transform knockout players into FeedItem format with synthetic IDs
     const knockoutFeedItems: FeedItem[] = knockoutPlayers.map((player, index) => ({
@@ -262,8 +266,8 @@ export async function GET(
     const oldestOtherItem = otherItems.length > 0 ? otherItems[otherItems.length - 1] : null;
     const nextCursor = hasMore && oldestOtherItem
       ? (oldestOtherItem.created_at instanceof Date
-          ? oldestOtherItem.created_at.toISOString()
-          : String(oldestOtherItem.created_at))
+        ? oldestOtherItem.created_at.toISOString()
+        : String(oldestOtherItem.created_at))
       : null;
 
     // Batch-load reactions for all feed items
@@ -351,7 +355,7 @@ export async function POST(
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required. Please log in to post messages." },
