@@ -23,9 +23,7 @@ import {
   ChevronDown,
   Download,
   QrCode,
-  ClipboardList,
 } from "lucide-react";
-import Link from "next/link";
 import { formatGameDate, formatTime } from "@/lib/utils";
 import { QRCodeModal } from "../../QRCodeModal";
 import { GameTimer } from "@/components/Timer/GameTimer";
