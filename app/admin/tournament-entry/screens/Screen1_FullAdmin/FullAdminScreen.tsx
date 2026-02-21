@@ -2077,15 +2077,6 @@ export function FullAdminScreen({
                     should be knocked out:
                   </p>
                   <div className="max-h-64 overflow-y-auto border rounded mb-4">
-                    {/* Option to be first knockout */}
-                    <button
-                      onClick={() =>
-                        handleMoveKnockout(moveKnockoutModal.playerId, null)
-                      }
-                      className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
-                    >
-                      <span className="font-medium">Be the first knockout</span>
-                    </button>
                     {/* List all knocked out players except the one being moved */}
                     {players
                       .filter(
@@ -2120,6 +2111,15 @@ export function FullAdminScreen({
                           </button>
                         );
                       })}
+                    {/* Option to be first knockout */}
+                    <button
+                      onClick={() =>
+                        handleMoveKnockout(moveKnockoutModal.playerId, null)
+                      }
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
+                    >
+                      <span className="font-medium">Be the first knockout</span>
+                    </button>
                   </div>
                   <button
                     onClick={() => setMoveKnockoutModal(null)}
