@@ -13,6 +13,7 @@ import AuditLogDetailModal from './AuditLogDetailModal';
 
 // Action type display configuration
 const ACTION_TYPE_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  PLAYER_CREATED: { label: 'Player Created', color: 'bg-emerald-100 text-emerald-800', icon: '★' },
   PLAYER_ADDED: { label: 'Player Added', color: 'bg-green-100 text-green-800', icon: '+' },
   PLAYER_REMOVED: { label: 'Player Removed', color: 'bg-red-100 text-red-800', icon: '-' },
   PLAYER_CHECKED_IN: { label: 'Check-in', color: 'bg-blue-100 text-blue-800', icon: 'v' },
@@ -181,6 +182,8 @@ export default function AuditLogViewerPage() {
     const target = log.targetPlayerName;
 
     switch (log.actionType) {
+      case 'PLAYER_CREATED':
+        return `${target || 'A player'} was added to the global players table`;
       case 'PLAYER_ADDED':
         return `${actor} added ${target || 'a player'} to the tournament`;
       case 'PLAYER_REMOVED':

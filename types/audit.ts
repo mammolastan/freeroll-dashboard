@@ -2,6 +2,7 @@
 
 export type AuditActionType =
     // Player Management
+    | 'PLAYER_CREATED'
     | 'PLAYER_ADDED'
     | 'PLAYER_REMOVED'
     | 'PLAYER_CHECKED_IN'

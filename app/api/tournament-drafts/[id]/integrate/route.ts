@@ -479,7 +479,7 @@ export async function POST(
       for (const newPlayer of result._auditData.newPlayersCreated) {
         await logAuditEvent({
           ...baseAuditData,
-          actionType: "PLAYER_ADDED",
+          actionType: "PLAYER_CREATED",
           actionCategory: "SYSTEM",
           targetPlayerId: null,
           targetPlayerName: newPlayer.playerName,
@@ -487,10 +487,8 @@ export async function POST(
           newValue: {
             playerUid: newPlayer.playerUid,
             playerName: newPlayer.playerName,
-            isNewPlayer: true,
           },
           metadata: {
-            createdDuringIntegration: true,
             gameUid: result.gameUID,
           },
         });
