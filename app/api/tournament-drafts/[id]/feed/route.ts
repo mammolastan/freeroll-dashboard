@@ -119,7 +119,7 @@ export async function GET(
   LEFT JOIN players hitman_player
     ON hitman.player_uid COLLATE utf8mb4_unicode_ci = hitman_player.uid COLLATE utf8mb4_unicode_ci
   LEFT JOIN (
-    SELECT MIN(id) as id, name, uid, photo_url
+    SELECT name, MIN(uid) as uid, MIN(photo_url) as photo_url
     FROM players
     GROUP BY name
   ) hitman_by_name
