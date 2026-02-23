@@ -80,7 +80,6 @@ export default function TournamentEntryPage() {
       levelChangeAudio.load();
 
       setAudioEnabled(true);
-      console.log("Audio enabled - will persist across screen changes");
     }
   }, [audioEnabled, oneMinuteAudio, levelChangeAudio]);
 
@@ -141,15 +140,11 @@ export default function TournamentEntryPage() {
   useEffect(() => {
     if (!currentDraft) return;
 
-    console.log("Admin: Setting up Socket.IO for tournament:", currentDraft.id);
-
     // Join the tournament room
     socket.emit("joinRoom", currentDraft.id.toString());
 
     // Listen for player updates
     const handlePlayersUpdated = (eventOrPlayers: unknown) => {
-      console.log("Admin: Raw socket data:", eventOrPlayers);
-
       // STEP 1: Extract players array (handle multiple formats)
       let rawPlayers: unknown[];
       if (Array.isArray(eventOrPlayers)) {
@@ -221,7 +216,6 @@ export default function TournamentEntryPage() {
         };
       });
 
-      console.log("Admin: Normalized players:", normalizedPlayers);
       setPlayers([...normalizedPlayers]);
     };
 
@@ -230,10 +224,6 @@ export default function TournamentEntryPage() {
 
     // Cleanup when component unmounts or tournament changes
     return () => {
-      console.log(
-        "Admin: Cleaning up Socket.IO for tournament:",
-        currentDraft.id,
-      );
       socket.off("players:updated", handlePlayersUpdated);
       socket.off("updatePlayers", handlePlayersUpdated);
     };
