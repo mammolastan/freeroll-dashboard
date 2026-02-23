@@ -42,8 +42,7 @@ interface Player {
 export default function TournamentEntryPage() {
   const { currentScreen, setCurrentScreen } = useScreenRouter(1);
 
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Authentication is now handled by middleware - if we reach this page, user is an admin
 
   // View state - determines whether to show tournament list or entry view
   const [currentView, setCurrentView] = useState<"welcome" | "entry">(
@@ -85,10 +84,8 @@ export default function TournamentEntryPage() {
     }
   }, [audioEnabled, oneMinuteAudio, levelChangeAudio]);
 
-  // Load tournament and player data (only when authenticated)
+  // Load tournament and player data
   const loadData = useCallback(async () => {
-    if (!isAuthenticated) return;
-
     try {
       // Load tournaments to find the active one
       const tournamentsResponse = await fetch(
@@ -133,7 +130,7 @@ export default function TournamentEntryPage() {
     } catch (error) {
       console.error("Error loading data:", error);
     }
-  }, [isAuthenticated, currentDraft]);
+  }, [currentDraft]);
 
   // Load data when authenticated or when data version changes
   useEffect(() => {
@@ -142,7 +139,7 @@ export default function TournamentEntryPage() {
 
   // Socket.IO real-time updates for admin screens
   useEffect(() => {
-    if (!currentDraft || !isAuthenticated) return;
+    if (!currentDraft) return;
 
     console.log("Admin: Setting up Socket.IO for tournament:", currentDraft.id);
 
@@ -240,7 +237,7 @@ export default function TournamentEntryPage() {
       socket.off("players:updated", handlePlayersUpdated);
       socket.off("updatePlayers", handlePlayersUpdated);
     };
-  }, [currentDraft, isAuthenticated]);
+  }, [currentDraft]);
 
   // Callback for screens to trigger data reload
   const handleDataChange = useCallback(() => {
@@ -269,8 +266,6 @@ export default function TournamentEntryPage() {
     <>
       {currentScreen === 1 && (
         <FullAdminScreen
-          isAuthenticated={isAuthenticated}
-          setIsAuthenticated={setIsAuthenticated}
           currentView={currentView}
           setCurrentView={setCurrentView}
           currentDraft={currentDraft}

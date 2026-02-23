@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-utils';
 
 interface AuditLogRow {
   id: number;
@@ -50,6 +51,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   const { id } = await params;
   const logId = parseInt(id);
 

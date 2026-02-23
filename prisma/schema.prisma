@@ -35,22 +35,6 @@ model PokerTournament {
   @@map("poker_tournaments")
 }
 
-model ProcessedFile {
-  id                  Int       @id @default(autoincrement())
-  filename            String    @unique(map: "filename") @db.VarChar(255)
-  processed_at        DateTime  @default(now()) @map("processed_at") @db.Timestamp(0)
-  status              Status
-  error_message       String?   @map("error_message") @db.Text
-  drive_file_id       String    @map("drive_file_id") @db.VarChar(255)
-  md5_checksum        String?   @map("md5_checksum") @db.VarChar(32)
-  drive_modified_time DateTime  @map("drive_modified_time") @db.DateTime(0)
-  game_uid            String?   @map("game_uid") @db.VarChar(100)
-  game_date           DateTime? @db.Date
-
-  @@index([md5_checksum], map: "idx_md5_checksum")
-  @@map("processed_files")
-}
-
 model Player {
   uid               String          @id
   name              String
@@ -64,11 +48,13 @@ model Player {
   photo_url         String?         @db.VarChar(500)
   favorite_hand     String?         @db.VarChar(100)
   favorite_pro      String?         @db.VarChar(100)
+  isAdmin           Boolean         @default(false)
   bonus_points      bonus_points[]
   password_resets   PasswordReset[]
   PlayerBadge       PlayerBadge[]
 
   @@index([email], map: "idx_player_email")
+  @@index([isAdmin], map: "idx_player_isAdmin")
   @@map("players")
 }
 
@@ -170,6 +156,7 @@ model TournamentDraft {
   timer_is_paused         Boolean?                @default(false)
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
   TournamentAuditLog      TournamentAuditLog[]
+  games                   games[]
   players                 TournamentDraftPlayer[]
   tournament_feed_items   tournament_feed_items[]
 
@@ -276,9 +263,119 @@ model TournamentAuditLog {
   @@index([tournament_id], map: "idx_tournament_id")
 }
 
-enum Status {
-  success
-  error
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model appearances {
+  game_id      Int
+  player_id    Int
+  placement    Int?
+  points       Int?       @default(0)
+  player_score Float?     @db.Float
+  created      DateTime   @default(now()) @db.Timestamp(0)
+  modified     DateTime   @default(now()) @db.Timestamp(0)
+  games        games      @relation(fields: [game_id], references: [id], onUpdate: Restrict, map: "fk_appearances_game")
+  players_v2   players_v2 @relation(fields: [player_id], references: [id], onUpdate: Restrict, map: "fk_appearances_player")
+
+  @@id([game_id, player_id])
+  @@index([player_id], map: "idx_appearances_player")
+}
+
+model games {
+  id                  Int              @id @default(autoincrement())
+  uid                 String           @unique(map: "uq_games_uid") @db.VarChar(50)
+  league_id           Int              @default(1)
+  venue_id            Int
+  date                DateTime         @db.Date
+  time                DateTime?        @db.Time(0)
+  director            String?          @db.VarChar(255)
+  bonus_points        Int              @default(0)
+  season              String?          @db.VarChar(100)
+  tournament_draft_id Int?
+  created             DateTime         @default(now()) @db.Timestamp(0)
+  modified            DateTime         @default(now()) @db.Timestamp(0)
+  appearances         appearances[]
+  tournament_drafts   TournamentDraft? @relation(fields: [tournament_draft_id], references: [id], onUpdate: Restrict, map: "fk_games_draft")
+  leagues             leagues          @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_games_league")
+  venues              venues           @relation(fields: [venue_id], references: [id], onUpdate: Restrict, map: "fk_games_venue")
+  knockouts           knockouts[]
+
+  @@index([date], map: "idx_games_date")
+  @@index([tournament_draft_id], map: "idx_games_draft")
+  @@index([league_id], map: "idx_games_league")
+  @@index([season], map: "idx_games_season")
+  @@index([venue_id], map: "idx_games_venue")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model knockouts {
+  id                                      Int         @id @default(autoincrement())
+  game_id                                 Int
+  hitman                                  Int?
+  victim                                  Int
+  time_ko                                 DateTime?   @db.Timestamp(0)
+  time_created                            DateTime    @default(now()) @db.Timestamp(0)
+  modified                                DateTime    @default(now()) @db.Timestamp(0)
+  games                                   games       @relation(fields: [game_id], references: [id], onUpdate: Restrict, map: "fk_knockouts_game")
+  players_v2_knockouts_hitmanToplayers_v2 players_v2? @relation("knockouts_hitmanToplayers_v2", fields: [hitman], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_knockouts_hitman")
+  players_v2_knockouts_victimToplayers_v2 players_v2  @relation("knockouts_victimToplayers_v2", fields: [victim], references: [id], onUpdate: Restrict, map: "fk_knockouts_victim")
+
+  @@index([game_id], map: "idx_knockouts_game")
+  @@index([hitman], map: "idx_knockouts_hitman")
+  @@index([victim], map: "idx_knockouts_victim")
+}
+
+model leagues {
+  id              Int          @id @default(autoincrement())
+  name            String       @unique(map: "uq_leagues_name") @db.VarChar(255)
+  slug            String       @unique(map: "uq_leagues_slug") @db.VarChar(255)
+  is_active       Boolean      @default(true)
+  league_settings String?      @db.LongText
+  created         DateTime     @default(now()) @db.Timestamp(0)
+  modified        DateTime     @default(now()) @db.Timestamp(0)
+  games           games[]
+  players_v2      players_v2[]
+  venues          venues[]
+}
+
+model players_v2 {
+  id                                     Int           @id @default(autoincrement())
+  uid                                    String        @unique(map: "uq_players_uid") @db.VarChar(50)
+  league_id                              Int           @default(1)
+  first_name                             String?       @db.VarChar(255)
+  last_name                              String?       @db.VarChar(255)
+  nickname                               String?       @db.VarChar(255)
+  email                                  String?       @unique(map: "uq_players_email") @db.VarChar(255)
+  email_verified_at                      DateTime?     @db.Timestamp(0)
+  last_login_at                          DateTime?     @db.Timestamp(0)
+  password_hash                          String?       @db.VarChar(255)
+  photo_url                              String?       @db.VarChar(500)
+  favorite_hand                          String?       @db.VarChar(100)
+  favorite_pro                           String?       @db.VarChar(100)
+  created                                DateTime      @default(now()) @db.Timestamp(0)
+  modified                               DateTime      @default(now()) @db.Timestamp(0)
+  isAdmin                                Boolean       @default(false)
+  appearances                            appearances[]
+  knockouts_knockouts_hitmanToplayers_v2 knockouts[]   @relation("knockouts_hitmanToplayers_v2")
+  knockouts_knockouts_victimToplayers_v2 knockouts[]   @relation("knockouts_victimToplayers_v2")
+  leagues                                leagues       @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
+
+  @@index([league_id], map: "idx_players_league")
+  @@index([isAdmin], map: "idx_players_v2_isAdmin")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model venues {
+  id          Int      @id @default(autoincrement())
+  league_id   Int      @default(1)
+  name        String   @unique(map: "uq_venues_name") @db.VarChar(255)
+  address     String?  @db.VarChar(300)
+  is_active   Boolean  @default(true)
+  cutoff_time Int?
+  created     DateTime @default(now()) @db.Timestamp(0)
+  modified    DateTime @default(now()) @db.Timestamp(0)
+  games       games[]
+  leagues     leagues  @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
+
+  @@index([league_id], map: "idx_venues_league")
 }
 
 enum TournamentDraftStatus {

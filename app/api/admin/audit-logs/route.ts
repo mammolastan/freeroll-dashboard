@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { requireAdmin } from '@/lib/auth-utils';
 
 interface AuditLogRow {
   id: number;
@@ -48,6 +49,9 @@ function transformLog(log: AuditLogRow) {
 }
 
 export async function GET(request: NextRequest) {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   const searchParams = request.nextUrl.searchParams;
 
   // Required parameter

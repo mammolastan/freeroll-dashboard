@@ -2,8 +2,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP } from "@/lib/auditlog";
+import { requireAdmin } from "@/lib/auth-utils";
 
 export async function POST(request: Request) {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   const ipAddress = getClientIP(request);
 
   try {

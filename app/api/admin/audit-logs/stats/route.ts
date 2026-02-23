@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/auth-utils';
 
 interface ActionTypeCount {
   action_type: string;
@@ -24,6 +25,9 @@ interface DateRange {
 }
 
 export async function GET(request: NextRequest) {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   const searchParams = request.nextUrl.searchParams;
   const tournamentId = searchParams.get('tournamentId');
 

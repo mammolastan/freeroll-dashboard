@@ -1,9 +1,12 @@
 // app/api/admin/processed-file-by-game/route.ts
 import { NextResponse } from "next/server";
-
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth-utils";
 
 export async function GET(request: Request) {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const fileName = searchParams.get("fileName");

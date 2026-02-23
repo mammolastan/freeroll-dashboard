@@ -100,8 +100,6 @@ function calculateKoPositions(players: Player[]): Map<number, number> {
 }
 
 interface FullAdminScreenProps {
-  isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
   currentView: "welcome" | "entry";
   setCurrentView: (view: "welcome" | "entry") => void;
   currentDraft: TournamentDraft | null;
@@ -113,8 +111,6 @@ interface FullAdminScreenProps {
 }
 
 export function FullAdminScreen({
-  isAuthenticated,
-  setIsAuthenticated,
   currentView,
   setCurrentView,
   currentDraft: currentDraftProp,
@@ -124,8 +120,7 @@ export function FullAdminScreen({
   currentScreen,
   onScreenChange,
 }: FullAdminScreenProps) {
-  // Authentication
-  const [password, setPassword] = useState("");
+  // Authentication is now handled by middleware - if we reach this page, user is an admin
 
   // Tournament management
   const [tournaments, setTournaments] = useState<TournamentDraft[]>([]);
@@ -1338,32 +1333,11 @@ export function FullAdminScreen({
     }
   };
 
-  // Authentication
-  const handleLogin = async (e: React.KeyboardEvent | React.MouseEvent) => {
-    if (("key" in e && e.key === "Enter") || e.type === "click") {
-      const response = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(true);
-        loadTournaments();
-      } else {
-        alert("Invalid password");
-        setPassword("");
-      }
-    }
-  };
-
-  // Load tournaments and venues on authentication
+  // Load tournaments and venues on mount
   useEffect(() => {
-    if (isAuthenticated) {
-      loadTournaments();
-      loadVenues();
-    }
-  }, [isAuthenticated, loadTournaments]);
+    loadTournaments();
+    loadVenues();
+  }, [loadTournaments]);
 
   // manage load more button visibility
   useEffect(() => {
@@ -1420,38 +1394,6 @@ export function FullAdminScreen({
       setSkipNextAutoRefresh(false);
     }, 5000);
   };
-
-  // Pre-Authentication UI
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <Card className="w-96">
-          <CardHeader>
-            <CardTitle>Tournament Entry - Admin Login</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={handleLogin}
-                className="w-full px-3 py-2 border rounded text-black"
-                placeholder="Enter admin password"
-                required
-              />
-              <button
-                onClick={handleLogin}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Login
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Welcome Screen
   if (currentView === "welcome") {

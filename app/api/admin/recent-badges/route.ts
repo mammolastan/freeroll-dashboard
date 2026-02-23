@@ -2,10 +2,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { requireAdmin } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic"; // This ensures the route always runs dynamically
 
 export async function GET() {
+  const adminCheck = await requireAdmin();
+  if (adminCheck.error) return adminCheck.error;
+
   try {
     const recentBadges = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT 
