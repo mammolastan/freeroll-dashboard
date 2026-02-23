@@ -12,7 +12,17 @@ export default async function AdminLayout({
 }) {
   const session = await getServerSession(authOptions);
 
+  // Debug logging - check your terminal
+  console.log("[AdminLayout]", {
+    hasSession: !!session,
+    user: session?.user ? {
+      email: session.user.email,
+      isAdmin: session.user.isAdmin,
+    } : null,
+  });
+
   if (!session) {
+    console.log("[AdminLayout] No session, redirecting to login");
     // Get current path from headers for proper callback
     const headersList = await headers();
     const pathname = headersList.get("x-invoke-path") || "/admin";
@@ -20,8 +30,10 @@ export default async function AdminLayout({
   }
 
   if (!session.user?.isAdmin) {
+    console.log("[AdminLayout] User is not admin, redirecting to unauthorized");
     redirect("/unauthorized");
   }
 
+  console.log("[AdminLayout] Access granted");
   return <>{children}</>;
 }

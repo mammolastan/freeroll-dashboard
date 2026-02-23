@@ -12,12 +12,18 @@ export async function middleware(req: NextRequest) {
   if (!token) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    // Prevent caching of auth redirects
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    return response;
   }
 
   // Logged in but not admin - redirect to unauthorized
   if (!token.isAdmin) {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+    const response = NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Prevent caching of auth redirects
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    return response;
   }
 
   return NextResponse.next();
