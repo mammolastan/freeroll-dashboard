@@ -125,7 +125,7 @@ const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
     description: "10-minute levels",
     levels: TURBO_SPEED_LEVELS,
   },
-  freeroll: {
+  No300600: {
     id: "No300600",
     name: "No300600",
     description: "20-min, no 300/600, break after 1k/2k",
@@ -135,8 +135,18 @@ const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
 
 // Helper function to get blind schedule
 function getBlindSchedule(scheduleId: string): BlindLevel[] {
+  // Try direct key lookup first
   const schedule = BLIND_SCHEDULES[scheduleId];
-  return schedule ? schedule.levels : BLIND_SCHEDULES.standard.levels;
+  if (schedule) {
+    return schedule.levels;
+  }
+
+  // Legacy mapping for "freeroll" -> No300600
+  if (scheduleId === "freeroll") {
+    return BLIND_SCHEDULES.No300600.levels;
+  }
+
+  return BLIND_SCHEDULES.standard.levels;
 }
 
 export type { BlindLevel, BlindSchedule };

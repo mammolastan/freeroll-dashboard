@@ -42,6 +42,7 @@ interface GameTimerProps {
   isAdmin?: boolean;
   playersRemaining?: number;
   totalPlayers?: number;
+  blindScheduleName?: string;
 }
 
 export function GameTimer({
@@ -49,6 +50,7 @@ export function GameTimer({
   isAdmin = false,
   playersRemaining,
   totalPlayers,
+  blindScheduleName,
 }: GameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -696,10 +698,17 @@ export function GameTimer({
                 </div>
               )}
 
+              {/* Blind Schedule Name (Admin only) */}
+              {isAdmin && blindScheduleName && (
+                <div className="text-xs text-gray-500 uppercase tracking-wider">
+                  Schedule: <span className="text-purple-400 font-medium">{blindScheduleName}</span>
+                </div>
+              )}
+
               {/* Level + Blinds Row */}
               <div className="flex items-center justify-center gap-3 flex-wrap">
                 {isAdmin &&
-                  timerState.isPaused &&
+                  (!timerState.isRunning || timerState.isPaused) &&
                   timerState.currentLevel > 1 && (
                     <button
                       onClick={handlePrevLevel}
@@ -713,7 +722,7 @@ export function GameTimer({
                   Level {timerState.currentLevel}
                 </div>
                 {isAdmin &&
-                  timerState.isPaused &&
+                  (!timerState.isRunning || timerState.isPaused) &&
                   timerState.blindLevels &&
                   timerState.currentLevel < timerState.blindLevels.length && (
                     <button

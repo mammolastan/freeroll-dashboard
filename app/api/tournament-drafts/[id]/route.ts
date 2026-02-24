@@ -172,12 +172,12 @@ export async function PATCH(
     // Validate blind_schedule value if provided
     if (
       blind_schedule &&
-      !["standard", "medium", "turbo", "freeroll", "No300600"].includes(blind_schedule)
+      !["standard", "medium", "turbo", "No300600"].includes(blind_schedule)
     ) {
       return NextResponse.json(
         {
           error:
-            "Invalid blind schedule. Must be 'standard', 'medium', 'turbo', or 'freeroll'",
+            "Invalid blind schedule. Must be 'standard', 'medium', 'turbo', or 'No300600'",
         },
         { status: 400 }
       );

@@ -2340,6 +2340,7 @@ export function FullAdminScreen({
                   tournamentId={currentDraft.id}
                   playersRemaining={computedStats?.playersRemaining}
                   isAdmin={true}
+                  blindScheduleName={currentDraft.blind_schedule || undefined}
                 />
               </div>
             )}
