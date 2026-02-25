@@ -4,6 +4,38 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
+// Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
+function serializeTime(time: unknown): string | null {
+  if (!time) return null;
+
+  if (time instanceof Date) {
+    const hours = time.getUTCHours().toString().padStart(2, "0");
+    const minutes = time.getUTCMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }
+
+  if (typeof time === "string") {
+    const match = time.match(/^(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+    return time;
+  }
+
+  return null;
+}
+
+// Helper to serialize tournament draft for JSON response
+function serializeDraft(draft: RawQueryResult) {
+  return {
+    ...draft,
+    id: Number(draft.id),
+    start_points: Number(draft.start_points),
+    player_count: draft.player_count !== undefined ? Number(draft.player_count) : undefined,
+    tournament_time: serializeTime(draft.tournament_time),
+  };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,7 +61,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json((draft)[0]);
+    return NextResponse.json(serializeDraft(draft[0]));
   } catch (error) {
     console.error("Error fetching tournament draft:", error);
     return NextResponse.json(
@@ -80,7 +112,7 @@ export async function PUT(
     const updatedDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_drafts WHERE id = ${draftId}
     `;
-    const updatedDraft = updatedDraftResult[0];
+    const updatedDraft = serializeDraft(updatedDraftResult[0]);
 
     // Audit logging - compare and log only changed fields
     try {
@@ -227,7 +259,7 @@ export async function PATCH(
     const updatedDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT * FROM tournament_drafts WHERE id = ${draftId}
     `;
-    const updatedDraft = updatedDraftResult[0];
+    const updatedDraft = serializeDraft(updatedDraftResult[0]);
 
     // Audit logging
     try {

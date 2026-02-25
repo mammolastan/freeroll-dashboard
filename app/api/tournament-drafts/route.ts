@@ -4,6 +4,28 @@ import { prisma } from "@/lib/prisma";
 import {RawQueryResult } from "@/types"
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
+// Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
+function serializeTime(time: unknown): string | null {
+  if (!time) return null;
+
+  if (time instanceof Date) {
+    const hours = time.getUTCHours().toString().padStart(2, "0");
+    const minutes = time.getUTCMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }
+
+  if (typeof time === "string") {
+    // Already a string, ensure it's in HH:MM format
+    const match = time.match(/^(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+    return time;
+  }
+
+  return null;
+}
+
 // GET - List all tournament drafts
 export async function GET() {
   try {
@@ -17,12 +39,13 @@ export async function GET() {
       ORDER BY td.tournament_date DESC, td.updated_at DESC
     `;
 
-    // Serialize BigInt values
+    // Serialize BigInt values and time
     const serializedDrafts = (drafts).map((draft) => ({
       ...draft,
       id: Number(draft.id),
       start_points: Number(draft.start_points),
       player_count: Number(draft.player_count),
+      tournament_time: serializeTime(draft.tournament_time),
     }));
 
     return NextResponse.json(serializedDrafts);
@@ -78,6 +101,7 @@ export async function POST(request: NextRequest) {
       ...draft,
       id: Number(draft.id),
       start_points: Number(draft.start_points),
+      tournament_time: serializeTime(draft.tournament_time),
     }));
 
     // Audit logging for tournament creation
