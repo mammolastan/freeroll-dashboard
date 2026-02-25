@@ -32,7 +32,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get the player
-    const player = await prisma.player.findUnique({
+    const player = await prisma.players_v2.findUnique({
       where: { uid: session.user.uid },
     });
 
@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest) {
     // Hash and update the new password
     const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
-    await prisma.player.update({
+    await prisma.players_v2.update({
       where: { uid: session.user.uid },
       data: { password_hash: newPasswordHash },
     });

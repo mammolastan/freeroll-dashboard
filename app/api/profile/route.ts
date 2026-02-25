@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDisplayName } from "@/lib/playerUtils";
 
 // GET - Fetch current user's profile
 export async function GET() {
@@ -12,17 +13,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const player = await prisma.player.findUnique({
+    const player = await prisma.players_v2.findUnique({
       where: { uid: session.user.uid },
       select: {
         uid: true,
-        name: true,
+        first_name: true,
+        last_name: true,
         nickname: true,
         email: true,
         photo_url: true,
         favorite_hand: true,
         favorite_pro: true,
-        created_at: true,
+        created: true,
       },
     });
 
@@ -30,7 +32,12 @@ export async function GET() {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
     }
 
-    return NextResponse.json(player);
+    // Return with computed display name for backwards compatibility
+    return NextResponse.json({
+      ...player,
+      name: getDisplayName(player),
+      created_at: player.created,
+    });
   } catch (error) {
     console.error("Profile fetch error:", error);
     return NextResponse.json(
@@ -102,7 +109,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const updatedPlayer = await prisma.player.update({
+    const updatedPlayer = await prisma.players_v2.update({
       where: { uid: session.user.uid },
       data: {
         nickname: nickname?.trim() || null,
@@ -111,14 +118,19 @@ export async function PATCH(request: NextRequest) {
       },
       select: {
         uid: true,
-        name: true,
+        first_name: true,
+        last_name: true,
         nickname: true,
         favorite_hand: true,
         favorite_pro: true,
       },
     });
 
-    return NextResponse.json(updatedPlayer);
+    // Return with computed display name for backwards compatibility
+    return NextResponse.json({
+      ...updatedPlayer,
+      name: getDisplayName(updatedPlayer),
+    });
   } catch (error) {
     console.error("Profile update error:", error);
     return NextResponse.json(

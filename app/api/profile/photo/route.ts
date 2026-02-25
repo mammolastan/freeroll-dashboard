@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const filepath = path.join(UPLOAD_DIR, filename);
 
     // Delete old photo if it exists (might have different extension from before)
-    const player = await prisma.player.findUnique({
+    const player = await prisma.players_v2.findUnique({
       where: { uid: session.user.uid },
       select: { photo_url: true },
     });
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     // Update database with cache-busting timestamp
     const timestamp = Date.now();
     const photoUrl = `/api/uploads/avatars/${filename}?t=${timestamp}`;
-    await prisma.player.update({
+    await prisma.players_v2.update({
       where: { uid: session.user.uid },
       data: { photo_url: photoUrl },
     });
@@ -143,7 +143,7 @@ export async function DELETE() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const player = await prisma.player.findUnique({
+    const player = await prisma.players_v2.findUnique({
       where: { uid: session.user.uid },
       select: { photo_url: true },
     });
@@ -161,7 +161,7 @@ export async function DELETE() {
       }
 
       // Update database
-      await prisma.player.update({
+      await prisma.players_v2.update({
         where: { uid: session.user.uid },
         data: { photo_url: null },
       });

@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { getDisplayName } from "@/lib/playerUtils";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,7 +17,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password required");
         }
 
-        const player = await prisma.player.findFirst({
+        const player = await prisma.players_v2.findFirst({
           where: { email: credentials.email.toLowerCase() },
         });
 
@@ -33,7 +34,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password");
         }
 
-        await prisma.player.update({
+        await prisma.players_v2.update({
           where: { uid: player.uid },
           data: { last_login_at: new Date() },
         });
@@ -41,7 +42,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: player.uid,
           email: player.email,
-          name: player.name,
+          name: getDisplayName(player),
           nickname: player.nickname,
           image: player.photo_url,
           isAdmin: player.isAdmin,

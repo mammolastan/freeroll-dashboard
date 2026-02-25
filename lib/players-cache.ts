@@ -1,28 +1,42 @@
 // lib/players-cache.ts
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { getDisplayName } from "@/lib/playerUtils";
 
 export interface Player {
   uid: string;
-  name: string;
+  first_name: string | null;
+  last_name: string | null;
   nickname: string | null;
-  created_at: Date;
-  updated_at: Date;
+  created: Date;
+  modified: Date;
+}
+
+// Extended interface with computed display name for backwards compatibility
+export interface PlayerWithDisplayName extends Player {
+  name: string;
 }
 
 // Cached function that fetches all players (revalidates every 24 hours)
 export const getCachedPlayers = unstable_cache(
-  async (): Promise<Player[]> => {
-    console.log("🔄 Fetching fresh players data from database...");
+  async (): Promise<PlayerWithDisplayName[]> => {
+    console.log("Fetching fresh players data from database...");
 
-    const players = await prisma.player.findMany({
-      orderBy: {
-        name: "asc",
-      },
+    const players = await prisma.players_v2.findMany({
+      orderBy: [
+        { first_name: "asc" },
+        { last_name: "asc" },
+      ],
     });
 
-    console.log(`✅ Loaded ${players.length} players into cache`);
-    return players;
+    // Add computed display name for backwards compatibility
+    const playersWithDisplayName = players.map(player => ({
+      ...player,
+      name: getDisplayName(player),
+    }));
+
+    console.log(`Loaded ${players.length} players into cache`);
+    return playersWithDisplayName;
   },
   ["all-players"], // Cache key
   {
@@ -33,7 +47,7 @@ export const getCachedPlayers = unstable_cache(
 
 // Helper function to format player names
 export function formatPlayerName(
-  player: Player | undefined,
+  player: PlayerWithDisplayName | undefined,
   format: "name" | "nickname" | "both" = "name",
   fallback: string = "Unknown Player"
 ): string {

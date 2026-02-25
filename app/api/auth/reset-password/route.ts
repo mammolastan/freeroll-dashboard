@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Update password and mark token as used
     await prisma.$transaction([
-      prisma.player.update({
+      prisma.players_v2.update({
         where: { uid: matchedReset.player_uid },
         data: { password_hash: passwordHash },
       }),

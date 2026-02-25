@@ -36,22 +36,19 @@ model PokerTournament {
 }
 
 model Player {
-  uid               String          @id
+  uid               String    @id
   name              String
   nickname          String?
-  created_at        DateTime        @default(now())
-  updated_at        DateTime        @default(now()) @updatedAt
-  email             String?         @unique @db.VarChar(255)
-  email_verified_at DateTime?       @db.Timestamp(0)
-  last_login_at     DateTime?       @db.Timestamp(0)
-  password_hash     String?         @db.VarChar(255)
-  photo_url         String?         @db.VarChar(500)
-  favorite_hand     String?         @db.VarChar(100)
-  favorite_pro      String?         @db.VarChar(100)
-  isAdmin           Boolean         @default(false)
-  bonus_points      bonus_points[]
-  password_resets   PasswordReset[]
-  PlayerBadge       PlayerBadge[]
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @default(now()) @updatedAt
+  email             String?   @unique @db.VarChar(255)
+  email_verified_at DateTime? @db.Timestamp(0)
+  last_login_at     DateTime? @db.Timestamp(0)
+  password_hash     String?   @db.VarChar(255)
+  photo_url         String?   @db.VarChar(500)
+  favorite_hand     String?   @db.VarChar(100)
+  favorite_pro      String?   @db.VarChar(100)
+  isAdmin           Boolean   @default(false)
 
   @@index([email], map: "idx_player_email")
   @@index([isAdmin], map: "idx_player_isAdmin")
@@ -59,13 +56,13 @@ model Player {
 }
 
 model PasswordReset {
-  id         String    @id @default(uuid()) @db.VarChar(36)
+  id         String     @id @default(uuid()) @db.VarChar(36)
   player_uid String
-  token_hash String    @unique @db.VarChar(255)
-  expires_at DateTime  @db.Timestamp(0)
-  used_at    DateTime? @db.Timestamp(0)
-  created_at DateTime  @default(now()) @db.Timestamp(0)
-  player     Player    @relation(fields: [player_uid], references: [uid], onDelete: Cascade, onUpdate: Restrict)
+  token_hash String     @unique @db.VarChar(255)
+  expires_at DateTime   @db.Timestamp(0)
+  used_at    DateTime?  @db.Timestamp(0)
+  created_at DateTime   @default(now()) @db.Timestamp(0)
+  player     players_v2 @relation(fields: [player_uid], references: [uid], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([player_uid], map: "idx_reset_player_uid")
   @@index([expires_at], map: "idx_reset_expires")
@@ -91,18 +88,18 @@ model Badge {
 }
 
 model PlayerBadge {
-  id          Int       @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   player_uid  String
-  badge_id    String    @db.VarChar(36)
-  earned_at   DateTime  @db.DateTime(0)
-  quarter     String?   @db.VarChar(7)
+  badge_id    String     @db.VarChar(36)
+  earned_at   DateTime   @db.DateTime(0)
+  quarter     String?    @db.VarChar(7)
   year        Int?
-  game_id     String?   @db.VarChar(255)
-  expiration  DateTime? @map("expiration") @db.Date
-  description String?   @map("description") @db.Text
-  CreatedAt   DateTime? @default(now()) @db.DateTime(0)
-  player      Player    @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "player_badges_ibfk_1")
-  badge       Badge     @relation(fields: [badge_id], references: [badge_id], onUpdate: Restrict, map: "player_badges_ibfk_2")
+  game_id     String?    @db.VarChar(255)
+  expiration  DateTime?  @map("expiration") @db.Date
+  description String?    @map("description") @db.Text
+  CreatedAt   DateTime?  @default(now()) @db.DateTime(0)
+  player      players_v2 @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "player_badges_ibfk_1")
+  badge       Badge      @relation(fields: [badge_id], references: [badge_id], onUpdate: Restrict, map: "player_badges_ibfk_2")
 
   @@unique([player_uid, badge_id, quarter, year], map: "player_uid")
   @@index([badge_id], map: "badge_id")
@@ -195,16 +192,16 @@ model TournamentDraftPlayer {
 }
 
 model bonus_points {
-  id         Int      @id @default(autoincrement())
-  player_uid String   @db.VarChar(255)
+  id         Int        @id @default(autoincrement())
+  player_uid String     @db.VarChar(255)
   points     Int
-  reason     String   @db.VarChar(255)
-  category   String?  @default("promotional") @db.VarChar(100)
-  awarded_by String?  @db.VarChar(255)
-  awarded_at DateTime @default(now()) @db.Timestamp(0)
-  season     String?  @db.VarChar(100)
-  notes      String?  @db.Text
-  players    Player   @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "bonus_points_ibfk_1")
+  reason     String     @db.VarChar(255)
+  category   String?    @default("promotional") @db.VarChar(100)
+  awarded_by String?    @db.VarChar(255)
+  awarded_at DateTime   @default(now()) @db.Timestamp(0)
+  season     String?    @db.VarChar(100)
+  notes      String?    @db.Text
+  players    players_v2 @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "bonus_points_ibfk_1")
 
   @@index([awarded_at], map: "idx_awarded_date")
   @@index([player_uid, season], map: "idx_player_season")
@@ -337,26 +334,29 @@ model leagues {
 }
 
 model players_v2 {
-  id                                     Int           @id @default(autoincrement())
-  uid                                    String        @unique(map: "uq_players_uid") @db.VarChar(50)
-  league_id                              Int           @default(1)
-  first_name                             String?       @db.VarChar(255)
-  last_name                              String?       @db.VarChar(255)
-  nickname                               String?       @db.VarChar(255)
-  email                                  String?       @unique(map: "uq_players_email") @db.VarChar(255)
-  email_verified_at                      DateTime?     @db.Timestamp(0)
-  last_login_at                          DateTime?     @db.Timestamp(0)
-  password_hash                          String?       @db.VarChar(255)
-  photo_url                              String?       @db.VarChar(500)
-  favorite_hand                          String?       @db.VarChar(100)
-  favorite_pro                           String?       @db.VarChar(100)
-  created                                DateTime      @default(now()) @db.Timestamp(0)
-  modified                               DateTime      @default(now()) @db.Timestamp(0)
-  isAdmin                                Boolean       @default(false)
+  id                                     Int             @id @default(autoincrement())
+  uid                                    String          @unique(map: "uq_players_uid") @db.VarChar(50)
+  league_id                              Int             @default(1)
+  first_name                             String?         @db.VarChar(255)
+  last_name                              String?         @db.VarChar(255)
+  nickname                               String?         @db.VarChar(255)
+  email                                  String?         @unique(map: "uq_players_email") @db.VarChar(255)
+  email_verified_at                      DateTime?       @db.Timestamp(0)
+  last_login_at                          DateTime?       @db.Timestamp(0)
+  password_hash                          String?         @db.VarChar(255)
+  photo_url                              String?         @db.VarChar(500)
+  favorite_hand                          String?         @db.VarChar(100)
+  favorite_pro                           String?         @db.VarChar(100)
+  created                                DateTime        @default(now()) @db.Timestamp(0)
+  modified                               DateTime        @default(now()) @db.Timestamp(0)
+  isAdmin                                Boolean         @default(false)
   appearances                            appearances[]
-  knockouts_knockouts_hitmanToplayers_v2 knockouts[]   @relation("knockouts_hitmanToplayers_v2")
-  knockouts_knockouts_victimToplayers_v2 knockouts[]   @relation("knockouts_victimToplayers_v2")
-  leagues                                leagues       @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
+  bonus_points                           bonus_points[]
+  knockouts_knockouts_hitmanToplayers_v2 knockouts[]     @relation("knockouts_hitmanToplayers_v2")
+  knockouts_knockouts_victimToplayers_v2 knockouts[]     @relation("knockouts_victimToplayers_v2")
+  password_resets                        PasswordReset[]
+  PlayerBadge                            PlayerBadge[]
+  leagues                                leagues         @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
 
   @@index([league_id], map: "idx_players_league")
   @@index([isAdmin], map: "idx_players_v2_isAdmin")

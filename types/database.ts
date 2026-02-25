@@ -9,12 +9,11 @@ import { Prisma } from '@prisma/client';
  */
 export type {
   Player,
+  players_v2 as PlayersV2,
   Badge,
   PlayerBadge,
-  PokerTournament,
   TournamentDraft,
   TournamentDraftPlayer,
-  ProcessedFile,
   PasswordReset,
   bonus_points as BonusPoints,
 } from '@prisma/client';
@@ -23,19 +22,18 @@ export type {
  * Re-export enums
  */
 export {
-  Status,
   TournamentDraftStatus,
   tournament_draft_players_added_by as PlayerAddedBy
 } from '@prisma/client';
 
 /**
- * Player with related data
+ * Player with related data (using players_v2)
  */
-export type PlayerWithBadges = Prisma.PlayerGetPayload<{
+export type PlayerWithBadges = Prisma.players_v2GetPayload<{
   include: { PlayerBadge: { include: { badge: true } } };
 }>;
 
-export type PlayerWithAllRelations = Prisma.PlayerGetPayload<{
+export type PlayerWithAllRelations = Prisma.players_v2GetPayload<{
   include: {
     PlayerBadge: { include: { badge: true } };
     bonus_points: true;
@@ -80,16 +78,16 @@ export type BadgeWithPlayers = Prisma.BadgeGetPayload<{
 }>;
 
 /**
- * Select types for partial queries
+ * Select types for partial queries (using players_v2)
  */
 export type PlayerBasicInfo = Pick<
-  Prisma.PlayerGetPayload<object>,
-  'uid' | 'name' | 'nickname' | 'email' | 'photo_url'
+  Prisma.players_v2GetPayload<object>,
+  'uid' | 'first_name' | 'last_name' | 'nickname' | 'email' | 'photo_url'
 >;
 
 export type PlayerPublicInfo = Pick<
-  Prisma.PlayerGetPayload<object>,
-  'uid' | 'name' | 'nickname' | 'photo_url'
+  Prisma.players_v2GetPayload<object>,
+  'uid' | 'first_name' | 'last_name' | 'nickname' | 'photo_url'
 >;
 
 export type TournamentBasicInfo = Pick<
@@ -98,10 +96,10 @@ export type TournamentBasicInfo = Pick<
 >;
 
 /**
- * Create input types for API requests
+ * Create input types for API requests (using players_v2)
  */
-export type PlayerCreateInput = Prisma.PlayerCreateInput;
-export type PlayerUpdateInput = Prisma.PlayerUpdateInput;
+export type PlayerCreateInput = Prisma.players_v2CreateInput;
+export type PlayerUpdateInput = Prisma.players_v2UpdateInput;
 export type TournamentDraftCreateInput = Prisma.TournamentDraftCreateInput;
 export type TournamentDraftUpdateInput = Prisma.TournamentDraftUpdateInput;
 export type TournamentDraftPlayerCreateInput = Prisma.TournamentDraftPlayerCreateInput;
@@ -110,18 +108,18 @@ export type BadgeCreateInput = Prisma.BadgeCreateInput;
 export type PlayerBadgeCreateInput = Prisma.PlayerBadgeCreateInput;
 
 /**
- * Where clause types for queries
+ * Where clause types for queries (using players_v2)
  */
-export type PlayerWhereInput = Prisma.PlayerWhereInput;
+export type PlayerWhereInput = Prisma.players_v2WhereInput;
 export type TournamentDraftWhereInput = Prisma.TournamentDraftWhereInput;
 export type TournamentDraftPlayerWhereInput = Prisma.TournamentDraftPlayerWhereInput;
 export type BadgeWhereInput = Prisma.BadgeWhereInput;
 export type PlayerBadgeWhereInput = Prisma.PlayerBadgeWhereInput;
 
 /**
- * OrderBy types for sorting
+ * OrderBy types for sorting (using players_v2)
  */
-export type PlayerOrderByInput = Prisma.PlayerOrderByWithRelationInput;
+export type PlayerOrderByInput = Prisma.players_v2OrderByWithRelationInput;
 export type TournamentDraftOrderByInput = Prisma.TournamentDraftOrderByWithRelationInput;
 export type BadgeOrderByInput = Prisma.BadgeOrderByWithRelationInput;
 

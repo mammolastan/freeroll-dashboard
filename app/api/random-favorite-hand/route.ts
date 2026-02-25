@@ -2,18 +2,20 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDisplayName } from "@/lib/playerUtils";
 
 export async function GET() {
   try {
     // Get all players who have a favorite hand set
-    const playersWithFavoriteHands = await prisma.player.findMany({
+    const playersWithFavoriteHands = await prisma.players_v2.findMany({
       where: {
         favorite_hand: {
           not: null,
         },
       },
       select: {
-        name: true,
+        first_name: true,
+        last_name: true,
         nickname: true,
         favorite_hand: true,
       },
@@ -37,7 +39,7 @@ export async function GET() {
 
     return NextResponse.json({
       hand: selected.favorite_hand,
-      playerName: selected.nickname || selected.name,
+      playerName: selected.nickname || getDisplayName(selected),
       totalHands: validPlayers.length,
     });
   } catch (error) {

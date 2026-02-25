@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { requireAdmin } from "@/lib/auth-utils";
+import { getDisplayName } from "@/lib/playerUtils";
 
 export async function POST(request: Request) {
   const adminCheck = await requireAdmin();
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     const { uid, nickname } = await request.json();
 
     // Fetch current player state before updating
-    const currentPlayer = await prisma.player.findUnique({
+    const currentPlayer = await prisma.players_v2.findUnique({
       where: { uid },
     });
 
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
 
     const oldNickname = currentPlayer.nickname;
 
-    const updatedPlayer = await prisma.player.update({
+    const updatedPlayer = await prisma.players_v2.update({
       where: { uid },
       data: { nickname },
     });
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
           actorId: null,
           actorName: actor.actorName,
           targetPlayerId: null, // Player table uses uid (string), not numeric id
-          targetPlayerName: currentPlayer.name,
+          targetPlayerName: getDisplayName(currentPlayer),
           previousValue: {
             nickname: oldNickname,
           },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { getDisplayName, parseName } from "@/lib/playerUtils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if email already registered
-    const existingUser = await prisma.player.findFirst({
+    const existingUser = await prisma.players_v2.findFirst({
       where: { email: normalizedEmail },
     });
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (existingPlayerUid) {
       // Claiming an existing player record
-      const existingPlayer = await prisma.player.findUnique({
+      const existingPlayer = await prisma.players_v2.findUnique({
         where: { uid: existingPlayerUid },
       });
 
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Update existing player with auth info
-      player = await prisma.player.update({
+      player = await prisma.players_v2.update({
         where: { uid: existingPlayerUid },
         data: {
           email: normalizedEmail,
@@ -78,10 +79,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      player = await prisma.player.create({
+      const { first_name, last_name } = parseName(name);
+
+      player = await prisma.players_v2.create({
         data: {
           uid: uuidv4(),
-          name: name.trim(),
+          first_name,
+          last_name,
           email: normalizedEmail,
           password_hash,
         },
@@ -92,7 +96,7 @@ export async function POST(request: NextRequest) {
       success: true,
       player: {
         uid: player.uid,
-        name: player.name,
+        name: getDisplayName(player),
         email: player.email,
         nickname: player.nickname,
       },

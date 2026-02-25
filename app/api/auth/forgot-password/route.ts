@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Find player by email
-    const player = await prisma.player.findFirst({
+    const player = await prisma.players_v2.findFirst({
       where: { email: normalizedEmail },
     });
 

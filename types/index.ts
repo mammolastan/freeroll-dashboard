@@ -39,12 +39,11 @@ export {
 // Database Types
 export type {
   Player,
+  PlayersV2,
   Badge,
   PlayerBadge,
-  PokerTournament,
   TournamentDraft,
   TournamentDraftPlayer,
-  ProcessedFile,
   PasswordReset,
   BonusPoints,
   PlayerWithBadges,
@@ -86,7 +85,6 @@ export type {
 } from './database';
 
 export {
-  Status,
   TournamentDraftStatus,
   PlayerAddedBy,
 } from './database';
