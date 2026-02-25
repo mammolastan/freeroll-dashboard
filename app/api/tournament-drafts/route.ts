@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {RawQueryResult } from "@/types"
+import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 // GET - List all tournament drafts
 export async function GET() {
@@ -78,6 +79,40 @@ export async function POST(request: NextRequest) {
       id: Number(draft.id),
       start_points: Number(draft.start_points),
     }));
+
+    // Audit logging for tournament creation
+    if (serializedDraft.length > 0) {
+      try {
+        const tournamentId = serializedDraft[0].id;
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
+        await logAuditEvent({
+          tournamentId: tournamentId,
+          actionType: 'TOURNAMENT_CREATED',
+          actionCategory: 'ADMIN',
+          actorId: null,
+          actorName: actor.actorName,
+          targetPlayerId: null,
+          targetPlayerName: null,
+          previousValue: null,
+          newValue: {
+            tournamentId: tournamentId,
+            tournamentDate: tournament_date,
+            tournamentTime: tournament_time || null,
+            directorName: director_name || null,
+            venue: venue,
+            startPoints: start_points || 0,
+          },
+          metadata: withActorMetadata(actor, {
+            venue: venue,
+            tournamentDate: tournament_date,
+          }),
+          ipAddress: getClientIP(request),
+        });
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+    }
 
     return NextResponse.json(serializedDraft[0]);
   } catch (error) {
