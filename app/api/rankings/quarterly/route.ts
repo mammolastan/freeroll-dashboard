@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import {
   getCurrentETDate,
   getQuarterDateRange,
-  getDateCondition,
 } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { Prisma } from "@prisma/client";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -84,26 +84,35 @@ export async function GET(request: Request) {
       targetYear
     );
 
-    const dateConditionP = getDateCondition(startOfQuarter, endOfQuarter, "p");
+    const dateCondition = Prisma.sql`g.date >= DATE(${startOfQuarter}) AND g.date <= DATE(${endOfQuarter})`;
 
-    // Get player stats for the quarter
+    // Get player stats for the quarter using the new schema
     const players = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-        p.Name as name,
-        p.UID as uid,
-        pl.nickname,
-        pl.photo_url,
-        COUNT(DISTINCT CASE WHEN p.Venue != 'bonus' THEN p.File_name END) as gamesPlayed,
-        CAST(SUM(p.Total_Points) AS SIGNED) as totalPoints,
-        CAST(SUM(CASE WHEN p.Venue != 'bonus' THEN p.Knockouts ELSE 0 END) AS SIGNED) as totalKnockouts,
-        CAST(SUM(CASE WHEN p.Placement <= 8 AND p.Venue != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
-        CAST(AVG(CASE WHEN p.Venue != 'bonus' THEN p.Player_Score END) AS DECIMAL(10,2)) as avgScore
-        FROM poker_tournaments p
-        LEFT JOIN players pl ON p.UID = pl.uid
-        WHERE ${dateConditionP}        
-        GROUP BY p.Name, p.UID, pl.nickname
-        HAVING gamesPlayed >= 1
-        ORDER BY totalPoints DESC
+      SELECT
+        CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
+        p.uid,
+        p.nickname,
+        p.photo_url,
+        COUNT(DISTINCT CASE WHEN v.name != 'bonus' THEN g.id END) as gamesPlayed,
+        CAST(SUM(a.points) AS SIGNED) as totalPoints,
+        CAST((
+          SELECT COUNT(*) FROM knockouts k
+          JOIN games kg ON kg.id = k.game_id
+          JOIN venues kv ON kv.id = kg.venue_id
+          WHERE k.hitman = p.id
+          AND kv.name != 'bonus'
+          AND kg.date >= DATE(${startOfQuarter}) AND kg.date <= DATE(${endOfQuarter})
+        ) AS SIGNED) as totalKnockouts,
+        CAST(SUM(CASE WHEN a.placement <= 8 AND v.name != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
+        CAST(AVG(CASE WHEN v.name != 'bonus' THEN a.player_score END) AS DECIMAL(10,2)) as avgScore
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE ${dateCondition}
+      GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url
+      HAVING gamesPlayed >= 1
+      ORDER BY totalPoints DESC
     `;
 
     // Serialize the results and add rankings

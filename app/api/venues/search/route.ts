@@ -2,10 +2,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {RawQueryResult} from "@/types"
+import { RawQueryResult } from "@/types";
 export const dynamic = "force-dynamic";
 
-function serializeResults(results: RawQueryResult[]):RawQueryResult[] {
+function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   return results.map((record) => {
     const serialized = { ...record };
     for (const key in serialized) {
@@ -27,12 +27,13 @@ export async function GET(request: NextRequest) {
     }
 
     const venues = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-        Venue as name,
-        COUNT(DISTINCT File_name) as totalGames
-      FROM poker_tournaments
-      WHERE Venue LIKE ${`%${query}%`}
-      GROUP BY Venue
+      SELECT
+        v.name,
+        COUNT(DISTINCT g.id) as totalGames
+      FROM venues v
+      LEFT JOIN games g ON g.venue_id = v.id
+      WHERE v.name LIKE ${`%${query}%`}
+      GROUP BY v.id, v.name
       ORDER BY totalGames DESC
       LIMIT 10
     `;

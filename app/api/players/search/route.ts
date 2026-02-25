@@ -32,15 +32,15 @@ export async function GET(request: NextRequest) {
       const players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           p.uid,
-          p.name,
+          CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
           p.nickname,
-          COUNT(DISTINCT pt.File_name) as TotalGames
-        FROM players p
-        LEFT JOIN poker_tournaments pt ON p.uid = pt.UID
-        WHERE (p.name LIKE ${searchTerm} OR p.nickname LIKE ${searchTerm})
+          COUNT(DISTINCT a.game_id) as TotalGames
+        FROM players_v2 p
+        LEFT JOIN appearances a ON p.id = a.player_id
+        WHERE (CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm} OR p.nickname LIKE ${searchTerm})
           AND p.email IS NULL
-        GROUP BY p.uid, p.name, p.nickname
-        ORDER BY COUNT(DISTINCT pt.File_name) DESC, p.name ASC
+        GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname
+        ORDER BY COUNT(DISTINCT a.game_id) DESC, p.first_name ASC
         LIMIT 10
       `;
 
@@ -59,59 +59,62 @@ export async function GET(request: NextRequest) {
 
     if (isNameSearch) {
       // Search by name or nickname - ordered by recent activity
-      // Primary table is `players` so newly registered users appear immediately
       const searchTerm = `%${query}%`;
       players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
-          p.name as Name,
+          CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as Name,
           p.uid as UID,
           p.nickname,
           p.photo_url,
           p.favorite_hand,
           p.favorite_pro,
-          COUNT(DISTINCT pt.File_name) as TotalGames,
-          SUM(pt.Total_Points) as TotalPoints,
-          MAX(pt.game_date) as LastGameDate
-        FROM players p
-        LEFT JOIN poker_tournaments pt ON p.uid = pt.UID
-        WHERE p.name LIKE ${searchTerm}
+          COUNT(DISTINCT a.game_id) as TotalGames,
+          COALESCE(SUM(a.points), 0) as TotalPoints,
+          MAX(g.date) as LastGameDate
+        FROM players_v2 p
+        LEFT JOIN appearances a ON p.id = a.player_id
+        LEFT JOIN games g ON g.id = a.game_id
+        WHERE CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm}
+          OR p.first_name LIKE ${searchTerm}
+          OR p.last_name LIKE ${searchTerm}
           OR p.nickname LIKE ${searchTerm}
-        GROUP BY p.uid, p.name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
+        GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
         ORDER BY
           CASE
-            WHEN MAX(pt.game_date) IS NULL THEN 1
+            WHEN MAX(g.date) IS NULL THEN 1
             ELSE 0
           END,
-          MAX(pt.game_date) DESC,
-          SUM(pt.Total_Points) DESC,
-          p.name ASC
+          MAX(g.date) DESC,
+          SUM(a.points) DESC,
+          p.first_name ASC
         LIMIT 10
       `;
     } else {
       // Search by exact UID match
       players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
-          p.name as Name,
+          CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as Name,
           p.uid as UID,
           p.nickname,
           p.photo_url,
           p.favorite_hand,
           p.favorite_pro,
-          COUNT(DISTINCT pt.File_name) as TotalGames,
-          SUM(pt.Total_Points) as TotalPoints,
-          MAX(pt.game_date) as LastGameDate
-        FROM players p
-        LEFT JOIN poker_tournaments pt ON p.uid = pt.UID
+          COUNT(DISTINCT a.game_id) as TotalGames,
+          COALESCE(SUM(a.points), 0) as TotalPoints,
+          MAX(g.date) as LastGameDate
+        FROM players_v2 p
+        LEFT JOIN appearances a ON p.id = a.player_id
+        LEFT JOIN games g ON g.id = a.game_id
         WHERE p.uid = ${query}
-        GROUP BY p.uid, p.name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
+        GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
         ORDER BY
           CASE
-            WHEN MAX(pt.game_date) IS NULL THEN 1
+            WHEN MAX(g.date) IS NULL THEN 1
             ELSE 0
           END,
-          MAX(pt.game_date) DESC,
-          SUM(pt.Total_Points) DESC,
-          p.name ASC
+          MAX(g.date) DESC,
+          SUM(a.points) DESC,
+          p.first_name ASC
         LIMIT 10
       `;
     }

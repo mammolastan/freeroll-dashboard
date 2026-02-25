@@ -1,9 +1,9 @@
 // app/api/venues/[venue]/stats/route.ts
 import { NextResponse } from "next/server";
-import { getCurrentETDate, getDateCondition } from "@/lib/utils";
+import { getCurrentETDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
-
+import { Prisma } from "@prisma/client";
 
 function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   return results.map((record) => {
@@ -85,24 +85,30 @@ export async function GET(
     const { startDate, endDate, monthName, year } =
       getDateRangeForMonth(baseDate);
 
-    const dateCondition = getDateCondition(startDate, endDate); // Use alias for JOIN queries
-    const dateConditionP = getDateCondition(startDate, endDate, "p"); // Use alias for JOIN queries
+    const dateCondition = Prisma.sql`g.date >= DATE(${startDate}) AND g.date <= DATE(${endDate})`;
 
     // Get top players for the venue
     const topPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-      p.Name,
-      p.UID,
-      pl.nickname,
-      COUNT(*) as gamesPlayed,
-      SUM(Total_Points) as totalPoints,
-      SUM(Knockouts) as knockouts,
-      AVG(Player_Score) as avgScore
-      FROM poker_tournaments p
-      LEFT JOIN players pl ON p.UID = pl.uid
-      WHERE p.Venue = ${venue}
-      AND ${dateConditionP}
-      GROUP BY Name, UID
+      SELECT
+        CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as Name,
+        p.uid as UID,
+        p.nickname,
+        COUNT(*) as gamesPlayed,
+        SUM(a.points) as totalPoints,
+        (SELECT COUNT(*) FROM knockouts k
+         JOIN games kg ON kg.id = k.game_id
+         JOIN venues kv ON kv.id = kg.venue_id
+         WHERE k.hitman = p.id
+         AND kv.name = ${venue}
+         AND ${dateCondition}) as knockouts,
+        AVG(a.player_score) as avgScore
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE v.name = ${venue}
+      AND ${dateCondition}
+      GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname
       HAVING gamesPlayed > 0
       ORDER BY totalPoints DESC, avgScore DESC
       LIMIT 25
@@ -110,13 +116,19 @@ export async function GET(
 
     // Get venue statistics
     const venueStats = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
-        COUNT(DISTINCT File_name) as totalGames,
-        COUNT(DISTINCT UID) as uniquePlayers,
-        AVG(Total_Points) as avgPoints,
-        SUM(Knockouts) as totalKnockouts
-      FROM poker_tournaments
-      WHERE Venue = ${venue}
+      SELECT
+        COUNT(DISTINCT g.id) as totalGames,
+        COUNT(DISTINCT a.player_id) as uniquePlayers,
+        AVG(a.points) as avgPoints,
+        (SELECT COUNT(*) FROM knockouts k
+         JOIN games kg ON kg.id = k.game_id
+         JOIN venues kv ON kv.id = kg.venue_id
+         WHERE kv.name = ${venue}
+         AND kg.date >= DATE(${startDate}) AND kg.date <= DATE(${endDate})) as totalKnockouts
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      WHERE v.name = ${venue}
       AND ${dateCondition}
     `;
 

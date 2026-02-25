@@ -17,13 +17,13 @@ export async function GET() {
         pb.player_uid,
         pb.earned_at,
         pb.description as badge_description,
-        p.name,
+        CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
         p.nickname,
         b.short_description,
         b.icon,
         b.rarity
       FROM player_badges pb
-      LEFT JOIN players p ON pb.player_uid = p.uid
+      LEFT JOIN players_v2 p ON pb.player_uid = p.uid
       LEFT JOIN badges b ON pb.badge_id = b.badge_id
       ORDER BY pb.earned_at DESC
       LIMIT 25

@@ -10,7 +10,7 @@ export class PlayersService {
       const players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT tdp.*, p.photo_url
         FROM tournament_draft_players tdp
-        LEFT JOIN players p ON tdp.player_uid = p.UID
+        LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
         WHERE tdp.tournament_draft_id = ${tournamentId}
         ORDER BY tdp.created_at ASC
       `;

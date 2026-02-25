@@ -232,29 +232,101 @@ export async function POST(
 
         const gameUID = "SYS-G-" + uuidv4();
 
-        // 7. Process each player with calculated placements
+        // 6. Get or create venue
+        let venue = await tx.venues.findFirst({ where: { name: draft.venue } });
+        if (!venue) {
+          venue = await tx.venues.create({
+            data: { name: draft.venue, league_id: 1 }
+          });
+        }
+
+        // 7. Create game record
+        const seasonString = new Date(draft.tournament_date).toLocaleDateString(
+          "en-US",
+          { month: "long", year: "2-digit" }
+        );
+
+        // Handle tournament_time - it could be a Date object, string, or null
+        let gameTime: Date | null = null;
+        if (draft.tournament_time) {
+          if (draft.tournament_time instanceof Date) {
+            gameTime = draft.tournament_time;
+          } else if (typeof draft.tournament_time === 'string') {
+            // Handle string format like "14:30:00" or "14:30"
+            const timeDate = new Date(`1970-01-01T${draft.tournament_time}`);
+            if (!isNaN(timeDate.getTime())) {
+              gameTime = timeDate;
+            }
+          }
+        }
+
+        const game = await tx.games.create({
+          data: {
+            uid: gameUID,
+            league_id: 1,
+            venue_id: venue.id,
+            date: new Date(draft.tournament_date),
+            time: gameTime,
+            director: draft.director_name,
+            season: seasonString,
+            tournament_draft_id: draftId,
+          }
+        });
+
+        // 8. Process each player - create players_v2 records for new players, then appearances
+        // First, handle new players and build a map of uid -> players_v2.id
+        const playerIdMap = new Map<string, number>();
+
         for (const player of playersWithPlacements) {
-          // Handle new players
+          // Handle new players - create in players_v2
           if (player.is_new_player && !player.player_uid) {
             const newUID = "SYS-P-" + uuidv4();
 
-            // Insert into players table
-            await tx.$queryRaw`
-            INSERT INTO players (uid, name, created_at, updated_at)
-            VALUES (${newUID}, ${player.player_name}, NOW(), NOW())
-          `;
+            // Parse name into first_name and last_name
+            const nameParts = player.player_name.trim().split(/\s+/);
+            const firstName = nameParts[0] || "";
+            const lastName = nameParts.slice(1).join(" ") || "";
+
+            // Insert into players_v2 table
+            const newPlayer = await tx.players_v2.create({
+              data: {
+                uid: newUID,
+                league_id: 1,
+                first_name: firstName,
+                last_name: lastName,
+              }
+            });
+
             revalidatePlayersCache();
             player.player_uid = newUID;
+            playerIdMap.set(newUID, newPlayer.id);
 
             // UPDATE THE DRAFT TABLE WITH THE NEW UID
             await tx.$queryRaw`
-              UPDATE tournament_draft_players 
+              UPDATE tournament_draft_players
               SET player_uid = ${newUID}
-              WHERE tournament_draft_id = ${draftId} 
+              WHERE tournament_draft_id = ${draftId}
               AND player_name = ${player.player_name}
               AND is_new_player = true
             `;
-            
+          } else if (player.player_uid) {
+            // Existing player - look up their players_v2.id
+            const existingPlayer = await tx.players_v2.findUnique({
+              where: { uid: player.player_uid }
+            });
+            if (existingPlayer) {
+              playerIdMap.set(player.player_uid, existingPlayer.id);
+            }
+          }
+        }
+
+        // 9. Create appearances for each player
+        for (const player of playersWithPlacements) {
+          if (!player.player_uid) continue;
+
+          const playerId = playerIdMap.get(player.player_uid);
+          if (!playerId) {
+            throw new Error(`Could not find player_id for uid: ${player.player_uid}`);
           }
 
           // Calculate points and score
@@ -265,43 +337,45 @@ export async function POST(
           );
           const totalPoints = draft.start_points + placementPoints;
 
-          // Look up hitman's UID - prefer the stored hitman_uid, fall back to finding by name
-          let hitmanUid: string | null = player.hitman_uid;
-          if (!hitmanUid && player.hitman_name) {
-            const hitmanPlayer = playersWithPlacements.find(
-              (p) => p.player_name === player.hitman_name
-            );
-            hitmanUid = hitmanPlayer?.player_uid || null;
-          }
-
-          // Insert into poker_tournaments table
-          await tx.pokerTournament.create({
+          // Create appearance record
+          await tx.appearances.create({
             data: {
-              name: player.player_name,
-              uid: player.player_uid,
-              hitman: player.hitman_name,
-              Hitman_UID: hitmanUid,
+              game_id: game.id,
+              player_id: playerId,
               placement: player.placement,
-              knockouts: player.knockouts || 0,
-              startPoints: draft.start_points,
-              hitPoints: 0,
-              placementPoints: placementPoints,
-              totalPoints: totalPoints,
-              season: new Date(draft.tournament_date).toLocaleDateString(
-                "en-US",
-                {
-                  month: "long",
-                  year: "2-digit",
-                }
-              ),
-              venue: draft.venue,
-              fileName: fileName,
-              gameDate: draft.tournament_date,
-              playerScore: playerScore,
-              gameUid: gameUID,
-            },
+              points: totalPoints,
+              player_score: playerScore,
+            }
           });
 
+          // 10. Create knockout record if player was knocked out
+          if (player.hitman_uid || player.hitman_name) {
+            // Look up hitman's players_v2.id
+            let hitmanId: number | null = null;
+
+            if (player.hitman_uid) {
+              hitmanId = playerIdMap.get(player.hitman_uid) || null;
+            }
+
+            // Fall back to finding hitman by name
+            if (!hitmanId && player.hitman_name) {
+              const hitmanPlayer = playersWithPlacements.find(
+                (p) => p.player_name === player.hitman_name
+              );
+              if (hitmanPlayer?.player_uid) {
+                hitmanId = playerIdMap.get(hitmanPlayer.player_uid) || null;
+              }
+            }
+
+            await tx.knockouts.create({
+              data: {
+                game_id: game.id,
+                hitman: hitmanId,
+                victim: playerId,
+                time_ko: player.knockedout_at,
+              }
+            });
+          }
         }
 
         // Update draft status to integrated

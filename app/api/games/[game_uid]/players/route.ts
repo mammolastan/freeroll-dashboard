@@ -8,32 +8,42 @@ export async function GET(
   { params }: { params: Promise<{ game_uid: string }> }
 ) {
   try {
-    // The identifier could be either game_uid or fileName (as fallback)
     const { game_uid } = await params;
     const identifier = decodeURIComponent(game_uid);
 
-    // Try to find players by game_uid first, then fallback to fileName
-    const players = await prisma.pokerTournament.findMany({
+    // Find the game by uid
+    const game = await prisma.games.findUnique({
+      where: { uid: identifier },
+    });
+
+    if (!game) {
+      return NextResponse.json({ players: [] });
+    }
+
+    // Get all appearances (players) for this game
+    const appearances = await prisma.appearances.findMany({
       where: {
-        OR: [
-          { gameUid: identifier }, // Try game_uid first
-          { fileName: identifier }, // Fallback to fileName
-        ],
+        game_id: game.id,
       },
-      select: {
-        id: true,
-        name: true,
-        uid: true,
-        placement: true,
-        startPoints: true,
-        hitman: true,
-        totalPoints: true,
-        playerScore: true,
+      include: {
+        players_v2: true,
       },
       orderBy: {
         placement: "asc",
       },
     });
+
+    // Transform to match the expected response format
+    const players = appearances.map((a) => ({
+      id: a.player_id,
+      name: `${a.players_v2.first_name || ''} ${a.players_v2.last_name || ''}`.trim(),
+      uid: a.players_v2.uid,
+      placement: a.placement,
+      startPoints: 0, // Not stored separately in new schema
+      hitman: null, // Would need separate query to knockouts table
+      totalPoints: a.points,
+      playerScore: a.player_score,
+    }));
 
     return NextResponse.json({ players });
   } catch (error) {

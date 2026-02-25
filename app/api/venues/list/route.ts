@@ -1,8 +1,9 @@
 // app/api/venues/list/route.ts
 import { NextResponse } from "next/server";
-import { getCurrentETDate, getDateCondition } from "@/lib/utils";
+import { getCurrentETDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
-import {RawQueryResult} from "@/types"
+import { RawQueryResult } from "@/types";
+import { Prisma } from "@prisma/client";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -76,37 +77,44 @@ export async function GET(request: Request) {
 
     // Get date range and details
     const { startDate, endDate, monthName, year } = getMonthDetails(baseDate);
-    const dateCondition = getDateCondition(startDate, endDate);
-    const dateConditionP = getDateCondition(startDate, endDate, "p");
+    const dateCondition = Prisma.sql`g.date >= DATE(${startDate}) AND g.date <= DATE(${endDate})`;
 
-    // Get all venues
+    // Get all venues with game counts
     const venues = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT DISTINCT 
-        Venue as name,
-        COUNT(DISTINCT File_name) as totalGames
-      FROM poker_tournaments
+      SELECT
+        v.name,
+        COUNT(DISTINCT g.id) as totalGames
+      FROM venues v
+      JOIN games g ON g.venue_id = v.id
       WHERE ${dateCondition}
-      AND Venue != 'bonus'
-      GROUP BY Venue
+      AND v.name != 'bonus'
+      GROUP BY v.id, v.name
       ORDER BY totalGames DESC
     `;
 
     const venuesWithPlayers = await Promise.all(
-      (venues).map(async (venue) => {
+      venues.map(async (venue) => {
         const topPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-          SELECT 
-            p.Name as name,
-            p.UID as uid,
-            SUM(p.Total_Points) as totalPoints,
-            SUM(p.Knockouts) as knockouts,
+          SELECT
+            CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
+            p.uid,
+            SUM(a.points) as totalPoints,
+            (SELECT COUNT(*) FROM knockouts k
+             JOIN games kg ON kg.id = k.game_id
+             JOIN venues kv ON kv.id = kg.venue_id
+             WHERE k.hitman = p.id
+             AND kv.name = ${venue.name}
+             AND kg.date >= DATE(${startDate}) AND kg.date <= DATE(${endDate})) as knockouts,
             COUNT(*) as gamesPlayed,
-            AVG(p.Player_Score) as avgScore,
-            pl.nickname
-          FROM poker_tournaments p
-          LEFT JOIN players pl ON p.UID = pl.uid
-          WHERE Venue = ${venue.name}
-          AND ${dateConditionP}
-          GROUP BY name, uid, pl.nickname
+            AVG(a.player_score) as avgScore,
+            p.nickname
+          FROM appearances a
+          JOIN games g ON g.id = a.game_id
+          JOIN venues v ON v.id = g.venue_id
+          JOIN players_v2 p ON p.id = a.player_id
+          WHERE v.name = ${venue.name}
+          AND ${dateCondition}
+          GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname
           ORDER BY totalPoints DESC, avgScore DESC
           LIMIT 5
         `;

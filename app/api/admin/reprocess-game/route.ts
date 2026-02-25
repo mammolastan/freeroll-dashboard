@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     const { fileId, filename, gameUid } = await request.json();
 
     // Validate input
-    if (!fileId || !filename) {
+    if (!gameUid) {
       return NextResponse.json(
-        { error: "Missing required fields (fileId, filename)" },
+        { error: "Missing required field (gameUid)" },
         { status: 400 }
       );
     }
@@ -21,39 +21,26 @@ export async function POST(request: Request) {
     let deletionDetails = "";
 
     try {
-      // Start a transaction to ensure both operations succeed or fail together
-      await prisma.$transaction(async (tx) => {
-        // First, delete all tournament records for this game
-        if (gameUid) {
-          // Delete by game_uid if available
-          const deletedTournaments = await tx.pokerTournament.deleteMany({
-            where: {
-              OR: [{ uid: gameUid }, { fileName: filename }],
-            },
-          });
-          deletionDetails += `Deleted ${deletedTournaments.count} tournament records. `;
-        } else {
-          // Fallback to filename if no game_uid
-          const deletedTournaments = await tx.pokerTournament.deleteMany({
-            where: {
-              fileName: filename,
-            },
-          });
-          deletionDetails += `Deleted ${deletedTournaments.count} tournament records (by filename). `;
-        }
-
-        // Then, delete the processed file record
-        await tx.processedFile.delete({
-          where: {
-            id: parseInt(fileId),
-          },
-        });
-        deletionDetails += `Deleted processed file record.`;
+      // Delete the game record (cascades to appearances and knockouts)
+      const game = await prisma.games.findUnique({
+        where: { uid: gameUid },
       });
+
+      if (game) {
+        await prisma.games.delete({
+          where: { uid: gameUid },
+        });
+        deletionDetails = `Deleted game and cascaded to appearances/knockouts.`;
+      } else {
+        return NextResponse.json(
+          { error: `No game found with uid ${gameUid}` },
+          { status: 404 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Successfully reprocessed ${filename}`,
+        message: `Successfully reprocessed ${filename || gameUid}`,
         details: deletionDetails,
       });
     } catch (transactionError) {
@@ -65,7 +52,7 @@ export async function POST(request: Request) {
         transactionError.message.includes("not found")
       ) {
         return NextResponse.json(
-          { error: "File record not found in database" },
+          { error: "Game not found in database" },
           { status: 404 }
         );
       }

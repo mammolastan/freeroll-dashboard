@@ -1,4 +1,4 @@
-// app/api/games/[fileName]/route.ts
+// app/api/games/[game_uid]/route.ts
 import { NextResponse } from "next/server";
 import { formatGameDateET } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -10,45 +10,52 @@ export async function GET(
   try {
     const { game_uid } = await params;
 
-    // Get all players from this game
-    const players: {
-      Name: string;
-      UID: string;
-      Placement: number;
-      Knockouts: number;
-      Hitman: number;
-      Total_Points: number;
-      Start_Points: number;
-      Hit_Points: number;
-      Placement_Points: number;
-      Venue: string;
-      Season: string;
-      nickname: string;
-      file_name: string;
-      game_date: string;
-      photo_url: string | null;
-    }[] = await prisma.$queryRaw`
+    // Get game details from games table
+    const game = await prisma.games.findUnique({
+      where: { uid: game_uid },
+      include: {
+        venues: true,
+      }
+    });
+
+    if (!game) {
+      return NextResponse.json({ error: "Game not found" }, { status: 404 });
+    }
+
+    // Get all players from this game with their appearances and knockouts
+    const players = await prisma.$queryRaw<
+      Array<{
+        Name: string;
+        UID: string;
+        Placement: number;
+        Knockouts: bigint;
+        Total_Points: number;
+        Player_Score: number;
+        Venue: string;
+        Season: string;
+        nickname: string | null;
+        game_date: Date;
+        photo_url: string | null;
+      }>
+    >`
       SELECT
-        p.Name,
-        p.UID,
-        p.Placement,
-        p.Knockouts,
-        p.Hitman,
-        p.Total_Points,
-        p.Start_Points,
-        p.Hit_Points,
-        p.Placement_Points,
-        p.Venue,
-        p.Season,
-        p.game_uid,
-        p.file_name,
-        pl.nickname,
-        pl.photo_url,
-        p.game_date
-      FROM poker_tournaments p
-      LEFT JOIN players pl ON p.UID = pl.uid
-      WHERE p.game_uid = ${game_uid}
-      ORDER BY p.Placement ASC, p.Name ASC
+        CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as Name,
+        p.uid as UID,
+        a.placement as Placement,
+        (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = p.id AND k.game_id = g.id) as Knockouts,
+        a.points as Total_Points,
+        a.player_score as Player_Score,
+        v.name as Venue,
+        g.season as Season,
+        p.nickname,
+        p.photo_url,
+        g.date as game_date
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE g.uid = ${game_uid}
+      ORDER BY a.placement ASC, p.first_name ASC
     `;
 
     if (!players.length) {
@@ -58,7 +65,7 @@ export async function GET(
     // Calculate game statistics
     const totalPlayers = players.length;
     const totalKnockouts = players.reduce(
-      (sum, player) => sum + (player.Knockouts || 0),
+      (sum, player) => sum + Number(player.Knockouts || 0),
       0
     );
     const totalPoints = players.reduce(
@@ -67,8 +74,7 @@ export async function GET(
     );
     const averagePoints = totalPoints / totalPlayers;
 
-    // const gameDate = createGameDate(month, day, seasonYear);
-    const gameDate = formatGameDateET(players[0].game_date);
+    const gameDate = formatGameDateET(players[0].game_date.toISOString());
 
     const gameDetails = {
       players: players.map((player) => ({
@@ -76,12 +82,9 @@ export async function GET(
         uid: player.UID,
         nickname: player.nickname,
         placement: player.Placement,
-        knockouts: player.Knockouts,
-        hitman: player.Hitman,
+        knockouts: Number(player.Knockouts),
         totalPoints: player.Total_Points,
-        startPoints: player.Start_Points,
-        hitPoints: player.Hit_Points,
-        placementPoints: player.Placement_Points,
+        playerScore: player.Player_Score,
         photo_url: player.photo_url,
       })),
       venue: players[0].Venue,

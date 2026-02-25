@@ -22,24 +22,26 @@ export async function GET(
         gamesPlayed: bigint;
         totalPoints: bigint;
         finalTables: bigint;
-        wins: bigint; // Added wins field
+        wins: bigint;
         avgScore: number;
       }>
     >`
-      SELECT 
-        QUARTER(game_date) as quarter,
-        YEAR(game_date) as year,
+      SELECT
+        QUARTER(g.date) as quarter,
+        YEAR(g.date) as year,
         COUNT(*) as gamesPlayed,
-        COALESCE(SUM(Total_Points), 0) as totalPoints,
-        COALESCE(SUM(CASE WHEN Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
-        COALESCE(SUM(CASE WHEN Placement = 1 THEN 1 ELSE 0 END), 0) as wins,
-        COALESCE(AVG(Player_Score), 0) as avgScore
-      FROM poker_tournaments
-      WHERE UID = ${playerUID}
-        AND game_date IS NOT NULL
-        AND Placement IS NOT NULL
-        AND NOT (QUARTER(game_date) = ${currentQuarter} AND YEAR(game_date) = ${currentYear})
-      GROUP BY QUARTER(game_date), YEAR(game_date)
+        COALESCE(SUM(a.points), 0) as totalPoints,
+        COALESCE(SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+        COALESCE(SUM(CASE WHEN a.placement = 1 THEN 1 ELSE 0 END), 0) as wins,
+        COALESCE(AVG(a.player_score), 0) as avgScore
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+        AND g.date IS NOT NULL
+        AND a.placement IS NOT NULL
+        AND NOT (QUARTER(g.date) = ${currentQuarter} AND YEAR(g.date) = ${currentYear})
+      GROUP BY QUARTER(g.date), YEAR(g.date)
       HAVING gamesPlayed >= 3
       ORDER BY year DESC, quarter DESC
     `;
@@ -52,7 +54,7 @@ export async function GET(
           highestFTP: null,
           highestPowerRating: null,
           bestLeagueRanking: null,
-          mostWins: null, // Added mostWins field
+          mostWins: null,
         },
         totalQuarters: 0,
       });
@@ -64,22 +66,25 @@ export async function GET(
         // Get all players' stats for this quarter
         const allPlayersInQuarter = await prisma.$queryRaw<
           Array<{
-            UID: string;
+            uid: string;
             totalPoints: bigint;
             avgScore: number;
           }>
         >`
-          SELECT 
-            UID,
-            COALESCE(SUM(Total_Points), 0) as totalPoints,
-            COALESCE(AVG(Player_Score), 0) as avgScore
-          FROM poker_tournaments
-          WHERE QUARTER(game_date) = ${playerQuarter.quarter}
-            AND YEAR(game_date) = ${playerQuarter.year}
-            AND game_date IS NOT NULL
-            AND Placement IS NOT NULL
-            AND Venue != 'bonus'
-          GROUP BY UID
+          SELECT
+            p.uid,
+            COALESCE(SUM(a.points), 0) as totalPoints,
+            COALESCE(AVG(a.player_score), 0) as avgScore
+          FROM appearances a
+          JOIN games g ON g.id = a.game_id
+          JOIN venues v ON v.id = g.venue_id
+          JOIN players_v2 p ON p.id = a.player_id
+          WHERE QUARTER(g.date) = ${playerQuarter.quarter}
+            AND YEAR(g.date) = ${playerQuarter.year}
+            AND g.date IS NOT NULL
+            AND a.placement IS NOT NULL
+            AND v.name != 'bonus'
+          GROUP BY p.uid
           HAVING COUNT(*) >= 1
           ORDER BY totalPoints DESC, avgScore DESC
         `;
@@ -99,7 +104,7 @@ export async function GET(
               otherAvgScore > playerAvgScore)
           ) {
             ranking++;
-          } else if (otherPlayer.UID === playerUID) {
+          } else if (otherPlayer.uid === playerUID) {
             break;
           }
         }
@@ -110,7 +115,7 @@ export async function GET(
           gamesPlayed: Number(playerQuarter.gamesPlayed),
           totalPoints: Number(playerQuarter.totalPoints),
           finalTables: Number(playerQuarter.finalTables),
-          wins: Number(playerQuarter.wins), // Added wins field
+          wins: Number(playerQuarter.wins),
           finalTablePercentage: Number(
             (
               (Number(playerQuarter.finalTables) /
@@ -148,7 +153,7 @@ export async function GET(
       ),
       mostWins: quarterlyStatsWithRankings.reduce((max, current) =>
         current.wins > (max?.wins || 0) ? current : max
-      ), // Added mostWins personal best
+      ),
     };
 
     return NextResponse.json({

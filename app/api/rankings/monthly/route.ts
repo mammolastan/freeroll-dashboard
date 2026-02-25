@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import {
   getCurrentETDate,
   getMonthDateRange,
-  getDateCondition,
 } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -46,17 +46,18 @@ export async function GET(request: Request) {
 
     // Get the date range for the target month
     const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
-    const dateCondition = getDateCondition(startOfMonth, endOfMonth);
+    const dateCondition = Prisma.sql`g.date >= DATE(${startOfMonth}) AND g.date <= DATE(${endOfMonth})`;
 
-    // Get all venues for the month
+    // Get all venues for the month from the venues table
     const venues = await prisma.$queryRaw<{ name: string }[]>`
-     SELECT DISTINCT Venue as name
-     FROM poker_tournaments
-     WHERE ${dateCondition}
-     AND Venue != 'bonus'
-   `;
+      SELECT DISTINCT v.name
+      FROM venues v
+      JOIN games g ON g.venue_id = v.id
+      WHERE ${dateCondition}
+      AND v.name != 'bonus'
+    `;
 
-    // Get overall rankings (top 50)
+    // Get overall rankings (top 200)
     const overallRankings = await prisma.$queryRaw<
       {
         name: string;
@@ -66,27 +67,30 @@ export async function GET(request: Request) {
         nickname: string | null;
       }[]
     >`
-          SELECT 
+      SELECT
         p.name,
         p.uid,
-        pl.nickname,
+        p.nickname,
         p.totalPoints,
         @rank := @rank + 1 as rank
       FROM (
-        SELECT 
-          Name as name,
-          UID as uid,
-          SUM(Total_Points) as totalPoints,
-          AVG(Player_Score) as avgScore
-        FROM poker_tournaments
+        SELECT
+          CONCAT(COALESCE(pl.first_name, ''), ' ', COALESCE(pl.last_name, '')) as name,
+          pl.uid,
+          pl.nickname,
+          SUM(a.points) as totalPoints,
+          AVG(a.player_score) as avgScore
+        FROM appearances a
+        JOIN games g ON g.id = a.game_id
+        JOIN venues v ON v.id = g.venue_id
+        JOIN players_v2 pl ON pl.id = a.player_id
         WHERE ${dateCondition}
-        AND game_date IS NOT NULL
-        AND Placement IS NOT NULL
-        AND Venue != 'bonus'
-        GROUP BY Name, UID
+        AND g.date IS NOT NULL
+        AND a.placement IS NOT NULL
+        AND v.name != 'bonus'
+        GROUP BY pl.id, pl.uid, pl.first_name, pl.last_name, pl.nickname
         ORDER BY totalPoints DESC, avgScore DESC
-      ) p
-      LEFT JOIN players pl ON p.uid = pl.uid,
+      ) p,
       (SELECT @rank := 0) r
       LIMIT 200
     `;
@@ -102,21 +106,24 @@ export async function GET(request: Request) {
             rank: bigint;
           }[]
         >`
-          SELECT 
+          SELECT
             name,
             uid,
             totalPoints,
             @vrank := @vrank + 1 as rank
           FROM (
-            SELECT 
-              Name as name,
-              UID as uid,
-              SUM(Total_Points) as totalPoints,
-              AVG(Player_Score) as avgScore
-            FROM poker_tournaments
+            SELECT
+              CONCAT(COALESCE(pl.first_name, ''), ' ', COALESCE(pl.last_name, '')) as name,
+              pl.uid,
+              SUM(a.points) as totalPoints,
+              AVG(a.player_score) as avgScore
+            FROM appearances a
+            JOIN games g ON g.id = a.game_id
+            JOIN venues v ON v.id = g.venue_id
+            JOIN players_v2 pl ON pl.id = a.player_id
             WHERE ${dateCondition}
-            AND Venue = ${venue.name}
-            GROUP BY Name, UID
+            AND v.name = ${venue.name}
+            GROUP BY pl.id, pl.uid, pl.first_name, pl.last_name
             ORDER BY totalPoints DESC, avgScore DESC
           ) ranked_venue_players,
           (SELECT @vrank := 0) r

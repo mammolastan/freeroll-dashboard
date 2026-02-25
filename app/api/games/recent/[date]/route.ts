@@ -13,60 +13,34 @@ export async function GET(
     // Convert input date string to a Date object
     const selectedDate = new Date(date);
 
-    const games = await prisma.pokerTournament.findMany({
+    // Get games from the games table for this date
+    const games = await prisma.games.findMany({
       where: {
-        gameDate: selectedDate,
+        date: selectedDate,
       },
       orderBy: {
-        gameDate: "desc",
+        date: "desc",
       },
-      select: {
-        id: true,
-        gameDate: true,
-        fileName: true,
-        season: true,
-        venue: true,
-        gameUid: true, // Use gameUid instead of uid (which is player UID)
+      include: {
+        venues: true,
+        _count: {
+          select: { appearances: true }
+        }
       },
-      distinct: ["fileName"], // Ensure we don't get duplicate games
     });
 
-    // For each game, get the player count and processed date
-    const gamesWithDetails = await Promise.all(
-      games.map(async (game) => {
-        // Get player count
-        const playerCount = await prisma.pokerTournament.count({
-          where: {
-            fileName: game.fileName,
-          },
-        });
-
-        // Get processed file info
-        let processedAt = null;
-        const processedFile = await prisma.processedFile.findFirst({
-          where: {
-            OR: [
-              { game_uid: game.gameUid || undefined },
-              ...(game.fileName ? [{ filename: game.fileName }] : []),
-            ],
-          },
-          select: {
-            processed_at: true,
-          },
-        });
-
-        if (processedFile) {
-          processedAt = processedFile.processed_at;
-        }
-
-        return {
-          ...game,
-          game_uid: game.gameUid || game.fileName, // Use gameUid if available, fallback to fileName
-          playerCount,
-          processedAt,
-        };
-      })
-    );
+    // Transform games to response format
+    const gamesWithDetails = games.map((game) => ({
+      id: game.id,
+      gameDate: game.date,
+      fileName: null, // No longer stored in games table
+      season: game.season,
+      venue: game.venues.name,
+      gameUid: game.uid,
+      game_uid: game.uid,
+      playerCount: game._count.appearances,
+      processedAt: game.created, // Use game creation timestamp
+    }));
 
     return NextResponse.json({ games: gamesWithDetails });
   } catch (error) {

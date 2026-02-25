@@ -7,22 +7,26 @@ export const revalidate = 3600; // 1 * 60 * 60 = 3600 seconds
 
 export async function GET() {
   try {
-    // First get all unique recent games (deduplicated by game_uid)
+    // Get recent games from the games table
     const games = await prisma.$queryRaw<
       Array<{
-        game_date: Date;
-        Venue: string;
         game_uid: string;
+        game_date: Date;
+        venue: string;
+        totalPlayers: bigint;
       }>
     >`
       SELECT
-        MAX(game_date) as game_date,
-        MAX(Venue) as Venue,
-        game_uid
-      FROM poker_tournaments
-      WHERE game_date IS NOT NULL
-      GROUP BY game_uid
-      ORDER BY game_date DESC
+        g.uid as game_uid,
+        g.date as game_date,
+        v.name as venue,
+        COUNT(a.player_id) as totalPlayers
+      FROM games g
+      JOIN venues v ON v.id = g.venue_id
+      LEFT JOIN appearances a ON a.game_id = g.id
+      WHERE g.date IS NOT NULL
+      GROUP BY g.id, g.uid, g.date, v.name
+      ORDER BY g.date DESC
       LIMIT 15
     `;
 
@@ -34,35 +38,37 @@ export async function GET() {
             name: string;
             placement: number;
             totalPoints: number;
-            knockouts: number;
+            knockouts: bigint;
             venue: string;
             uid: string;
-            nickname: string;
+            nickname: string | null;
             game_uid: string;
             photo_url: string | null;
           }>
         >`
           SELECT
-            p.Name as name,
-            p.Placement as placement,
-            p.Total_Points as totalPoints,
-            p.Knockouts as knockouts,
-            p.Venue as venue,
-            p.UID as uid,
-            p.game_uid as game_uid,
-            pl.nickname,
-            pl.photo_url
-          FROM poker_tournaments p
-          LEFT JOIN players pl ON p.UID = pl.uid
-          WHERE p.game_uid = ${game.game_uid}
-          ORDER BY p.Placement ASC
+            CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
+            a.placement,
+            a.points as totalPoints,
+            (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = p.id AND k.game_id = g.id) as knockouts,
+            v.name as venue,
+            p.uid,
+            g.uid as game_uid,
+            p.nickname,
+            p.photo_url
+          FROM appearances a
+          JOIN games g ON g.id = a.game_id
+          JOIN venues v ON v.id = g.venue_id
+          JOIN players_v2 p ON p.id = a.player_id
+          WHERE g.uid = ${game.game_uid}
+          ORDER BY a.placement ASC
         `;
 
         // Get top 3 players
         const topThree = players.slice(0, 3).map((player) => ({
           name: player.name,
           points: player.totalPoints || 0,
-          knockouts: player.knockouts || 0,
+          knockouts: Number(player.knockouts) || 0,
           UID: player.uid,
           nickname: player.nickname,
           photo_url: player.photo_url,
@@ -70,12 +76,12 @@ export async function GET() {
 
         return {
           game_uid: game.game_uid,
-          venue: game.Venue || "Unknown Venue",
-          date: game.game_date.toISOString(), // Use actual game_date
-          totalPlayers: players.length,
+          venue: game.venue || "Unknown Venue",
+          date: game.game_date.toISOString(),
+          totalPlayers: Number(game.totalPlayers),
           topThree,
           totalKnockouts: players.reduce(
-            (sum, player) => sum + (player.knockouts || 0),
+            (sum, player) => sum + (Number(player.knockouts) || 0),
             0
           ),
         };

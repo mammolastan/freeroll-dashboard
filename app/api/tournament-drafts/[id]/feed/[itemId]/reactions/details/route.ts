@@ -19,13 +19,13 @@ export async function GET(
     const rows = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         r.user_uid,
-        p.name,
+        CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
         p.nickname,
         p.photo_url,
         r.reaction_type,
         r.count
       FROM feed_item_reactions r
-      LEFT JOIN players p
+      LEFT JOIN players_v2 p
         ON r.user_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
       WHERE r.feed_item_id = ${itemId}
         AND r.tournament_draft_id = ${tournamentId}

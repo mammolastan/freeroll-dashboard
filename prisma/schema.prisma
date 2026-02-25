@@ -272,7 +272,7 @@ model appearances {
   player_score Float?     @db.Float
   created      DateTime   @default(now()) @db.Timestamp(0)
   modified     DateTime   @default(now()) @db.Timestamp(0)
-  games        games      @relation(fields: [game_id], references: [id], onUpdate: Restrict, map: "fk_appearances_game")
+  games        games      @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_appearances_game")
   players_v2   players_v2 @relation(fields: [player_id], references: [id], onUpdate: Restrict, map: "fk_appearances_player")
 
   @@id([game_id, player_id])
@@ -314,7 +314,7 @@ model knockouts {
   time_ko                                 DateTime?   @db.Timestamp(0)
   time_created                            DateTime    @default(now()) @db.Timestamp(0)
   modified                                DateTime    @default(now()) @db.Timestamp(0)
-  games                                   games       @relation(fields: [game_id], references: [id], onUpdate: Restrict, map: "fk_knockouts_game")
+  games                                   games       @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_knockouts_game")
   players_v2_knockouts_hitmanToplayers_v2 players_v2? @relation("knockouts_hitmanToplayers_v2", fields: [hitman], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_knockouts_hitman")
   players_v2_knockouts_victimToplayers_v2 players_v2  @relation("knockouts_victimToplayers_v2", fields: [victim], references: [id], onUpdate: Restrict, map: "fk_knockouts_victim")
 

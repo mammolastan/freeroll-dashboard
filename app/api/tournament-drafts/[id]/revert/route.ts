@@ -51,42 +51,58 @@ export async function POST(
       console.log(`=== REVERT PROCESS ===`);
       console.log(`Draft ID: ${draftId}, Game UID: ${draft.game_uid}`);
 
-      // 2. Get all integrated poker tournament entries for this game
-      const integratedEntries = await tx.$queryRaw<
-        Array<{
-          id: number;
-          name: string;
-          uid: string;
-          placement: number;
-          knockouts: number;
-          hitman: string | null;
-        }>
-      >`
-        SELECT id, Name as name, UID as uid, Placement as placement, 
-               Knockouts as knockouts, Hitman as hitman
-        FROM poker_tournaments 
-        WHERE game_uid = ${draft.game_uid}
-      `;
+      // 2. Get game record and all appearances for this game
+      const game = await tx.games.findUnique({
+        where: { uid: draft.game_uid },
+        include: {
+          appearances: {
+            include: {
+              players_v2: true
+            }
+          }
+        }
+      });
+
+      if (!game) {
+        throw new Error(`Game not found with uid: ${draft.game_uid}`);
+      }
+
+      // Build integrated entries from appearances for audit logging
+      const integratedEntries = await Promise.all(
+        game.appearances.map(async (a) => {
+          // Count knockouts for this player in this game
+          const knockoutCount = await tx.knockouts.count({
+            where: { game_id: game.id, hitman: a.player_id }
+          });
+          return {
+            id: a.player_id,
+            name: `${a.players_v2.first_name || ''} ${a.players_v2.last_name || ''}`.trim(),
+            uid: a.players_v2.uid,
+            placement: a.placement || 0,
+            knockouts: knockoutCount,
+            hitman: null as string | null,
+          };
+        })
+      );
 
       console.log(
         `Found ${integratedEntries.length} integrated entries to revert`
       );
 
       // 3. Find new players by checking which players in this tournament
-      //    don't exist in the poker_tournaments table for any OTHER game
+      //    don't exist in any OTHER game
       const newPlayersToRemove: string[] = [];
 
       for (const entry of integratedEntries) {
-        // Check if this player appears in any other tournaments
-        const otherTournaments = await tx.$queryRaw<Array<{ count: bigint }>>`
-          SELECT COUNT(*) as count FROM poker_tournaments 
-          WHERE UID = ${entry.uid} AND game_uid != ${draft.game_uid}
-        `;
+        // Check if this player appears in any other games
+        const otherGamesCount = await tx.appearances.count({
+          where: {
+            player_id: entry.id,
+            game_id: { not: game.id }
+          }
+        });
 
-        // IMPORTANT: MySQL returns BigInt, so use == for comparison instead of ===
-        const count = Number(otherTournaments[0].count); // Convert to number for safety
-
-        if (count === 0) {
+        if (otherGamesCount === 0) {
           // This player only exists in this tournament, so they must be new
           newPlayersToRemove.push(entry.uid);
           console.log(
@@ -94,38 +110,49 @@ export async function POST(
           );
         } else {
           console.log(
-            `Existing player: ${entry.name} (${entry.uid}) - found in ${count} other tournaments`
+            `Existing player: ${entry.name} (${entry.uid}) - found in ${otherGamesCount} other tournaments`
           );
         }
       }
 
       console.log(`Found ${newPlayersToRemove.length} new players to remove`);
 
-      // 4. Delete all poker tournament entries for this game
-      const deleteResult = await tx.$executeRaw`
-        DELETE FROM poker_tournaments WHERE game_uid = ${draft.game_uid}
-      `;
+      // 4. Delete knockouts, appearances, then the game record
+      // (Schema doesn't have cascade delete, so we must delete manually)
+      await tx.knockouts.deleteMany({
+        where: { game_id: game.id }
+      });
+      console.log(`Deleted knockouts for game ${game.id}`);
 
-      console.log(`Deleted ${deleteResult} poker tournament entries`);
+      await tx.appearances.deleteMany({
+        where: { game_id: game.id }
+      });
+      console.log(`Deleted appearances for game ${game.id}`);
+
+      await tx.games.delete({
+        where: { uid: draft.game_uid }
+      });
+
+      console.log(`Deleted game record`);
+      const deleteResult = integratedEntries.length; // For backward compat with audit log
 
       // 5. Remove new players that don't appear in any other tournaments
       let playersRemoved = 0;
       for (const playerUID of newPlayersToRemove) {
         try {
           // Check if player still exists (safety check)
-          const playerExists = await tx.$queryRaw<
-            Array<{ uid: string; name: string }>
-          >`
-            SELECT uid, name FROM players WHERE uid = ${playerUID}
-          `;
+          const playerExists = await tx.players_v2.findUnique({
+            where: { uid: playerUID }
+          });
 
-          if (playerExists.length === 0) {
+          if (!playerExists) {
             console.log(`Player ${playerUID} does not exist - skipping`);
             continue;
           }
 
+          const playerName = `${playerExists.first_name || ''} ${playerExists.last_name || ''}`.trim();
           console.log(
-            `Attempting to delete player: ${playerExists[0].name} (${playerUID})`
+            `Attempting to delete player: ${playerName} (${playerUID})`
           );
 
           // First, delete any badge entries for this player (foreign key constraint)
@@ -139,21 +166,15 @@ export async function POST(
             );
           }
 
-          // Now delete the player
-          const deletePlayerResult = await tx.$executeRaw`
-            DELETE FROM players WHERE uid = ${playerUID}
-          `;
+          // Now delete the player from players_v2
+          await tx.players_v2.delete({
+            where: { uid: playerUID }
+          });
 
-          if (deletePlayerResult > 0) {
-            playersRemoved++;
-            console.log(
-              `✓ Successfully removed new player: ${playerExists[0].name} (${playerUID})`
-            );
-          } else {
-            console.log(
-              `✗ Failed to remove player ${playerUID} - no rows affected`
-            );
-          }
+          playersRemoved++;
+          console.log(
+            `✓ Successfully removed new player: ${playerName} (${playerUID})`
+          );
         } catch (deleteError) {
           console.error(`Error deleting player ${playerUID}:`, deleteError);
         }

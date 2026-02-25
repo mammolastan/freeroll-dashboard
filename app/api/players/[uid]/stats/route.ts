@@ -1,9 +1,7 @@
 // app/api/players/[uid]/stats/route.ts
 import { NextResponse } from "next/server";
-import { getDateCondition } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-
 
 export async function GET(
   request: Request,
@@ -24,36 +22,50 @@ export async function GET(
     const endDate =
       endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
 
-    // Base venue condition
+    // Build date condition for games table
+    const dateConditions: Prisma.Sql[] = [];
+    if (startDate) {
+      dateConditions.push(Prisma.sql`g.date >= DATE(${startDate})`);
+    }
+    if (endDate) {
+      dateConditions.push(Prisma.sql`g.date <= DATE(${endDate})`);
+    }
+    const dateCondition = dateConditions.length > 0
+      ? Prisma.sql`AND ${Prisma.join(dateConditions, ' AND ')}`
+      : Prisma.sql``;
+
+    // Venue condition - joins with venues table
     const venueCondition =
       venue && venue !== "all"
-        ? Prisma.sql`AND p1.Venue = ${venue}`
+        ? Prisma.sql`AND v.name = ${venue}`
         : Prisma.sql``;
 
-    const dateCondition = getDateCondition(startDate, endDate);
-    const dateConditionP1 = getDateCondition(startDate, endDate, "p1");
-
     // Get available venues for this player within the date range
-    const availableVenues: { Venue: string }[] = await prisma.$queryRaw`
-    SELECT DISTINCT Venue 
-    FROM poker_tournaments
-    WHERE UID = ${playerUID}
-    AND venue != 'bonus'
-    ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
-    ORDER BY Venue
-  `;
+    const availableVenues: { venue: string }[] = await prisma.$queryRaw`
+      SELECT DISTINCT v.name as venue
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+      AND v.name != 'bonus'
+      ${dateCondition}
+      ORDER BY v.name
+    `;
 
     // Earliest game date query
     const earliestGameQuery = await prisma.$queryRaw<{ earliest_date: Date }[]>`
-      SELECT MIN(game_date) as earliest_date
-      FROM poker_tournaments
-      WHERE UID = ${playerUID}
+      SELECT MIN(g.date) as earliest_date
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
     `;
 
     const earliestGameDate =
       earliestGameQuery[0]?.earliest_date?.toISOString() || null;
 
-    // Quarterly stats
+    // Quarterly stats - aggregates from appearances
     const quarterlyStats: {
       gamesPlayed: number;
       totalPoints: number;
@@ -62,116 +74,162 @@ export async function GET(
       avgScore: number;
       finalTablePercentage: number;
     }[] = await prisma.$queryRaw`
-    SELECT 
-      COUNT(CASE WHEN p1.Venue != 'bonus' THEN 1 END) as gamesPlayed,  -- Exclude bonus from games count
-      COALESCE(SUM(p1.Total_Points), 0) as totalPoints,                -- Include bonus in total points
-      COALESCE(SUM(p1.Knockouts), 0) as knockouts,
-      COALESCE(SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
-      COALESCE(CAST(AVG(p1.Player_Score) AS DECIMAL(10,2)), 0) as avgScore,
-      COALESCE(CAST(
-        (SUM(CASE WHEN p1.Placement <= 8 THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
-        AS DECIMAL(10,2)
-      ), 0) as finalTablePercentage
-    FROM poker_tournaments p1
-    LEFT JOIN players pl ON p1.UID = pl.uid
-    WHERE p1.UID = ${playerUID}    
-    ${startDate ? Prisma.sql`AND ${dateCondition}` : Prisma.sql`AND 1=1`}
-    ${venueCondition}
-  `;
+      SELECT
+        COUNT(CASE WHEN v.name != 'bonus' THEN 1 END) as gamesPlayed,
+        COALESCE(SUM(a.points), 0) as totalPoints,
+        COALESCE((
+          SELECT COUNT(*) FROM knockouts k
+          JOIN games kg ON kg.id = k.game_id
+          JOIN players_v2 kp ON kp.id = k.hitman
+          WHERE kp.uid = ${playerUID}
+          ${startDate ? Prisma.sql`AND kg.date >= DATE(${startDate})` : Prisma.sql``}
+          ${endDate ? Prisma.sql`AND kg.date <= DATE(${endDate})` : Prisma.sql``}
+        ), 0) as knockouts,
+        COALESCE(SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+        COALESCE(CAST(AVG(a.player_score) AS DECIMAL(10,2)), 0) as avgScore,
+        COALESCE(CAST(
+          (SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0))
+          AS DECIMAL(10,2)
+        ), 0) as finalTablePercentage
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+      ${dateCondition}
+      ${venueCondition}
+    `;
 
-    // Most Knocked Out By
+    // Most Knocked Out By - using knockouts table
     const knockedOutBy: {
       name: string;
       uid: string;
       nickname: string | null;
       count: number;
     }[] = await prisma.$queryRaw`
-        SELECT 
-          p2.Name as name,
-          p2.UID as uid,
-          pl.nickname,
-          COUNT(*) as count
-        FROM poker_tournaments p1
-        JOIN poker_tournaments p2 ON p2.Name = p1.Hitman AND p2.File_name = p1.File_name
-        LEFT JOIN players pl ON p2.UID = pl.uid
-        WHERE p1.UID = ${playerUID}
-        AND p1.Hitman IS NOT NULL
-        ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
-        ${venueCondition}
-        GROUP BY p2.Name, p2.UID, pl.nickname
-        ORDER BY count DESC
-        LIMIT 3
-      `;
+      SELECT
+        CONCAT(COALESCE(hitman_p.first_name, ''), ' ', COALESCE(hitman_p.last_name, '')) as name,
+        hitman_p.uid,
+        hitman_p.nickname,
+        COUNT(*) as count
+      FROM knockouts k
+      JOIN games g ON g.id = k.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 victim_p ON victim_p.id = k.victim
+      JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
+      WHERE victim_p.uid = ${playerUID}
+      AND k.hitman IS NOT NULL
+      ${dateCondition}
+      ${venueCondition}
+      GROUP BY hitman_p.id, hitman_p.uid, hitman_p.first_name, hitman_p.last_name, hitman_p.nickname
+      ORDER BY count DESC
+      LIMIT 3
+    `;
 
-    // Most Knocked Out
+    // Most Knocked Out - using knockouts table
     const knockedOut: {
       name: string;
       uid: string;
       nickname: string | null;
       count: number;
     }[] = await prisma.$queryRaw`
-  SELECT 
-    p2.Name as name,
-    p2.UID as uid,
-    pl.nickname,
-    COUNT(*) as count
-  FROM poker_tournaments p1
-  JOIN poker_tournaments p2 ON p2.File_name = p1.File_name AND p2.Hitman = p1.Name
-  LEFT JOIN players pl ON p2.UID = pl.uid
-  WHERE p1.UID = ${playerUID}
-  ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
-  ${venueCondition}
-  GROUP BY p2.Name, p2.UID, pl.nickname
-  ORDER BY count DESC
-  LIMIT 3
-`;
+      SELECT
+        CONCAT(COALESCE(victim_p.first_name, ''), ' ', COALESCE(victim_p.last_name, '')) as name,
+        victim_p.uid,
+        victim_p.nickname,
+        COUNT(*) as count
+      FROM knockouts k
+      JOIN games g ON g.id = k.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
+      JOIN players_v2 victim_p ON victim_p.id = k.victim
+      WHERE hitman_p.uid = ${playerUID}
+      ${dateCondition}
+      ${venueCondition}
+      GROUP BY victim_p.id, victim_p.uid, victim_p.first_name, victim_p.last_name, victim_p.nickname
+      ORDER BY count DESC
+      LIMIT 3
+    `;
 
     // Venue Stats
-    const venueStats: { venue: string; points: number }[] =
-      await prisma.$queryRaw`
-  SELECT 
-    p1.Venue as venue,
-    SUM(p1.Total_Points) as points
-  FROM poker_tournaments p1
-  WHERE p1.UID = ${playerUID}
-  ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
-  ${venueCondition}
-  GROUP BY p1.Venue
-  ORDER BY points DESC
-`;
+    const venueStatsRaw = await prisma.$queryRaw<
+      Array<{ venue: string; points: bigint }>
+    >`
+        SELECT
+          v.name as venue,
+          SUM(a.points) as points
+        FROM appearances a
+        JOIN games g ON g.id = a.game_id
+        JOIN venues v ON v.id = g.venue_id
+        JOIN players_v2 p ON p.id = a.player_id
+        WHERE p.uid = ${playerUID}
+        ${dateCondition}
+        ${venueCondition}
+        GROUP BY v.id, v.name
+        ORDER BY points DESC
+      `;
+
+    const venueStats = venueStatsRaw.map((stat) => ({
+      venue: stat.venue,
+      points: Number(stat.points),
+    }));
 
     // Recent Games
-    const recentGames = await prisma.$queryRaw`
-  SELECT 
-    p1.game_date as date,
-    p1.Venue as venue,
-    p1.Placement as placement,
-    p1.Total_Points as points,
-    p1.Knockouts as knockouts,
-    p1.File_name as fileName,
-    p1.game_uid as game_uid
-  FROM poker_tournaments p1
-  WHERE p1.UID = ${playerUID}
-  ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
-  ${venueCondition}
-  ORDER BY p1.game_date DESC
-  LIMIT 50
-`;
+    const recentGamesRaw = await prisma.$queryRaw<
+      Array<{
+        date: Date;
+        venue: string;
+        placement: number;
+        points: number;
+        knockouts: bigint;
+        game_uid: string;
+      }>
+    >`
+      SELECT
+        g.date,
+        v.name as venue,
+        a.placement,
+        a.points,
+        (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = a.player_id AND k.game_id = g.id) as knockouts,
+        g.uid as game_uid
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+      ${dateCondition}
+      ${venueCondition}
+      ORDER BY g.date DESC
+      LIMIT 50
+    `;
+
+    // Serialize BigInt values in recentGames
+    const recentGames = recentGamesRaw.map((game) => ({
+      date: game.date,
+      venue: game.venue,
+      placement: game.placement,
+      points: game.points,
+      knockouts: Number(game.knockouts),
+      game_uid: game.game_uid,
+    }));
 
     // Placement Frequency
     const placementFrequency = await prisma.$queryRaw<
-      { Placement: number; frequency: number }[]
+      { Placement: number; frequency: bigint }[]
     >`
-      SELECT 
-        Placement,
+      SELECT
+        a.placement as Placement,
         COUNT(*) as frequency
-      FROM poker_tournaments p1
-      WHERE UID = ${playerUID}
-      ${startDate ? Prisma.sql`AND ${dateConditionP1}` : Prisma.sql`AND 1=1`}
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+      ${dateCondition}
       ${venueCondition}
-      AND Placement <= 8
-      GROUP BY Placement
-      ORDER BY Placement ASC
+      AND a.placement <= 8
+      GROUP BY a.placement
+      ORDER BY a.placement ASC
     `;
 
     const response = {
@@ -185,7 +243,7 @@ export async function GET(
           quarterlyStats[0]?.finalTablePercentage || 0
         ),
       },
-      availableVenues: availableVenues.map((v) => v.Venue),
+      availableVenues: availableVenues.map((v) => v.venue),
       mostKnockedOutBy: knockedOutBy.map((ko) => ({
         name: ko.name,
         uid: ko.uid,
@@ -198,10 +256,7 @@ export async function GET(
         nickname: ko.nickname,
         count: Number(ko.count),
       })),
-      venueStats: venueStats.map((stat) => ({
-        venue: stat.venue,
-        points: Number(stat.points),
-      })),
+      venueStats,
       recentGames,
       earliestGameDate,
       placementFrequency: placementFrequency.map((pf) => ({

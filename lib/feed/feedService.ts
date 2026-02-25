@@ -131,7 +131,7 @@ export async function createCheckInFeedItem(
     let photoUrl: string | null = null;
     if (playerUid) {
       const playerData = await prisma.$queryRaw<RawQueryResult[]>`
-        SELECT photo_url FROM players WHERE uid = ${playerUid}
+        SELECT photo_url FROM players_v2 WHERE uid = ${playerUid}
       `;
       if (playerData.length > 0 && playerData[0].photo_url) {
         photoUrl = String(playerData[0].photo_url);

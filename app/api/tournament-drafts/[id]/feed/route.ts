@@ -86,7 +86,7 @@ export async function GET(
         f.photo_filename,
         f.created_at
       FROM tournament_feed_items f
-      LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+      LEFT JOIN players_v2 p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
       WHERE f.tournament_draft_id = ${tournamentId}
         AND f.item_type IN ('td_message', 'message', 'photo')
       ORDER BY f.created_at DESC
@@ -114,14 +114,14 @@ export async function GET(
   LEFT JOIN tournament_draft_players hitman
     ON hitman.tournament_draft_id = ko.tournament_draft_id
     AND (hitman.player_name = ko.hitman_name OR hitman.player_nickname = ko.hitman_name)
-  LEFT JOIN players eliminated_player
+  LEFT JOIN players_v2 eliminated_player
     ON ko.player_uid COLLATE utf8mb4_unicode_ci = eliminated_player.uid COLLATE utf8mb4_unicode_ci
-  LEFT JOIN players hitman_player
+  LEFT JOIN players_v2 hitman_player
     ON hitman.player_uid COLLATE utf8mb4_unicode_ci = hitman_player.uid COLLATE utf8mb4_unicode_ci
   LEFT JOIN (
-    SELECT name, MIN(uid) as uid, MIN(photo_url) as photo_url
-    FROM players
-    GROUP BY name
+    SELECT CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) as name, MIN(uid) as uid, MIN(photo_url) as photo_url
+    FROM players_v2
+    GROUP BY first_name, last_name
   ) hitman_by_name
     ON hitman_by_name.name COLLATE utf8mb4_unicode_ci = ko.hitman_name COLLATE utf8mb4_unicode_ci
   WHERE ko.tournament_draft_id = ${tournamentId}
@@ -177,7 +177,7 @@ export async function GET(
           f.photo_filename,
           f.created_at
         FROM tournament_feed_items f
-        LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+        LEFT JOIN players_v2 p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
           AND f.item_type NOT IN ('td_message', 'message', 'knockout', 'photo')
           AND f.created_at < ${new Date(before)}
@@ -201,7 +201,7 @@ export async function GET(
           f.photo_filename,
           f.created_at
         FROM tournament_feed_items f
-        LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+        LEFT JOIN players_v2 p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
         WHERE f.tournament_draft_id = ${tournamentId}
           AND f.item_type NOT IN ('td_message', 'message', 'knockout', 'photo')
         ORDER BY f.created_at DESC
@@ -446,7 +446,7 @@ export async function POST(
         f.ko_position,
         f.created_at
       FROM tournament_feed_items f
-      LEFT JOIN players p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
+      LEFT JOIN players_v2 p ON f.author_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
       WHERE f.id = LAST_INSERT_ID()
     `;
 

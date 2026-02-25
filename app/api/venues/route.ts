@@ -4,18 +4,19 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Get unique venues from poker_tournaments table within the past year
+    // Get venues from the venues table that have recent games (past year)
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
     const venues = await prisma.$queryRaw<{ venue: string }[]>`
-      SELECT Venue as venue
-      FROM poker_tournaments
-      WHERE Venue IS NOT NULL 
-      AND Venue != ''
-      AND game_date >= ${oneYearAgo.toISOString().split("T")[0]}
-      GROUP BY Venue
-      ORDER BY MAX(created_at) DESC
+      SELECT v.name as venue
+      FROM venues v
+      JOIN games g ON g.venue_id = v.id
+      WHERE v.name IS NOT NULL
+      AND v.name != ''
+      AND g.date >= ${oneYearAgo.toISOString().split("T")[0]}
+      GROUP BY v.id, v.name
+      ORDER BY MAX(g.date) DESC
     `;
 
     // Extract just the venue names
