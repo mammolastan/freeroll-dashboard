@@ -1,7 +1,7 @@
 // app/api/admin/players/update-nickname/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent, getClientIP } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { requireAdmin } from "@/lib/auth-utils";
 
 export async function POST(request: Request) {
@@ -31,13 +31,14 @@ export async function POST(request: Request) {
 
     // Audit logging - using tournamentId: 0 as sentinel for non-tournament actions
     if (oldNickname !== nickname) {
+      const actor = getActorFromSession(adminCheck.session);
       try {
         await logAuditEvent({
           tournamentId: 0, // Sentinel value for non-tournament actions
           actionType: "ENTRY_FIELD_UPDATED",
           actionCategory: "ADMIN",
           actorId: null,
-          actorName: "Admin",
+          actorName: actor.actorName,
           targetPlayerId: null, // Player table uses uid (string), not numeric id
           targetPlayerName: currentPlayer.name,
           previousValue: {
@@ -46,10 +47,10 @@ export async function POST(request: Request) {
           newValue: {
             nickname: nickname,
           },
-          metadata: {
+          metadata: withActorMetadata(actor, {
             playerTable: true, // Flag that this is a player table change, not tournament entry
             playerUid: uid,
-          },
+          }),
           ipAddress,
         });
       } catch (auditError) {

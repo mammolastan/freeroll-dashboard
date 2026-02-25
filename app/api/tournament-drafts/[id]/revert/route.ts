@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent, getClientIP } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 interface DraftTournament {
   id: number;
@@ -203,6 +203,8 @@ export async function POST(
     console.log("Tournament revert completed successfully:", result);
 
     // Audit logging - run after transaction succeeds
+    const session = await getAuditSession();
+    const actor = getActorFromSession(session);
     try {
       // Build the list of players that were removed
       const playersRemoved = result._auditData.integratedEntries.map(
@@ -232,7 +234,7 @@ export async function POST(
         actionType: "TOURNAMENT_REVERTED",
         actionCategory: "ADMIN",
         actorId: null,
-        actorName: "Admin",
+        actorName: actor.actorName,
         targetPlayerId: null,
         targetPlayerName: null,
         previousValue: {
@@ -246,11 +248,11 @@ export async function POST(
           status: "in_progress",
           gameUid: null,
         },
-        metadata: {
+        metadata: withActorMetadata(actor, {
           playersRemoved,
           newPlayersDeleted: result._auditData.newPlayersRemoved,
           entriesDeleted: result.entriesDeleted,
-        },
+        }),
         ipAddress,
       });
     } catch (auditError) {

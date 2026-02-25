@@ -1,7 +1,54 @@
 // lib/auditLog.ts
 
 import { prisma } from '@/lib/prisma';
+import { getServerSession, Session } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { AuditActionType, AuditActionCategory, AuditLogValue, AuditValue } from '@/types/audit';
+
+/**
+ * Actor info extracted from a session for audit logging
+ */
+export interface AuditActorInfo {
+    actorUid: string | null;
+    actorName: string | null;
+}
+
+/**
+ * Get the current admin session for audit logging.
+ * Returns the session if authenticated, null otherwise.
+ */
+export async function getAuditSession(): Promise<Session | null> {
+    return await getServerSession(authOptions);
+}
+
+/**
+ * Extract actor info from a session for audit logging.
+ * Uses nickname if available, otherwise falls back to name.
+ */
+export function getActorFromSession(session: Session | null): AuditActorInfo {
+    if (!session?.user) {
+        return { actorUid: null, actorName: 'Admin' };
+    }
+
+    return {
+        actorUid: session.user.uid || null,
+        actorName: session.user.nickname || session.user.name || 'Admin',
+    };
+}
+
+/**
+ * Merge actor UID into existing metadata for audit logging.
+ * Returns a new metadata object with actorUid included.
+ */
+export function withActorMetadata(
+    actor: AuditActorInfo,
+    existingMetadata?: Record<string, AuditValue> | null
+): Record<string, AuditValue> {
+    return {
+        ...existingMetadata,
+        actorUid: actor.actorUid,
+    };
+}
 
 interface LogAuditParams {
     tournamentId: number;

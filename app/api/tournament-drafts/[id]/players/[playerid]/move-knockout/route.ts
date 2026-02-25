@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { emitPlayerJoined } from "@/lib/socketServer";
-import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -211,13 +211,15 @@ export async function PUT(
           }
         }
 
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
         try {
           await logAuditEvent({
             tournamentId: draftId,
             actionType: 'KNOCKOUT_ORDER_CHANGED',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: playerName,
             previousValue: {
@@ -226,7 +228,7 @@ export async function PUT(
             newValue: {
               koPosition: typeof newKoPosition === 'number' ? newKoPosition : null,
             },
-            metadata: {
+            metadata: withActorMetadata(actor, {
               direction,
               afterPlayerId: afterPlayerId,
               shiftedCount: playersToShift.length,
@@ -234,7 +236,7 @@ export async function PUT(
               previousOrder,
               newOrder,
               adminScreen: getAdminScreen(request),
-            },
+            }),
             ipAddress: getClientIP(request),
           });
         } catch (auditError) {

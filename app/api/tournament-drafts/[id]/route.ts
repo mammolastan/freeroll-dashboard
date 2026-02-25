@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
-import { logAuditEvent, getClientIP } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 export async function GET(
   request: NextRequest,
@@ -126,19 +126,21 @@ export async function PUT(
           newValue[field] = values.new;
         }
 
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
         await logAuditEvent({
           tournamentId: draftId,
           actionType: "TOURNAMENT_UPDATED",
           actionCategory: "ADMIN",
           actorId: null,
-          actorName: "Admin",
+          actorName: actor.actorName,
           targetPlayerId: null,
           targetPlayerName: null,
           previousValue,
           newValue,
-          metadata: {
+          metadata: withActorMetadata(actor, {
             fieldsChanged: Object.keys(changedFields),
-          },
+          }),
           ipAddress,
         });
       }
@@ -234,12 +236,14 @@ export async function PATCH(
         JSON.stringify(currentCustomLevels) !== JSON.stringify(custom_blind_levels);
 
       if (scheduleChanged || customLevelsChanged) {
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
         await logAuditEvent({
           tournamentId: draftId,
           actionType: "BLIND_SCHEDULE_CHANGED",
           actionCategory: "ADMIN",
           actorId: null,
-          actorName: "Admin",
+          actorName: actor.actorName,
           targetPlayerId: null,
           targetPlayerName: null,
           previousValue: {
@@ -250,10 +254,10 @@ export async function PATCH(
             blindSchedule: (blind_schedule || currentSchedule) as string,
             hasCustomLevels: !!custom_blind_levels,
           },
-          metadata: {
+          metadata: withActorMetadata(actor, {
             scheduleType: (blind_schedule || currentSchedule) as string,
             customized: !!custom_blind_levels,
-          },
+          }),
           ipAddress,
         });
       }
@@ -322,13 +326,15 @@ export async function DELETE(
     // the schema would need to be modified (either remove CASCADE and make
     // tournament_id nullable, or create a separate DeletedTournamentAuditLog table).
     // For now, we log the deletion for completeness, acknowledging this limitation.
+    const session = await getAuditSession();
+    const actor = getActorFromSession(session);
     try {
       await logAuditEvent({
         tournamentId,
         actionType: "TOURNAMENT_DELETED",
         actionCategory: "ADMIN",
         actorId: null,
-        actorName: "Admin",
+        actorName: actor.actorName,
         targetPlayerId: null,
         targetPlayerName: null,
         previousValue: {
@@ -342,10 +348,10 @@ export async function DELETE(
           players: playerList,
         },
         newValue: null,
-        metadata: {
+        metadata: withActorMetadata(actor, {
           wasIntegrated: tournament.game_uid !== null,
           gameUid: tournament.game_uid,
-        },
+        }),
         ipAddress,
       });
     } catch (auditError) {

@@ -5,7 +5,7 @@ import { emitPlayerJoined } from "@/lib/socketServer";
 import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { TournamentDraftPlayerUpdateInput } from "@/types";
-import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -333,6 +333,8 @@ export async function PUT(
     }
 
     // Log audit events for all tracked changes
+    const session = await getAuditSession();
+    const actor = getActorFromSession(session);
     for (const auditEvent of auditEventsToLog) {
       try {
         await logAuditEvent({
@@ -340,12 +342,12 @@ export async function PUT(
           actionType: auditEvent.actionType,
           actionCategory: 'ADMIN',
           actorId: null,
-          actorName: 'Admin',
+          actorName: actor.actorName,
           targetPlayerId: auditEvent.playerId,
           targetPlayerName: auditEvent.playerName,
           previousValue: auditEvent.previousValue as Record<string, string | number | boolean | null>,
           newValue: auditEvent.newValue as Record<string, string | number | boolean | null>,
-          metadata: auditEvent.metadata as Record<string, string | number | boolean | null> | null,
+          metadata: withActorMetadata(actor, auditEvent.metadata as Record<string, string | number | boolean | null> | null),
           ipAddress,
         });
       } catch (auditError) {

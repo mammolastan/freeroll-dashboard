@@ -6,7 +6,7 @@ import { RealtimeAPI } from "@/lib/realtime";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
-import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 export async function GET(
   request: NextRequest,
@@ -95,12 +95,14 @@ export async function POST(
       try {
         const newPlayerId = newPlayer[0].id;
         const playerId = typeof newPlayerId === 'number' ? newPlayerId : null;
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
         await logAuditEvent({
           tournamentId: draftId,
           actionType: 'PLAYER_ADDED',
           actionCategory: validAddedBy === 'admin' ? 'ADMIN' : 'PLAYER',
           actorId: null,
-          actorName: validAddedBy === 'admin' ? 'Admin' : null,
+          actorName: validAddedBy === 'admin' ? actor.actorName : null,
           targetPlayerId: playerId,
           targetPlayerName: player_name,
           previousValue: null,
@@ -111,12 +113,19 @@ export async function POST(
             isNewPlayer: is_new_player || false,
             checkedIn: true,
           },
-          metadata: {
-            addedBy: validAddedBy,
-            tournamentDraftEntryId: playerId,
-            playerNickname: player_nickname || null,
-            adminScreen: getAdminScreen(request),
-          },
+          metadata: validAddedBy === 'admin'
+            ? withActorMetadata(actor, {
+                addedBy: validAddedBy,
+                tournamentDraftEntryId: playerId,
+                playerNickname: player_nickname || null,
+                adminScreen: getAdminScreen(request),
+              })
+            : {
+                addedBy: validAddedBy,
+                tournamentDraftEntryId: playerId,
+                playerNickname: player_nickname || null,
+                adminScreen: getAdminScreen(request),
+              },
           ipAddress: getClientIP(request),
         });
       } catch (auditError) {

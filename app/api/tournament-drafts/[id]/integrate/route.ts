@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
 import { prisma } from "@/lib/prisma";
-import { logAuditEvent, getClientIP } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 interface DraftTournament {
   id: number;
@@ -387,10 +387,12 @@ export async function POST(
     console.log("Tournament integration completed successfully:", result);
 
     // Audit logging - run after transaction succeeds
+    const session = await getAuditSession();
+    const actor = getActorFromSession(session);
     const baseAuditData = {
       tournamentId: draftId,
       actorId: null as number | null,
-      actorName: "Admin",
+      actorName: actor.actorName,
       ipAddress,
     };
 
@@ -411,10 +413,10 @@ export async function POST(
           gameUid: result.gameUID,
           fileName: result.fileName,
         },
-        metadata: {
+        metadata: withActorMetadata(actor, {
           tournamentDraftId: draftId,
           totalPlayers: result.playersIntegrated,
-        },
+        }),
       });
 
       // 2. Log placements assignment
@@ -437,9 +439,9 @@ export async function POST(
           playersProcessed: placementAssignments.length,
           placements: placementAssignments,
         },
-        metadata: {
+        metadata: withActorMetadata(actor, {
           gameUid: result.gameUID,
-        },
+        }),
       });
 
       // 3. Log points calculation
@@ -469,10 +471,10 @@ export async function POST(
           startPoints: result._auditData.startPoints,
           pointsBreakdown: pointsAwarded,
         },
-        metadata: {
+        metadata: withActorMetadata(actor, {
           gameUid: result.gameUID,
           pointsStructure: "standard",
-        },
+        }),
       });
 
       // 4. Log new players created during integration
@@ -488,9 +490,9 @@ export async function POST(
             playerUid: newPlayer.playerUid,
             playerName: newPlayer.playerName,
           },
-          metadata: {
+          metadata: withActorMetadata(actor, {
             gameUid: result.gameUID,
-          },
+          }),
         });
       }
     } catch (auditError) {

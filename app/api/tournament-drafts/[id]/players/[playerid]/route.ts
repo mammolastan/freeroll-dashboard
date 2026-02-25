@@ -4,7 +4,7 @@ import { emitPlayerJoined } from "@/lib/socketServer";
 import { broadcastKnockoutEvent } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
-import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
+import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
 export async function PUT(
   request: NextRequest,
@@ -204,6 +204,8 @@ export async function PUT(
       const ipAddress = getClientIP(request);
       const adminScreen = getAdminScreen(request);
       const targetPlayerName = String(currentPlayer?.player_nickname || currentPlayer?.player_name || player_name);
+      const session = await getAuditSession();
+      const actor = getActorFromSession(session);
 
       // Helper to safely convert raw query values to AuditValue compatible types
       const toAuditValue = (val: unknown): string | number | boolean | null => {
@@ -224,7 +226,7 @@ export async function PUT(
             actionType: 'KNOCKOUT_RECORDED',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: targetPlayerName,
             previousValue: {
@@ -238,12 +240,12 @@ export async function PUT(
               knockedOutByName: hitmanDisplayName,
               koPosition: toAuditValue(updatedPlayer.ko_position),
             },
-            metadata: {
+            metadata: withActorMetadata(actor, {
               knockedOutAt: updatedPlayer.knockedout_at instanceof Date
                 ? updatedPlayer.knockedout_at.toISOString()
                 : toAuditValue(updatedPlayer.knockedout_at),
               adminScreen,
-            },
+            }),
             ipAddress,
           });
         } else if (wasKO && !isNowKO) {
@@ -253,7 +255,7 @@ export async function PUT(
             actionType: 'KNOCKOUT_REMOVED',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: targetPlayerName,
             previousValue: {
@@ -267,7 +269,7 @@ export async function PUT(
               knockedOutBy: null,
               koPosition: null,
             },
-            metadata: { adminScreen },
+            metadata: withActorMetadata(actor, { adminScreen }),
             ipAddress,
           });
         }
@@ -279,7 +281,7 @@ export async function PUT(
             actionType: 'HITMAN_CHANGED',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: targetPlayerName,
             previousValue: {
@@ -290,7 +292,7 @@ export async function PUT(
               hitman: toAuditValue(updatedPlayer.hitman_name),
               hitmanUid: toAuditValue(updatedPlayer.hitman_uid),
             },
-            metadata: { adminScreen },
+            metadata: withActorMetadata(actor, { adminScreen }),
             ipAddress,
           });
         }
@@ -302,7 +304,7 @@ export async function PUT(
             actionType: 'PLACEMENT_SET',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: targetPlayerName,
             previousValue: {
@@ -311,7 +313,7 @@ export async function PUT(
             newValue: {
               placement: toAuditValue(updatedPlayer.placement),
             },
-            metadata: { adminScreen },
+            metadata: withActorMetadata(actor, { adminScreen }),
             ipAddress,
           });
         }
@@ -370,13 +372,15 @@ export async function DELETE(
           if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
           return String(val);
         };
+        const session = await getAuditSession();
+        const actor = getActorFromSession(session);
         try {
           await logAuditEvent({
             tournamentId: draftId,
             actionType: 'PLAYER_REMOVED',
             actionCategory: 'ADMIN',
             actorId: null,
-            actorName: 'Admin',
+            actorName: actor.actorName,
             targetPlayerId: playerId,
             targetPlayerName: String(deletedPlayer.player_nickname || deletedPlayer.player_name),
             previousValue: {
@@ -390,10 +394,10 @@ export async function DELETE(
               checkedIn: deletedPlayer.checked_in_at !== null,
             },
             newValue: null,
-            metadata: {
+            metadata: withActorMetadata(actor, {
               tournamentDraftEntryId: toAuditValue(deletedPlayer.id),
               adminScreen: getAdminScreen(request),
-            },
+            }),
             ipAddress: getClientIP(request),
           });
         } catch (auditError) {
