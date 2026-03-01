@@ -111,8 +111,9 @@ export async function POST(
     const buffer = Buffer.from(arrayBuffer);
 
     // Process and compress image with sharp
-    // Resize to max dimension while maintaining aspect ratio, convert to WebP
+    // Auto-rotate based on EXIF orientation, resize, convert to WebP
     await sharp(buffer)
+      .rotate() // Auto-rotate based on EXIF Orientation tag
       .resize(MAX_DIMENSION, MAX_DIMENSION, {
         fit: "inside",
         withoutEnlargement: true,
