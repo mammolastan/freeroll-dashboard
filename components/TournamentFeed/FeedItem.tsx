@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FeedItem as FeedItemType } from "@/lib/realtime/hooks/useTournamentFeed";
-import { Skull, UserCheck, Megaphone, X, Star, Camera } from "lucide-react";
+import { Skull, UserCheck, Megaphone, X, Star } from "lucide-react";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { ReactionBar } from "./ReactionBar";
 import { SuitCounts, ReactionType } from "@/types";
@@ -476,6 +476,7 @@ function PhotoModal({
           width={1200}
           height={800}
           className="max-w-full max-h-[85vh] object-contain rounded-lg"
+          style={{ imageOrientation: "from-image" }}
           unoptimized
         />
       </div>
@@ -502,51 +503,37 @@ function PhotoItem({ item, onDelete }: FeedItemProps) {
 
   return (
     <>
-      <div className="flex gap-3 p-3 hover:bg-gray-800/30 transition-colors bg-amber-500/5 group">
-        {/* Icon */}
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-          <Camera className="h-4 w-4 text-amber-400" />
-        </div>
+      <div className="relative group">
+        {/* Full-width photo - click to enlarge */}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="block w-full overflow-hidden cursor-pointer flex justify-center"
+        >
+          <Image
+            src={item.photo_url}
+            alt="Tournament photo"
+            width={800}
+            height={600}
+            className="w-auto h-auto max-w-full max-h-[400px] object-contain"
+            style={{ imageOrientation: "from-image" }}
+            unoptimized
+          />
+        </button>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-medium text-amber-300 text-sm">
-              Tournament Photo
-            </span>
-            <span className="text-xs text-gray-500">
-              {formatRelativeTime(item.created_at)}
-            </span>
-          </div>
-
-          {/* Photo thumbnail - click to enlarge */}
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="block relative overflow-hidden rounded-lg border border-amber-500/30 hover:border-amber-500/60 transition-colors cursor-pointer"
-          >
-            <Image
-              src={item.photo_url}
-              alt="Tournament photo"
-              width={300}
-              height={200}
-              className="object-cover max-h-48 w-auto"
-              unoptimized
-            />
-          </button>
-
-          {/* Caption */}
-          {item.message_text && (
-            <p className="text-gray-300 text-sm mt-2 break-words whitespace-pre-wrap">
+        {/* Caption overlay at bottom */}
+        {item.message_text && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+            <p className="text-white text-sm break-words whitespace-pre-wrap">
               {item.message_text}
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Delete Button */}
+        {/* Delete Button - top right corner */}
         {onDelete && typeof item.id === "number" && (
           <button
             onClick={() => onDelete(item.id as number)}
-            className="flex-shrink-0 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+            className="absolute top-2 right-2 p-1.5 text-white/70 hover:text-red-400 bg-black/50 hover:bg-black/70 rounded transition-colors opacity-0 group-hover:opacity-100"
             title="Delete photo"
           >
             <X className="h-4 w-4" />
