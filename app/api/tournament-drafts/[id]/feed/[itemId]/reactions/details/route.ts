@@ -30,7 +30,7 @@ export async function GET(
       WHERE r.feed_item_id = ${itemId}
         AND r.tournament_draft_id = ${tournamentId}
         AND r.count > 0
-      ORDER BY p.name ASC, r.reaction_type ASC
+      ORDER BY p.first_name ASC, r.reaction_type ASC
     `;
 
     const details = rows.map((row) => ({
