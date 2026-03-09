@@ -129,6 +129,12 @@ export async function POST(
       });
       console.log(`Deleted appearances for game ${game.id}`);
 
+      // Delete game_periods records
+      await tx.$executeRaw`
+        DELETE FROM game_periods WHERE game_id = ${game.id}
+      `;
+      console.log(`Deleted game_periods for game ${game.id}`);
+
       await tx.games.delete({
         where: { uid: draft.game_uid }
       });

@@ -201,7 +201,7 @@ export async function PATCH(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const { blind_schedule, custom_blind_levels } = body;
+    const { blind_schedule, custom_blind_levels, period_ids } = body;
 
     // Validate blind_schedule value if provided
     if (
@@ -219,10 +219,55 @@ export async function PATCH(
 
     // Get current state before updating
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT blind_schedule, custom_blind_levels FROM tournament_drafts WHERE id = ${draftId}
+      SELECT blind_schedule, custom_blind_levels, period_ids FROM tournament_drafts WHERE id = ${draftId}
     `;
     const currentSchedule = currentDraftResult[0]?.blind_schedule;
     const currentCustomLevels = currentDraftResult[0]?.custom_blind_levels;
+    const currentPeriodIds = currentDraftResult[0]?.period_ids;
+
+    // Handle period_ids update
+    if (period_ids !== undefined) {
+      const periodIdsJson = Array.isArray(period_ids) && period_ids.length > 0
+        ? JSON.stringify(period_ids)
+        : null;
+
+      await prisma.$queryRaw`
+        UPDATE tournament_drafts
+        SET
+          period_ids = ${periodIdsJson},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${draftId}
+      `;
+
+      // Audit logging for period changes
+      try {
+        const periodIdsChanged = JSON.stringify(currentPeriodIds) !== JSON.stringify(periodIdsJson);
+        if (periodIdsChanged) {
+          const session = await getAuditSession();
+          const actor = getActorFromSession(session);
+          await logAuditEvent({
+            tournamentId: draftId,
+            actionType: "TOURNAMENT_UPDATED",
+            actionCategory: "ADMIN",
+            actorId: null,
+            actorName: actor.actorName,
+            targetPlayerId: null,
+            targetPlayerName: null,
+            previousValue: { period_ids: currentPeriodIds },
+            newValue: { period_ids: periodIdsJson },
+            metadata: withActorMetadata(actor, { field: "period_ids" }),
+            ipAddress,
+          });
+        }
+      } catch (auditError) {
+        console.error("Audit logging failed:", auditError);
+      }
+
+      const updatedDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
+        SELECT * FROM tournament_drafts WHERE id = ${draftId}
+      `;
+      return NextResponse.json(serializeDraft(updatedDraftResult[0]));
+    }
 
     // Build the update query based on what fields are provided
     if (blind_schedule !== undefined && custom_blind_levels !== undefined) {

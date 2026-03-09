@@ -14,6 +14,7 @@ interface DraftTournament {
   venue: string;
   start_points: number;
   status: string;
+  period_ids?: string | null;
 }
 
 interface DraftPlayer {
@@ -272,6 +273,38 @@ export async function POST(
             tournament_draft_id: draftId,
           }
         });
+
+        // 7b. Create game_periods records
+        let periodIds: number[] = [];
+
+        // Check if period_ids were specified in the draft
+        if (draft.period_ids) {
+          try {
+            periodIds = JSON.parse(draft.period_ids);
+          } catch {
+            console.warn('Failed to parse period_ids from draft, falling back to auto-assignment');
+          }
+        }
+
+        // If no period_ids specified, auto-assign based on date range
+        if (periodIds.length === 0) {
+          const matchingPeriods = await tx.$queryRaw<{ id: number }[]>`
+            SELECT id FROM competition_periods
+            WHERE league_id = 1
+            AND is_active = 1
+            AND ${new Date(draft.tournament_date)} BETWEEN start_date AND end_date
+          `;
+          periodIds = matchingPeriods.map(p => p.id);
+        }
+
+        // Insert game_periods records
+        for (const periodId of periodIds) {
+          await tx.$executeRaw`
+            INSERT INTO game_periods (game_id, period_id, assigned_by)
+            VALUES (${game.id}, ${periodId}, 'integration')
+            ON DUPLICATE KEY UPDATE assigned_by = assigned_by
+          `;
+        }
 
         // 8. Process each player - create players_v2 records for new players, then appearances
         // First, handle new players and build a map of uid -> players_v2.id

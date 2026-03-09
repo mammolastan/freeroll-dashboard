@@ -36,16 +36,59 @@ function checkIfBubble(qualifyingVenues: VenueRanking[]): boolean {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    // Get the target date (current or previous month)
-    const currentDate = getCurrentETDate();
-    const targetDate = isCurrentMonth
-      ? currentDate
-      : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+    // Check for period_id first (new approach)
+    const periodIdParam = searchParams.get("period_id");
 
-    // Get the date range for the target month
-    const { startOfMonth, endOfMonth } = getMonthDateRange(targetDate);
+    let periodId: number | null = null;
+    let periodName: string | null = null;
+    let startOfMonth: Date;
+    let endOfMonth: Date;
+    let targetDate: Date;
+
+    if (periodIdParam) {
+      // New period-based approach
+      periodId = parseInt(periodIdParam);
+      if (isNaN(periodId)) {
+        return NextResponse.json(
+          { error: "Invalid period_id parameter" },
+          { status: 400 }
+        );
+      }
+
+      // Look up the period
+      const period = await prisma.competition_periods.findUnique({
+        where: { id: periodId },
+      });
+
+      if (!period) {
+        return NextResponse.json(
+          { error: "Period not found" },
+          { status: 404 }
+        );
+      }
+
+      periodName = period.name;
+      startOfMonth = period.start_date;
+      endOfMonth = period.end_date;
+      targetDate = period.start_date;
+    } else {
+      // Legacy approach: currentMonth parameter
+      const isCurrentMonth = searchParams.get("currentMonth") !== "false";
+
+      // Get the target date (current or previous month)
+      const currentDate = getCurrentETDate();
+      targetDate = isCurrentMonth
+        ? currentDate
+        : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+
+      // Get the date range for the target month
+      const dateRange = getMonthDateRange(targetDate);
+      startOfMonth = dateRange.startOfMonth;
+      endOfMonth = dateRange.endOfMonth;
+    }
+
+    // Build date condition for legacy queries or period condition for new approach
     const dateCondition = Prisma.sql`g.date >= DATE(${startOfMonth}) AND g.date <= DATE(${endOfMonth})`;
 
     // Get all venues for the month from the venues table
@@ -174,11 +217,17 @@ export async function GET(request: Request) {
     // Return the results with the month and year from the target date
     return NextResponse.json({
       rankings,
-      month: targetDate.toLocaleString("default", {
+      month: periodName || targetDate.toLocaleString("default", {
         month: "long",
         timeZone: "America/New_York",
       }),
       year: targetDate.getFullYear(),
+      ...(periodId && { period_id: periodId }),
+      ...(periodName && { period_name: periodName }),
+      dateRange: {
+        start: startOfMonth.toISOString(),
+        end: endOfMonth.toISOString(),
+      },
     });
   } catch (error) {
     console.error("Monthly rankings error:", error);

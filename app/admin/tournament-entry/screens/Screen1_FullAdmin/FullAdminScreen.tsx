@@ -54,6 +54,7 @@ interface TournamentDraft {
   player_count: number;
   blind_schedule?: string;
   custom_blind_levels?: string | null;
+  period_ids?: string | null;
 }
 
 interface PlayerSearchResult {
@@ -142,7 +143,34 @@ export function FullAdminScreen({
     director_name: "",
     venue: "",
     start_points: 0,
+    period_ids: [] as number[],
   });
+
+  // Competition periods state
+  interface CompetitionPeriod {
+    id: number;
+    name: string;
+    period_type: string;
+    start_date: string;
+    end_date: string;
+  }
+  const [availablePeriods, setAvailablePeriods] = useState<CompetitionPeriod[]>(
+    [],
+  );
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+  const [editingPeriods, setEditingPeriods] = useState(false);
+  const [draftPeriodIds, setDraftPeriodIds] = useState<number[]>([]);
+  const [savingPeriods, setSavingPeriods] = useState(false);
+
+  // New period modal state
+  const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
+  const [newPeriod, setNewPeriod] = useState({
+    name: "",
+    period_type: "monthly" as "monthly" | "quarterly",
+    start_date: "",
+    end_date: "",
+  });
+  const [savingNewPeriod, setSavingNewPeriod] = useState(false);
 
   // Player management (using props from parent)
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -317,6 +345,7 @@ export function FullAdminScreen({
         director_name: "",
         venue: "",
         start_points: 0,
+        period_ids: [],
       });
 
       // Refresh tournaments list and venues (in case a new venue was added)
@@ -1333,6 +1362,144 @@ export function FullAdminScreen({
     }
   };
 
+  // Save period changes for the current draft
+  const savePeriods = async () => {
+    if (!currentDraft) return;
+
+    setSavingPeriods(true);
+    try {
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ period_ids: draftPeriodIds }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update periods");
+      }
+
+      const updatedDraft = await response.json();
+      updateCurrentDraft(updatedDraft);
+      setEditingPeriods(false);
+    } catch (error) {
+      console.error("Error saving periods:", error);
+      alert("Failed to save period changes");
+    } finally {
+      setSavingPeriods(false);
+    }
+  };
+
+  // Helper to get current month date range
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0); // Last day of month
+
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
+
+    return {
+      name: `${monthNames[month]} ${year}`,
+      start_date: startDate.toISOString().split("T")[0],
+      end_date: endDate.toISOString().split("T")[0],
+    };
+  };
+
+  // Helper to get current quarter date range
+  const getCurrentQuarterRange = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.floor(now.getMonth() / 3);
+    const startMonth = quarter * 3;
+    const startDate = new Date(year, startMonth, 1);
+    const endDate = new Date(year, startMonth + 3, 0); // Last day of quarter
+
+    return {
+      name: `Q${quarter + 1} ${year}`,
+      start_date: startDate.toISOString().split("T")[0],
+      end_date: endDate.toISOString().split("T")[0],
+    };
+  };
+
+  // Pre-populate new period with current month
+  const prefillCurrentMonth = () => {
+    const monthRange = getCurrentMonthRange();
+    setNewPeriod({
+      name: monthRange.name,
+      period_type: "monthly",
+      start_date: monthRange.start_date,
+      end_date: monthRange.end_date,
+    });
+  };
+
+  // Pre-populate new period with current quarter
+  const prefillCurrentQuarter = () => {
+    const quarterRange = getCurrentQuarterRange();
+    setNewPeriod({
+      name: quarterRange.name,
+      period_type: "quarterly",
+      start_date: quarterRange.start_date,
+      end_date: quarterRange.end_date,
+    });
+  };
+
+  // Create a new competition period
+  const createNewPeriod = async () => {
+    if (!newPeriod.name || !newPeriod.start_date || !newPeriod.end_date) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setSavingNewPeriod(true);
+    try {
+      const response = await fetch("/api/competition-periods", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          league_id: 1,
+          name: newPeriod.name,
+          period_type: newPeriod.period_type,
+          start_date: newPeriod.start_date,
+          end_date: newPeriod.end_date,
+          is_active: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create period");
+      }
+
+      const createdPeriod = await response.json();
+
+      // Add to available periods and auto-select it
+      setAvailablePeriods((prev) => [createdPeriod, ...prev]);
+      setNewTournament((prev) => ({
+        ...prev,
+        period_ids: [...prev.period_ids, createdPeriod.id],
+      }));
+
+      // Reset and close modal
+      setNewPeriod({
+        name: "",
+        period_type: "monthly",
+        start_date: "",
+        end_date: "",
+      });
+      setShowNewPeriodModal(false);
+    } catch (error) {
+      console.error("Error creating period:", error);
+      alert(`Failed to create period: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingNewPeriod(false);
+    }
+  };
+
   // Load tournaments and venues on mount
   useEffect(() => {
     loadTournaments();
@@ -1353,6 +1520,87 @@ export function FullAdminScreen({
       }));
     }
   }, [showCreateModal]);
+
+  // Fetch competition periods and auto-select matching ones when date changes
+  useEffect(() => {
+    const fetchPeriods = async () => {
+      if (!newTournament.tournament_date) {
+        setAvailablePeriods([]);
+        return;
+      }
+
+      setPeriodsLoading(true);
+      try {
+        const response = await fetch("/api/competition-periods?league_id=1");
+        if (!response.ok) throw new Error("Failed to fetch periods");
+
+        const data = await response.json();
+        setAvailablePeriods(data.periods || []);
+
+        // Auto-select periods that match the tournament date
+        const tournamentDate = new Date(newTournament.tournament_date);
+        const matchingPeriodIds = (data.periods || [])
+          .filter((period: CompetitionPeriod) => {
+            const startDate = new Date(period.start_date);
+            const endDate = new Date(period.end_date);
+            return tournamentDate >= startDate && tournamentDate <= endDate;
+          })
+          .map((period: CompetitionPeriod) => period.id);
+
+        setNewTournament((prev) => ({
+          ...prev,
+          period_ids: matchingPeriodIds,
+        }));
+      } catch (error) {
+        console.error("Error fetching competition periods:", error);
+        setAvailablePeriods([]);
+      } finally {
+        setPeriodsLoading(false);
+      }
+    };
+
+    if (showCreateModal && newTournament.tournament_date) {
+      fetchPeriods();
+    }
+  }, [showCreateModal, newTournament.tournament_date]);
+
+  // Load periods when viewing a tournament draft (entry view)
+  useEffect(() => {
+    const loadPeriodsForDraft = async () => {
+      if (!currentDraft || currentView !== "entry") {
+        return;
+      }
+
+      setPeriodsLoading(true);
+      try {
+        const response = await fetch("/api/competition-periods?league_id=1");
+        if (!response.ok) throw new Error("Failed to fetch periods");
+
+        const data = await response.json();
+        setAvailablePeriods(data.periods || []);
+
+        // Parse existing period_ids from the draft
+        if (currentDraft.period_ids) {
+          try {
+            const ids = JSON.parse(currentDraft.period_ids);
+            setDraftPeriodIds(Array.isArray(ids) ? ids : []);
+          } catch {
+            setDraftPeriodIds([]);
+          }
+        } else {
+          setDraftPeriodIds([]);
+        }
+      } catch (error) {
+        console.error("Error loading periods for draft:", error);
+        setAvailablePeriods([]);
+      } finally {
+        setPeriodsLoading(false);
+      }
+    };
+
+    loadPeriodsForDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDraft?.id, currentDraft?.period_ids, currentView]);
 
   // smart polling functionality
   useEffect(() => {
@@ -1591,6 +1839,164 @@ export function FullAdminScreen({
                         }).filter(Boolean)}
                       </select>
                     </div>
+
+                    {/* Competition Periods Selector */}
+                    {availablePeriods.length > 0 && (
+                      <div className="col-span-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-gray-900">
+                            Competition Periods
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPeriodModal(true)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+                            title="Add new competition period"
+                          >
+                            <Plus size={12} />
+                            New
+                          </button>
+                        </div>
+                        {periodsLoading ? (
+                          <div className="text-sm text-gray-500">
+                            Loading periods...
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {/* Monthly Periods */}
+                            {availablePeriods.filter(
+                              (p) => p.period_type === "monthly",
+                            ).length > 0 && (
+                              <div>
+                                <div className="text-xs font-medium text-gray-600 mb-1">
+                                  Monthly
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {availablePeriods
+                                    .filter((p) => p.period_type === "monthly")
+                                    .slice(0, 6)
+                                    .map((period) => (
+                                      <label
+                                        key={period.id}
+                                        className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-sm ${
+                                          newTournament.period_ids.includes(
+                                            period.id,
+                                          )
+                                            ? "bg-blue-100 border-blue-500 text-blue-800"
+                                            : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={newTournament.period_ids.includes(
+                                            period.id,
+                                          )}
+                                          onChange={(e) => {
+                                            const newIds = e.target.checked
+                                              ? [
+                                                  ...newTournament.period_ids,
+                                                  period.id,
+                                                ]
+                                              : newTournament.period_ids.filter(
+                                                  (id) => id !== period.id,
+                                                );
+                                            setNewTournament((prev) => ({
+                                              ...prev,
+                                              period_ids: newIds,
+                                            }));
+                                          }}
+                                          className="sr-only"
+                                        />
+                                        {newTournament.period_ids.includes(
+                                          period.id,
+                                        ) && (
+                                          <Check
+                                            size={12}
+                                            className="text-blue-600"
+                                          />
+                                        )}
+                                        {period.name}
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Quarterly Periods */}
+                            {availablePeriods.filter(
+                              (p) => p.period_type === "quarterly",
+                            ).length > 0 && (
+                              <div>
+                                <div className="text-xs font-medium text-gray-600 mb-1">
+                                  Quarterly
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {availablePeriods
+                                    .filter(
+                                      (p) => p.period_type === "quarterly",
+                                    )
+                                    .slice(0, 4)
+                                    .map((period) => (
+                                      <label
+                                        key={period.id}
+                                        className={`flex items-center gap-1.5 px-2 py-1 rounded border cursor-pointer text-sm ${
+                                          newTournament.period_ids.includes(
+                                            period.id,
+                                          )
+                                            ? "bg-green-100 border-green-500 text-green-800"
+                                            : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={newTournament.period_ids.includes(
+                                            period.id,
+                                          )}
+                                          onChange={(e) => {
+                                            const newIds = e.target.checked
+                                              ? [
+                                                  ...newTournament.period_ids,
+                                                  period.id,
+                                                ]
+                                              : newTournament.period_ids.filter(
+                                                  (id) => id !== period.id,
+                                                );
+                                            setNewTournament((prev) => ({
+                                              ...prev,
+                                              period_ids: newIds,
+                                            }));
+                                          }}
+                                          className="sr-only"
+                                        />
+                                        {newTournament.period_ids.includes(
+                                          period.id,
+                                        ) && (
+                                          <Check
+                                            size={12}
+                                            className="text-green-600"
+                                          />
+                                        )}
+                                        {period.name}
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Warning if no periods match */}
+                            {newTournament.tournament_date &&
+                              newTournament.period_ids.length === 0 && (
+                                <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                                  No active periods cover this date. The game
+                                  will not appear in rankings until a period is
+                                  created.
+                                </div>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Venue *
@@ -1740,6 +2146,125 @@ export function FullAdminScreen({
               </Card>
             </div>
           )}
+
+          {/* New Competition Period Modal */}
+          {showNewPeriodModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+              <Card className="w-96">
+                <CardHeader>
+                  <CardTitle className="text-lg">Add Competition Period</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Quick fill buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={prefillCurrentMonth}
+                        className="flex-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-sm transition-colors"
+                      >
+                        New Month
+                      </button>
+                      <button
+                        type="button"
+                        onClick={prefillCurrentQuarter}
+                        className="flex-1 px-3 py-2 bg-green-100 hover:bg-green-200 text-green-800 rounded text-sm transition-colors"
+                      >
+                        New Quarter
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Period Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newPeriod.name}
+                        onChange={(e) =>
+                          setNewPeriod({ ...newPeriod, name: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded text-black"
+                        placeholder="e.g., January 2026 or Q1 2026"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Period Type *
+                      </label>
+                      <select
+                        value={newPeriod.period_type}
+                        onChange={(e) =>
+                          setNewPeriod({
+                            ...newPeriod,
+                            period_type: e.target.value as "monthly" | "quarterly",
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded text-black"
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Start Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={newPeriod.start_date}
+                          onChange={(e) =>
+                            setNewPeriod({ ...newPeriod, start_date: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border rounded text-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          End Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={newPeriod.end_date}
+                          onChange={(e) =>
+                            setNewPeriod({ ...newPeriod, end_date: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border rounded text-black"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <button
+                        onClick={createNewPeriod}
+                        disabled={savingNewPeriod}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {savingNewPeriod ? "Creating..." : "Create Period"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowNewPeriodModal(false);
+                          setNewPeriod({
+                            name: "",
+                            period_type: "monthly",
+                            start_date: "",
+                            end_date: "",
+                          });
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1864,6 +2389,189 @@ export function FullAdminScreen({
                       Director: {currentDraft?.director_name} | Players:{" "}
                       {players.length}
                     </p>
+
+                    {/* Competition Periods Display/Edit */}
+                    <div className="mt-2">
+                      {!editingPeriods ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-gray-500">
+                            Periods:
+                          </span>
+                          {periodsLoading ? (
+                            <span className="text-xs text-gray-400">
+                              Loading...
+                            </span>
+                          ) : draftPeriodIds.length > 0 ? (
+                            <>
+                              {availablePeriods
+                                .filter((p) => draftPeriodIds.includes(p.id))
+                                .map((period) => (
+                                  <span
+                                    key={period.id}
+                                    className={`text-xs px-2 py-0.5 rounded ${
+                                      period.period_type === "monthly"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
+                                    {period.name}
+                                  </span>
+                                ))}
+                            </>
+                          ) : (
+                            <span className="text-xs text-amber-600">
+                              None assigned
+                            </span>
+                          )}
+                          {currentDraft?.status === "in_progress" && (
+                            <button
+                              onClick={() => setEditingPeriods(true)}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 p-3 rounded-lg border">
+                          <div className="text-sm font-medium text-gray-700 mb-2">
+                            Select Competition Periods
+                          </div>
+                          <div className="space-y-2">
+                            {/* Monthly Periods */}
+                            {availablePeriods.filter(
+                              (p) => p.period_type === "monthly",
+                            ).length > 0 && (
+                              <div>
+                                <div className="text-xs font-medium text-gray-600 mb-1">
+                                  Monthly
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {availablePeriods
+                                    .filter((p) => p.period_type === "monthly")
+                                    .map((period) => (
+                                      <label
+                                        key={period.id}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
+                                          draftPeriodIds.includes(period.id)
+                                            ? "bg-blue-100 border-blue-500 text-blue-800"
+                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={draftPeriodIds.includes(
+                                            period.id,
+                                          )}
+                                          onChange={(e) => {
+                                            const newIds = e.target.checked
+                                              ? [...draftPeriodIds, period.id]
+                                              : draftPeriodIds.filter(
+                                                  (id) => id !== period.id,
+                                                );
+                                            setDraftPeriodIds(newIds);
+                                          }}
+                                          className="sr-only"
+                                        />
+                                        {draftPeriodIds.includes(period.id) && (
+                                          <Check
+                                            size={10}
+                                            className="text-blue-600"
+                                          />
+                                        )}
+                                        {period.name}
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Quarterly Periods */}
+                            {availablePeriods.filter(
+                              (p) => p.period_type === "quarterly",
+                            ).length > 0 && (
+                              <div>
+                                <div className="text-xs font-medium text-gray-600 mb-1">
+                                  Quarterly
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {availablePeriods
+                                    .filter(
+                                      (p) => p.period_type === "quarterly",
+                                    )
+                                    .map((period) => (
+                                      <label
+                                        key={period.id}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
+                                          draftPeriodIds.includes(period.id)
+                                            ? "bg-green-100 border-green-500 text-green-800"
+                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={draftPeriodIds.includes(
+                                            period.id,
+                                          )}
+                                          onChange={(e) => {
+                                            const newIds = e.target.checked
+                                              ? [...draftPeriodIds, period.id]
+                                              : draftPeriodIds.filter(
+                                                  (id) => id !== period.id,
+                                                );
+                                            setDraftPeriodIds(newIds);
+                                          }}
+                                          className="sr-only"
+                                        />
+                                        {draftPeriodIds.includes(period.id) && (
+                                          <Check
+                                            size={10}
+                                            className="text-green-600"
+                                          />
+                                        )}
+                                        {period.name}
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={savePeriods}
+                              disabled={savingPeriods}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs disabled:opacity-50"
+                            >
+                              {savingPeriods ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                // Reset to original
+                                if (currentDraft?.period_ids) {
+                                  try {
+                                    const ids = JSON.parse(
+                                      currentDraft.period_ids,
+                                    );
+                                    setDraftPeriodIds(
+                                      Array.isArray(ids) ? ids : [],
+                                    );
+                                  } catch {
+                                    setDraftPeriodIds([]);
+                                  }
+                                } else {
+                                  setDraftPeriodIds([]);
+                                }
+                                setEditingPeriods(false);
+                              }}
+                              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Buttons and info */}
@@ -2258,7 +2966,7 @@ export function FullAdminScreen({
                             );
                           }
                         }}
-                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 text-black rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={currentDraft.status === "integrated"}
                       >
                         {Object.values(BLIND_SCHEDULES).map((schedule) => (

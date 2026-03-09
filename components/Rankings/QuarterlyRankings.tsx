@@ -50,73 +50,27 @@ type SortField =
   | "pointsPerGame";
 type SortDirection = "asc" | "desc";
 
-interface QuarterOption {
-  quarter: number;
-  year: number;
-  label: string;
-  value: string;
+interface CompetitionPeriod {
+  id: number;
+  name: string;
+  period_type: string;
+  start_date: string;
+  end_date: string;
 }
 
-// Helper function to check for quartersplus cheat code
-function hasQuartersPlusCheatCode(): boolean {
-  if (typeof window === "undefined") return false;
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("cheatcode") === "quartersplus";
-}
-
-// Helper function to generate quarter options
-function generateQuarterOptions(
-  extendedMode: boolean = false,
-): QuarterOption[] {
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
-
-  const options: QuarterOption[] = [];
-
-  let year = currentYear;
-  let quarter = currentQuarter;
-
-  // Generate 6 quarters normally, or 12 if extendedMode is enabled
-  const quarterCount = extendedMode ? 12 : 6;
-  for (let i = 0; i < quarterCount; i++) {
-    const quarterLabels = ["Q1", "Q2", "Q3", "Q4"];
-    const monthRanges = ["Jan - Mar", "Apr - Jun", "Jul - Sep", "Oct - Dec"];
-
-    options.push({
-      quarter,
-      year,
-      label: `${quarterLabels[quarter - 1]} ${year} (${monthRanges[quarter - 1]})`,
-      value: `${quarter}-${year}`,
-    });
-
-    // Move to previous quarter
-    quarter--;
-    if (quarter === 0) {
-      quarter = 4;
-      year--;
-    }
-  }
-
-  return options;
-}
-
-// Helper function to parse quarter from URL or get default
-function getSelectedQuarterFromURL(): string {
-  if (typeof window === "undefined") return "";
+// Helper function to get period_id from URL
+function getSelectedPeriodIdFromURL(): number | null {
+  if (typeof window === "undefined") return null;
 
   const urlParams = new URLSearchParams(window.location.search);
-  const quarterParam = urlParams.get("quarter");
+  const periodIdParam = urlParams.get("period_id");
 
-  if (quarterParam && /^\d-\d{4}$/.test(quarterParam)) {
-    return quarterParam;
+  if (periodIdParam) {
+    const id = parseInt(periodIdParam);
+    if (!isNaN(id)) return id;
   }
 
-  // Default to current quarter
-  const currentDate = new Date();
-  const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
-  const currentYear = currentDate.getFullYear();
-  return `${currentQuarter}-${currentYear}`;
+  return null;
 }
 
 export default function QuarterlyRankings() {
@@ -135,40 +89,59 @@ export default function QuarterlyRankings() {
     direction: "asc",
   });
 
-  // Check for extended quarters mode (cheatcode=quartersplus)
-  const [extendedQuartersMode, setExtendedQuartersMode] = useState(false);
+  // Competition periods state
+  const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(() =>
+    getSelectedPeriodIdFromURL()
+  );
+  const [periodsLoading, setPeriodsLoading] = useState(true);
 
+  // Fetch available periods on mount
   useEffect(() => {
-    setExtendedQuartersMode(hasQuartersPlusCheatCode());
+    async function fetchPeriods() {
+      try {
+        const response = await fetch("/api/competition-periods?league_id=1&period_type=quarterly");
+        if (!response.ok) throw new Error("Failed to fetch periods");
+        const data = await response.json();
+        setPeriods(data.periods || []);
+
+        // If no period selected from URL, select the first (most recent) period
+        if (!selectedPeriodId && data.periods?.length > 0) {
+          setSelectedPeriodId(data.periods[0].id);
+        }
+      } catch (error) {
+        console.error("Error fetching periods:", error);
+      } finally {
+        setPeriodsLoading(false);
+      }
+    }
+
+    fetchPeriods();
   }, []);
 
-  // Generate quarter options and get selected quarter
-  const quarterOptions = generateQuarterOptions(extendedQuartersMode);
-  const [selectedQuarter, setSelectedQuarter] = useState<string>(() =>
-    getSelectedQuarterFromURL(),
-  );
-
-  // Update URL when quarter changes
-  const updateURL = (quarterValue: string) => {
+  // Update URL when period changes
+  const updateURL = (periodId: number) => {
     if (typeof window === "undefined") return;
 
     const url = new URL(window.location.href);
-    url.searchParams.set("quarter", quarterValue);
+    url.searchParams.set("period_id", periodId.toString());
     window.history.replaceState({}, "", url.toString());
   };
 
-  const handleQuarterChange = (quarterValue: string) => {
-    setSelectedQuarter(quarterValue);
-    updateURL(quarterValue);
+  const handlePeriodChange = (periodId: number) => {
+    setSelectedPeriodId(periodId);
+    updateURL(periodId);
   };
 
+  // Fetch rankings when period changes
   useEffect(() => {
     async function fetchRankings() {
+      if (!selectedPeriodId) return;
+
       setIsTransitioning(true);
       try {
-        const [quarter, year] = selectedQuarter.split("-").map(Number);
         const response = await fetch(
-          `/api/rankings/quarterly?quarter=${quarter}&year=${year}`,
+          `/api/rankings/quarterly?period_id=${selectedPeriodId}`,
         );
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
@@ -183,10 +156,13 @@ export default function QuarterlyRankings() {
       }
     }
 
-    if (selectedQuarter) {
+    if (selectedPeriodId) {
       fetchRankings();
     }
-  }, [selectedQuarter]);
+  }, [selectedPeriodId]);
+
+  // Get the selected period's name for display
+  const selectedPeriod = periods.find(p => p.id === selectedPeriodId);
 
   // Fetch badges for visible players
   useEffect(() => {
@@ -357,6 +333,17 @@ export default function QuarterlyRankings() {
     );
   }
 
+  if (periodsLoading) {
+    return (
+      <div className="text-center py-12 text-gray-600">
+        <RotatingImageLoader
+          src="/images/Poker-Chip-Isloated-Blue.png"
+          size="large"
+        />
+      </div>
+    );
+  }
+
   if (!rankingsData?.rankings.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -365,23 +352,22 @@ export default function QuarterlyRankings() {
             Select Quarter:
           </label>
           <select
-            value={selectedQuarter}
-            onChange={(e) => handleQuarterChange(e.target.value)}
+            value={selectedPeriodId || ""}
+            onChange={(e) => handlePeriodChange(parseInt(e.target.value))}
             className="text-black px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {quarterOptions.map((option) => (
+            {periods.map((period) => (
               <option
-                key={option.value}
-                value={option.value}
+                key={period.id}
+                value={period.id}
               >
-                {option.label}
+                {period.name}
               </option>
             ))}
           </select>
         </div>
         <div className="text-xl text-white">
-          No games yet for this quarter (Q{rankingsData?.quarter}{" "}
-          {rankingsData?.year}). Check back soon.{" "}
+          No games yet for {selectedPeriod?.name || "this quarter"}. Check back soon.
         </div>
       </div>
     );
@@ -394,7 +380,7 @@ export default function QuarterlyRankings() {
       {/* Header section */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">
-          Quarterly Rankings - Q{rankingsData.quarter} {rankingsData.year}
+          Quarterly Rankings - {selectedPeriod?.name || `Q${rankingsData.quarter} ${rankingsData.year}`}
         </h2>
 
         <div className="flex flex-col sm:flex-row items-center lg:items-end gap-4 mb-4">
@@ -404,16 +390,16 @@ export default function QuarterlyRankings() {
               Select Quarter:
             </label>
             <select
-              value={selectedQuarter}
-              onChange={(e) => handleQuarterChange(e.target.value)}
+              value={selectedPeriodId || ""}
+              onChange={(e) => handlePeriodChange(parseInt(e.target.value))}
               className="text-black px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {quarterOptions.map((option) => (
+              {periods.map((period) => (
                 <option
-                  key={option.value}
-                  value={option.value}
+                  key={period.id}
+                  value={period.id}
                 >
-                  {option.label}
+                  {period.name}
                 </option>
               ))}
             </select>
@@ -497,7 +483,7 @@ export default function QuarterlyRankings() {
         {/* Player rankings */}
         <div>
           {sortedAndFilteredRankings.map((player, index) => {
-            const uniqueKey = `${player.uid}-${rankingsData.quarter}-${rankingsData.year}-${index}`;
+            const uniqueKey = `${player.uid}-${selectedPeriodId}-${index}`;
             const isQualificationBarrier =
               player.ranking === 41 && !showFavoritesOnly && !filterText;
 

@@ -152,6 +152,7 @@ model TournamentDraft {
   timer_is_running        Boolean?                @default(false)
   timer_is_paused         Boolean?                @default(false)
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
+  period_ids              String?                 @db.VarChar(500)
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
@@ -294,6 +295,7 @@ model games {
   leagues             leagues          @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_games_league")
   venues              venues           @relation(fields: [venue_id], references: [id], onUpdate: Restrict, map: "fk_games_venue")
   knockouts           knockouts[]
+  game_periods        game_periods[]
 
   @@index([date], map: "idx_games_date")
   @@index([tournament_draft_id], map: "idx_games_draft")
@@ -321,16 +323,17 @@ model knockouts {
 }
 
 model leagues {
-  id              Int          @id @default(autoincrement())
-  name            String       @unique(map: "uq_leagues_name") @db.VarChar(255)
-  slug            String       @unique(map: "uq_leagues_slug") @db.VarChar(255)
-  is_active       Boolean      @default(true)
-  league_settings String?      @db.LongText
-  created         DateTime     @default(now()) @db.Timestamp(0)
-  modified        DateTime     @default(now()) @db.Timestamp(0)
-  games           games[]
-  players_v2      players_v2[]
-  venues          venues[]
+  id                  Int                   @id @default(autoincrement())
+  name                String                @unique(map: "uq_leagues_name") @db.VarChar(255)
+  slug                String                @unique(map: "uq_leagues_slug") @db.VarChar(255)
+  is_active           Boolean               @default(true)
+  league_settings     String?               @db.LongText
+  created             DateTime              @default(now()) @db.Timestamp(0)
+  modified            DateTime              @default(now()) @db.Timestamp(0)
+  games               games[]
+  players_v2          players_v2[]
+  venues              venues[]
+  competition_periods competition_periods[]
 }
 
 model players_v2 {
@@ -376,6 +379,37 @@ model venues {
   leagues     leagues  @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
 
   @@index([league_id], map: "idx_venues_league")
+}
+
+model competition_periods {
+  id            Int            @id @default(autoincrement())
+  league_id     Int
+  name          String         @db.VarChar(100)
+  period_type   String         @db.VarChar(50)
+  start_date    DateTime       @db.Date
+  end_date      DateTime       @db.Date
+  is_active     Boolean        @default(true)
+  display_order Int            @default(0)
+  created       DateTime       @default(now()) @db.Timestamp(0)
+  modified      DateTime       @default(now()) @db.Timestamp(0)
+  leagues       leagues        @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_periods_league")
+  game_periods  game_periods[]
+
+  @@index([league_id], map: "idx_periods_league")
+  @@index([league_id, period_type], map: "idx_periods_type")
+  @@index([league_id, is_active], map: "idx_periods_active")
+}
+
+model game_periods {
+  game_id             Int
+  period_id           Int
+  assigned_by         String              @default("auto") @db.VarChar(50)
+  created             DateTime            @default(now()) @db.Timestamp(0)
+  games               games               @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_game_periods_game")
+  competition_periods competition_periods @relation(fields: [period_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_game_periods_period")
+
+  @@id([game_id, period_id])
+  @@index([period_id], map: "idx_game_periods_period")
 }
 
 enum TournamentDraftStatus {

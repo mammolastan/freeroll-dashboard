@@ -1,6 +1,6 @@
 // components/PlayerDashboard/DateRangeSelector.tsx
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface DateRangeOption {
     label: string;
@@ -9,26 +9,49 @@ interface DateRangeOption {
     endDate: Date | null;
 }
 
+interface CompetitionPeriod {
+    id: number;
+    name: string;
+    period_type: string;
+    start_date: string;
+    end_date: string;
+}
+
 interface DateRangeSelectorProps {
     onRangeChange: (startDate: Date | null, endDate: Date | null, value: string) => void;
     selectedRange: string;
 }
 
 export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSelectorProps) {
-    const createDate = (year: number, month: number, day: number) => {
-        // Use local date creation to avoid timezone shifts
-        return new Date(year, month, day);
-    };
+    const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const getCurrentQuarter = (date: Date): number => {
-        return Math.floor(date.getMonth() / 3) + 1;
+    // Fetch competition periods on mount
+    useEffect(() => {
+        async function fetchPeriods() {
+            try {
+                const response = await fetch('/api/competition-periods?league_id=1');
+                if (!response.ok) throw new Error('Failed to fetch periods');
+                const data = await response.json();
+                setPeriods(data.periods || []);
+            } catch (error) {
+                console.error('Error fetching competition periods:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchPeriods();
+    }, []);
+
+    const createDate = (year: number, month: number, day: number) => {
+        return new Date(year, month, day);
     };
 
     const generateDateRanges = (): DateRangeOption[] => {
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
-        const currentQuarter = getCurrentQuarter(currentDate);
 
         const ranges: DateRangeOption[] = [
             {
@@ -42,41 +65,37 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
                 value: 'current-month',
                 startDate: createDate(currentYear, currentMonth, 1),
                 endDate: createDate(currentYear, currentMonth + 1, 0)
-            },
-            {
-                label: `Current Quarter (Q${currentQuarter} ${currentYear})`,
-                value: `Q${currentQuarter}-${currentYear}`,
-                startDate: createDate(currentYear, (currentQuarter - 1) * 3, 1),
-                endDate: createDate(currentYear, currentQuarter * 3, 0)
             }
         ];
 
-        // Add previous quarters (up to 3)
-        let currentQYear = currentYear;
-        let remainingQuarters = 3;
+        // Add quarterly periods from competition_periods (limit to recent 6)
+        const quarterlyPeriods = periods
+            .filter(p => p.period_type === 'quarterly')
+            .slice(0, 6);
 
-        for (let q = currentQuarter - 1; q >= 1 && remainingQuarters > 0; q--) {
+        quarterlyPeriods.forEach(period => {
             ranges.push({
-                label: `Q${q} ${currentQYear}`,
-                value: `Q${q}-${currentQYear}`,
-                startDate: createDate(currentQYear, (q - 1) * 3, 1),
-                endDate: createDate(currentQYear, q * 3, 0)
+                label: period.name,
+                value: `period-${period.id}`,
+                startDate: new Date(period.start_date),
+                endDate: new Date(period.end_date)
             });
-            remainingQuarters--;
-        }
+        });
 
-        // If we haven't added 3 quarters yet, move to previous year
-        if (remainingQuarters > 0) {
-            currentQYear--;
-            for (let q = 4; q >= 1 && remainingQuarters > 0; q--) {
+        // Add monthly periods (limit to recent 6)
+        const monthlyPeriods = periods
+            .filter(p => p.period_type === 'monthly')
+            .slice(0, 6);
+
+        if (monthlyPeriods.length > 0) {
+            monthlyPeriods.forEach(period => {
                 ranges.push({
-                    label: `Q${q} ${currentQYear}`,
-                    value: `Q${q}-${currentQYear}`,
-                    startDate: createDate(currentQYear, (q - 1) * 3, 1),
-                    endDate: createDate(currentQYear, q * 3, 0)
+                    label: period.name,
+                    value: `period-${period.id}`,
+                    startDate: new Date(period.start_date),
+                    endDate: new Date(period.end_date)
                 });
-                remainingQuarters--;
-            }
+            });
         }
 
         return ranges;
@@ -96,12 +115,35 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
                         onRangeChange(range.startDate, range.endDate, range.value);
                     }
                 }}
+                disabled={loading}
             >
-                {ranges.map((range) => (
-                    <option key={range.value} value={range.value}>
-                        {range.label}
-                    </option>
-                ))}
+                {loading ? (
+                    <option>Loading...</option>
+                ) : (
+                    <>
+                        <optgroup label="General">
+                            {ranges.filter(r => r.value === 'all-time' || r.value === 'current-month').map((range) => (
+                                <option key={range.value} value={range.value}>
+                                    {range.label}
+                                </option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Quarterly">
+                            {ranges.filter(r => r.value.startsWith('period-') && periods.find(p => `period-${p.id}` === r.value)?.period_type === 'quarterly').map((range) => (
+                                <option key={range.value} value={range.value}>
+                                    {range.label}
+                                </option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Monthly">
+                            {ranges.filter(r => r.value.startsWith('period-') && periods.find(p => `period-${p.id}` === r.value)?.period_type === 'monthly').map((range) => (
+                                <option key={range.value} value={range.value}>
+                                    {range.label}
+                                </option>
+                            ))}
+                        </optgroup>
+                    </>
+                )}
             </select>
         </div>
     );
