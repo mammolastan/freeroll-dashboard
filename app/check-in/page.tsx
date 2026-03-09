@@ -1,7 +1,7 @@
 // app/check-in/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight } from 'lucide-react';
@@ -25,7 +25,7 @@ interface ActiveTournament {
     updated_at: string;
 }
 
-export default function CheckInPage() {
+function CheckInPageContent() {
     const searchParams = useSearchParams();
     const [tournaments, setTournaments] = useState<ActiveTournament[]>([]);
     const [loading, setLoading] = useState(true);
@@ -216,5 +216,26 @@ export default function CheckInPage() {
 
             </div>
         </div>
+    );
+}
+
+// Loading fallback for Suspense
+function CheckInLoading() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-500 mx-auto shadow-[0_0_20px_rgba(6,182,212,0.5)]"></div>
+                <p className="mt-4 text-cyan-300">Loading active tournaments...</p>
+            </div>
+        </div>
+    );
+}
+
+// Wrap in Suspense for useSearchParams
+export default function CheckInPage() {
+    return (
+        <Suspense fallback={<CheckInLoading />}>
+            <CheckInPageContent />
+        </Suspense>
     );
 }
