@@ -1,6 +1,7 @@
 // app/api/competition-periods/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 export const revalidate = 3600; // 1 hour cache
 
@@ -8,24 +9,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const leagueId = searchParams.get("league_id");
+    // Use the league utility to resolve league_id from session, slug, or direct param
+    const leagueIdNum = await getLeagueIdFromRequest(request);
     const periodType = searchParams.get("period_type");
     const activeOnly = searchParams.get("active_only") !== "false"; // defaults to true
-
-    if (!leagueId) {
-      return NextResponse.json(
-        { error: "league_id is required" },
-        { status: 400 }
-      );
-    }
-
-    const leagueIdNum = parseInt(leagueId);
-    if (isNaN(leagueIdNum)) {
-      return NextResponse.json(
-        { error: "league_id must be a number" },
-        { status: 400 }
-      );
-    }
 
     // Build the query
     const whereClause: {

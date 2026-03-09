@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { MonthlyPlayerCard } from "@/components/Rankings/MonthlyPlayerCard";
 import RotatingImageLoader from "../ui/RotatingImageLoader";
+import { useLeagueParam } from "@/lib/useLeagueParam";
 
 interface VenueRanking {
   venue: string;
@@ -60,6 +61,9 @@ export default function MonthlyRankings() {
   const [availableVenues, setAvailableVenues] = useState<string[]>([]);
   const [filterText, setFilterText] = useState("");
 
+  // League param for multi-tenant support
+  const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
   // Competition periods state
   const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(() =>
@@ -67,11 +71,13 @@ export default function MonthlyRankings() {
   );
   const [periodsLoading, setPeriodsLoading] = useState(true);
 
-  // Fetch available periods on mount
+  // Fetch available periods on mount (wait for league param to be ready)
   useEffect(() => {
+    if (!leagueParamReady) return;
+
     async function fetchPeriods() {
       try {
-        const response = await fetch("/api/competition-periods?league_id=1&period_type=monthly");
+        const response = await fetch(appendLeagueParam("/api/competition-periods?period_type=monthly"));
         if (!response.ok) throw new Error("Failed to fetch periods");
         const data = await response.json();
         setPeriods(data.periods || []);
@@ -88,7 +94,7 @@ export default function MonthlyRankings() {
     }
 
     fetchPeriods();
-  }, []);
+  }, [leagueParamReady, appendLeagueParam]);
 
   // Update URL when period changes
   const updateURL = (periodId: number) => {
@@ -109,13 +115,15 @@ export default function MonthlyRankings() {
 
   // Fetch rankings when period changes
   useEffect(() => {
+    if (!leagueParamReady) return;
+
     async function fetchRankings() {
       if (!selectedPeriodId) return;
 
       setIsTransitioning(true);
       try {
         const response = await fetch(
-          `/api/rankings/monthly?period_id=${selectedPeriodId}`,
+          appendLeagueParam(`/api/rankings/monthly?period_id=${selectedPeriodId}`),
         );
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
@@ -158,7 +166,7 @@ export default function MonthlyRankings() {
     if (selectedPeriodId) {
       fetchRankings();
     }
-  }, [selectedPeriodId]);
+  }, [selectedPeriodId, leagueParamReady, appendLeagueParam]);
 
   const getFilteredRankings = (): PlayerRanking[] => {
     if (!rankingsData?.rankings) return [];

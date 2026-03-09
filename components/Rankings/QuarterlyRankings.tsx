@@ -16,6 +16,7 @@ import RotatingImageLoader from "../ui/RotatingImageLoader";
 import { useFavorites, FavoritesFilter } from "./FavoritesComponents";
 import { BadgeData } from "../ui/Badge";
 import { QualificationBarrier } from "./QualificationBarrier";
+import { useLeagueParam } from "@/lib/useLeagueParam";
 
 interface PlayerRanking {
   name: string;
@@ -89,6 +90,9 @@ export default function QuarterlyRankings() {
     direction: "asc",
   });
 
+  // League param for multi-tenant support
+  const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
   // Competition periods state
   const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(() =>
@@ -96,11 +100,13 @@ export default function QuarterlyRankings() {
   );
   const [periodsLoading, setPeriodsLoading] = useState(true);
 
-  // Fetch available periods on mount
+  // Fetch available periods on mount (wait for league param to be ready)
   useEffect(() => {
+    if (!leagueParamReady) return;
+
     async function fetchPeriods() {
       try {
-        const response = await fetch("/api/competition-periods?league_id=1&period_type=quarterly");
+        const response = await fetch(appendLeagueParam("/api/competition-periods?period_type=quarterly"));
         if (!response.ok) throw new Error("Failed to fetch periods");
         const data = await response.json();
         setPeriods(data.periods || []);
@@ -117,7 +123,7 @@ export default function QuarterlyRankings() {
     }
 
     fetchPeriods();
-  }, []);
+  }, [leagueParamReady, appendLeagueParam]);
 
   // Update URL when period changes
   const updateURL = (periodId: number) => {
@@ -135,13 +141,15 @@ export default function QuarterlyRankings() {
 
   // Fetch rankings when period changes
   useEffect(() => {
+    if (!leagueParamReady) return;
+
     async function fetchRankings() {
       if (!selectedPeriodId) return;
 
       setIsTransitioning(true);
       try {
         const response = await fetch(
-          `/api/rankings/quarterly?period_id=${selectedPeriodId}`,
+          appendLeagueParam(`/api/rankings/quarterly?period_id=${selectedPeriodId}`),
         );
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
@@ -159,7 +167,7 @@ export default function QuarterlyRankings() {
     if (selectedPeriodId) {
       fetchRankings();
     }
-  }, [selectedPeriodId]);
+  }, [selectedPeriodId, leagueParamReady, appendLeagueParam]);
 
   // Get the selected period's name for display
   const selectedPeriod = periods.find(p => p.id === selectedPeriodId);

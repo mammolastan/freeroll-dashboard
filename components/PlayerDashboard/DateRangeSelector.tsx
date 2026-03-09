@@ -1,6 +1,8 @@
 // components/PlayerDashboard/DateRangeSelector.tsx
+"use client";
 
 import React, { useState, useEffect } from 'react';
+import { useLeagueParam } from '@/lib/useLeagueParam';
 
 interface DateRangeOption {
     label: string;
@@ -26,11 +28,16 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
     const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch competition periods on mount
+    // League param for multi-tenant support
+    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
+    // Fetch competition periods on mount (wait for league param to be ready)
     useEffect(() => {
+        if (!leagueParamReady) return;
+
         async function fetchPeriods() {
             try {
-                const response = await fetch('/api/competition-periods?league_id=1');
+                const response = await fetch(appendLeagueParam('/api/competition-periods'));
                 if (!response.ok) throw new Error('Failed to fetch periods');
                 const data = await response.json();
                 setPeriods(data.periods || []);
@@ -42,7 +49,7 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
         }
 
         fetchPeriods();
-    }, []);
+    }, [leagueParamReady, appendLeagueParam]);
 
     const createDate = (year: number, month: number, day: number) => {
         return new Date(year, month, day);

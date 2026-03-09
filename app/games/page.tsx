@@ -7,6 +7,7 @@ import { Star, Users, ChevronRight } from "lucide-react";
 import RotatingImageLoader from "@/components/ui/RotatingImageLoader";
 import { formatGameDateET } from "@/lib/utils";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
+import { useLeagueParam } from "@/lib/useLeagueParam";
 
 interface TopPlayer {
   name: string;
@@ -47,10 +48,15 @@ export default function GamesPage() {
   const [fetchTimestamp, setFetchTimestamp] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // League param for multi-tenant support
+  const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
   useEffect(() => {
+    if (!leagueParamReady) return;
+
     async function fetchRecentGames() {
       try {
-        const response = await fetch("/api/games/recent");
+        const response = await fetch(appendLeagueParam("/api/games/recent"));
         const data = await response.json();
         setGames(data.games);
         setFetchTimestamp(data.fetchTimestamp);
@@ -62,7 +68,7 @@ export default function GamesPage() {
     }
 
     fetchRecentGames();
-  }, []);
+  }, [leagueParamReady, appendLeagueParam]);
 
   if (loading) {
     return (

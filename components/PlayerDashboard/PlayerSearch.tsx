@@ -1,6 +1,8 @@
 // components/PlayerDashboard/PlayerSearch.tsx
+"use client";
 
 import { useEffect, useState } from "react"
+import { useLeagueParam } from "@/lib/useLeagueParam"
 
 interface Player {
     Name: string
@@ -18,9 +20,12 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
     const [players, setPlayers] = useState<Player[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
+    // League param for multi-tenant support
+    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam()
+
     useEffect(() => {
-        if (!search) {
-            setPlayers([])
+        if (!search || !leagueParamReady) {
+            if (!search) setPlayers([])
             return
         }
 
@@ -28,7 +33,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
             setIsLoading(true)
             try {
                 // Fetch players
-                const response = await fetch(`/api/players/search?q=${search}&name=true`)
+                const response = await fetch(appendLeagueParam(`/api/players/search?q=${search}&name=true`))
                 const data = await response.json()
                 setPlayers(data)
             } catch (error) {
@@ -39,7 +44,7 @@ export function PlayerSearch({ onPlayerSelect }: PlayerSearchProps) {
         }, 300)
 
         return () => clearTimeout(timer)
-    }, [search])
+    }, [search, leagueParamReady, appendLeagueParam])
 
     return (
         <div className="w-full max-w-sm mx-auto">

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { PlayerSearch } from '@/components/PlayerDashboard/PlayerSearch'
 import { PlayerDetails } from '@/components/PlayerDashboard/PlayerDetails'
 import { PlayerAvatarModal } from '@/components/ui/PlayerAvatarModal'
+import { getLeagueParamFromURL } from '@/lib/useLeagueParam'
 
 interface Player {
     Name: string
@@ -41,11 +42,14 @@ export default function PlayersPage() {
             }
         }
 
+        // Get league param helper for multi-tenant support
+        const { appendLeagueParam } = getLeagueParamFromURL();
+
         // If URL has UID, fetch player data using the stats endpoint
         if (urlUid) {
 
             // First fetch will get minimal player info
-            fetch(`/api/players/search?q=${encodeURIComponent(urlUid)}`)
+            fetch(appendLeagueParam(`/api/players/search?q=${encodeURIComponent(urlUid)}`))
                 .then(response => response.json())
                 .then(data => {
 
@@ -65,7 +69,7 @@ export default function PlayersPage() {
                 .catch(error => console.error('Error fetching player:', error));
         } else if (urlName) {
             // Handle name-based search
-            fetch(`/api/players/search?q=${encodeURIComponent(urlName)}&name=true`)
+            fetch(appendLeagueParam(`/api/players/search?q=${encodeURIComponent(urlName)}&name=true`))
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.length > 0) {

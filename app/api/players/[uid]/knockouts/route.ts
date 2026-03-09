@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
-import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 export async function GET(
   request: Request,
@@ -24,7 +23,22 @@ export async function GET(
         : null;
     const endDate =
       endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
-    const leagueId = await getLeagueIdFromRequest(request);
+
+    // Look up the player's league from their UID (UIDs are globally unique)
+    // This allows player profile links to work without passing league param
+    const player = await prisma.players_v2.findUnique({
+      where: { uid: playerUID },
+      select: { league_id: true },
+    });
+
+    if (!player) {
+      return NextResponse.json(
+        { error: "Player not found" },
+        { status: 404 }
+      );
+    }
+
+    const leagueId = player.league_id;
 
     // Build date condition for games table
     const dateConditions: Prisma.Sql[] = [];

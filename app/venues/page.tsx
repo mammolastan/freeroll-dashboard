@@ -5,6 +5,7 @@ import { VenueDetails } from '@/components/VenueDashboard/VenueDetails'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
+import { useLeagueParam } from '@/lib/useLeagueParam'
 
 interface Venue {
     name: string;
@@ -40,11 +41,16 @@ export default function VenuesPage() {
     })
     const [isTransitioning, setIsTransitioning] = useState(false)
 
+    // League param for multi-tenant support
+    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam()
+
     useEffect(() => {
+        if (!leagueParamReady) return;
+
         async function fetchVenues() {
             setIsTransitioning(true)
             try {
-                const response = await fetch(`/api/venues/list?currentMonth=${isCurrentMonth}`)
+                const response = await fetch(appendLeagueParam(`/api/venues/list?currentMonth=${isCurrentMonth}`))
                 const data = await response.json()
                 if (data.venues) {
                     setVenueData(data)
@@ -72,7 +78,7 @@ export default function VenuesPage() {
         }
 
         fetchVenues()
-    }, [isCurrentMonth])
+    }, [isCurrentMonth, leagueParamReady, appendLeagueParam])
 
     if (loading && !isTransitioning) {
         return (

@@ -94,7 +94,8 @@ export async function GET(request: NextRequest) {
         LIMIT 10
       `;
     } else {
-      // Search by exact UID match
+      // Search by exact UID match - UIDs are globally unique, so no league filter needed
+      // This allows player profile links to work across leagues without passing league param
       players = await prisma.$queryRaw<RawQueryResult[]>`
         SELECT
           CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as Name,
@@ -103,15 +104,15 @@ export async function GET(request: NextRequest) {
           p.photo_url,
           p.favorite_hand,
           p.favorite_pro,
+          p.league_id,
           COUNT(DISTINCT a.game_id) as TotalGames,
           COALESCE(SUM(a.points), 0) as TotalPoints,
           MAX(g.date) as LastGameDate
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
         LEFT JOIN games g ON g.id = a.game_id
-        WHERE p.league_id = ${leagueId}
-          AND p.uid = ${query}
-        GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
+        WHERE p.uid = ${query}
+        GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro, p.league_id
         ORDER BY
           CASE
             WHEN MAX(g.date) IS NULL THEN 1

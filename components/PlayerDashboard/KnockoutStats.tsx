@@ -1,10 +1,13 @@
 // components/PlayerDashboard/KnockoutStats.tsx
+"use client";
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Swords, Search } from 'lucide-react';
 import { formatGameDate } from '@/lib/utils';
 import { PlayerSearch } from './PlayerSearch';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
+import { useLeagueParam } from '@/lib/useLeagueParam';
 
 interface KnockoutGame {
     date: string;
@@ -55,7 +58,12 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
     const [searchVisible, setSearchVisible] = useState(false);
     const [expanded, setExpanded] = useState(false);
 
+    // League param for multi-tenant support
+    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
     useEffect(() => {
+        if (!leagueParamReady) return;
+
         const fetchStats = async () => {
             if (!expanded) return;
 
@@ -63,7 +71,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
             try {
                 // Fetch knockout stats
                 const compareQueryParam = comparePlayer ? `&compareUid=${comparePlayer.UID}` : '';
-                const response = await fetch(`/api/players/${playerUID}/knockouts?${compareQueryParam}`);
+                const response = await fetch(appendLeagueParam(`/api/players/${playerUID}/knockouts?${compareQueryParam}`));
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 setStats(data);
@@ -75,7 +83,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
         };
 
         fetchStats();
-    }, [playerUID, comparePlayer, expanded]);
+    }, [playerUID, comparePlayer, expanded, leagueParamReady, appendLeagueParam]);
 
     const handlePlayerSelect = (player: { Name: string; UID: string; nickname: string | null }) => {
         setComparePlayer(player);

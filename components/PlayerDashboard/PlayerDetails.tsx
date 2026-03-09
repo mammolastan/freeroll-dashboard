@@ -1,4 +1,5 @@
 // components/PlayerDashboard/PlayerDetails.tsx
+"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { DateRangeSelector } from './DateRangeSelector';
@@ -13,6 +14,7 @@ import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
 import { HelpCircle, Swords } from "lucide-react"
 import { KnockoutStats } from './KnockoutStats';
 import { PersonalBestCard } from './PersonalBestCard';
+import { useLeagueParam } from '@/lib/useLeagueParam';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -70,6 +72,10 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     const [badges, setBadges] = useState<BadgeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [badgesLoading, setBadgesLoading] = useState(true);
+
+    // League param for multi-tenant support
+    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+
     const [selectedRange, setSelectedRange] = useState(() => {
         if (initialRange) {
             return initialRange;
@@ -145,7 +151,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
             // Add venue parameter
             params.append('venue', selectedVenue);
 
-            const response = await fetch(`/api/players/${playerUID}/stats?${params.toString()}`);
+            const response = await fetch(appendLeagueParam(`/api/players/${playerUID}/stats?${params.toString()}`));
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
@@ -157,7 +163,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         } finally {
             setLoading(false);
         }
-    }, [playerUID, isCustomRange, startDate, endDate, selectedVenue]);
+    }, [playerUID, isCustomRange, startDate, endDate, selectedVenue, leagueParamReady, appendLeagueParam]);
 
     // Handle custom date range changes
     const handleCustomDateRangeChange = (startDate: Date, endDate: Date) => {
@@ -171,6 +177,8 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
     // Fetch stats when player is selected or date changes
     useEffect(() => {
+        if (!leagueParamReady) return;
+
         if (playerUID) {
             if (!isCustomRange) {
                 fetchPlayerStats();
@@ -178,13 +186,15 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 fetchPlayerStats(customStartDate, customEndDate);
             }
         }
-    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue, fetchPlayerStats]);
+    }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue, leagueParamReady, fetchPlayerStats]);
 
     // Fetch player badges
     useEffect(() => {
+        if (!leagueParamReady) return;
+
         if (playerUID) {
             setBadgesLoading(true);
-            fetch(`/api/players/${playerUID}/badges`)
+            fetch(appendLeagueParam(`/api/players/${playerUID}/badges`))
                 .then(response => response.json())
                 .then(data => {
                     setBadges(data);
@@ -197,7 +207,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     setBadgesLoading(false);
                 });
         }
-    }, [playerUID]);
+    }, [playerUID, leagueParamReady, appendLeagueParam]);
 
     if (loading) {
         return (
