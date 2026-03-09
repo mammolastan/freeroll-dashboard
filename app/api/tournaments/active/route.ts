@@ -1,14 +1,17 @@
 // app/api/tournaments/active/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types"
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Disable caching for this route to always get fresh tournament data
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const leagueId = await getLeagueIdFromRequest(request);
+
     const activeTournaments = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.id,
@@ -28,7 +31,9 @@ export async function GET() {
         COUNT(CASE WHEN tdp.ko_position IS NULL THEN 1 END) as players_remaining
       FROM tournament_drafts td
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
-      WHERE td.status = 'in_progress' AND td.tournament_date >= CURDATE() - INTERVAL 1 DAY
+      WHERE td.status = 'in_progress'
+        AND td.tournament_date >= CURDATE() - INTERVAL 1 DAY
+        AND td.league_id = ${leagueId}
       GROUP BY td.id
       ORDER BY td.tournament_date DESC, td.created_at DESC
     `;

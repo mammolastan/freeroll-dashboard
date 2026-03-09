@@ -153,15 +153,18 @@ model TournamentDraft {
   timer_is_paused         Boolean?                @default(false)
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
   period_ids              String?                 @db.VarChar(500)
+  league_id               Int                     @default(1)
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
   tournament_feed_items   tournament_feed_items[]
+  leagues                 leagues                 @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_league")
 
   @@index([status], map: "idx_status")
   @@index([tournament_date], map: "idx_tournament_date")
   @@index([game_uid], map: "idx_game_uid")
   @@index([check_in_token], map: "idx_check_in_token")
+  @@index([league_id], map: "idx_tournament_drafts_league")
   @@map("tournament_drafts")
 }
 
@@ -334,6 +337,7 @@ model leagues {
   players_v2          players_v2[]
   venues              venues[]
   competition_periods competition_periods[]
+  tournament_drafts   TournamentDraft[]
 }
 
 model players_v2 {

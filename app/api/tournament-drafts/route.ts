@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {RawQueryResult } from "@/types"
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
 function serializeTime(time: unknown): string | null {
@@ -27,14 +28,17 @@ function serializeTime(time: unknown): string | null {
 }
 
 // GET - List all tournament drafts
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const leagueId = await getLeagueIdFromRequest(request);
+
     const drafts = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
+      SELECT
         td.*,
         COUNT(tdp.id) as player_count
       FROM tournament_drafts td
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
+      WHERE td.league_id = ${leagueId}
       GROUP BY td.id
       ORDER BY td.tournament_date DESC, td.updated_at DESC
     `;
@@ -63,8 +67,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { tournament_date, tournament_time, director_name, venue, start_points, period_ids } = body;
+    const leagueId = await getLeagueIdFromRequest(request);
 
-    console.log("Creating tournament with data:", body);
+    console.log("Creating tournament with data:", body, "for league_id:", leagueId);
 
     // Validate required fields
     if (!tournament_date || !venue) {
@@ -85,10 +90,10 @@ export async function POST(request: NextRequest) {
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
       INSERT INTO tournament_drafts
-      (tournament_date, tournament_time, director_name, venue, start_points, created_by, status, period_ids)
+      (tournament_date, tournament_time, director_name, venue, start_points, created_by, status, period_ids, league_id)
       VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${venue}, ${
       start_points || 0
-    }, 'admin', 'in_progress', ${periodIdsJson})
+    }, 'admin', 'in_progress', ${periodIdsJson}, ${leagueId})
     `;
 
     console.log("Insert result:", result);

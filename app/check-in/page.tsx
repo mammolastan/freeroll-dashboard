@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight } from 'lucide-react';
 import { formatGameDate, formatTime, formatCutoffTime } from '@/lib/utils';
 
@@ -25,17 +26,26 @@ interface ActiveTournament {
 }
 
 export default function CheckInPage() {
+    const searchParams = useSearchParams();
     const [tournaments, setTournaments] = useState<ActiveTournament[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchActiveTournaments();
-    }, []);
+    }, [searchParams]);
 
     const fetchActiveTournaments = async () => {
         try {
-            const response = await fetch('/api/tournaments/active');
+            // Pass league parameter to API if present
+            const leagueSlug = searchParams.get('league');
+            const leagueId = searchParams.get('league_id');
+            const params = new URLSearchParams();
+            if (leagueSlug) params.set('league', leagueSlug);
+            if (leagueId) params.set('league_id', leagueId);
+            const queryString = params.toString();
+
+            const response = await fetch(`/api/tournaments/active${queryString ? `?${queryString}` : ''}`);
 
             if (!response.ok) {
                 throw new Error('Failed to fetch active tournaments');

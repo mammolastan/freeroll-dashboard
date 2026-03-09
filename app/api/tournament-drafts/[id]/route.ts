@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
 function serializeTime(time: unknown): string | null {
@@ -43,6 +44,7 @@ export async function GET(
   try {
     const { id } = await params;
     const draftId = parseInt(id);
+    const leagueId = await getLeagueIdFromRequest(request);
 
     const draft = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
@@ -50,7 +52,7 @@ export async function GET(
         COUNT(tdp.id) as player_count
       FROM tournament_drafts td
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
-      WHERE td.id = ${draftId}
+      WHERE td.id = ${draftId} AND td.league_id = ${leagueId}
       GROUP BY td.id
     `;
 
@@ -81,6 +83,7 @@ export async function PUT(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
+    const leagueId = await getLeagueIdFromRequest(request);
     const {
       tournament_date,
       tournament_time,
@@ -89,11 +92,18 @@ export async function PUT(
       start_points,
     } = body;
 
-    // Get current state before updating for audit comparison
+    // Get current state before updating for audit comparison (also verifies league ownership)
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT tournament_date, tournament_time, director_name, venue, start_points
-      FROM tournament_drafts WHERE id = ${draftId}
+      FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
     `;
+
+    if (!currentDraftResult.length) {
+      return NextResponse.json(
+        { error: "Tournament draft not found" },
+        { status: 404 }
+      );
+    }
 
     const currentDraft = currentDraftResult[0];
 
@@ -201,6 +211,7 @@ export async function PATCH(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
+    const leagueId = await getLeagueIdFromRequest(request);
     const { blind_schedule, custom_blind_levels, period_ids } = body;
 
     // Validate blind_schedule value if provided
@@ -217,10 +228,18 @@ export async function PATCH(
       );
     }
 
-    // Get current state before updating
+    // Get current state before updating (also verifies league ownership)
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT blind_schedule, custom_blind_levels, period_ids FROM tournament_drafts WHERE id = ${draftId}
+      SELECT blind_schedule, custom_blind_levels, period_ids FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
     `;
+
+    if (!currentDraftResult.length) {
+      return NextResponse.json(
+        { error: "Tournament draft not found" },
+        { status: 404 }
+      );
+    }
+
     const currentSchedule = currentDraftResult[0]?.blind_schedule;
     const currentCustomLevels = currentDraftResult[0]?.custom_blind_levels;
     const currentPeriodIds = currentDraftResult[0]?.period_ids;
@@ -362,6 +381,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const tournamentId = parseInt(id);
+    const leagueId = await getLeagueIdFromRequest(request);
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
@@ -370,9 +390,9 @@ export async function DELETE(
       );
     }
 
-    // Get full tournament state before deletion for audit logging
+    // Get full tournament state before deletion for audit logging (also verifies league ownership)
     const existingTournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_drafts WHERE id = ${tournamentId}
+      SELECT * FROM tournament_drafts WHERE id = ${tournamentId} AND league_id = ${leagueId}
     `;
 
     if ((existingTournament).length === 0) {
