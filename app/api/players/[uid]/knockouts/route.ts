@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 export async function GET(
   request: Request,
@@ -23,6 +24,7 @@ export async function GET(
         : null;
     const endDate =
       endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
+    const leagueId = await getLeagueIdFromRequest(request);
 
     // Build date condition for games table
     const dateConditions: Prisma.Sql[] = [];
@@ -62,6 +64,7 @@ export async function GET(
       JOIN players_v2 victim_p ON victim_p.id = k.victim
       JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
       WHERE victim_p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       AND k.hitman IS NOT NULL
       ${dateCondition}
       ${venueCondition}
@@ -90,6 +93,7 @@ export async function GET(
       JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
       JOIN players_v2 victim_p ON victim_p.id = k.victim
       WHERE hitman_p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       ${dateCondition}
       ${venueCondition}
       GROUP BY victim_p.id, victim_p.uid, victim_p.first_name, victim_p.last_name, victim_p.nickname
@@ -124,6 +128,7 @@ export async function GET(
         JOIN players_v2 victim_p ON victim_p.id = k.victim
         WHERE hitman_p.uid = ${playerUID}
         AND victim_p.uid = ${compareUid}
+        AND g.league_id = ${leagueId}
         ${dateCondition}
         ${venueCondition}
         ORDER BY g.date DESC
@@ -142,6 +147,7 @@ export async function GET(
         JOIN players_v2 victim_p ON victim_p.id = k.victim
         WHERE hitman_p.uid = ${compareUid}
         AND victim_p.uid = ${playerUID}
+        AND g.league_id = ${leagueId}
         ${dateCondition}
         ${venueCondition}
         ORDER BY g.date DESC
@@ -163,6 +169,7 @@ export async function GET(
         JOIN players_v2 p2 ON p2.id = a2.player_id
         WHERE p1.uid = ${playerUID}
         AND p2.uid = ${compareUid}
+        AND g.league_id = ${leagueId}
         ${dateCondition}
         ${venueCondition}
         ORDER BY g.date DESC
@@ -219,6 +226,7 @@ export async function GET(
          JOIN venues v ON v.id = g.venue_id
          JOIN players_v2 p ON p.id = k.victim
          WHERE p.uid = ${playerUID}
+         AND g.league_id = ${leagueId}
          ${dateCondition}
          ${venueCondition}) as knockedOutCount,
         (SELECT COUNT(*) FROM knockouts k
@@ -226,6 +234,7 @@ export async function GET(
          JOIN venues v ON v.id = g.venue_id
          JOIN players_v2 p ON p.id = k.hitman
          WHERE p.uid = ${playerUID}
+         AND g.league_id = ${leagueId}
          ${dateCondition}
          ${venueCondition}) as knockoutCount
     `;

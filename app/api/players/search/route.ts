@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 function serializeResults(results: RawQueryResult[]) {
   return results.map((record) => {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get("q");
     const isNameSearch = searchParams.get("name") === "true";
     const unclaimedOnly = searchParams.get("unclaimed") === "true";
+    const leagueId = await getLeagueIdFromRequest(request);
 
     if (!query) {
       return NextResponse.json([]);
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT a.game_id) as TotalGames
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
-        WHERE (CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm} OR p.nickname LIKE ${searchTerm})
+        WHERE p.league_id = ${leagueId}
+          AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm} OR p.nickname LIKE ${searchTerm})
           AND p.email IS NULL
         GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname
         ORDER BY COUNT(DISTINCT a.game_id) DESC, p.first_name ASC
@@ -74,10 +77,11 @@ export async function GET(request: NextRequest) {
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
         LEFT JOIN games g ON g.id = a.game_id
-        WHERE CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm}
+        WHERE p.league_id = ${leagueId}
+          AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ${searchTerm}
           OR p.first_name LIKE ${searchTerm}
           OR p.last_name LIKE ${searchTerm}
-          OR p.nickname LIKE ${searchTerm}
+          OR p.nickname LIKE ${searchTerm})
         GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
         ORDER BY
           CASE
@@ -105,7 +109,8 @@ export async function GET(request: NextRequest) {
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
         LEFT JOIN games g ON g.id = a.game_id
-        WHERE p.uid = ${query}
+        WHERE p.league_id = ${leagueId}
+          AND p.uid = ${query}
         GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url, p.favorite_hand, p.favorite_pro
         ORDER BY
           CASE

@@ -1,17 +1,21 @@
 // app/api/random-favorite-hand/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/playerUtils";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const leagueId = await getLeagueIdFromRequest(request);
+
     // Get all players who have a favorite hand set
     const playersWithFavoriteHands = await prisma.players_v2.findMany({
       where: {
         favorite_hand: {
           not: null,
         },
+        league_id: leagueId,
       },
       select: {
         first_name: true,

@@ -7,6 +7,7 @@ declare module "next-auth" {
       uid: string;
       nickname: string | null;
       isAdmin: boolean;
+      leagueId: number;
     } & DefaultSession["user"];
   }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
     uid?: string;
     nickname?: string | null;
     isAdmin?: boolean;
+    leagueId?: number;
   }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     uid: string;
     nickname: string | null;
     isAdmin: boolean;
+    leagueId: number;
   }
 }

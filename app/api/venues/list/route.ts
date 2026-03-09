@@ -4,6 +4,7 @@ import { getCurrentETDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { Prisma } from "@prisma/client";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -63,6 +64,7 @@ function getMonthDetails(currentDate: Date): {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const leagueId = await getLeagueIdFromRequest(request);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
     // Get current date and adjust if needed
@@ -87,6 +89,7 @@ export async function GET(request: Request) {
       FROM venues v
       JOIN games g ON g.venue_id = v.id
       WHERE ${dateCondition}
+      AND v.league_id = ${leagueId}
       AND v.name != 'bonus'
       GROUP BY v.id, v.name
       ORDER BY totalGames DESC
@@ -104,6 +107,7 @@ export async function GET(request: Request) {
              JOIN venues kv ON kv.id = kg.venue_id
              WHERE k.hitman = p.id
              AND kv.name = ${venue.name}
+             AND kg.league_id = ${leagueId}
              AND kg.date >= DATE(${startDate}) AND kg.date <= DATE(${endDate})) as knockouts,
             COUNT(*) as gamesPlayed,
             AVG(a.player_score) as avgScore,
@@ -113,6 +117,7 @@ export async function GET(request: Request) {
           JOIN venues v ON v.id = g.venue_id
           JOIN players_v2 p ON p.id = a.player_id
           WHERE v.name = ${venue.name}
+          AND g.league_id = ${leagueId}
           AND ${dateCondition}
           GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname
           ORDER BY totalPoints DESC, avgScore DESC

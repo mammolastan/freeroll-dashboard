@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +10,7 @@ export async function GET(
 ) {
   try {
     const { date } = await params;
+    const leagueId = await getLeagueIdFromRequest(request);
 
     // Convert input date string to a Date object
     const selectedDate = new Date(date);
@@ -17,6 +19,7 @@ export async function GET(
     const games = await prisma.games.findMany({
       where: {
         date: selectedDate,
+        league_id: leagueId,
       },
       orderBy: {
         date: "desc",

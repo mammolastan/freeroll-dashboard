@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult, PlayerSearchResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
 import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -118,11 +119,17 @@ export async function POST(
     } else {
       // Search for existing player in main database by BOTH name AND nickname
       // First get potential matches
+      const leagueId = await getLeagueIdFromRequest(request);
       const likePattern = `%${cleanPlayerName}%`;
       const existingPlayers = await prisma.$queryRaw<PlayerSearchResult[]>`
-        SELECT name, uid, nickname FROM players
-        WHERE name LIKE ${likePattern}
-           OR (nickname IS NOT NULL AND nickname LIKE ${likePattern})
+        SELECT
+          CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
+          p.uid,
+          p.nickname
+        FROM players_v2 p
+        WHERE p.league_id = ${leagueId}
+          AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ${likePattern}
+           OR (p.nickname IS NOT NULL AND p.nickname LIKE ${likePattern}))
         LIMIT 10
       `;
 
@@ -304,7 +311,12 @@ export async function PUT(
     } else {
       // User selected existing player
       const selectedPlayer = await prisma.$queryRaw<PlayerSearchResult[]>`
-        SELECT name, uid, nickname FROM players WHERE uid = ${selected_player_uid}
+        SELECT
+          CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
+          p.uid,
+          p.nickname
+        FROM players_v2 p
+        WHERE p.uid = ${selected_player_uid}
       `;
 
       if (!selectedPlayer.length) {

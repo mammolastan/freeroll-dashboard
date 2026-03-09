@@ -1,12 +1,14 @@
 // app/api/games/recent/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Set revalidation cache period to 6 hours (in seconds)
 export const revalidate = 3600; // 1 * 60 * 60 = 3600 seconds
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const leagueId = await getLeagueIdFromRequest(request);
     // Get recent games from the games table
     const games = await prisma.$queryRaw<
       Array<{
@@ -25,6 +27,7 @@ export async function GET() {
       JOIN venues v ON v.id = g.venue_id
       LEFT JOIN appearances a ON a.game_id = g.id
       WHERE g.date IS NOT NULL
+      AND g.league_id = ${leagueId}
       GROUP BY g.id, g.uid, g.date, v.name
       ORDER BY g.date DESC
       LIMIT 15

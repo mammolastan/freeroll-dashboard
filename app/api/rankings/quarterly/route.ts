@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { Prisma } from "@prisma/client";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -31,6 +32,7 @@ function serializeResults(results: RawQueryResult[]) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const leagueId = await getLeagueIdFromRequest(request);
 
     // Check for period_id first (new approach)
     const periodIdParam = searchParams.get("period_id");
@@ -148,6 +150,7 @@ export async function GET(request: Request) {
             JOIN venues kv ON kv.id = kg.venue_id
             WHERE k.hitman = p.id
             AND kv.name != 'bonus'
+            AND kg.league_id = ${leagueId}
             AND kgp.period_id = ${periodId}
           ) AS SIGNED) as totalKnockouts,
           CAST(SUM(CASE WHEN a.placement <= 8 AND v.name != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
@@ -158,6 +161,7 @@ export async function GET(request: Request) {
         JOIN venues v ON v.id = g.venue_id
         JOIN players_v2 p ON p.id = a.player_id
         WHERE gp.period_id = ${periodId}
+        AND g.league_id = ${leagueId}
         GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url
         HAVING gamesPlayed >= 1
         ORDER BY totalPoints DESC
@@ -180,6 +184,7 @@ export async function GET(request: Request) {
             JOIN venues kv ON kv.id = kg.venue_id
             WHERE k.hitman = p.id
             AND kv.name != 'bonus'
+            AND kg.league_id = ${leagueId}
             AND kg.date >= DATE(${startOfQuarter}) AND kg.date <= DATE(${endOfQuarter})
           ) AS SIGNED) as totalKnockouts,
           CAST(SUM(CASE WHEN a.placement <= 8 AND v.name != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
@@ -189,6 +194,7 @@ export async function GET(request: Request) {
         JOIN venues v ON v.id = g.venue_id
         JOIN players_v2 p ON p.id = a.player_id
         WHERE ${dateCondition}
+        AND g.league_id = ${leagueId}
         GROUP BY p.id, p.uid, p.first_name, p.last_name, p.nickname, p.photo_url
         HAVING gamesPlayed >= 1
         ORDER BY totalPoints DESC

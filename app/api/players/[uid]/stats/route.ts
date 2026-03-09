@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 export async function GET(
   request: Request,
@@ -21,6 +22,7 @@ export async function GET(
         : null;
     const endDate =
       endDateParam && endDateParam !== "null" ? new Date(endDateParam) : null;
+    const leagueId = await getLeagueIdFromRequest(request);
 
     // Build date condition for games table
     const dateConditions: Prisma.Sql[] = [];
@@ -48,6 +50,7 @@ export async function GET(
       JOIN venues v ON v.id = g.venue_id
       JOIN players_v2 p ON p.id = a.player_id
       WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       AND v.name != 'bonus'
       ${dateCondition}
       ORDER BY v.name
@@ -60,6 +63,7 @@ export async function GET(
       JOIN games g ON g.id = a.game_id
       JOIN players_v2 p ON p.id = a.player_id
       WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
     `;
 
     const earliestGameDate =
@@ -82,6 +86,7 @@ export async function GET(
           JOIN games kg ON kg.id = k.game_id
           JOIN players_v2 kp ON kp.id = k.hitman
           WHERE kp.uid = ${playerUID}
+          AND kg.league_id = ${leagueId}
           ${startDate ? Prisma.sql`AND kg.date >= DATE(${startDate})` : Prisma.sql``}
           ${endDate ? Prisma.sql`AND kg.date <= DATE(${endDate})` : Prisma.sql``}
         ), 0) as knockouts,
@@ -96,6 +101,7 @@ export async function GET(
       JOIN venues v ON v.id = g.venue_id
       JOIN players_v2 p ON p.id = a.player_id
       WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       ${dateCondition}
       ${venueCondition}
     `;
@@ -118,6 +124,7 @@ export async function GET(
       JOIN players_v2 victim_p ON victim_p.id = k.victim
       JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
       WHERE victim_p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       AND k.hitman IS NOT NULL
       ${dateCondition}
       ${venueCondition}
@@ -144,6 +151,7 @@ export async function GET(
       JOIN players_v2 hitman_p ON hitman_p.id = k.hitman
       JOIN players_v2 victim_p ON victim_p.id = k.victim
       WHERE hitman_p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       ${dateCondition}
       ${venueCondition}
       GROUP BY victim_p.id, victim_p.uid, victim_p.first_name, victim_p.last_name, victim_p.nickname
@@ -163,6 +171,7 @@ export async function GET(
         JOIN venues v ON v.id = g.venue_id
         JOIN players_v2 p ON p.id = a.player_id
         WHERE p.uid = ${playerUID}
+        AND g.league_id = ${leagueId}
         ${dateCondition}
         ${venueCondition}
         GROUP BY v.id, v.name
@@ -197,6 +206,7 @@ export async function GET(
       JOIN venues v ON v.id = g.venue_id
       JOIN players_v2 p ON p.id = a.player_id
       WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       ${dateCondition}
       ${venueCondition}
       ORDER BY g.date DESC
@@ -225,6 +235,7 @@ export async function GET(
       JOIN venues v ON v.id = g.venue_id
       JOIN players_v2 p ON p.id = a.player_id
       WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
       ${dateCondition}
       ${venueCondition}
       AND a.placement <= 8

@@ -46,6 +46,7 @@ export const authOptions: NextAuthOptions = {
           nickname: player.nickname,
           image: player.photo_url,
           isAdmin: player.isAdmin,
+          leagueId: player.league_id,
         };
       },
     }),
@@ -68,6 +69,7 @@ export const authOptions: NextAuthOptions = {
         token.nickname = user.nickname ?? null;
         token.image = user.image;
         token.isAdmin = user.isAdmin ?? false;
+        token.leagueId = user.leagueId ?? 1;
       }
 
       if (trigger === "update" && session) {
@@ -84,6 +86,7 @@ export const authOptions: NextAuthOptions = {
         session.user.uid = token.uid as string;
         session.user.nickname = token.nickname as string | null;
         session.user.isAdmin = token.isAdmin as boolean;
+        session.user.leagueId = token.leagueId as number;
       }
       return session;
     },

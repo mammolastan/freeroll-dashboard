@@ -9,6 +9,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Users,
@@ -122,6 +123,8 @@ export function FullAdminScreen({
   onScreenChange,
 }: FullAdminScreenProps) {
   // Authentication is now handled by middleware - if we reach this page, user is an admin
+  const { data: session } = useSession();
+  const leagueId = session?.user?.leagueId ?? 1;
 
   // Tournament management
   const [tournaments, setTournaments] = useState<TournamentDraft[]>([]);
@@ -1531,7 +1534,7 @@ export function FullAdminScreen({
 
       setPeriodsLoading(true);
       try {
-        const response = await fetch("/api/competition-periods?league_id=1");
+        const response = await fetch(`/api/competition-periods?league_id=${leagueId}`);
         if (!response.ok) throw new Error("Failed to fetch periods");
 
         const data = await response.json();
@@ -1573,7 +1576,7 @@ export function FullAdminScreen({
 
       setPeriodsLoading(true);
       try {
-        const response = await fetch("/api/competition-periods?league_id=1");
+        const response = await fetch(`/api/competition-periods?league_id=${leagueId}`);
         if (!response.ok) throw new Error("Failed to fetch periods");
 
         const data = await response.json();

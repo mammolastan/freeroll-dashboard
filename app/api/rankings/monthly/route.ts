@@ -6,6 +6,7 @@ import {
 } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -36,6 +37,7 @@ function checkIfBubble(qualifyingVenues: VenueRanking[]): boolean {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const leagueId = await getLeagueIdFromRequest(request);
 
     // Check for period_id first (new approach)
     const periodIdParam = searchParams.get("period_id");
@@ -97,6 +99,7 @@ export async function GET(request: Request) {
       FROM venues v
       JOIN games g ON g.venue_id = v.id
       WHERE ${dateCondition}
+      AND g.league_id = ${leagueId}
       AND v.name != 'bonus'
     `;
 
@@ -128,6 +131,7 @@ export async function GET(request: Request) {
         JOIN venues v ON v.id = g.venue_id
         JOIN players_v2 pl ON pl.id = a.player_id
         WHERE ${dateCondition}
+        AND g.league_id = ${leagueId}
         AND g.date IS NOT NULL
         AND a.placement IS NOT NULL
         AND v.name != 'bonus'
@@ -165,6 +169,7 @@ export async function GET(request: Request) {
             JOIN venues v ON v.id = g.venue_id
             JOIN players_v2 pl ON pl.id = a.player_id
             WHERE ${dateCondition}
+            AND g.league_id = ${leagueId}
             AND v.name = ${venue.name}
             GROUP BY pl.id, pl.uid, pl.first_name, pl.last_name
             ORDER BY totalPoints DESC, avgScore DESC
