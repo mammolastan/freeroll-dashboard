@@ -15,6 +15,7 @@ interface DraftTournament {
   start_points: number;
   status: string;
   period_ids?: string | null;
+  league_id: number;
 }
 
 interface DraftPlayer {
@@ -237,7 +238,7 @@ export async function POST(
         let venue = await tx.venues.findFirst({ where: { name: draft.venue } });
         if (!venue) {
           venue = await tx.venues.create({
-            data: { name: draft.venue, league_id: 1 }
+            data: { name: draft.venue, league_id: draft.league_id }
           });
         }
 
@@ -264,7 +265,7 @@ export async function POST(
         const game = await tx.games.create({
           data: {
             uid: gameUID,
-            league_id: 1,
+            league_id: draft.league_id,
             venue_id: venue.id,
             date: new Date(draft.tournament_date),
             time: gameTime,
@@ -290,7 +291,7 @@ export async function POST(
         if (periodIds.length === 0) {
           const matchingPeriods = await tx.$queryRaw<{ id: number }[]>`
             SELECT id FROM competition_periods
-            WHERE league_id = 1
+            WHERE league_id = ${draft.league_id}
             AND is_active = 1
             AND ${new Date(draft.tournament_date)} BETWEEN start_date AND end_date
           `;
@@ -324,7 +325,7 @@ export async function POST(
             const newPlayer = await tx.players_v2.create({
               data: {
                 uid: newUID,
-                league_id: 1,
+                league_id: draft.league_id,
                 first_name: firstName,
                 last_name: lastName,
               }
