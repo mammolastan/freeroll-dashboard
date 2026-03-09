@@ -411,10 +411,17 @@ export async function POST(
           }
         }
 
-        // Update draft status to integrated
+        // Update draft status to integrated and stop any running timer
         await tx.$queryRaw`
-        UPDATE tournament_drafts 
-        SET status = 'integrated', game_uid = ${gameUID},file_name = ${fileName}, updated_at = CURRENT_TIMESTAMP
+        UPDATE tournament_drafts
+        SET status = 'integrated',
+            game_uid = ${gameUID},
+            file_name = ${fileName},
+            timer_is_running = false,
+            timer_is_paused = false,
+            timer_remaining_seconds = NULL,
+            timer_last_updated = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
         // Delete existing check-in feed items
