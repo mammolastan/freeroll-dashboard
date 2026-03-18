@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useLeague } from "@/lib/LeagueContext";
 
 /**
  * Hook to read league params from URL and provide helpers for API calls.
  *
- * Reads either `?league=slug` or `?league_id=N` from the current URL
- * and provides utilities to forward these to API calls.
+ * Priority order:
+ * 1. LeagueContext (from [leagueSlug] path segment)
+ * 2. `?league=slug` query param
+ * 3. `?league_id=N` query param
  *
  * Usage:
  *   const { appendLeagueParam, leagueQueryString, isReady } = useLeagueParam();
@@ -20,6 +23,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
  */
 
 export function useLeagueParam() {
+  const { leagueSlug: contextSlug } = useLeague(); // from [leagueSlug] path segment
+
   const [isReady, setIsReady] = useState(false);
   const paramsRef = useRef<{ leagueSlug: string | null; leagueId: string | null }>({
     leagueSlug: null,
@@ -30,40 +35,44 @@ export function useLeagueParam() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     paramsRef.current = {
-      leagueSlug: searchParams.get("league"),
-      leagueId: searchParams.get("league_id"),
+      leagueSlug: contextSlug ?? searchParams.get("league"), // context wins
+      leagueId: contextSlug ? null : searchParams.get("league_id"), // ignore league_id if context present
     };
     setIsReady(true);
-  }, []);
+  }, [contextSlug]); // re-run if context changes
 
   // Stable function that reads from ref - won't change between renders
   const appendLeagueParam = useCallback((url: string): string => {
-    const { leagueSlug, leagueId } = paramsRef.current;
+    const activeSlug = contextSlug ?? paramsRef.current.leagueSlug;
+    const activeId = contextSlug ? null : paramsRef.current.leagueId;
 
     let leagueQueryString = "";
-    if (leagueSlug) leagueQueryString = `league=${encodeURIComponent(leagueSlug)}`;
-    else if (leagueId) leagueQueryString = `league_id=${encodeURIComponent(leagueId)}`;
+    if (activeSlug) leagueQueryString = `league=${encodeURIComponent(activeSlug)}`;
+    else if (activeId) leagueQueryString = `league_id=${encodeURIComponent(activeId)}`;
 
     if (!leagueQueryString) return url;
 
     const separator = url.includes("?") ? "&" : "?";
     return `${url}${separator}${leagueQueryString}`;
-  }, []);
+  }, [contextSlug]);
 
   // Build the query string portion for league params
+  const activeSlug = contextSlug ?? paramsRef.current.leagueSlug;
+  const activeId = contextSlug ? null : paramsRef.current.leagueId;
+
   let leagueQueryString = "";
-  if (paramsRef.current.leagueSlug) {
-    leagueQueryString = `league=${encodeURIComponent(paramsRef.current.leagueSlug)}`;
-  } else if (paramsRef.current.leagueId) {
-    leagueQueryString = `league_id=${encodeURIComponent(paramsRef.current.leagueId)}`;
+  if (activeSlug) {
+    leagueQueryString = `league=${encodeURIComponent(activeSlug)}`;
+  } else if (activeId) {
+    leagueQueryString = `league_id=${encodeURIComponent(activeId)}`;
   }
 
   return {
-    leagueSlug: paramsRef.current.leagueSlug,
-    leagueId: paramsRef.current.leagueId,
+    leagueSlug: activeSlug,
+    leagueId: activeId,
     leagueQueryString,
     appendLeagueParam,
-    hasLeagueParam: Boolean(paramsRef.current.leagueSlug || paramsRef.current.leagueId),
+    hasLeagueParam: Boolean(activeSlug || activeId),
     isReady,
   };
 }

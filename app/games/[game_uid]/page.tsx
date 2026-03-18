@@ -1,4 +1,4 @@
-// app/games/[fileName]/page.tsx
+// app/games/[game_uid]/page.tsx
 'use client'
 import { useState, useEffect, use } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -6,6 +6,7 @@ import { Star, Users, ArrowLeft, Swords } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import PlayerAvatar from '@/components/ui/PlayerAvatar'
+import { useLeaguePrefix } from '@/lib/LeagueContext'
 
 interface Player {
     name: string
@@ -45,6 +46,7 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
     const resolvedParams = use(params)
     const [gameDetails, setGameDetails] = useState<GameDetails | null>(null)
     const [loading, setLoading] = useState(true)
+    const leaguePrefix = useLeaguePrefix()
 
     useEffect(() => {
         async function fetchGameDetails() {
@@ -86,7 +88,7 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
     return (
         <div className="container mx-auto px-4 py-8">
             <Link
-                href={`/games`}
+                href={`${leaguePrefix}/games`}
                 className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -146,7 +148,7 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
                                         />
                                     )}
                                     <Link
-                                        href={`/players?uid=${encodeURIComponent(player.uid)}`}
+                                        href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}`}
                                         className="freeroll-link font-medium"
                                     >
                                         {player.nickname || player.name}

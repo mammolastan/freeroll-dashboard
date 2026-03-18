@@ -1,11 +1,12 @@
 // components/Navigation/Navbar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import NavLink from './NavLink';
 import Link from 'next/link';
+import { useLeague } from '@/lib/LeagueContext';
 import {
     Home,
     Store,
@@ -41,6 +42,42 @@ const Navbar = () => {
     const [isRankingsOpen, setIsRankingsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+    // Get league slug from context OR extract from pathname
+    // Context won't be available since Navbar is rendered in root layout (outside LeagueProvider)
+    // So we also check the pathname for league-prefixed routes
+    const { leagueSlug: contextSlug } = useLeague();
+
+    // Reserved paths that are NOT league slugs
+    const RESERVED_PATHS = [
+        'admin', 'login', 'register', 'profile', 'api', 'tvscreen',
+        '_next', 'rankings', 'venues', 'players', 'games', 'check-in',
+        'badges', 'unauthorized', 'activeTournament', 'gameview'
+    ];
+
+    // Extract league slug from pathname if not in context
+    const getLeagueSlugFromPath = (): string | null => {
+        if (!pathname) return null;
+        const firstSegment = pathname.split('/')[1];
+        if (!firstSegment || RESERVED_PATHS.includes(firstSegment)) return null;
+        return firstSegment;
+    };
+
+    const leagueSlug = contextSlug ?? getLeagueSlugFromPath();
+    const prefix = leagueSlug ? `/${leagueSlug}` : '';
+
+    // Fetch league name when slug is detected
+    const [leagueName, setLeagueName] = useState<string | null>(null);
+    useEffect(() => {
+        if (!leagueSlug) {
+            setLeagueName(null);
+            return;
+        }
+        fetch(`/api/leagues/${leagueSlug}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => setLeagueName(data?.name ?? null))
+            .catch(() => setLeagueName(null));
+    }, [leagueSlug]);
+
     // Hide navbar on fullscreen pages like tvscreen
     if (pathname?.startsWith('/tvscreen')) {
         return null;
@@ -48,22 +85,23 @@ const Navbar = () => {
 
     const toggleMenu = () => setIsOpen(!isOpen);
 
+    // Nav links use prefix for league-scoped routes
     const navLinks: NavItem[] = [
-        { href: '/', icon: <Home size={20} />, text: 'Home' },
+        { href: `${prefix}/`, icon: <Home size={20} />, text: 'Home' },
         {
             href: '#',
             icon: <Trophy size={20} />,
             text: 'Rankings',
             children: [
-                { href: '/rankings/monthly', text: 'Monthly Rankings' },
-                { href: '/rankings/quarterly', text: 'Quarterly Rankings' }
+                { href: `${prefix}/rankings/monthly`, text: 'Monthly Rankings' },
+                { href: `${prefix}/rankings/quarterly`, text: 'Quarterly Rankings' }
             ]
         },
-        { href: '/games', icon: <GalleryHorizontalEnd size={20} />, text: 'Recent Games' },
-        { href: '/check-in', icon: <ClipboardCheck size={20} />, text: 'Active Games' },
-        { href: '/players', icon: <CircleUserRound size={20} />, text: 'Players' },
-        { href: '/venues', icon: <Store size={20} />, text: 'Venues' },
-        { href: '/badges', icon: <Award size={20} />, text: 'Badges' },
+        { href: `${prefix}/games`, icon: <GalleryHorizontalEnd size={20} />, text: 'Recent Games' },
+        { href: `${prefix}/check-in`, icon: <ClipboardCheck size={20} />, text: 'Active Games' },
+        { href: `${prefix}/players`, icon: <CircleUserRound size={20} />, text: 'Players' },
+        { href: `${prefix}/venues`, icon: <Store size={20} />, text: 'Venues' },
+        { href: `${prefix}/badges`, icon: <Award size={20} />, text: 'Badges' },
     ];
 
     const handleNavigation = (href: string) => {
@@ -83,8 +121,8 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo/Brand */}
-                    <Link href="/" className="text-xl font-bold truncate">
-                        Freeroll Atlanta Player Dashboard
+                    <Link href={`${prefix}/`} className="text-xl font-bold truncate">
+                        {leagueName ? `${leagueName} Player Dashboard` : 'Freeroll Atlanta Player Dashboard'}
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -164,7 +202,7 @@ const Navbar = () => {
                                                 <span>My Profile</span>
                                             </Link>
                                             <Link
-                                                href={`/players?uid=${session.user.uid}`}
+                                                href={`${prefix}/players?uid=${session.user.uid}`}
                                                 className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600"
                                                 onClick={() => setIsUserMenuOpen(false)}
                                             >
@@ -303,7 +341,7 @@ const Navbar = () => {
                                             <span>My Profile</span>
                                         </Link>
                                         <Link
-                                            href={`/players?uid=${session.user.uid}`}
+                                            href={`${prefix}/players?uid=${session.user.uid}`}
                                             className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
                                             onClick={() => setIsOpen(false)}
                                         >

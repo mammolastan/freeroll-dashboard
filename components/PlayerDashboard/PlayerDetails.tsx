@@ -15,6 +15,7 @@ import { HelpCircle, Swords } from "lucide-react"
 import { KnockoutStats } from './KnockoutStats';
 import { PersonalBestCard } from './PersonalBestCard';
 import { useLeagueParam } from '@/lib/useLeagueParam';
+import { useLeaguePrefix } from '@/lib/LeagueContext';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -75,6 +76,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
 
     // League param for multi-tenant support
     const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+    const leaguePrefix = useLeaguePrefix();
 
     const [selectedRange, setSelectedRange] = useState(() => {
         if (initialRange) {
@@ -456,7 +458,7 @@ Math: log(total_players + 1 / Placement)`}
                                 {stats.recentGames.slice(0, 5).map((game, index) => (
                                     <Link
                                         key={index}
-                                        href={`/games/${encodeURIComponent(game.game_uid)}`}
+                                        href={`${leaguePrefix}/games/${encodeURIComponent(game.game_uid)}`}
                                         className="block border-b border-gray-100 last:border-0 pb-3 last:pb-0 hover:bg-gray-50 transition-colors rounded-lg"
                                     >
                                         <div className="font-medium text-gray-800">{game.venue}</div>

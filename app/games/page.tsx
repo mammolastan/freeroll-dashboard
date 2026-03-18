@@ -8,6 +8,7 @@ import RotatingImageLoader from "@/components/ui/RotatingImageLoader";
 import { formatGameDateET } from "@/lib/utils";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { useLeagueParam } from "@/lib/useLeagueParam";
+import { useLeaguePrefix } from "@/lib/LeagueContext";
 
 interface TopPlayer {
   name: string;
@@ -50,6 +51,7 @@ export default function GamesPage() {
 
   // League param for multi-tenant support
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+  const leaguePrefix = useLeaguePrefix();
 
   useEffect(() => {
     if (!leagueParamReady) return;
@@ -164,7 +166,7 @@ export default function GamesPage() {
               </div>
 
               <Link
-                href={`/games/${encodeURIComponent(game.game_uid)}`}
+                href={`${leaguePrefix}/games/${encodeURIComponent(game.game_uid)}`}
                 className="mt-4 text-sm text-blue-600 flex items-center justify-end gap-1"
               >
                 Full game details
