@@ -38,13 +38,31 @@ export interface RealtimeTournament {
 
 /**
  * Timer state for real-time updates
+ * Uses timestamp-based architecture: server broadcasts state snapshots,
+ * clients compute countdown locally using lastUpdate + serverTime for clock skew compensation
  */
 export interface RealtimeTimerState {
-  current_level: number;
-  remaining_seconds: number;
-  is_running: boolean;
-  is_paused: boolean;
-  last_updated: Date | string;
+  tournamentId: number;
+  currentLevel: number;
+  timeRemaining: number; // seconds remaining at moment of lastUpdate
+  isRunning: boolean;
+  isPaused: boolean;
+  blindLevels: TimerBlindLevel[];
+  lastUpdate: number; // Unix ms timestamp when timeRemaining was captured
+  serverTime?: number; // Unix ms timestamp at broadcast (for clock skew compensation)
+}
+
+/**
+ * Blind level structure for real-time timer payloads (camelCase to match server)
+ * Note: This differs from components.ts BlindLevel which uses snake_case
+ */
+export interface TimerBlindLevel {
+  level: number;
+  duration: number; // minutes
+  smallBlind: number;
+  bigBlind: number;
+  ante?: number;
+  isbreak?: boolean;
 }
 
 /**

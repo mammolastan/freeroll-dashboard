@@ -94,6 +94,7 @@ export type {
   RealtimePlayer,
   RealtimeTournament,
   RealtimeTimerState,
+  TimerBlindLevel,
   TournamentGameState,
   PlayerUpdatePayload,
   TournamentUpdatePayload,
