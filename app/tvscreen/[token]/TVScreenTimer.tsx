@@ -22,6 +22,7 @@ interface TimerState {
   isPaused: boolean;
   blindLevels: BlindLevel[];
   lastUpdate: number;
+  serverTime?: number; // Unix ms timestamp at moment of broadcast (for clock skew compensation)
 }
 
 interface TVScreenTimerProps {
@@ -30,6 +31,7 @@ interface TVScreenTimerProps {
 
 export function TVScreenTimer({ tournamentId }: TVScreenTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
+  const [displaySeconds, setDisplaySeconds] = useState<number>(0);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -59,21 +61,41 @@ export function TVScreenTimer({ tournamentId }: TVScreenTimerProps) {
     socket.on("timer:sync", handleTimerSync);
     socket.on("connect", handleReconnect);
 
-    const syncInterval = setInterval(() => {
-      if (!socket.connected) {
-        socket.connect();
-      } else {
-        socket.emit("timer:requestSync", { tournamentId });
-      }
-    }, 5000);
-
     return () => {
       socket.off("timer:update", handleTimerUpdate);
       socket.off("timer:sync", handleTimerSync);
       socket.off("connect", handleReconnect);
-      clearInterval(syncInterval);
     };
   }, [tournamentId]);
+
+  // Local countdown effect - compute display time from timestamp snapshot
+  useEffect(() => {
+    if (!timerState) return;
+
+    // When paused or stopped, display is just the snapshot value
+    if (!timerState.isRunning || timerState.isPaused) {
+      setDisplaySeconds(timerState.timeRemaining);
+      return;
+    }
+
+    // Compute clock offset to correct for server/client clock skew
+    const clockOffset = timerState.serverTime ? Date.now() - timerState.serverTime : 0;
+
+    // Compute initial display value immediately on snapshot receipt
+    const computeDisplay = () => {
+      const elapsed = Math.floor((Date.now() - timerState.lastUpdate - clockOffset) / 1000);
+      return Math.max(0, timerState.timeRemaining - elapsed);
+    };
+
+    setDisplaySeconds(computeDisplay());
+
+    // Local interval drives the countdown — no socket needed
+    const interval = setInterval(() => {
+      setDisplaySeconds(computeDisplay());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerState]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -88,8 +110,8 @@ export function TVScreenTimer({ tournamentId }: TVScreenTimerProps) {
 
   const getTimeStateClass = (): string => {
     if (!timerState) return "";
-    if (timerState.timeRemaining < 60) return "tvscreen-timer-time--critical";
-    if (timerState.timeRemaining < 300) return "tvscreen-timer-time--warning";
+    if (displaySeconds < 60) return "tvscreen-timer-time--critical";
+    if (displaySeconds < 300) return "tvscreen-timer-time--warning";
     return "tvscreen-timer-time--normal";
   };
 
@@ -109,7 +131,7 @@ export function TVScreenTimer({ tournamentId }: TVScreenTimerProps) {
     if (!timerState.blindLevels) return null;
     if (currentBlind?.isbreak) return 0;
 
-    let totalSeconds = timerState.timeRemaining;
+    let totalSeconds = displaySeconds; // Use displaySeconds for current level
 
     for (let i = timerState.currentLevel; i < timerState.blindLevels.length; i++) {
       const level = timerState.blindLevels[i];
@@ -131,7 +153,7 @@ export function TVScreenTimer({ tournamentId }: TVScreenTimerProps) {
         <div
           className={`tvscreen-timer-time ${getTimeStateClass()} ${timerState.isPaused ? "tvscreen-timer-time--paused" : ""}`}
         >
-          {formatTime(timerState.timeRemaining || 0)}
+          {formatTime(displaySeconds)}
         </div>
       </div>
 

@@ -126,6 +126,7 @@ interface TimerState {
   isPaused: boolean;
   blindLevels: BlindLevel[];
   lastUpdate: number; // timestamp
+  serverTime?: number; // Unix ms timestamp at moment of broadcast (for clock skew compensation)
 }
 
 // Default blind structure (for backward compatibility)
@@ -693,19 +694,24 @@ app.prepare().then(async () => {
     // Recover active timers from database on startup
     await recoverActiveTimers();
 
-    // Timer update interval - broadcast timer updates every second
+    // Timer expiry check - runs every second but ONLY broadcasts on level expiry
+    // Clients compute their own countdown locally from the lastUpdate timestamp
     setInterval(async () => {
       for (const [tournamentId, timer] of Array.from(timerStates.entries())) {
-        if (timer.isRunning && !timer.isPaused) {
+        if (!timer.isRunning || timer.isPaused) continue;
+
+        const now = Date.now();
+        const elapsed = Math.floor((now - timer.lastUpdate) / 1000);
+
+        if (elapsed >= timer.timeRemaining) {
+          // Timer expired — delegate to existing updateTimer which handles level advance
           const updatedTimer = await updateTimer(tournamentId);
 
-          // Validate timer state before sending
           if (
             updatedTimer &&
             typeof updatedTimer.timeRemaining === "number" &&
             updatedTimer.blindLevels
           ) {
-            // Explicitly create serializable object with tournamentId
             const timerPayload = {
               tournamentId: updatedTimer.tournamentId,
               currentLevel: updatedTimer.currentLevel,
@@ -714,15 +720,13 @@ app.prepare().then(async () => {
               isPaused: updatedTimer.isPaused,
               blindLevels: updatedTimer.blindLevels,
               lastUpdate: updatedTimer.lastUpdate,
+              serverTime: Date.now(),
             };
             io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-          } else {
-            console.error(
-              `Invalid timer update for tournament ${tournamentId}:`,
-              updatedTimer
-            );
+            console.log(`Timer level expired for tournament ${tournamentId}, advanced to level ${updatedTimer.currentLevel}`);
           }
         }
+        // No broadcast on normal ticks — clients compute their own countdown
       }
     }, 1000);
 
@@ -730,7 +734,6 @@ app.prepare().then(async () => {
     setInterval(async () => {
       for (const [tournamentId, timer] of Array.from(timerStates.entries())) {
         try {
-          // Verify tournament still exists before saving
           const tournament = await prisma.tournamentDraft.findUnique({
             where: { id: tournamentId },
             select: { id: true },
@@ -740,6 +743,13 @@ app.prepare().then(async () => {
             console.log(`Tournament ${tournamentId} no longer exists, removing timer state`);
             timerStates.delete(tournamentId);
             continue;
+          }
+
+          // If running, snapshot the current computed timeRemaining before saving
+          if (timer.isRunning && !timer.isPaused) {
+            const elapsed = Math.floor((Date.now() - timer.lastUpdate) / 1000);
+            timer.timeRemaining = Math.max(0, timer.timeRemaining - elapsed);
+            timer.lastUpdate = Date.now();
           }
 
           await saveTimerStateToDB(tournamentId, timer);
@@ -798,6 +808,7 @@ app.prepare().then(async () => {
                 isPaused: timerState.isPaused,
                 blindLevels: timerState.blindLevels,
                 lastUpdate: timerState.lastUpdate,
+                serverTime: Date.now(),
               };
               socket.emit("timer:sync", timerPayload);
             } else {
@@ -867,6 +878,7 @@ app.prepare().then(async () => {
           isPaused: timerState.isPaused,
           blindLevels: timerState.blindLevels,
           lastUpdate: timerState.lastUpdate,
+          serverTime: Date.now(),
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer started for tournament ${tournamentId}`);
@@ -920,6 +932,7 @@ app.prepare().then(async () => {
           isPaused: timerState.isPaused,
           blindLevels: timerState.blindLevels,
           lastUpdate: timerState.lastUpdate,
+          serverTime: Date.now(),
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer paused for tournament ${tournamentId}`);
@@ -968,6 +981,7 @@ app.prepare().then(async () => {
           isPaused: timerState.isPaused,
           blindLevels: timerState.blindLevels,
           lastUpdate: timerState.lastUpdate,
+          serverTime: Date.now(),
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer resumed for tournament ${tournamentId}`);
@@ -1016,6 +1030,7 @@ app.prepare().then(async () => {
           isPaused: timerState.isPaused,
           blindLevels: timerState.blindLevels,
           lastUpdate: timerState.lastUpdate,
+          serverTime: Date.now(),
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(`Timer reset for tournament ${tournamentId}`);
@@ -1063,6 +1078,7 @@ app.prepare().then(async () => {
           isPaused: timerState.isPaused,
           blindLevels: timerState.blindLevels,
           lastUpdate: timerState.lastUpdate,
+          serverTime: Date.now(),
         };
         socket.emit("timer:sync", timerPayload);
       });
@@ -1095,6 +1111,7 @@ app.prepare().then(async () => {
             isPaused: timer.isPaused,
             blindLevels: timer.blindLevels,
             lastUpdate: timer.lastUpdate,
+            serverTime: Date.now(),
           };
           io.to(tournamentId.toString()).emit("timer:update", timerPayload);
           console.log(
@@ -1154,6 +1171,7 @@ app.prepare().then(async () => {
             isPaused: timer.isPaused,
             blindLevels: timer.blindLevels,
             lastUpdate: timer.lastUpdate,
+            serverTime: Date.now(),
           };
           io.to(tournamentId.toString()).emit("timer:update", timerPayload);
           console.log(
@@ -1208,6 +1226,7 @@ app.prepare().then(async () => {
           isPaused: timer.isPaused,
           blindLevels: timer.blindLevels,
           lastUpdate: timer.lastUpdate,
+          serverTime: Date.now(),
         };
         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
         console.log(
@@ -1269,6 +1288,7 @@ app.prepare().then(async () => {
             isPaused: timer.isPaused,
             blindLevels: timer.blindLevels,
             lastUpdate: timer.lastUpdate,
+            serverTime: Date.now(),
           };
           io.to(tournamentId.toString()).emit("timer:update", timerPayload);
           console.log(

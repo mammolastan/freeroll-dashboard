@@ -23,6 +23,7 @@ interface TimerState {
   isPaused: boolean;
   blindLevels: BlindLevel[];
   lastUpdate: number;
+  serverTime?: number; // Unix ms timestamp at moment of broadcast (for clock skew compensation)
 }
 
 interface MinimalGameTimerProps {
@@ -43,6 +44,7 @@ export function MinimalGameTimer({
   enableAudio
 }: MinimalGameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
+  const [displaySeconds, setDisplaySeconds] = useState<number>(0);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editMinutes, setEditMinutes] = useState('');
   const [editSeconds, setEditSeconds] = useState('');
@@ -130,28 +132,42 @@ export function MinimalGameTimer({
     socket.on('timer:sync', handleTimerSync);
     socket.on('connect', handleReconnect);
 
-    // Connection health monitoring
-    const ensureConnection = () => {
-      if (!socket.connected) {
-        console.log('Socket disconnected, attempting reconnection...');
-        socket.connect();
-      } else if (socket.connected) {
-        // If connected but not receiving updates, rejoin room
-        socket.emit('timer:requestSync', { tournamentId });
-      }
-    };
-
-    // Check connection health every 5 seconds
-    const syncInterval = setInterval(ensureConnection, 5000);
-
     return () => {
       console.log('MinimalGameTimer: Cleaning up for tournament', tournamentId);
       socket.off('timer:update', handleTimerUpdate);
       socket.off('timer:sync', handleTimerSync);
       socket.off('connect', handleReconnect);
-      clearInterval(syncInterval);
     };
   }, [tournamentId]);
+
+  // Local countdown effect - compute display time from timestamp snapshot
+  useEffect(() => {
+    if (!timerState) return;
+
+    // When paused or stopped, display is just the snapshot value
+    if (!timerState.isRunning || timerState.isPaused) {
+      setDisplaySeconds(timerState.timeRemaining);
+      return;
+    }
+
+    // Compute clock offset to correct for server/client clock skew
+    const clockOffset = timerState.serverTime ? Date.now() - timerState.serverTime : 0;
+
+    // Compute initial display value immediately on snapshot receipt
+    const computeDisplay = () => {
+      const elapsed = Math.floor((Date.now() - timerState.lastUpdate - clockOffset) / 1000);
+      return Math.max(0, timerState.timeRemaining - elapsed);
+    };
+
+    setDisplaySeconds(computeDisplay());
+
+    // Local interval drives the countdown — no socket needed
+    const interval = setInterval(() => {
+      setDisplaySeconds(computeDisplay());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerState]);
 
   // Audio notification functions
   const playOneMinuteWarning = useCallback(() => {
@@ -180,7 +196,7 @@ export function MinimalGameTimer({
     }
   }, [audioEnabled, levelChangeAudio]);
 
-  // Monitor timer state for audio notifications
+  // Monitor level changes for audio notifications
   useEffect(() => {
     if (!timerState || !timerState.isRunning || timerState.isPaused) {
       return;
@@ -192,18 +208,25 @@ export function MinimalGameTimer({
       setHasPlayedOneMinuteWarning(false); // Reset for new level
     }
     setLastLevel(timerState.currentLevel);
+  }, [timerState, lastLevel, playLevelChangeSound]);
+
+  // Monitor displaySeconds for time-based audio notifications
+  useEffect(() => {
+    if (!timerState || !timerState.isRunning || timerState.isPaused) {
+      return;
+    }
 
     // Check for 1-minute warning
-    if (timerState.timeRemaining === 60 && !hasPlayedOneMinuteWarning) {
+    if (displaySeconds === 60 && !hasPlayedOneMinuteWarning) {
       playOneMinuteWarning();
       setHasPlayedOneMinuteWarning(true);
     }
 
     // Reset warning flag if time goes back above 60 seconds (manual adjustment)
-    if (timerState.timeRemaining > 60) {
+    if (displaySeconds > 60) {
       setHasPlayedOneMinuteWarning(false);
     }
-  }, [timerState, lastLevel, hasPlayedOneMinuteWarning, playLevelChangeSound, playOneMinuteWarning]);
+  }, [displaySeconds, timerState, hasPlayedOneMinuteWarning, playOneMinuteWarning]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -278,8 +301,8 @@ export function MinimalGameTimer({
 
   const handleStartEdit = () => {
     if (timerState) {
-      const minutes = Math.floor(timerState.timeRemaining / 60);
-      const seconds = timerState.timeRemaining % 60;
+      const minutes = Math.floor(displaySeconds / 60);
+      const seconds = displaySeconds % 60;
       setEditMinutes(minutes.toString());
       setEditSeconds(seconds.toString());
       setIsEditingTime(true);
@@ -388,13 +411,13 @@ export function MinimalGameTimer({
           <>
             <div className={`text-9xl lg:text-[16rem] font-mono font-bold transition-all duration-300 ${timerState.isPaused
               ? 'text-gray-500 drop-shadow-[0_0_20px_rgba(107,114,128,0.5)]'
-              : timerState.timeRemaining < 60
+              : displaySeconds < 60
                 ? 'text-red-400 drop-shadow-[0_0_30px_rgba(239,68,68,0.9)]'
-                : timerState.timeRemaining < 300
+                : displaySeconds < 300
                   ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(234,179,8,0.7)]'
                   : 'text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]'
               }`}>
-              {formatTime(timerState.timeRemaining || 0)}
+              {formatTime(displaySeconds)}
             </div>
             {timerState.isPaused && (
               <button
