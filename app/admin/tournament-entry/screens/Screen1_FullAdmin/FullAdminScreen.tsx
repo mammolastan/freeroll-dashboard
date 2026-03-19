@@ -216,6 +216,62 @@ export function FullAdminScreen({
   const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<
     Record<number, number>
   >({});
+  // Track when knockout was initiated via crosshair click (to default to "unknown" on blur)
+  const [knockoutInitiated, setKnockoutInitiated] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  // Optimistic updates for immediate visual feedback
+  const [optimisticUpdates, setOptimisticUpdates] = useState<{
+    [playerId: number]: Partial<Player>;
+  }>({});
+
+  // Merge players prop with optimistic updates for display
+  const displayPlayers = useMemo(() => {
+    return players.map((player) => {
+      const optimistic = optimisticUpdates[player.id];
+      if (optimistic) {
+        return { ...player, ...optimistic };
+      }
+      return player;
+    });
+  }, [players, optimisticUpdates]);
+
+  // Clear optimistic updates when real data arrives from server
+  useEffect(() => {
+    // When players prop changes, clear any optimistic updates that are now reflected in real data
+    setOptimisticUpdates((prev) => {
+      const newUpdates = { ...prev };
+      let hasChanges = false;
+      for (const playerId of Object.keys(newUpdates)) {
+        const id = parseInt(playerId);
+        const realPlayer = players.find((p) => p.id === id);
+        const optimistic = newUpdates[id];
+        if (realPlayer && optimistic) {
+          // For knockouts: only clear if real data has BOTH hitman_name AND knockedout_at
+          // This prevents flicker during intermediate states while parent reloads data
+          if (
+            optimistic.hitman_name &&
+            realPlayer.hitman_name === optimistic.hitman_name &&
+            realPlayer.knockedout_at // Must have knockedout_at set by server
+          ) {
+            delete newUpdates[id];
+            hasChanges = true;
+          }
+          // For un-knockouts: only clear if real data has cleared both fields
+          if (
+            optimistic.hitman_name === null &&
+            realPlayer.hitman_name === null &&
+            !realPlayer.knockedout_at // Must have knockedout_at cleared by server
+          ) {
+            delete newUpdates[id];
+            hasChanges = true;
+          }
+        }
+      }
+      return hasChanges ? newUpdates : prev;
+    });
+  }, [players]);
 
   // Blind schedule edit modal
   const [showBlindEditModal, setShowBlindEditModal] = useState(false);
@@ -249,8 +305,8 @@ export function FullAdminScreen({
 
   // Calculate ko_positions based on knockedout_at timestamps
   const koPositionsMap = useMemo(
-    () => calculateKoPositions(players),
-    [players],
+    () => calculateKoPositions(displayPlayers),
+    [displayPlayers],
   );
 
   // Sync currentDraft with parent prop
@@ -510,7 +566,7 @@ export function FullAdminScreen({
   };
 
   const getFilteredAndSortedPlayers = () => {
-    const filteredPlayers = players;
+    const filteredPlayers = displayPlayers;
 
     // Apply sorting
     return filteredPlayers.sort((a, b) => {
@@ -727,6 +783,23 @@ export function FullAdminScreen({
         // DO NOT auto-clear KO position when hitman is removed
         // This was causing unwanted data loss - users can manually clear if needed
 
+        // OPTIMISTIC UPDATE: Immediately update local state for instant visual feedback
+        if (field === "hitman_name") {
+          setOptimisticUpdates((prev) => ({
+            ...prev,
+            [playerId]: {
+              ...prev[playerId],
+              hitman_name: value as string | null,
+              // Set a temporary knockedout_at for visual styling (will be replaced by real server value)
+              knockedout_at: value ? new Date().toISOString() : null,
+              // Include ko_position if we're auto-assigning it
+              ...(fieldsToUpdate.ko_position !== undefined
+                ? { ko_position: fieldsToUpdate.ko_position as number | null }
+                : {}),
+            },
+          }));
+        }
+
         // Store only changed fields, merging with any existing pending updates
         pendingUpdatesRef.current[playerId] = {
           ...pendingUpdatesRef.current[playerId],
@@ -797,8 +870,8 @@ export function FullAdminScreen({
             await response.json();
             temporarilyDisableAutoRefresh();
 
-            // Trigger parent to reload all player data
-            onDataChangeRef.current();
+            // Don't call onDataChange here - Socket.IO will handle real-time updates
+            // Calling it causes a flicker due to race condition between HTTP fetch and socket update
           } catch (error) {
             console.error("Batch update error:", error);
             alert(
@@ -924,7 +997,8 @@ export function FullAdminScreen({
   // Filter players for hitman selection - returns active (not knocked out) players
   const getHitmanCandidates = (currentPlayerId: number, searchTerm: string) => {
     // Get all active players (not knocked out), excluding the current player
-    let candidates = players
+    // Use displayPlayers for optimistic updates (so newly knocked out players are excluded immediately)
+    let candidates = displayPlayers
       .filter((p) => p.id !== currentPlayerId) // Exclude the current player
       .filter((p) => !p.knockedout_at); // Only active players (not knocked out)
 
@@ -956,6 +1030,7 @@ export function FullAdminScreen({
     updatePlayer(playerId, "hitman_name", finalHitmanName);
     setHitmanSearchValues((prev) => ({ ...prev, [playerId]: finalHitmanName }));
     setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
+    setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
   };
 
   // Handle hitman search input changes
@@ -989,6 +1064,8 @@ export function FullAdminScreen({
       // The dropdown will show all active players when focused
       setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "" }));
       setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: true }));
+      // Mark that knockout was initiated via crosshair (so blur defaults to "unknown")
+      setKnockoutInitiated((prev) => ({ ...prev, [playerId]: true }));
 
       setTimeout(() => {
         const hitmanInput = document.getElementById(
@@ -1020,6 +1097,7 @@ export function FullAdminScreen({
 
       setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
       setHitmanHighlightedIndex((prev) => ({ ...prev, [playerId]: -1 }));
+      setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
 
       // THEN use the debounced updatePlayer function for both fields
       await updatePlayer(playerId, "hitman_name", null);
@@ -1170,6 +1248,10 @@ export function FullAdminScreen({
     }, 150); // Small delay to allow dropdown clicks to register
 
     const currentValue = hitmanSearchValues[playerId] ?? "";
+    const wasKnockoutInitiated = knockoutInitiated[playerId] ?? false;
+
+    // Clear the knockout initiated flag
+    setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
 
     // Process the final value when user leaves the input
     if (
@@ -1179,8 +1261,14 @@ export function FullAdminScreen({
       // Treat "unknown" as a valid hitman and trigger KO position assignment
       updatePlayer(playerId, "hitman_name", "unknown");
     } else if (currentValue === "") {
-      // Clear hitman if empty
-      updatePlayer(playerId, "hitman_name", null);
+      // If knockout was initiated via crosshair click, default to "unknown"
+      // Otherwise, clear the hitman
+      if (wasKnockoutInitiated) {
+        updatePlayer(playerId, "hitman_name", "unknown");
+        setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
+      } else {
+        updatePlayer(playerId, "hitman_name", null);
+      }
     } else {
       // Check if it matches an exact player name
       const exactMatch = players.find(
@@ -2864,7 +2952,7 @@ export function FullAdminScreen({
             </div>
 
             {/* Tournament Summary */}
-            {players.length > 0 && (
+            {displayPlayers.length > 0 && (
               <div className="mb-6 p-4 bg-gray-50 rounded">
                 <h4 className="font-semibold text-black mb-2">
                   Tournament Summary
@@ -2873,32 +2961,32 @@ export function FullAdminScreen({
                   <div>
                     <span className="text-black">Total Players:</span>
                     <span className="ml-2 text-black font-medium">
-                      {players.length}
+                      {displayPlayers.length}
                     </span>
                   </div>
                   <div>
                     <span className="text-black">Players Remaining:</span>
                     <span className="ml-2 text-black font-medium">
-                      {players.length -
-                        players.filter((p) => p.hitman_name !== null).length}
+                      {displayPlayers.length -
+                        displayPlayers.filter((p) => p.hitman_name !== null).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-black">New Players:</span>
                     <span className="ml-2 font-medium text-black ">
-                      {players.filter((p) => p.is_new_player).length}
+                      {displayPlayers.filter((p) => p.is_new_player).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-black">With Hitmen:</span>
                     <span className="ml-2 font-medium text-black ">
-                      {players.filter((p) => p.hitman_name !== null).length}
+                      {displayPlayers.filter((p) => p.hitman_name !== null).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-black">With Placements:</span>
                     <span className="ml-2 font-medium text-black ">
-                      {players.filter((p) => p.placement !== null).length}
+                      {displayPlayers.filter((p) => p.placement !== null).length}
                     </span>
                   </div>
                 </div>
