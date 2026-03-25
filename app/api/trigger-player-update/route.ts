@@ -22,6 +22,7 @@ type PlayerQueryResult = {
   placement: number | null;
   hitman_name: string | null;
   photo_url: string | null;
+  knockedout_at: Date | null;
 };
 
 async function getCheckedInPlayers(tournamentDraftId: number) {
@@ -46,11 +47,14 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
       checked_in_at: p.checked_in_at || null,
       created_at: p.created_at || null,
       is_active: p.ko_position === null,
-      eliminated_at: null,
+      eliminated_at: p.knockedout_at || null,
       eliminated_by_player_id: null,
       elimination_position: p.ko_position ? Number(p.ko_position) : null,
       placement: p.placement ? Number(p.placement) : null,
       photo_url: p.photo_url || null,
+      // Include both formats for compatibility with different client components
+      hitman_name: p.hitman_name || null,
+      knockedout_at: p.knockedout_at || null,
       hitman: p.hitman_name
         ? { id: null, name: p.hitman_name, nickname: null }
         : undefined,
