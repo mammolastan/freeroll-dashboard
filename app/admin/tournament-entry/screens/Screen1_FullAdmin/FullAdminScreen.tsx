@@ -1280,8 +1280,16 @@ export function FullAdminScreen({
       if (exactMatch) {
         updatePlayer(playerId, "hitman_name", exactMatch.player_name);
       } else {
-        // If it doesn't match any player, treat it as a custom hitman name
-        updatePlayer(playerId, "hitman_name", currentValue);
+        // Get the filtered candidates (same list shown in dropdown)
+        const candidates = getHitmanCandidates(playerId, currentValue);
+        if (candidates.length > 0) {
+          // Select the first matching player (topmost in dropdown after "unknown")
+          selectHitman(playerId, candidates[0].player_name);
+        } else {
+          // No matches found - default to "unknown" instead of arbitrary text
+          updatePlayer(playerId, "hitman_name", "unknown");
+          setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
+        }
       }
     }
   };
@@ -3240,7 +3248,7 @@ export function FullAdminScreen({
                   {/* Column Headers */}
                   <div className="grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
                     <div
-                      className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "name" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded -ml-2" : ""}`}
                       onClick={() => handleSort("name")}
                     >
                       Player Name
@@ -3251,7 +3259,7 @@ export function FullAdminScreen({
                       )}
                     </div>
                     <div
-                      className="cursor-pointer hover:text-blue-600"
+                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "checked_in_at" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
                       onClick={() => handleSort("checked_in_at")}
                     >
                       Time
@@ -3263,7 +3271,7 @@ export function FullAdminScreen({
                     </div>
                     <div>Hitman</div>
                     <div
-                      className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "ko_position" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
                       onClick={() => handleSort("ko_position")}
                     >
                       KO #
