@@ -1254,12 +1254,14 @@ export function FullAdminScreen({
     setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
 
     // Process the final value when user leaves the input
+    // Check if typing a prefix of "unknown" (at least 2 chars to avoid false positives)
     if (
-      currentValue.toLowerCase() === "unknown" ||
-      currentValue === "unknown"
+      currentValue.length >= 2 &&
+      "unknown".startsWith(currentValue.toLowerCase())
     ) {
-      // Treat "unknown" as a valid hitman and trigger KO position assignment
+      // Treat as "unknown" - user is typing "un", "unk", "unknown", etc.
       updatePlayer(playerId, "hitman_name", "unknown");
+      setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
     } else if (currentValue === "") {
       // If knockout was initiated via crosshair click, default to "unknown"
       // Otherwise, clear the hitman
