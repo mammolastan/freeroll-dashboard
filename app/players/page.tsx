@@ -2,10 +2,17 @@
 
 'use client'
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { PlayerSearch } from '@/components/PlayerDashboard/PlayerSearch'
 import { PlayerDetails } from '@/components/PlayerDashboard/PlayerDetails'
 import { PlayerAvatarModal } from '@/components/ui/PlayerAvatarModal'
 import { getLeagueParamFromURL } from '@/lib/useLeagueParam'
+import { FEATURES } from '@/lib/features'
+import {
+    PlayerReviewModal,
+    ReviewCard,
+    usePlayerReviews
+} from '@/features/player-reviews'
 
 interface Player {
     Name: string
@@ -21,6 +28,18 @@ export default function PlayersPage() {
     const [isClient, setIsClient] = useState(false);
     const [initialRange, setInitialRange] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [showReviewModal, setShowReviewModal] = useState(false);
+
+    // Session for checking admin status
+    const { data: session } = useSession();
+    const viewer = session?.user;
+    const viewerUid = viewer?.uid ?? null;
+    const isAdmin = viewer?.isAdmin === true;
+
+    // Player reviews hook
+    const { data: reviewData, deleteReview } = usePlayerReviews(
+        FEATURES.PLAYER_REVIEWS && selectedPlayer ? selectedPlayer.UID : null
+    );
 
     // Single useEffect to handle initialization
     useEffect(() => {
@@ -173,6 +192,58 @@ export default function PlayersPage() {
                             )}
                         </div>
                     </div>
+
+                    {/* Community Reviews Section - above stats/badges */}
+                    {FEATURES.PLAYER_REVIEWS && (
+                        <section className="mb-8 bg-gray-900 rounded-xl p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-white">Community Reviews</h2>
+                                <button
+                                    onClick={() => setShowReviewModal(true)}
+                                    className="text-sm text-yellow-400 hover:underline"
+                                >
+                                    {reviewData?.my_review ? 'Edit My Review' : 'Leave a Review'}
+                                </button>
+                            </div>
+                            {/* Simple average display without distribution bars */}
+                            {reviewData && reviewData.summary.total_reviews > 0 && (
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-2xl font-bold text-white">{reviewData.summary.average_rating.toFixed(1)}</span>
+                                    <span className="text-yellow-400 text-xl">★</span>
+                                    <span className="text-sm text-gray-400">({reviewData.summary.total_reviews} review{reviewData.summary.total_reviews !== 1 ? 's' : ''})</span>
+                                </div>
+                            )}
+                            {reviewData && reviewData.summary.total_reviews === 0 && (
+                                <p className="text-sm text-gray-400 italic mb-4">No reviews yet. Be the first!</p>
+                            )}
+                            {reviewData?.reviews && reviewData.reviews.length > 0 && (
+                                <div className="space-y-3 mt-4">
+                                    {reviewData.reviews.slice(0, 5).map((r) => (
+                                        <ReviewCard
+                                            key={r.id}
+                                            review={r}
+                                            canDelete={isAdmin || viewerUid === r.reviewer_uid}
+                                            onDelete={deleteReview}
+                                        />
+                                    ))}
+                                    {reviewData.reviews.length > 5 && (
+                                        <button
+                                            onClick={() => setShowReviewModal(true)}
+                                            className="text-sm text-yellow-400 hover:underline"
+                                        >
+                                            View all {reviewData.reviews.length} reviews
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            <PlayerReviewModal
+                                isOpen={showReviewModal}
+                                onClose={() => setShowReviewModal(false)}
+                                reviewed_uid={selectedPlayer.UID}
+                                player_name={selectedPlayer.nickname || selectedPlayer.Name}
+                            />
+                        </section>
+                    )}
 
                     <PlayerDetails
                         key={`${selectedPlayer.UID}-${initialRange}`}

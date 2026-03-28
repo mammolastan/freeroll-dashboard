@@ -17,6 +17,8 @@ import { useFavorites, FavoritesFilter } from "./FavoritesComponents";
 import { BadgeData } from "../ui/Badge";
 import { QualificationBarrier } from "./QualificationBarrier";
 import { useLeagueParam } from "@/lib/useLeagueParam";
+import { FEATURES } from "@/lib/features";
+import { PlayerReviewModal } from "@/features/player-reviews";
 
 interface PlayerRanking {
   name: string;
@@ -33,6 +35,8 @@ interface PlayerRanking {
   nickname: string | null;
   photoUrl: string | null;
   badges?: BadgeData[];
+  reviewAvg?: number;
+  reviewCount?: number;
 }
 
 interface RankingsData {
@@ -89,6 +93,9 @@ export default function QuarterlyRankings() {
     field: "ranking",
     direction: "asc",
   });
+
+  // Review modal state
+  const [reviewTarget, setReviewTarget] = useState<{ uid: string; name: string } | null>(null);
 
   // League param for multi-tenant support
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
@@ -511,12 +518,23 @@ export default function QuarterlyRankings() {
                   player={player}
                   isFavorite={isFavorite(player.uid)}
                   onToggleFavorite={toggleFavorite}
+                  onOpenReview={FEATURES.PLAYER_REVIEWS ? (uid, name) => setReviewTarget({ uid, name }) : undefined}
                 />
               </React.Fragment>
             );
           })}
         </div>
       </div>
+
+      {/* Player Review Modal */}
+      {FEATURES.PLAYER_REVIEWS && reviewTarget && (
+        <PlayerReviewModal
+          isOpen={!!reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          reviewed_uid={reviewTarget.uid}
+          player_name={reviewTarget.name}
+        />
+      )}
     </div>
   );
 }
