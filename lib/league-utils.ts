@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 // Resets on server restart — acceptable for this use case
 const slugCache = new Map<string, number>();
 
-async function getLeagueIdBySlug(slug: string): Promise<number | null> {
+export async function getLeagueIdBySlug(slug: string): Promise<number | null> {
   if (slugCache.has(slug)) return slugCache.get(slug)!;
   const league = await prisma.leagues.findUnique({
     where: { slug },

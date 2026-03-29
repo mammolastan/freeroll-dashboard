@@ -36,19 +36,21 @@ model PokerTournament {
 }
 
 model Player {
-  uid               String    @id
+  uid               String          @id
   name              String
   nickname          String?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @default(now()) @updatedAt
-  email             String?   @unique @db.VarChar(255)
-  email_verified_at DateTime? @db.Timestamp(0)
-  last_login_at     DateTime? @db.Timestamp(0)
-  password_hash     String?   @db.VarChar(255)
-  photo_url         String?   @db.VarChar(500)
-  favorite_hand     String?   @db.VarChar(100)
-  favorite_pro      String?   @db.VarChar(100)
-  isAdmin           Boolean   @default(false)
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @default(now()) @updatedAt
+  email             String?         @unique @db.VarChar(255)
+  email_verified_at DateTime?       @db.Timestamp(0)
+  last_login_at     DateTime?       @db.Timestamp(0)
+  password_hash     String?         @db.VarChar(255)
+  photo_url         String?         @db.VarChar(500)
+  favorite_hand     String?         @db.VarChar(100)
+  favorite_pro      String?         @db.VarChar(100)
+  isAdmin           Boolean         @default(false)
+  bonus_points      bonus_points[]
+  password_resets   PasswordReset[]
 
   @@index([email], map: "idx_player_email")
   @@index([isAdmin], map: "idx_player_isAdmin")
@@ -56,13 +58,13 @@ model Player {
 }
 
 model PasswordReset {
-  id         String     @id @default(uuid()) @db.VarChar(36)
+  id         String    @id @default(uuid()) @db.VarChar(36)
   player_uid String
-  token_hash String     @unique @db.VarChar(255)
-  expires_at DateTime   @db.Timestamp(0)
-  used_at    DateTime?  @db.Timestamp(0)
-  created_at DateTime   @default(now()) @db.Timestamp(0)
-  player     players_v2 @relation(fields: [player_uid], references: [uid], onDelete: Cascade, onUpdate: Restrict)
+  token_hash String    @unique @db.VarChar(255)
+  expires_at DateTime  @db.Timestamp(0)
+  used_at    DateTime? @db.Timestamp(0)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  player     Player    @relation(fields: [player_uid], references: [uid], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([player_uid], map: "idx_reset_player_uid")
   @@index([expires_at], map: "idx_reset_expires")
@@ -157,8 +159,8 @@ model TournamentDraft {
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
-  tournament_feed_items   tournament_feed_items[]
   leagues                 leagues                 @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_league")
+  tournament_feed_items   tournament_feed_items[]
 
   @@index([status], map: "idx_status")
   @@index([tournament_date], map: "idx_tournament_date")
@@ -196,16 +198,16 @@ model TournamentDraftPlayer {
 }
 
 model bonus_points {
-  id         Int        @id @default(autoincrement())
-  player_uid String     @db.VarChar(255)
+  id         Int      @id @default(autoincrement())
+  player_uid String   @db.VarChar(255)
   points     Int
-  reason     String     @db.VarChar(255)
-  category   String?    @default("promotional") @db.VarChar(100)
-  awarded_by String?    @db.VarChar(255)
-  awarded_at DateTime   @default(now()) @db.Timestamp(0)
-  season     String?    @db.VarChar(100)
-  notes      String?    @db.Text
-  players    players_v2 @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "bonus_points_ibfk_1")
+  reason     String   @db.VarChar(255)
+  category   String?  @default("promotional") @db.VarChar(100)
+  awarded_by String?  @db.VarChar(255)
+  awarded_at DateTime @default(now()) @db.Timestamp(0)
+  season     String?  @db.VarChar(100)
+  notes      String?  @db.Text
+  players    Player   @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "bonus_points_ibfk_1")
 
   @@index([awarded_at], map: "idx_awarded_date")
   @@index([player_uid, season], map: "idx_player_season")
@@ -294,11 +296,11 @@ model games {
   created             DateTime         @default(now()) @db.Timestamp(0)
   modified            DateTime         @default(now()) @db.Timestamp(0)
   appearances         appearances[]
+  game_periods        game_periods[]
   tournament_drafts   TournamentDraft? @relation(fields: [tournament_draft_id], references: [id], onUpdate: Restrict, map: "fk_games_draft")
   leagues             leagues          @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_games_league")
   venues              venues           @relation(fields: [venue_id], references: [id], onUpdate: Restrict, map: "fk_games_venue")
   knockouts           knockouts[]
-  game_periods        game_periods[]
 
   @@index([date], map: "idx_games_date")
   @@index([tournament_draft_id], map: "idx_games_draft")
@@ -333,37 +335,49 @@ model leagues {
   league_settings     String?               @db.LongText
   created             DateTime              @default(now()) @db.Timestamp(0)
   modified            DateTime              @default(now()) @db.Timestamp(0)
+  competition_periods competition_periods[]
   games               games[]
   players_v2          players_v2[]
-  venues              venues[]
-  competition_periods competition_periods[]
   tournament_drafts   TournamentDraft[]
+  venues              venues[]
+}
+
+model league_roles {
+  id          Int               @id @default(autoincrement())
+  league_id   Int
+  player_uid  String
+  role        league_roles_role
+  assigned_by String?
+  created     DateTime          @default(now()) @db.Timestamp(0)
+  modified    DateTime          @default(now()) @db.Timestamp(0)
+
+  @@unique([league_id, player_uid], name: "unique_member", map: "unique_member")
+  @@index([league_id], map: "idx_league_id")
+  @@index([player_uid], map: "idx_player_uid")
 }
 
 model players_v2 {
-  id                                     Int             @id @default(autoincrement())
-  uid                                    String          @unique(map: "uq_players_uid") @db.VarChar(50)
-  league_id                              Int             @default(1)
-  first_name                             String?         @db.VarChar(255)
-  last_name                              String?         @db.VarChar(255)
-  nickname                               String?         @db.VarChar(255)
-  email                                  String?         @unique(map: "uq_players_email") @db.VarChar(255)
-  email_verified_at                      DateTime?       @db.Timestamp(0)
-  last_login_at                          DateTime?       @db.Timestamp(0)
-  password_hash                          String?         @db.VarChar(255)
-  photo_url                              String?         @db.VarChar(500)
-  favorite_hand                          String?         @db.VarChar(100)
-  favorite_pro                           String?         @db.VarChar(100)
-  created                                DateTime        @default(now()) @db.Timestamp(0)
-  modified                               DateTime        @default(now()) @db.Timestamp(0)
-  isAdmin                                Boolean         @default(false)
+  id                                     Int           @id @default(autoincrement())
+  uid                                    String        @unique(map: "uq_players_uid") @db.VarChar(50)
+  league_id                              Int           @default(1)
+  first_name                             String?       @db.VarChar(255)
+  last_name                              String?       @db.VarChar(255)
+  nickname                               String?       @db.VarChar(255)
+  email                                  String?       @unique(map: "uq_players_email") @db.VarChar(255)
+  email_verified_at                      DateTime?     @db.Timestamp(0)
+  last_login_at                          DateTime?     @db.Timestamp(0)
+  password_hash                          String?       @db.VarChar(255)
+  photo_url                              String?       @db.VarChar(500)
+  favorite_hand                          String?       @db.VarChar(100)
+  favorite_pro                           String?       @db.VarChar(100)
+  created                                DateTime      @default(now()) @db.Timestamp(0)
+  modified                               DateTime      @default(now()) @db.Timestamp(0)
+  isAdmin                                Boolean       @default(false)
   appearances                            appearances[]
-  bonus_points                           bonus_points[]
-  knockouts_knockouts_hitmanToplayers_v2 knockouts[]     @relation("knockouts_hitmanToplayers_v2")
-  knockouts_knockouts_victimToplayers_v2 knockouts[]     @relation("knockouts_victimToplayers_v2")
-  password_resets                        PasswordReset[]
+  knockouts_knockouts_hitmanToplayers_v2 knockouts[]   @relation("knockouts_hitmanToplayers_v2")
+  knockouts_knockouts_victimToplayers_v2 knockouts[]   @relation("knockouts_victimToplayers_v2")
   PlayerBadge                            PlayerBadge[]
-  leagues                                leagues         @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
+  leagues                                leagues       @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
 
   @@index([league_id], map: "idx_players_league")
   @@index([isAdmin], map: "idx_players_v2_isAdmin")
@@ -402,6 +416,7 @@ model competition_periods {
   @@index([league_id], map: "idx_periods_league")
   @@index([league_id, period_type], map: "idx_periods_type")
   @@index([league_id, is_active], map: "idx_periods_active")
+  @@index([start_date, end_date], map: "idx_periods_dates")
 }
 
 model game_periods {
@@ -414,6 +429,23 @@ model game_periods {
 
   @@id([game_id, period_id])
   @@index([period_id], map: "idx_game_periods_period")
+  @@index([game_id], map: "idx_game_periods_game")
+}
+
+model player_reviews {
+  id           Int      @id @default(autoincrement())
+  league_id    Int      @default(1)
+  reviewed_uid String   @db.VarChar(255)
+  reviewer_uid String   @db.VarChar(255)
+  rating       Int      @db.TinyInt
+  review_text  String?  @db.Text
+  tags         String?  @db.VarChar(500)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([league_id, reviewed_uid, reviewer_uid], map: "uq_one_review_per_pair")
+  @@index([league_id, reviewed_uid], map: "idx_reviewed_uid")
+  @@index([league_id, reviewer_uid], map: "idx_reviewer_uid")
 }
 
 enum TournamentDraftStatus {
@@ -453,4 +485,9 @@ enum tournament_feed_items_item_type {
   system
   td_message
   photo
+}
+
+enum league_roles_role {
+  owner
+  admin
 }
