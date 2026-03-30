@@ -73,6 +73,9 @@ export async function GET(request: Request) {
       const etDate = new Date(
         baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
       );
+      // Set day to 1 first to avoid month rollover issues
+      // (e.g., March 30 -> February 30 would roll to March 2)
+      etDate.setDate(1);
       etDate.setMonth(etDate.getMonth() - 1);
       baseDate = etDate;
     }
