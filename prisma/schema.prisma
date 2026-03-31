@@ -97,7 +97,7 @@ model PlayerBadge {
   quarter     String?    @db.VarChar(7)
   year        Int?
   game_id     String?    @db.VarChar(255)
-  expiration  DateTime?  @map("expiration") @db.Date
+  expiration  DateTime?  @map("expiration") @db.DateTime(0)
   description String?    @map("description") @db.Text
   CreatedAt   DateTime?  @default(now()) @db.DateTime(0)
   player      players_v2 @relation(fields: [player_uid], references: [uid], onUpdate: Restrict, map: "player_badges_ibfk_1")
@@ -448,6 +448,25 @@ model player_reviews {
   @@index([league_id, reviewer_uid], map: "idx_reviewer_uid")
 }
 
+model tournament_draft_action_log {
+  id              Int                                     @id @default(autoincrement())
+  game_uid        String                                  @db.VarChar(255)
+  sequence_num    Int
+  action_type     tournament_draft_action_log_action_type
+  description     String                                  @db.VarChar(500)
+  actor_uid       String                                  @db.VarChar(255)
+  payload         String                                  @db.LongText
+  reverse_payload String                                  @db.LongText
+  status          tournament_draft_action_log_status      @default(applied)
+  performed_at    DateTime                                @default(now()) @db.Timestamp(0)
+  undone_at       DateTime?                               @db.Timestamp(0)
+  undone_by       String?                                 @db.VarChar(255)
+
+  @@unique([game_uid, sequence_num], map: "uq_game_sequence")
+  @@index([game_uid, status], map: "idx_game_status")
+  @@index([game_uid], map: "idx_game_uid")
+}
+
 enum TournamentDraftStatus {
   in_progress
   finalized
@@ -490,4 +509,17 @@ enum tournament_feed_items_item_type {
 enum league_roles_role {
   owner
   admin
+}
+
+enum tournament_draft_action_log_action_type {
+  PLAYER_ADDED
+  PLAYER_REMOVED
+  PLAYER_CHECKED_IN
+  KO_ASSIGNED
+  PLACEMENT_SET
+}
+
+enum tournament_draft_action_log_status {
+  applied
+  undone
 }
