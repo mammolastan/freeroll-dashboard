@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight, Monitor } from 'lucide-react';
 import { formatGameDate, formatTime, formatCutoffTime } from '@/lib/utils';
 
@@ -25,32 +26,39 @@ interface ActiveTournament {
 }
 
 export default function TVScreenSelectPage() {
+    const params = useParams();
+    const leagueSlug = params.leagueSlug as string | undefined;
+    const prefix = leagueSlug ? `/${leagueSlug}` : '';
+
     const [tournaments, setTournaments] = useState<ActiveTournament[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchActiveTournaments();
-    }, []);
+        const fetchActiveTournaments = async () => {
+            try {
+                const url = leagueSlug
+                    ? `/api/tournaments/active?league=${leagueSlug}`
+                    : '/api/tournaments/active';
+                const response = await fetch(url);
 
-    const fetchActiveTournaments = async () => {
-        try {
-            const response = await fetch('/api/tournaments/active');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch active tournaments');
+                }
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch active tournaments');
+                const data = await response.json();
+                setTournaments(data);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching tournaments:', err);
+                setError(err instanceof Error ? err.message : 'An error occurred');
+            } finally {
+                setLoading(false);
             }
+        };
 
-            const data = await response.json();
-            setTournaments(data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching tournaments:', err);
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
+        fetchActiveTournaments();
+    }, [leagueSlug]);
 
     const getBlindLevelDisplay = (level: number | null, schedule: string, isRunning: boolean, isPaused: boolean) => {
         // If timer has never been started (not running and not paused), show "Not started"
@@ -115,7 +123,7 @@ export default function TVScreenSelectPage() {
                         {tournaments.map((tournament) => (
                             <Link
                                 key={tournament.id}
-                                href={`/tvscreen/${tournament.id}`}
+                                href={`${prefix}/tvscreen/${tournament.id}`}
                                 className="block transition-transform hover:scale-105"
                             >
                                 <div className="h-full bg-gray-900/80 border border-cyan-500/30 rounded-lg hover:border-cyan-500/60 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all backdrop-blur-sm overflow-hidden">
