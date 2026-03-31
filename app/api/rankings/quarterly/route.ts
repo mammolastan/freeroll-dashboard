@@ -154,7 +154,9 @@ export async function GET(request: Request) {
             AND kgp.period_id = ${periodId}
           ) AS SIGNED) as totalKnockouts,
           CAST(SUM(CASE WHEN a.placement <= 8 AND v.name != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
-          CAST(AVG(CASE WHEN v.name != 'bonus' THEN a.player_score END) AS DECIMAL(10,2)) as avgScore
+          CAST(AVG(CASE WHEN v.name != 'bonus' THEN a.player_score END) AS DECIMAL(10,2)) as avgScore,
+          (SELECT ROUND(AVG(rating), 1) FROM player_reviews WHERE reviewed_uid COLLATE utf8mb4_unicode_ci = p.uid AND league_id = ${leagueId}) AS review_avg,
+          (SELECT COUNT(*) FROM player_reviews WHERE reviewed_uid COLLATE utf8mb4_unicode_ci = p.uid AND league_id = ${leagueId}) AS review_count
         FROM game_periods gp
         JOIN games g ON g.id = gp.game_id
         JOIN appearances a ON a.game_id = g.id
@@ -188,7 +190,9 @@ export async function GET(request: Request) {
             AND kg.date >= DATE(${startOfQuarter}) AND kg.date <= DATE(${endOfQuarter})
           ) AS SIGNED) as totalKnockouts,
           CAST(SUM(CASE WHEN a.placement <= 8 AND v.name != 'bonus' THEN 1 ELSE 0 END) AS SIGNED) as finalTables,
-          CAST(AVG(CASE WHEN v.name != 'bonus' THEN a.player_score END) AS DECIMAL(10,2)) as avgScore
+          CAST(AVG(CASE WHEN v.name != 'bonus' THEN a.player_score END) AS DECIMAL(10,2)) as avgScore,
+          (SELECT ROUND(AVG(rating), 1) FROM player_reviews WHERE reviewed_uid COLLATE utf8mb4_unicode_ci = p.uid AND league_id = ${leagueId}) AS review_avg,
+          (SELECT COUNT(*) FROM player_reviews WHERE reviewed_uid COLLATE utf8mb4_unicode_ci = p.uid AND league_id = ${leagueId}) AS review_count
         FROM appearances a
         JOIN games g ON g.id = a.game_id
         JOIN venues v ON v.id = g.venue_id
@@ -225,6 +229,9 @@ export async function GET(request: Request) {
           gamesPlayed > 0
             ? Number((totalPoints / gamesPlayed).toFixed(2))
             : 0,
+        // Review data
+        reviewAvg: player.review_avg ? Number(player.review_avg) : 0,
+        reviewCount: Number(player.review_count) || 0,
       };
     });
 

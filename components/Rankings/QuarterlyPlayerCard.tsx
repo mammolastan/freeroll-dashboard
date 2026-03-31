@@ -6,6 +6,8 @@ import { Zap, Hexagon, LandPlot, Calculator, Star } from "lucide-react";
 import { BadgeData, BadgeGroup } from "../ui/Badge";
 import "./PlayerRankingCard.css";
 import PlayerAvatar from "../ui/PlayerAvatar";
+import { FEATURES } from "@/lib/features";
+import { ReviewStarBadge } from "@/features/player-reviews";
 
 interface QuarterlyPlayer {
   name: string;
@@ -22,18 +24,22 @@ interface QuarterlyPlayer {
   nickname: string | null;
   photoUrl: string | null;
   badges?: BadgeData[];
+  reviewAvg?: number;
+  reviewCount?: number;
 }
 
 interface QuarterlyPlayerCardProps {
   player: QuarterlyPlayer;
   isFavorite?: boolean;
   onToggleFavorite?: (uid: string) => void;
+  onOpenReview?: (uid: string, name: string) => void;
 }
 
 export function QuarterlyPlayerCard({
   player,
   isFavorite,
   onToggleFavorite,
+  onOpenReview,
 }: QuarterlyPlayerCardProps) {
   const displayName = player.nickname || player.name;
 
@@ -137,6 +143,18 @@ export function QuarterlyPlayerCard({
               size="small"
               limit={7}
               showName={false}
+            />
+          </div>
+        )}
+
+        {/* Review Star Badge */}
+        {FEATURES.PLAYER_REVIEWS && onOpenReview && (
+          <div className="mt-2">
+            <ReviewStarBadge
+              average={player.reviewAvg ?? 0}
+              total={player.reviewCount ?? 0}
+              onClick={() => onOpenReview(player.uid, displayName)}
+              size="md"
             />
           </div>
         )}
