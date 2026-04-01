@@ -33,17 +33,17 @@ export interface ReviewsApiResponse {
 
 // Tags config - add new tags here as needed
 export const REVIEW_TAGS: { label: string; emoji: string }[] = [
+  { emoji: '🧠', label: 'Master of deception' },
+  { emoji: '☠️', label: 'Dirty ass ho' },
+  { emoji: '🚀', label: 'Rocket' },
+  { emoji: '👃', label: 'Smells' },
   { emoji: '🤝', label: 'Good Sport' },
+  { emoji: '😩', label: 'Little bitch' },
+  { emoji: '🫟', label: 'Spilled my drink' },
+  { emoji: '🚫', label: 'Rabbit-chases too much' },
   { emoji: '🃏', label: 'Sharp Player' },
   { emoji: '😂', label: 'Table Talk King' },
   { emoji: '🎯', label: 'Consistent' },
-  { emoji: '🧠', label: 'Strategic' },
   { emoji: '⚡', label: 'Quick Decisions' },
-  { emoji: '🎉', label: 'Fun to Play With' },
-  { emoji: '🫡', label: 'Respectful' },
-  { emoji: '🚫', label: 'Rabbit-chases too much' },
-  { emoji: '☠️', label: 'Is table poison' },
-  { emoji: '🫟', label: 'Spilled my drink' },
-  { emoji: '👃', label: 'Smells' },
 ];
 // To add more tags: append to this array. No DB changes needed.
