@@ -79,7 +79,7 @@ const Navbar = () => {
     }, [leagueSlug]);
 
     // Hide navbar on fullscreen pages like tvscreen
-    if (pathname?.startsWith('/tvscreen')) {
+    if (pathname?.includes('/tvscreen')) {
         return null;
     }
 

@@ -1,7 +1,8 @@
 'use client';
-import Image from 'next/image';
+import Link from 'next/link';
 import { StarRating } from './StarRating';
 import { TagBubbles } from './TagBubbles';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import type { PlayerReview } from '../types';
 
 interface ReviewCardProps {
@@ -20,20 +21,19 @@ export function ReviewCard({ review, canDelete, onDelete }: ReviewCardProps) {
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {review.reviewer_photo_url ? (
-            <Image
-              src={review.reviewer_photo_url}
-              alt={review.reviewer_name}
-              width={32} height={32}
-              className="rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold text-gray-300">
-              {review.reviewer_name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <PlayerAvatar
+            photoUrl={review.reviewer_photo_url}
+            name={review.reviewer_name}
+            uid={review.reviewer_uid}
+            size="sm"
+          />
           <div>
-            <div className="text-sm font-semibold text-white">{review.reviewer_name}</div>
+            <Link
+              href={`/players?uid=${encodeURIComponent(review.reviewer_uid)}`}
+              className="text-sm font-semibold text-white hover:text-cyan-300 transition-colors"
+            >
+              {review.reviewer_name}
+            </Link>
             <div className="text-xs text-gray-400">{date}</div>
           </div>
         </div>
