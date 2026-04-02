@@ -35,8 +35,10 @@ export async function GET(request: NextRequest) {
     const drafts = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.*,
+        v.name as venue_name,
         COUNT(tdp.id) as player_count
       FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
       WHERE td.league_id = ${leagueId}
       GROUP BY td.id
@@ -49,6 +51,8 @@ export async function GET(request: NextRequest) {
       id: Number(draft.id),
       start_points: Number(draft.start_points),
       player_count: Number(draft.player_count),
+      venue_id: draft.venue_id ? Number(draft.venue_id) : null,
+      venue: draft.venue_name || null,
       tournament_time: serializeTime(draft.tournament_time),
     }));
 
@@ -66,17 +70,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tournament_date, tournament_time, director_name, venue, start_points, period_ids } = body;
+    const { tournament_date, tournament_time, director_name, venue_id, start_points, period_ids } = body;
     const leagueId = await getLeagueIdFromRequest(request);
 
     console.log("Creating tournament with data:", body, "for league_id:", leagueId);
 
     // Validate required fields
-    if (!tournament_date || !venue) {
+    if (!tournament_date || !venue_id) {
       return NextResponse.json(
         {
           error:
-            "Missing required fields: tournament_date and venue are required",
+            "Missing required fields: tournament_date and venue_id are required",
         },
         { status: 400 }
       );
@@ -90,18 +94,20 @@ export async function POST(request: NextRequest) {
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
       INSERT INTO tournament_drafts
-      (tournament_date, tournament_time, director_name, venue, start_points, created_by, status, period_ids, league_id)
-      VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${venue}, ${
+      (tournament_date, tournament_time, director_name, venue_id, start_points, created_by, status, period_ids, league_id)
+      VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${venue_id}, ${
       start_points || 0
     }, 'admin', 'in_progress', ${periodIdsJson}, ${leagueId})
     `;
 
     console.log("Insert result:", result);
 
-    // Get the inserted record
+    // Get the inserted record with venue name
     const newDraft = await prisma.$queryRaw <RawQueryResult[]>`
-      SELECT * FROM tournament_drafts 
-      WHERE id = LAST_INSERT_ID()
+      SELECT td.*, v.name as venue_name
+      FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
+      WHERE td.id = LAST_INSERT_ID()
     `;
 
     console.log("New draft created:", newDraft);
@@ -111,6 +117,8 @@ export async function POST(request: NextRequest) {
       ...draft,
       id: Number(draft.id),
       start_points: Number(draft.start_points),
+      venue_id: draft.venue_id ? Number(draft.venue_id) : null,
+      venue: draft.venue_name || null,
       tournament_time: serializeTime(draft.tournament_time),
     }));
 
@@ -118,6 +126,7 @@ export async function POST(request: NextRequest) {
     if (serializedDraft.length > 0) {
       try {
         const tournamentId = serializedDraft[0].id;
+        const venueName = serializedDraft[0].venue || `venue_id:${venue_id}`;
         const session = await getAuditSession();
         const actor = getActorFromSession(session);
         await logAuditEvent({
@@ -134,11 +143,11 @@ export async function POST(request: NextRequest) {
             tournamentDate: tournament_date,
             tournamentTime: tournament_time || null,
             directorName: director_name || null,
-            venue: venue,
+            venueId: venue_id,
             startPoints: start_points || 0,
           },
           metadata: withActorMetadata(actor, {
-            venue: venue,
+            venue: venueName,
             tournamentDate: tournament_date,
           }),
           ipAddress: getClientIP(request),

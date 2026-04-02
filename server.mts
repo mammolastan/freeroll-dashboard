@@ -592,15 +592,21 @@ async function getTournamentData(tournamentDraftId: number) {
   try {
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
-        id,
-        tournament_date,
-        tournament_time,
-        director_name,
-        venue,
-        status,
-        start_points
-      FROM tournament_drafts
-      WHERE id = ${tournamentDraftId}
+        td.id,
+        CONCAT(
+          COALESCE(v.name, 'Tournament'),
+          ' - ',
+          DATE_FORMAT(td.tournament_date, '%m/%d/%Y')
+        ) as title,
+        td.tournament_date,
+        td.tournament_time,
+        td.director_name,
+        v.name as venue_name,
+        td.status,
+        td.start_points
+      FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
+      WHERE td.id = ${tournamentDraftId}
       LIMIT 1
     `;
 
@@ -618,12 +624,17 @@ async function getTournamentData(tournamentDraftId: number) {
       }
     }
 
+    const venueName =
+      data.venue_name !== null && data.venue_name !== undefined
+        ? String(data.venue_name)
+        : null;
+
     return {
       id: Number(data.id),
-      title: String(data.venue),
+      title: data.title != null ? String(data.title) : "Tournament",
       date: data.tournament_date,
       time: timeString,
-      venue: String(data.venue),
+      venue: venueName,
       status: String(data.status),
       max_players: null,
       start_points: Number(data.start_points) || 0,

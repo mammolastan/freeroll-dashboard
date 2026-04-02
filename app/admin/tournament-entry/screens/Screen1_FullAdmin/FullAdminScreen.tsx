@@ -47,7 +47,8 @@ interface TournamentDraft {
   tournament_date: string;
   tournament_time?: string;
   director_name: string;
-  venue: string;
+  venue: string | null;
+  venue_id: number | null;
   start_points: number;
   status: "in_progress" | "finalized" | "integrated";
   created_at: string;
@@ -56,6 +57,11 @@ interface TournamentDraft {
   blind_schedule?: string;
   custom_blind_levels?: string | null;
   period_ids?: string | null;
+}
+
+interface VenueOption {
+  id: number;
+  name: string;
 }
 
 interface PlayerSearchResult {
@@ -144,7 +150,7 @@ export function FullAdminScreen({
     tournament_date: "",
     tournament_time: "",
     director_name: "",
-    venue: "",
+    venue_id: null as number | null,
     start_points: 0,
     period_ids: [] as number[],
   });
@@ -294,7 +300,7 @@ export function FullAdminScreen({
   const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Venue management
-  const [venues, setVenues] = useState<string[]>([]);
+  const [venues, setVenues] = useState<VenueOption[]>([]);
 
   // Toast notification state for auto-calculations
   const [toast, setToast] = useState<{
@@ -348,8 +354,6 @@ export function FullAdminScreen({
   }, [sortBy, sortOrder]);
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
-  const [isAddingNewVenue, setIsAddingNewVenue] = useState(false);
-  const [newVenueInput, setNewVenueInput] = useState("");
   const [loadingVenues, setLoadingVenues] = useState(false);
 
   // checkin
@@ -377,7 +381,7 @@ export function FullAdminScreen({
   }, []);
 
   const createTournament = async () => {
-    if (!newTournament.tournament_date || !newTournament.venue) {
+    if (!newTournament.tournament_date || !newTournament.venue_id) {
       alert("Date and venue are required");
       return;
     }
@@ -402,14 +406,13 @@ export function FullAdminScreen({
         tournament_date: getTodayDateString(),
         tournament_time: "",
         director_name: "",
-        venue: "",
+        venue_id: null,
         start_points: 0,
         period_ids: [],
       });
 
-      // Refresh tournaments list and venues (in case a new venue was added)
+      // Refresh tournaments list
       loadTournaments();
-      loadVenues();
     } catch (error) {
       console.error("Error creating tournament:", error);
       alert(
@@ -475,51 +478,47 @@ export function FullAdminScreen({
     return today.toISOString().split("T")[0];
   };
 
-  // Load venues from API
+  // Load venues from API (active venues only for create modal; league from session)
   const loadVenues = async () => {
     setLoadingVenues(true);
     try {
-      const response = await fetch("/api/venues");
-      if (!response.ok) throw new Error("Failed to load venues");
-
-      const venuesData = await response.json();
-      setVenues(venuesData);
+      const fullResponse = await fetch(
+        `/api/venues/current-league?activeOnly=true`,
+      );
+      if (fullResponse.ok) {
+        const data = await fullResponse.json();
+        setVenues(data.venues || []);
+      } else {
+        setVenues([]);
+      }
     } catch (error) {
       console.error("Error loading venues:", error);
-      alert("Failed to load venues");
+      setVenues([]);
     } finally {
       setLoadingVenues(false);
     }
   };
 
   // Handle venue selection
-  const handleVenueSelect = (venue: string) => {
+  const handleVenueSelect = (venueId: number) => {
     setNewTournament({
       ...newTournament,
-      venue: venue,
+      venue_id: venueId,
     });
     setShowVenueDropdown(false);
-    setIsAddingNewVenue(false);
-    setNewVenueInput("");
   };
 
-  // Handle new venue addition
-  const handleAddNewVenue = () => {
-    if (newVenueInput.trim()) {
-      setNewTournament({
-        ...newTournament,
-        venue: newVenueInput.trim(),
-      });
-      setShowVenueDropdown(false);
-      setIsAddingNewVenue(false);
-      setNewVenueInput("");
-    }
+  // Get selected venue name for display
+  const getSelectedVenueName = (): string => {
+    if (!newTournament.venue_id) return "";
+    const venue = venues.find((v) => v.id === newTournament.venue_id);
+    return venue?.name || "";
   };
 
   // Update tournament field
   const updateTournamentField = async (
     field: string,
-    value: string | number,
+    value: string | number | null,
   ) => {
     if (!currentDraft || currentDraft.status === "integrated") return;
 
@@ -533,7 +532,7 @@ export function FullAdminScreen({
           field === "tournament_time" ? value : currentDraft.tournament_time,
         director_name:
           field === "director_name" ? value : currentDraft.director_name,
-        venue: field === "venue" ? value : currentDraft.venue,
+        venue_id: field === "venue_id" ? value : currentDraft.venue_id,
         start_points:
           field === "start_points" ? value : currentDraft.start_points,
       };
@@ -1501,8 +1500,20 @@ export function FullAdminScreen({
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0); // Last day of month
 
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"];
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
 
     return {
       name: `${monthNames[month]} ${year}`,
@@ -1595,7 +1606,9 @@ export function FullAdminScreen({
       setShowNewPeriodModal(false);
     } catch (error) {
       console.error("Error creating period:", error);
-      alert(`Failed to create period: ${error instanceof Error ? error.message : "Unknown error"}`);
+      alert(
+        `Failed to create period: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setSavingNewPeriod(false);
     }
@@ -1632,7 +1645,9 @@ export function FullAdminScreen({
 
       setPeriodsLoading(true);
       try {
-        const response = await fetch(`/api/competition-periods?league_id=${leagueId}`);
+        const response = await fetch(
+          `/api/competition-periods?league_id=${leagueId}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch periods");
 
         const data = await response.json();
@@ -1674,7 +1689,9 @@ export function FullAdminScreen({
 
       setPeriodsLoading(true);
       try {
-        const response = await fetch(`/api/competition-periods?league_id=${leagueId}`);
+        const response = await fetch(
+          `/api/competition-periods?league_id=${leagueId}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch periods");
 
         const data = await response.json();
@@ -2103,88 +2120,52 @@ export function FullAdminScreen({
                         Venue *
                       </label>
                       <div className="relative">
-                        {!isAddingNewVenue ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowVenueDropdown(!showVenueDropdown)
-                              }
-                              className="w-full px-3 py-2 border rounded text-black text-left bg-white flex items-center justify-between"
-                            >
-                              <span
-                                className={
-                                  newTournament.venue
-                                    ? "text-black"
-                                    : "text-gray-500"
-                                }
-                              >
-                                {newTournament.venue || "Select venue..."}
-                              </span>
-                              <ChevronDown size={16} />
-                            </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowVenueDropdown(!showVenueDropdown)
+                          }
+                          className="w-full px-3 py-2 border rounded text-black text-left bg-white flex items-center justify-between"
+                        >
+                          <span
+                            className={
+                              newTournament.venue_id
+                                ? "text-black"
+                                : "text-gray-500"
+                            }
+                          >
+                            {getSelectedVenueName() || "Select venue..."}
+                          </span>
+                          <ChevronDown size={16} />
+                        </button>
 
-                            {showVenueDropdown && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                                {loadingVenues ? (
-                                  <div className="px-3 py-2 text-gray-500">
-                                    Loading venues...
-                                  </div>
-                                ) : (
-                                  <>
-                                    {venues.map((venue, index) => (
-                                      <button
-                                        key={index}
-                                        type="button"
-                                        onClick={() => handleVenueSelect(venue)}
-                                        className="w-full px-3 py-2 text-left hover:bg-gray-100 text-black"
-                                      >
-                                        {venue}
-                                      </button>
-                                    ))}
-                                    <button
-                                      type="button"
-                                      onClick={() => setIsAddingNewVenue(true)}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-blue-600 border-t"
-                                    >
-                                      + Add new venue
-                                    </button>
-                                  </>
-                                )}
+                        {showVenueDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                            {loadingVenues ? (
+                              <div className="px-3 py-2 text-gray-500">
+                                Loading venues...
                               </div>
+                            ) : venues.length === 0 ? (
+                              <div className="px-3 py-2 text-gray-500">
+                                No venues available. Add venues in the admin
+                                settings.
+                              </div>
+                            ) : (
+                              venues.map((venue) => (
+                                <button
+                                  key={venue.id}
+                                  type="button"
+                                  onClick={() => handleVenueSelect(venue.id)}
+                                  className={`w-full px-3 py-2 text-left hover:bg-gray-100 text-black ${
+                                    newTournament.venue_id === venue.id
+                                      ? "bg-blue-50"
+                                      : ""
+                                  }`}
+                                >
+                                  {venue.name}
+                                </button>
+                              ))
                             )}
-                          </>
-                        ) : (
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newVenueInput}
-                              onChange={(e) => setNewVenueInput(e.target.value)}
-                              onKeyPress={(e) =>
-                                e.key === "Enter" && handleAddNewVenue()
-                              }
-                              placeholder="Enter new venue name"
-                              className="flex-1 px-3 py-2 border rounded text-black"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={handleAddNewVenue}
-                              className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsAddingNewVenue(false);
-                                setNewVenueInput("");
-                                setShowVenueDropdown(true);
-                              }}
-                              className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-                            >
-                              <X size={16} />
-                            </button>
                           </div>
                         )}
                       </div>
@@ -2233,9 +2214,7 @@ export function FullAdminScreen({
                       <button
                         onClick={() => {
                           setShowCreateModal(false);
-                          setIsAddingNewVenue(false); // Add this line
-                          setNewVenueInput(""); // Add this line
-                          setShowVenueDropdown(false); // Add this line
+                          setShowVenueDropdown(false);
                         }}
                         className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                       >
@@ -2253,7 +2232,9 @@ export function FullAdminScreen({
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
               <Card className="w-96">
                 <CardHeader>
-                  <CardTitle className="text-lg">Add Competition Period</CardTitle>
+                  <CardTitle className="text-lg">
+                    Add Competition Period
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -2299,7 +2280,9 @@ export function FullAdminScreen({
                         onChange={(e) =>
                           setNewPeriod({
                             ...newPeriod,
-                            period_type: e.target.value as "monthly" | "quarterly",
+                            period_type: e.target.value as
+                              | "monthly"
+                              | "quarterly",
                           })
                         }
                         className="w-full px-3 py-2 border rounded text-black"
@@ -2318,7 +2301,10 @@ export function FullAdminScreen({
                           type="date"
                           value={newPeriod.start_date}
                           onChange={(e) =>
-                            setNewPeriod({ ...newPeriod, start_date: e.target.value })
+                            setNewPeriod({
+                              ...newPeriod,
+                              start_date: e.target.value,
+                            })
                           }
                           className="w-full px-3 py-2 border rounded text-black"
                         />
@@ -2331,7 +2317,10 @@ export function FullAdminScreen({
                           type="date"
                           value={newPeriod.end_date}
                           onChange={(e) =>
-                            setNewPeriod({ ...newPeriod, end_date: e.target.value })
+                            setNewPeriod({
+                              ...newPeriod,
+                              end_date: e.target.value,
+                            })
                           }
                           className="w-full px-3 py-2 border rounded text-black"
                         />
@@ -2916,16 +2905,9 @@ export function FullAdminScreen({
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   Venue
                 </label>
-                <input
-                  type="text"
-                  value={currentDraft?.venue || ""}
-                  onChange={(e) =>
-                    updateTournamentField("venue", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border rounded text-black"
-                  placeholder="Tournament venue"
-                  disabled={currentDraft?.status === "integrated"}
-                />
+                <div className="w-full px-3 py-2 border rounded text-black bg-gray-50">
+                  {currentDraft?.venue || "No venue set"}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -2978,7 +2960,8 @@ export function FullAdminScreen({
                     <span className="text-black">Players Remaining:</span>
                     <span className="ml-2 text-black font-medium">
                       {displayPlayers.length -
-                        displayPlayers.filter((p) => p.hitman_name !== null).length}
+                        displayPlayers.filter((p) => p.hitman_name !== null)
+                          .length}
                     </span>
                   </div>
                   <div>
@@ -2990,13 +2973,19 @@ export function FullAdminScreen({
                   <div>
                     <span className="text-black">With Hitmen:</span>
                     <span className="ml-2 font-medium text-black ">
-                      {displayPlayers.filter((p) => p.hitman_name !== null).length}
+                      {
+                        displayPlayers.filter((p) => p.hitman_name !== null)
+                          .length
+                      }
                     </span>
                   </div>
                   <div>
                     <span className="text-black">With Placements:</span>
                     <span className="ml-2 font-medium text-black ">
-                      {displayPlayers.filter((p) => p.placement !== null).length}
+                      {
+                        displayPlayers.filter((p) => p.placement !== null)
+                          .length
+                      }
                     </span>
                   </div>
                 </div>

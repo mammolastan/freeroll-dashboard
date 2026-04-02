@@ -11,7 +11,8 @@ interface TournamentDraft {
   id: number;
   tournament_date: string;
   director_name: string;
-  venue: string;
+  venue: string | null;
+  venue_id: number | null;
   start_points: number;
   status: "in_progress" | "finalized" | "integrated";
   created_at: string;

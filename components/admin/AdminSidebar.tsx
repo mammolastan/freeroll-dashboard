@@ -27,11 +27,11 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const navItems = [
     { href: base, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
+    { href: `${base}/venues`, label: "Venues", icon: MapPin },
     { href: `${base}/settings`, label: "Identity", icon: Settings },
     { href: `${base}/access`, label: "Access", icon: Shield },
     { href: `${base}/scoring`, label: "Scoring", icon: Trophy },
     { href: `${base}/badges`, label: "Badges", icon: Star },
-    { href: `${base}/venues`, label: "Venues", icon: MapPin },
     { href: `${base}/game-defaults`, label: "Game Defaults", icon: Gamepad2 },
     ...(canManageRoles(role)
       ? [{ href: `${base}/members`, label: "Members", icon: Users }]

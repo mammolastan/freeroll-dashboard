@@ -11,7 +11,8 @@ interface DraftTournament {
   tournament_date: string;
   tournament_time?: Date | string | null;
   director_name: string;
-  venue: string;
+  venue_id: number | null;
+  venue_name?: string | null;
   start_points: number;
   status: string;
   period_ids?: string | null;
@@ -191,9 +192,12 @@ export async function POST(
   try {
     const result = await prisma.$transaction(
       async (tx) => {
-        // 1. Get tournament draft
+        // 1. Get tournament draft with venue name
         const draftResult = await tx.$queryRaw<DraftTournament[]>`
-        SELECT * FROM tournament_drafts WHERE id = ${draftId} AND status = 'in_progress'
+        SELECT td.*, v.name as venue_name
+        FROM tournament_drafts td
+        LEFT JOIN venues v ON td.venue_id = v.id
+        WHERE td.id = ${draftId} AND td.status = 'in_progress'
       `;
 
         if (draftResult.length === 0) {
@@ -224,30 +228,27 @@ export async function POST(
         // 4. CALCULATE PLACEMENTS BASED ON KO POSITIONS
         const playersWithPlacements = calculatePlacements(playersResult);
 
-        // 5. Generate unique filename & UID for the game
+        // 5. Validate venue exists
+        if (!draft.venue_id) {
+          throw new Error("Tournament draft has no venue assigned");
+        }
+
+        const venue = await tx.venues.findUnique({ where: { id: draft.venue_id } });
+        if (!venue) {
+          throw new Error("Venue not found for this tournament");
+        }
+
+        // 6. Generate unique filename & UID for the game
         const fileName = generateFileName(
           draft.tournament_date,
-          draft.venue,
+          venue.name,
           draft.director_name,
           draft.tournament_time
         );
 
         const gameUID = "SYS-G-" + uuidv4();
 
-        // 6. Get or create venue
-        let venue = await tx.venues.findFirst({ where: { name: draft.venue } });
-        if (!venue) {
-          venue = await tx.venues.create({
-            data: { name: draft.venue, league_id: draft.league_id }
-          });
-        }
-
         // 7. Create game record
-        const seasonString = new Date(draft.tournament_date).toLocaleDateString(
-          "en-US",
-          { month: "long", year: "2-digit" }
-        );
-
         // Handle tournament_time - it could be a Date object, string, or null
         let gameTime: Date | null = null;
         if (draft.tournament_time) {
@@ -270,7 +271,6 @@ export async function POST(
             date: new Date(draft.tournament_date),
             time: gameTime,
             director: draft.director_name,
-            season: seasonString,
             tournament_draft_id: draftId,
           }
         });

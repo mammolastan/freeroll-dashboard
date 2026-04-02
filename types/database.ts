@@ -92,7 +92,7 @@ export type PlayerPublicInfo = Pick<
 
 export type TournamentBasicInfo = Pick<
   Prisma.TournamentDraftGetPayload<object>,
-  'id' | 'tournament_date' | 'tournament_time' | 'venue' | 'status'
+  'id' | 'tournament_date' | 'tournament_time' | 'venue_id' | 'status'
 >;
 
 /**

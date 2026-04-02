@@ -32,7 +32,6 @@ export async function GET(
         Total_Points: number;
         Player_Score: number;
         Venue: string;
-        Season: string;
         nickname: string | null;
         game_date: Date;
         photo_url: string | null;
@@ -46,7 +45,6 @@ export async function GET(
         a.points as Total_Points,
         a.player_score as Player_Score,
         v.name as Venue,
-        g.season as Season,
         p.nickname,
         p.photo_url,
         g.date as game_date

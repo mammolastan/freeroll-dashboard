@@ -138,7 +138,6 @@ model TournamentDraft {
   tournament_date         DateTime                @db.Date
   tournament_time         DateTime?               @db.Time(0)
   director_name           String                  @db.VarChar(255)
-  venue                   String                  @db.VarChar(255)
   start_points            Int                     @default(0)
   status                  TournamentDraftStatus   @default(in_progress)
   created_by              String?                 @db.VarChar(255)
@@ -156,10 +155,12 @@ model TournamentDraft {
   timer_last_updated      DateTime                @default(now()) @db.Timestamp(0)
   period_ids              String?                 @db.VarChar(500)
   league_id               Int                     @default(1)
+  venue_id                Int?
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
   leagues                 leagues                 @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_league")
+  venue                   venues?                 @relation(fields: [venue_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_venue")
   tournament_feed_items   tournament_feed_items[]
 
   @@index([status], map: "idx_status")
@@ -167,6 +168,7 @@ model TournamentDraft {
   @@index([game_uid], map: "idx_game_uid")
   @@index([check_in_token], map: "idx_check_in_token")
   @@index([league_id], map: "idx_tournament_drafts_league")
+  @@index([venue_id], map: "idx_tournament_drafts_venue")
   @@map("tournament_drafts")
 }
 
@@ -291,7 +293,6 @@ model games {
   time                DateTime?        @db.Time(0)
   director            String?          @db.VarChar(255)
   bonus_points        Int              @default(0)
-  season              String?          @db.VarChar(100)
   tournament_draft_id Int?
   created             DateTime         @default(now()) @db.Timestamp(0)
   modified            DateTime         @default(now()) @db.Timestamp(0)
@@ -305,7 +306,6 @@ model games {
   @@index([date], map: "idx_games_date")
   @@index([tournament_draft_id], map: "idx_games_draft")
   @@index([league_id], map: "idx_games_league")
-  @@index([season], map: "idx_games_season")
   @@index([venue_id], map: "idx_games_venue")
 }
 
@@ -385,16 +385,17 @@ model players_v2 {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model venues {
-  id          Int      @id @default(autoincrement())
-  league_id   Int      @default(1)
-  name        String   @unique(map: "uq_venues_name") @db.VarChar(255)
-  address     String?  @db.VarChar(300)
-  is_active   Boolean  @default(true)
-  cutoff_time Int?
-  created     DateTime @default(now()) @db.Timestamp(0)
-  modified    DateTime @default(now()) @db.Timestamp(0)
-  games       games[]
-  leagues     leagues  @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
+  id               Int               @id @default(autoincrement())
+  league_id        Int               @default(1)
+  name             String            @unique(map: "uq_venues_name") @db.VarChar(255)
+  address          String?           @db.VarChar(300)
+  is_active        Boolean           @default(true)
+  cutoff_time      Int?
+  created          DateTime          @default(now()) @db.Timestamp(0)
+  modified         DateTime          @default(now()) @db.Timestamp(0)
+  games            games[]
+  tournamentDrafts TournamentDraft[]
+  leagues          leagues           @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
 
   @@index([league_id], map: "idx_venues_league")
 }

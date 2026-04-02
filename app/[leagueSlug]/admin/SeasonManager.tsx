@@ -553,6 +553,7 @@ export default function SeasonManager({
             addNewType={addNewType}
             prefillMonth={prefillMonth}
             prefillQuarter={prefillQuarter}
+            showQuickFillButtons={false}
             onSubmit={updatePeriod}
             onCancel={() => {
               setShowEditModal(false);
@@ -749,6 +750,7 @@ function SeasonForm({
   addNewType,
   prefillMonth,
   prefillQuarter,
+  showQuickFillButtons = true,
   onSubmit,
   onCancel,
   saving,
@@ -769,6 +771,7 @@ function SeasonForm({
   addNewType: () => void;
   prefillMonth: () => void;
   prefillQuarter: () => void;
+  showQuickFillButtons?: boolean;
   onSubmit: () => void;
   onCancel: () => void;
   saving: boolean;
@@ -776,23 +779,24 @@ function SeasonForm({
 }) {
   return (
     <div className="space-y-4">
-      {/* Quick fill buttons */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={prefillMonth}
-          className="flex-1 px-3 py-2 bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 rounded text-sm transition-colors"
-        >
-          Current Month
-        </button>
-        <button
-          type="button"
-          onClick={prefillQuarter}
-          className="flex-1 px-3 py-2 bg-emerald-900/50 hover:bg-emerald-800/50 text-emerald-300 rounded text-sm transition-colors"
-        >
-          Current Quarter
-        </button>
-      </div>
+      {showQuickFillButtons && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={prefillMonth}
+            className="flex-1 px-3 py-2 bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 rounded text-sm transition-colors"
+          >
+            Current Month
+          </button>
+          <button
+            type="button"
+            onClick={prefillQuarter}
+            className="flex-1 px-3 py-2 bg-emerald-900/50 hover:bg-emerald-800/50 text-emerald-300 rounded text-sm transition-colors"
+          >
+            Current Quarter
+          </button>
+        </div>
+      )}
 
       {/* Name */}
       <div>

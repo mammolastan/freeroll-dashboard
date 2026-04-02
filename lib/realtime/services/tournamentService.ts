@@ -8,28 +8,40 @@ export class TournamentService {
     try {
       const tournament = await prisma.$queryRaw`
         SELECT
-          id,
-          tournament_date,
-          tournament_time,
-          director_name,
-          venue,
-          status
-        FROM tournament_drafts
-        WHERE id = ${tournamentId}
+          td.id,
+          td.tournament_date,
+          td.tournament_time,
+          td.director_name,
+          td.start_points,
+          v.name as venue_name,
+          td.status
+        FROM tournament_drafts td
+        LEFT JOIN venues v ON td.venue_id = v.id
+        WHERE td.id = ${tournamentId}
         LIMIT 1
       `;
 
       if (!Array.isArray(tournament) || tournament.length === 0) return null;
 
-      const data = tournament[0];
+      const data = tournament[0] as {
+        id: number;
+        tournament_date: Date;
+        tournament_time: string | null;
+        director_name: string;
+        start_points: number;
+        venue_name: string | null;
+        status: string;
+      };
       return {
         id: data.id,
         title: `Tournament ${data.id}`, // No tournament_name field, using fallback
         date: data.tournament_date,
         time: data.tournament_time,
-        venue: data.venue,
-        status: data.status,
+        venue: data.venue_name,
+        status: data.status as Tournament['status'],
         max_players: null,
+        start_points: data.start_points,
+        td: data.director_name,
       };
     } catch (error) {
       console.error("Error fetching tournament data:", error);
@@ -42,15 +54,13 @@ export class TournamentService {
     updates: Partial<Tournament>
   ): Promise<Tournament | null> {
     try {
-      // Perform update
+      // Perform update - note: venue updates are not supported via this method
+      // since venue is now a relation. Use the admin UI to change venues.
       await prisma.$executeRaw`
         UPDATE tournament_drafts
         SET
-          title = COALESCE(${updates.title}, title),
-          date = COALESCE(${updates.date}, date),
-          venue = COALESCE(${updates.venue}, venue),
-          status = COALESCE(${updates.status}, status),
-          max_players = COALESCE(${updates.max_players}, max_players)
+          tournament_date = COALESCE(${updates.date}, tournament_date),
+          status = COALESCE(${updates.status}, status)
         WHERE id = ${tournamentId}
       `;
 

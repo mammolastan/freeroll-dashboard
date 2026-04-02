@@ -8,7 +8,7 @@ type QRCodeModalProps = {
     setShowQRCode: (show: boolean) => void;
     currentDraft: {
         tournament_date: string;
-        venue: string;
+        venue: string | null;
     } | null;
 };
 
@@ -63,7 +63,7 @@ export function QRCodeModal({ checkInUrl, showQRCode, setShowQRCode, currentDraf
             ctx.font = '14px Arial, sans-serif';
             ctx.fillStyle = '#374151';
             ctx.fillText(tournamentDate, totalWidth / 2, padding + 10);
-            ctx.fillText(currentDraft.venue, totalWidth / 2, padding + 30);
+            ctx.fillText(currentDraft.venue || 'Tournament', totalWidth / 2, padding + 30);
 
             // Draw the QR code in the center
             const qrX = (totalWidth - qrSize) / 2;
@@ -101,7 +101,7 @@ export function QRCodeModal({ checkInUrl, showQRCode, setShowQRCode, currentDraf
 
         const link = document.createElement('a');
         const dateString = new Date(currentDraft.tournament_date).toISOString().split('T')[0];
-        const venueSlug = currentDraft.venue.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const venueSlug = (currentDraft.venue || 'tournament').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         link.download = `tournament-qr-${dateString}-${venueSlug}.png`;
         link.href = compositeCanvasRef.current.toDataURL('image/png');
 

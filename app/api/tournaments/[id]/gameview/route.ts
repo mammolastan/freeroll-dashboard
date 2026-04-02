@@ -43,19 +43,24 @@ export async function GET(
       );
     }
 
-    // Fetch tournament data
+    // Fetch tournament data — venue label comes from venues.name via venue_id
     const tournamentResult = await prisma.$queryRaw<TournamentRow[]>`
       SELECT
-        id,
-        CONCAT(venue, ' - ', DATE_FORMAT(tournament_date, '%m/%d/%Y')) as title,
-        tournament_date,
-        tournament_time,
-        venue,
-        status,
-        start_points,
-        director_name
-      FROM tournament_drafts
-      WHERE id = ${tournamentId}
+        td.id,
+        CONCAT(
+          COALESCE(v.name, 'Tournament'),
+          ' - ',
+          DATE_FORMAT(td.tournament_date, '%m/%d/%Y')
+        ) as title,
+        td.tournament_date,
+        td.tournament_time,
+        v.name as venue,
+        td.status,
+        td.start_points,
+        td.director_name
+      FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
+      WHERE td.id = ${tournamentId}
     `;
 
     if (!tournamentResult || tournamentResult.length === 0) {

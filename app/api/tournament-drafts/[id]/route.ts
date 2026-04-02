@@ -49,8 +49,10 @@ export async function GET(
     const draft = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.*,
+        v.name as venue_name,
         COUNT(tdp.id) as player_count
       FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
       WHERE td.id = ${draftId} AND td.league_id = ${leagueId}
       GROUP BY td.id
@@ -63,7 +65,12 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(serializeDraft(draft[0]));
+    const result = draft[0];
+    return NextResponse.json({
+      ...serializeDraft(result),
+      venue_id: result.venue_id ? Number(result.venue_id) : null,
+      venue: result.venue_name || null,
+    });
   } catch (error) {
     console.error("Error fetching tournament draft:", error);
     return NextResponse.json(
@@ -88,13 +95,13 @@ export async function PUT(
       tournament_date,
       tournament_time,
       director_name,
-      venue,
+      venue_id,
       start_points,
     } = body;
 
     // Get current state before updating for audit comparison (also verifies league ownership)
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT tournament_date, tournament_time, director_name, venue, start_points
+      SELECT tournament_date, tournament_time, director_name, venue_id, start_points
       FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
     `;
 
@@ -113,16 +120,25 @@ export async function PUT(
         tournament_date = ${tournament_date},
         tournament_time = ${tournament_time || null},
         director_name = ${director_name},
-        venue = ${venue},
+        venue_id = ${venue_id || null},
         start_points = ${start_points || 0},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${draftId}
     `;
 
+    // Get the updated draft with venue name
     const updatedDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_drafts WHERE id = ${draftId}
+      SELECT td.*, v.name as venue_name
+      FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
+      WHERE td.id = ${draftId}
     `;
-    const updatedDraft = serializeDraft(updatedDraftResult[0]);
+    const draft = updatedDraftResult[0];
+    const updatedDraft = {
+      ...serializeDraft(draft),
+      venue_id: draft.venue_id ? Number(draft.venue_id) : null,
+      venue: draft.venue_name || null,
+    };
 
     // Audit logging - compare and log only changed fields
     try {
@@ -132,7 +148,7 @@ export async function PUT(
         "tournament_date",
         "tournament_time",
         "director_name",
-        "venue",
+        "venue_id",
         "start_points",
       ];
 
@@ -140,7 +156,7 @@ export async function PUT(
         tournament_date,
         tournament_time: tournament_time || null,
         director_name,
-        venue,
+        venue_id: venue_id || null,
         start_points: start_points || 0,
       };
 

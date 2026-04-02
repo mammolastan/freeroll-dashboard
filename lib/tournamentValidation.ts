@@ -147,7 +147,7 @@ export function hasAutoFixableKOIssues(validation: ValidationResult, players: Pl
  * Export tournament data as text
  */
 export function exportTournamentAsText(
-    tournament: { venue: string; tournament_date: string; director_name: string; start_points: number },
+    tournament: { venue: string | null; tournament_date: string; director_name: string; start_points: number },
     players: Player[]
 ): void {
     if (players.length === 0) return;
@@ -161,7 +161,8 @@ export function exportTournamentAsText(
         return a.player_name.localeCompare(b.player_name);
     });
 
-    let output = `Tournament: ${tournament.venue} - ${tournament.tournament_date}\n`;
+    const venueName = tournament.venue || 'Unknown Venue';
+    let output = `Tournament: ${venueName} - ${tournament.tournament_date}\n`;
     output += `Director: ${tournament.director_name}\n`;
     output += `Players: ${players.length}\n`;
     output += `Start Points: ${tournament.start_points}\n\n`;
@@ -183,7 +184,7 @@ export function exportTournamentAsText(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tournament_${tournament.venue.replace(/\s+/g, '_')}_${tournament.tournament_date}.txt`;
+    a.download = `tournament_${venueName.replace(/\s+/g, '_')}_${tournament.tournament_date}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

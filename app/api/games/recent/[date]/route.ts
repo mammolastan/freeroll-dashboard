@@ -37,7 +37,6 @@ export async function GET(
       id: game.id,
       gameDate: game.date,
       fileName: null, // No longer stored in games table
-      season: game.season,
       venue: game.venues.name,
       gameUid: game.uid,
       game_uid: game.uid,
