@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         td.tournament_date,
         td.tournament_time,
         td.director_name,
-        td.venue,
+        v.name AS venue,
         td.start_points,
         td.status,
         td.blind_schedule,
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         COUNT(tdp.id) as total_players,
         COUNT(CASE WHEN tdp.ko_position IS NULL THEN 1 END) as players_remaining
       FROM tournament_drafts td
+      LEFT JOIN venues v ON td.venue_id = v.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
       WHERE td.status = 'in_progress'
         AND td.tournament_date >= CURDATE() - INTERVAL 1 DAY

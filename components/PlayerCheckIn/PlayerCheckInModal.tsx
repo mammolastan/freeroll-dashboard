@@ -34,8 +34,6 @@ export function PlayerCheckInModal({
 }: PlayerCheckInModalProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [venue] = useState('');
-  const [tournamentDate] = useState('');
 
   // Fetch checked-in players when modal opens
   useEffect(() => {
@@ -115,11 +113,6 @@ export function PlayerCheckInModal({
             <h2 className="text-4xl font-bold text-cyan-300 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]">
               Player Check-In
             </h2>
-            {venue && tournamentDate && (
-              <p className="text-xl text-gray-400 mt-2">
-                {venue} - {new Date(tournamentDate).toLocaleDateString()}
-              </p>
-            )}
             {players.length > 0 && (
               <div className="mt-2 text-lg text-purple-400">
                 {players.length} Players Registered
