@@ -37,7 +37,8 @@ import {
   validateTournamentForIntegration,
   exportTournamentAsText,
 } from "@/lib/tournamentValidation";
-import { BLIND_SCHEDULES, BlindLevel } from "@/lib/blindLevels";
+import { BlindLevel } from "@/lib/blindLevels";
+import { getBlindScheduleDisplayName } from "@/lib/blind-schedule-label";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
@@ -282,6 +283,16 @@ export function FullAdminScreen({
   // Blind schedule edit modal
   const [showBlindEditModal, setShowBlindEditModal] = useState(false);
 
+  // League blind schedules from API
+  interface LeagueSchedule {
+    id: number;
+    name: string;
+    description: string;
+    levels: BlindLevel[];
+    isSystem: boolean;
+  }
+  const [leagueSchedules, setLeagueSchedules] = useState<LeagueSchedule[]>([]);
+
   // Refs
   const globalUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUpdatesRef = useRef<{ [key: number]: Partial<Player> }>({});
@@ -352,6 +363,27 @@ export function FullAdminScreen({
       localStorage.setItem("adminSortOrder", sortOrder);
     }
   }, [sortBy, sortOrder]);
+
+  const loadBlindSchedules = useCallback(() => {
+    fetch("/api/blind-schedules")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setLeagueSchedules(data as LeagueSchedule[]);
+        } else {
+          console.error("Failed to fetch blind schedules:", data);
+          setLeagueSchedules([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch blind schedules:", err);
+        setLeagueSchedules([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadBlindSchedules();
+  }, [loadBlindSchedules]);
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
@@ -1573,7 +1605,7 @@ export function FullAdminScreen({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          league_id: 1,
+          league_id: leagueId,
           name: newPeriod.name,
           period_type: newPeriod.period_type,
           start_date: newPeriod.start_date,
@@ -3019,7 +3051,7 @@ export function FullAdminScreen({
                         Schedule Type:
                       </label>
                       <select
-                        value={currentDraft.blind_schedule || "standard"}
+                        value={currentDraft.blind_schedule || ""}
                         onChange={async (e) => {
                           const newSchedule = e.target.value;
                           try {
@@ -3028,45 +3060,50 @@ export function FullAdminScreen({
                               {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  blind_schedule: newSchedule,
-                                }),
+                                body: JSON.stringify({ blind_schedule: newSchedule }),
                               },
                             );
 
                             if (response.ok) {
-                              if (currentDraft) {
-                                updateCurrentDraft({
-                                  ...currentDraft,
-                                  blind_schedule: newSchedule,
-                                  custom_blind_levels: null, // Clear custom levels when switching presets
-                                });
-                              }
-                              // Reset timer when schedule changes
-                              socket.emit("timer:reset", {
-                                tournamentId: currentDraft.id,
+                              updateCurrentDraft({
+                                ...currentDraft,
+                                blind_schedule: newSchedule,
+                                custom_blind_levels: null,
                               });
+                              socket.emit("timer:reset", { tournamentId: currentDraft.id });
                             } else {
                               console.error("Failed to update blind schedule");
                             }
                           } catch (error) {
-                            console.error(
-                              "Error updating blind schedule:",
-                              error,
-                            );
+                            console.error("Error updating blind schedule:", error);
                           }
                         }}
                         className="w-full sm:w-auto px-3 py-2 border border-gray-300 text-black rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={currentDraft.status === "integrated"}
                       >
-                        {Object.values(BLIND_SCHEDULES).map((schedule) => (
-                          <option
-                            key={schedule.id}
-                            value={schedule.id}
-                          >
-                            {schedule.name} - {schedule.description}
-                          </option>
-                        ))}
+                        {leagueSchedules.length === 0 && (
+                          <option value="">Loading schedules...</option>
+                        )}
+                        {leagueSchedules.filter((s) => !s.isSystem).length > 0 && (
+                          <optgroup label="League Schedules">
+                            {leagueSchedules
+                              .filter((s) => !s.isSystem)
+                              .map((s) => (
+                                <option key={s.id} value={String(s.id)}>
+                                  {s.name}{s.description ? ` - ${s.description}` : ""}
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="System Schedules">
+                          {leagueSchedules
+                            .filter((s) => s.isSystem)
+                            .map((s) => (
+                              <option key={s.id} value={String(s.id)}>
+                                {s.name}{s.description ? ` - ${s.description}` : ""}
+                              </option>
+                            ))}
+                        </optgroup>
                       </select>
                       <button
                         onClick={() => setShowBlindEditModal(true)}
@@ -3094,12 +3131,20 @@ export function FullAdminScreen({
                   isOpen={showBlindEditModal}
                   onClose={() => setShowBlindEditModal(false)}
                   tournamentId={currentDraft.id}
-                  currentScheduleId={currentDraft.blind_schedule || "standard"}
+                  currentScheduleId={currentDraft.blind_schedule || "1"}
+                  currentScheduleName={
+                    leagueSchedules.find(
+                      (s) => String(s.id) === String(currentDraft.blind_schedule ?? ""),
+                    )?.name ?? "Custom"
+                  }
                   customLevels={
                     currentDraft.custom_blind_levels
-                      ? JSON.parse(currentDraft.custom_blind_levels)
-                      : null
+                      ? (JSON.parse(currentDraft.custom_blind_levels) as BlindLevel[])
+                      : leagueSchedules.find(
+                          (s) => String(s.id) === String(currentDraft.blind_schedule ?? ""),
+                        )?.levels ?? null
                   }
+                  isCustomized={Boolean(currentDraft.custom_blind_levels)}
                   onSave={async (levels: BlindLevel[]) => {
                     const customLevelsJson = JSON.stringify(levels);
                     try {
@@ -3131,6 +3176,7 @@ export function FullAdminScreen({
                       throw error;
                     }
                   }}
+                  onSavedToLeague={loadBlindSchedules}
                 />
 
                 {/* Game Timer */}
@@ -3138,7 +3184,10 @@ export function FullAdminScreen({
                   tournamentId={currentDraft.id}
                   playersRemaining={computedStats?.playersRemaining}
                   isAdmin={true}
-                  blindScheduleName={currentDraft.blind_schedule || undefined}
+                  blindScheduleName={getBlindScheduleDisplayName(
+                    currentDraft,
+                    leagueSchedules,
+                  )}
                 />
               </div>
             )}

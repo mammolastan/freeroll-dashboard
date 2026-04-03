@@ -1,149 +1,77 @@
-interface BlindLevel {
+import { prisma } from "@/lib/prisma";
+
+export interface BlindLevel {
   level: number;
-  duration: number; // in minutes
+  duration: number;   // minutes
   smallBlind: number;
   bigBlind: number;
   ante?: number;
   isbreak?: boolean;
 }
 
-interface BlindSchedule {
+export interface BlindSchedule {
   id: string;
   name: string;
   description: string;
   levels: BlindLevel[];
 }
 
-// Standard Speed - 20 minute levels
-const STANDARD_SPEED_LEVELS: BlindLevel[] = [
-  { level: 1, duration: 20, smallBlind: 100, bigBlind: 200, isbreak: false },
-  { level: 2, duration: 20, smallBlind: 200, bigBlind: 400, isbreak: false },
-  { level: 3, duration: 20, smallBlind: 300, bigBlind: 600, isbreak: false },
-  { level: 4, duration: 20, smallBlind: 400, bigBlind: 800, isbreak: false },
-  { level: 5, duration: 20, smallBlind: 500, bigBlind: 1000, isbreak: false },
-  { level: 6, duration: 15, smallBlind: 0, bigBlind: 0, isbreak: true }, // 10 minute break
-  { level: 7, duration: 20, smallBlind: 1000, bigBlind: 2000, isbreak: false },
-  { level: 8, duration: 20, smallBlind: 2000, bigBlind: 4000, isbreak: false },
-  { level: 9, duration: 20, smallBlind: 3000, bigBlind: 6000, isbreak: false },
-  { level: 10, duration: 20, smallBlind: 4000, bigBlind: 8000, isbreak: false },
-  { level: 11, duration: 5, smallBlind: 0, bigBlind: 0, isbreak: true }, // 5 minute break (color up 1,000s)
-  {
-    level: 12,
-    duration: 20,
-    smallBlind: 5000,
-    bigBlind: 10000,
-    isbreak: false,
-  },
-  {
-    level: 13,
-    duration: 20,
-    smallBlind: 10000,
-    bigBlind: 20000,
-    isbreak: false,
-  },
-  {
-    level: 14,
-    duration: 20,
-    smallBlind: 15000,
-    bigBlind: 30000,
-    isbreak: false,
-  },
-  {
-    level: 15,
-    duration: 20,
-    smallBlind: 20000,
-    bigBlind: 40000,
-    isbreak: false,
-  },
-  {
-    level: 16,
-    duration: 20,
-    smallBlind: 25000,
-    bigBlind: 50000,
-    isbreak: false,
-  },
-  { level: 17, duration: 20, smallBlind: 50000, bigBlind: 100000, isbreak: false },
-  { level: 18, duration: 20, smallBlind: 100000, bigBlind: 200000, isbreak: false },
-];
+/**
+ * Resolve a blind schedule to its BlindLevel array.
+ * scheduleId is always a numeric string (e.g. "1", "42") pointing
+ * to the blind_schedules table. When leagueId is provided, only system
+ * schedules (league_id IS NULL) or that league's schedules match.
+ * When omitted (e.g. Socket.IO server), any active row with that id matches.
+ *
+ * Falls back to a minimal emergency schedule if the DB lookup fails.
+ */
+export async function resolveBlindSchedule(
+  scheduleId: string | null | undefined,
+  leagueId?: number
+): Promise<BlindLevel[]> {
+  const numericId = scheduleId ? parseInt(scheduleId, 10) : NaN;
 
-// Medium - 15 minute levels (same blind structure)
-const MEDIUM_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map(
-  (level) => ({
-    ...level,
-    duration: level.isbreak ? level.duration : 15,
-  })
-);
-
-// Turbo Speed - 10 minute levels (same blind structure)
-const TURBO_SPEED_LEVELS: BlindLevel[] = STANDARD_SPEED_LEVELS.map((level) => ({
-  ...level,
-  duration: level.isbreak ? level.duration : 10,
-}));
-
-// Freeroll Speed - 20 minute levels, no 300/600, break after 1k/2k
-const No300600: BlindLevel[] = [
-  { level: 1, duration: 20, smallBlind: 100, bigBlind: 200, isbreak: false },
-  { level: 2, duration: 20, smallBlind: 200, bigBlind: 400, isbreak: false },
-  { level: 3, duration: 20, smallBlind: 400, bigBlind: 800, isbreak: false },
-  { level: 4, duration: 20, smallBlind: 500, bigBlind: 1000, isbreak: false },
-  { level: 5, duration: 20, smallBlind: 1000, bigBlind: 2000, isbreak: false },
-  { level: 6, duration: 15, smallBlind: 0, bigBlind: 0, isbreak: true }, // 15 minute break
-  { level: 7, duration: 20, smallBlind: 2000, bigBlind: 4000, isbreak: false },
-  { level: 8, duration: 20, smallBlind: 3000, bigBlind: 6000, isbreak: false },
-  { level: 9, duration: 20, smallBlind: 4000, bigBlind: 8000, isbreak: false },
-  { level: 10, duration: 20, smallBlind: 5000, bigBlind: 10000, isbreak: false },
-  { level: 11, duration: 5, smallBlind: 0, bigBlind: 0, isbreak: true }, // 5 minute break (color up 1,000s)
-  { level: 12, duration: 20, smallBlind: 10000, bigBlind: 20000, isbreak: false },
-  { level: 13, duration: 20, smallBlind: 15000, bigBlind: 30000, isbreak: false },
-  { level: 14, duration: 20, smallBlind: 20000, bigBlind: 40000, isbreak: false },
-  { level: 15, duration: 20, smallBlind: 25000, bigBlind: 50000, isbreak: false },
-  { level: 16, duration: 20, smallBlind: 50000, bigBlind: 100000, isbreak: false },
-  { level: 17, duration: 20, smallBlind: 100000, bigBlind: 200000, isbreak: false },
-];
-
-// Blind schedule definitions
-const BLIND_SCHEDULES: Record<string, BlindSchedule> = {
-  standard: {
-    id: "standard",
-    name: "Standard Speed",
-    description: "20-minute levels",
-    levels: STANDARD_SPEED_LEVELS,
-  },
-  medium: {
-    id: "medium",
-    name: "Medium Speed",
-    description: "15-minute levels",
-    levels: MEDIUM_SPEED_LEVELS,
-  },
-  turbo: {
-    id: "turbo",
-    name: "Turbo Speed",
-    description: "10-minute levels",
-    levels: TURBO_SPEED_LEVELS,
-  },
-  No300600: {
-    id: "No300600",
-    name: "No300600",
-    description: "20-min, no 300/600, break after 1k/2k",
-    levels: No300600,
-  },
-};
-
-// Helper function to get blind schedule
-function getBlindSchedule(scheduleId: string): BlindLevel[] {
-  // Try direct key lookup first
-  const schedule = BLIND_SCHEDULES[scheduleId];
-  if (schedule) {
-    return schedule.levels;
+  if (!isNaN(numericId)) {
+    try {
+      const row =
+        leagueId != null
+          ? await prisma.$queryRaw<{ levels: string }[]>`
+              SELECT levels FROM blind_schedules
+              WHERE id = ${numericId}
+                AND is_active = 1
+                AND (league_id IS NULL OR league_id = ${leagueId})
+              LIMIT 1
+            `
+          : await prisma.$queryRaw<{ levels: string }[]>`
+              SELECT levels FROM blind_schedules
+              WHERE id = ${numericId}
+                AND is_active = 1
+              LIMIT 1
+            `;
+      if (row.length > 0) {
+        return JSON.parse(row[0].levels) as BlindLevel[];
+      }
+    } catch (err) {
+      console.error("[resolveBlindSchedule] DB lookup failed:", err);
+    }
   }
 
-  // Legacy mapping for "freeroll" -> No300600
-  if (scheduleId === "freeroll") {
-    return BLIND_SCHEDULES.No300600.levels;
-  }
-
-  return BLIND_SCHEDULES.standard.levels;
+  // Emergency fallback — should never be reached in normal operation
+  console.warn("[resolveBlindSchedule] Falling back to emergency schedule for id:", scheduleId);
+  return EMERGENCY_FALLBACK;
 }
 
-export type { BlindLevel, BlindSchedule };
-export { BLIND_SCHEDULES, getBlindSchedule };
+/**
+ * Minimal fallback used only if the DB is unreachable.
+ * Not exposed to the UI — the dropdown always uses DB data.
+ */
+const EMERGENCY_FALLBACK: BlindLevel[] = [
+  { level: 1, duration: 20, smallBlind: 100,  bigBlind: 200,  isbreak: false },
+  { level: 2, duration: 20, smallBlind: 200,  bigBlind: 400,  isbreak: false },
+  { level: 3, duration: 20, smallBlind: 300,  bigBlind: 600,  isbreak: false },
+  { level: 4, duration: 20, smallBlind: 500,  bigBlind: 1000, isbreak: false },
+  { level: 5, duration: 15, smallBlind: 0,    bigBlind: 0,    isbreak: true  },
+  { level: 6, duration: 20, smallBlind: 1000, bigBlind: 2000, isbreak: false },
+  { level: 7, duration: 20, smallBlind: 2000, bigBlind: 4000, isbreak: false },
+  { level: 8, duration: 20, smallBlind: 5000, bigBlind: 10000,isbreak: false },
+];

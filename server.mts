@@ -5,11 +5,7 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
-import {
-  BlindLevel,
-  BLIND_SCHEDULES,
-  getBlindSchedule,
-} from "./lib/blindLevels.mjs";
+import { resolveBlindSchedule, BlindLevel } from "./lib/blindLevels.mjs";
 import { TypedServer } from "./types/socket.js";
 import { AuditActionType, AuditActionCategory, AuditLogValue, AuditValue } from "./types/audit.js";
 
@@ -129,8 +125,7 @@ interface TimerState {
   serverTime?: number; // Unix ms timestamp at moment of broadcast (for clock skew compensation)
 }
 
-// Default blind structure (for backward compatibility)
-const DEFAULT_BLIND_LEVELS: BlindLevel[] = BLIND_SCHEDULES.standard.levels;
+// Resolved lazily per tournament — no hard-coded default constant needed
 
 // Store timer states for each tournament
 const timerStates = new Map<number, TimerState>();
@@ -156,7 +151,7 @@ async function getOrCreateTimerState(
     console.log(`Creating new timer state for tournament ${tournamentId}`);
 
     // Fetch tournament's blind schedule from database
-    let blindLevels = DEFAULT_BLIND_LEVELS;
+    let blindLevels: BlindLevel[];
     try {
       const tournament = await prisma.tournamentDraft.findUnique({
         where: { id: tournamentId },
@@ -176,24 +171,18 @@ async function getOrCreateTimerState(
         !!tournament?.custom_blind_levels
       );
 
-      // Check for custom blind levels first, then fall back to preset schedule
+      // Check for custom blind levels first, then fall back to DB schedule
       if (tournament?.custom_blind_levels) {
         try {
           blindLevels = JSON.parse(tournament.custom_blind_levels as string);
-          console.log(
-            `Using custom blind levels with ${blindLevels.length} levels`
-          );
+          console.log(`Using custom blind levels with ${blindLevels.length} levels`);
         } catch (parseError) {
-          console.error("Error parsing custom_blind_levels, falling back to preset:", parseError);
-          blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+          console.error("Error parsing custom_blind_levels, falling back to DB schedule:", parseError);
+          blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
         }
-      } else if (tournament?.blind_schedule) {
-        blindLevels = getBlindSchedule(tournament.blind_schedule);
-        console.log(
-          `Using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
-        );
       } else {
-        console.log(`Using default schedule with ${blindLevels.length} levels`);
+        blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
+        console.log(`Using DB schedule id="${tournament.blind_schedule}" with ${blindLevels.length} levels`);
       }
     } catch (error) {
       console.error("Error fetching tournament blind schedule:", error);
@@ -392,35 +381,29 @@ async function resetTimer(tournamentId: number): Promise<TimerState | null> {
   if (!timer) return null;
 
   // Reload blind schedule from database in case it changed
-  let blindLevels = DEFAULT_BLIND_LEVELS;
+  let blindLevels: BlindLevel[];
   try {
     const tournament = await prisma.tournamentDraft.findUnique({
       where: { id: tournamentId },
       select: { blind_schedule: true, custom_blind_levels: true },
     });
 
-    // Check for custom blind levels first, then fall back to preset schedule
+    // Check for custom blind levels first, then fall back to DB schedule
     if (tournament?.custom_blind_levels) {
       try {
         blindLevels = JSON.parse(tournament.custom_blind_levels as string);
-        console.log(
-          `Reset timer: using custom blind levels with ${blindLevels.length} levels`
-        );
+        console.log(`Reset timer: using custom blind levels with ${blindLevels.length} levels`);
       } catch (parseError) {
-        console.error("Error parsing custom_blind_levels during reset, falling back to preset:", parseError);
-        blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+        console.error("Error parsing custom_blind_levels during reset, falling back to DB schedule:", parseError);
+        blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
       }
-    } else if (tournament?.blind_schedule) {
-      blindLevels = getBlindSchedule(tournament.blind_schedule);
-      console.log(
-        `Reset timer: using ${tournament.blind_schedule} schedule with ${blindLevels.length} levels`
-      );
+    } else {
+      blindLevels = await resolveBlindSchedule(tournament?.blind_schedule ?? null);
+      console.log(`Reset timer: using DB schedule id="${tournament?.blind_schedule}" with ${blindLevels.length} levels`);
     }
   } catch (error) {
-    console.error(
-      "Error fetching tournament blind schedule during reset:",
-      error
-    );
+    console.error("Error fetching tournament blind schedule during reset:", error);
+    blindLevels = await resolveBlindSchedule(null); // Use fallback
   }
 
   timer.blindLevels = blindLevels;
@@ -556,18 +539,18 @@ async function loadTimerStateFromDB(
         );
       }
 
-      // Get blind levels - check for custom levels first, then fall back to preset
-      let blindLevels;
+      // Get blind levels - check for custom levels first, then fall back to DB schedule
+      let blindLevels: BlindLevel[];
       if (tournament.custom_blind_levels) {
         try {
           blindLevels = JSON.parse(tournament.custom_blind_levels as string);
           console.log(`Loading custom blind levels with ${blindLevels.length} levels`);
         } catch (parseError) {
-          console.error("Error parsing custom_blind_levels, falling back to preset:", parseError);
-          blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+          console.error("Error parsing custom_blind_levels, falling back to DB schedule:", parseError);
+          blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
         }
       } else {
-        blindLevels = getBlindSchedule(tournament.blind_schedule || "standard");
+        blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
       }
 
       return {
@@ -1287,8 +1270,8 @@ app.prepare().then(async () => {
         const previousLevelCount = timer.blindLevels.length;
 
         try {
-          // Update the timer with new blind levels
-          const newBlindLevels = getBlindSchedule(scheduleId);
+          // Update the timer with new blind levels from DB
+          const newBlindLevels = await resolveBlindSchedule(scheduleId);
           timer.blindLevels = newBlindLevels;
           timer.currentLevel = 1;
           timer.timeRemaining = newBlindLevels[0].duration * 60;
@@ -1320,7 +1303,7 @@ app.prepare().then(async () => {
               levelCount: previousLevelCount,
             },
             newValue: {
-              scheduleName: scheduleId,
+              scheduleId: scheduleId,
               levelCount: newBlindLevels.length,
             },
             metadata: null,

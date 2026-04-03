@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Star,
   Calendar,
+  ListOrdered,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -27,6 +28,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const navItems = [
     { href: base, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
+    { href: `${base}/blind-schedules`, label: "Blind Schedules", icon: ListOrdered },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
     { href: `${base}/settings`, label: "Identity", icon: Settings },
     { href: `${base}/access`, label: "Access", icon: Shield },

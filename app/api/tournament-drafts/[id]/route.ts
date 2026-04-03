@@ -230,16 +230,10 @@ export async function PATCH(
     const leagueId = await getLeagueIdFromRequest(request);
     const { blind_schedule, custom_blind_levels, period_ids } = body;
 
-    // Validate blind_schedule value if provided
-    if (
-      blind_schedule &&
-      !["standard", "medium", "turbo", "No300600"].includes(blind_schedule)
-    ) {
+    // Validate blind_schedule value if provided - must be a numeric string (DB ID)
+    if (blind_schedule && isNaN(parseInt(blind_schedule, 10))) {
       return NextResponse.json(
-        {
-          error:
-            "Invalid blind schedule. Must be 'standard', 'medium', 'turbo', or 'No300600'",
-        },
+        { error: "Invalid blind schedule. Must be a numeric schedule ID." },
         { status: 400 }
       );
     }

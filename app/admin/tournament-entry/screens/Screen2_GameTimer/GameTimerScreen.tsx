@@ -2,8 +2,9 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MinimalGameTimer } from './MinimalGameTimer';
+import { getBlindScheduleDisplayName } from '@/lib/blind-schedule-label';
 import { ScreenTabs } from '../../components/ScreenTabs';
 import { ScreenNumber } from '../../hooks/useScreenRouter';
 
@@ -19,6 +20,7 @@ interface TournamentDraft {
   updated_at: string;
   player_count: number;
   blind_schedule?: string;
+  custom_blind_levels?: string | null;
 }
 
 interface Player {
@@ -55,6 +57,31 @@ export function GameTimerScreen({
   currentScreen,
   onScreenChange
 }: GameTimerScreenProps) {
+  const [blindScheduleRows, setBlindScheduleRows] = useState<
+    { id: number; name: string }[]
+  >([]);
+
+  useEffect(() => {
+    fetch("/api/blind-schedules")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setBlindScheduleRows(
+            data.map((row: { id: number; name: string }) => ({
+              id: Number(row.id),
+              name: row.name,
+            })),
+          );
+        }
+      })
+      .catch(() => setBlindScheduleRows([]));
+  }, []);
+
+  const blindScheduleName = getBlindScheduleDisplayName(
+    currentDraft,
+    blindScheduleRows,
+  );
+
   // Calculate players remaining (those without ko_position)
   const playersRemaining = players.filter(p => p.ko_position === null).length;
 
@@ -88,6 +115,7 @@ export function GameTimerScreen({
           oneMinuteAudio={oneMinuteAudio}
           levelChangeAudio={levelChangeAudio}
           enableAudio={enableAudio}
+          blindScheduleName={blindScheduleName}
         />
       </div>
     </div>

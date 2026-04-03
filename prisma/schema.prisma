@@ -138,6 +138,7 @@ model TournamentDraft {
   tournament_date         DateTime                @db.Date
   tournament_time         DateTime?               @db.Time(0)
   director_name           String                  @db.VarChar(255)
+  venue                   String                  @db.VarChar(255)
   start_points            Int                     @default(0)
   status                  TournamentDraftStatus   @default(in_progress)
   created_by              String?                 @db.VarChar(255)
@@ -145,7 +146,7 @@ model TournamentDraft {
   updated_at              DateTime                @default(now()) @updatedAt @db.Timestamp(0)
   game_uid                String?                 @db.VarChar(100)
   file_name               String?                 @db.VarChar(255)
-  blind_schedule          String?                 @default("standard") @db.VarChar(50)
+  blind_schedule          String?                 @default("1") @db.VarChar(50)
   custom_blind_levels     String?                 @db.LongText
   check_in_token          String?                 @db.VarChar(36)
   timer_current_level     Int?                    @default(1)
@@ -160,7 +161,6 @@ model TournamentDraft {
   games                   games[]
   players                 TournamentDraftPlayer[]
   leagues                 leagues                 @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_league")
-  venue                   venues?                 @relation(fields: [venue_id], references: [id], onUpdate: Restrict, map: "fk_tournament_drafts_venue")
   tournament_feed_items   tournament_feed_items[]
 
   @@index([status], map: "idx_status")
@@ -168,7 +168,6 @@ model TournamentDraft {
   @@index([game_uid], map: "idx_game_uid")
   @@index([check_in_token], map: "idx_check_in_token")
   @@index([league_id], map: "idx_tournament_drafts_league")
-  @@index([venue_id], map: "idx_tournament_drafts_venue")
   @@map("tournament_drafts")
 }
 
@@ -335,6 +334,7 @@ model leagues {
   league_settings     String?               @db.LongText
   created             DateTime              @default(now()) @db.Timestamp(0)
   modified            DateTime              @default(now()) @db.Timestamp(0)
+  blind_schedules     BlindSchedule[]
   competition_periods competition_periods[]
   games               games[]
   players_v2          players_v2[]
@@ -385,17 +385,16 @@ model players_v2 {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model venues {
-  id               Int               @id @default(autoincrement())
-  league_id        Int               @default(1)
-  name             String            @unique(map: "uq_venues_name") @db.VarChar(255)
-  address          String?           @db.VarChar(300)
-  is_active        Boolean           @default(true)
-  cutoff_time      Int?
-  created          DateTime          @default(now()) @db.Timestamp(0)
-  modified         DateTime          @default(now()) @db.Timestamp(0)
-  games            games[]
-  tournamentDrafts TournamentDraft[]
-  leagues          leagues           @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
+  id          Int      @id @default(autoincrement())
+  league_id   Int      @default(1)
+  name        String   @unique(map: "uq_venues_name") @db.VarChar(255)
+  address     String?  @db.VarChar(300)
+  is_active   Boolean  @default(true)
+  cutoff_time Int?
+  created     DateTime @default(now()) @db.Timestamp(0)
+  modified    DateTime @default(now()) @db.Timestamp(0)
+  games       games[]
+  leagues     leagues  @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_venues_league")
 
   @@index([league_id], map: "idx_venues_league")
 }
@@ -466,6 +465,23 @@ model tournament_draft_action_log {
   @@unique([game_uid, sequence_num], map: "uq_game_sequence")
   @@index([game_uid, status], map: "idx_game_status")
   @@index([game_uid], map: "idx_game_uid")
+}
+
+model BlindSchedule {
+  id          Int      @id @default(autoincrement())
+  league_id   Int?
+  name        String   @db.VarChar(100)
+  description String   @default("") @db.VarChar(255)
+  levels      String   @db.LongText
+  is_active   Boolean  @default(true)
+  created_by  String?  @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  leagues     leagues? @relation(fields: [league_id], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@index([league_id], map: "idx_league_id")
+  @@index([is_active], map: "idx_is_active")
+  @@map("blind_schedules")
 }
 
 enum TournamentDraftStatus {

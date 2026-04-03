@@ -66,12 +66,30 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** Default blind_schedules.id for new drafts ("Standard" system schedule). */
+const DEFAULT_BLIND_SCHEDULE_ID = "1";
+
 // POST - Create new tournament draft
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tournament_date, tournament_time, director_name, venue_id, start_points, period_ids } = body;
+    const {
+      tournament_date,
+      tournament_time,
+      director_name,
+      venue_id,
+      start_points,
+      period_ids,
+      blind_schedule,
+    } = body;
     const leagueId = await getLeagueIdFromRequest(request);
+
+    const scheduleId =
+      typeof blind_schedule === "string" &&
+      blind_schedule.trim() !== "" &&
+      !isNaN(parseInt(blind_schedule, 10))
+        ? blind_schedule.trim()
+        : DEFAULT_BLIND_SCHEDULE_ID;
 
     console.log("Creating tournament with data:", body, "for league_id:", leagueId);
 
@@ -94,10 +112,10 @@ export async function POST(request: NextRequest) {
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
       INSERT INTO tournament_drafts
-      (tournament_date, tournament_time, director_name, venue_id, start_points, created_by, status, period_ids, league_id)
+      (tournament_date, tournament_time, director_name, venue_id, start_points, blind_schedule, created_by, status, period_ids, league_id)
       VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${venue_id}, ${
       start_points || 0
-    }, 'admin', 'in_progress', ${periodIdsJson}, ${leagueId})
+    }, ${scheduleId}, 'admin', 'in_progress', ${periodIdsJson}, ${leagueId})
     `;
 
     console.log("Insert result:", result);

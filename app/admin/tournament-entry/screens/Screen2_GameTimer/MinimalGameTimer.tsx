@@ -33,6 +33,8 @@ interface MinimalGameTimerProps {
   oneMinuteAudio: HTMLAudioElement | null;
   levelChangeAudio: HTMLAudioElement | null;
   enableAudio: () => void;
+  /** Resolved schedule title (not DB id) */
+  blindScheduleName?: string;
 }
 
 export function MinimalGameTimer({
@@ -41,7 +43,8 @@ export function MinimalGameTimer({
   audioEnabled,
   oneMinuteAudio,
   levelChangeAudio,
-  enableAudio
+  enableAudio,
+  blindScheduleName,
 }: MinimalGameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [displaySeconds, setDisplaySeconds] = useState<number>(0);
@@ -366,6 +369,15 @@ export function MinimalGameTimer({
         >
           🔇 Enable Sound
         </button>
+      )}
+
+      {blindScheduleName && (
+        <div className="text-xs text-gray-500 uppercase tracking-wider text-center">
+          Schedule:{' '}
+          <span className="text-purple-400 font-medium normal-case">
+            {blindScheduleName}
+          </span>
+        </div>
       )}
 
       {/* Time Remaining */}

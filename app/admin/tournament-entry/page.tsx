@@ -24,6 +24,7 @@ interface TournamentDraft {
   updated_at: string;
   player_count: number;
   blind_schedule?: string;
+  custom_blind_levels?: string | null;
 }
 
 interface Player {

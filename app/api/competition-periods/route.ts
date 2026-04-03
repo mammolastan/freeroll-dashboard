@@ -64,13 +64,15 @@ export async function GET(request: Request) {
 // POST - Create a new competition period
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { league_id, name, period_type, start_date, end_date, is_active = true } = body;
+    const leagueIdNum = await getLeagueIdFromRequest(request);
 
-    // Validate required fields
-    if (!league_id || !name || !period_type || !start_date || !end_date) {
+    const body = await request.json();
+    const { name, period_type, start_date, end_date, is_active = true } = body;
+
+    // Validate required fields (league comes from session / request, not trusted client body)
+    if (!name || !period_type || !start_date || !end_date) {
       return NextResponse.json(
-        { error: "Missing required fields: league_id, name, period_type, start_date, end_date" },
+        { error: "Missing required fields: name, period_type, start_date, end_date" },
         { status: 400 }
       );
     }
@@ -90,7 +92,7 @@ export async function POST(request: NextRequest) {
     // Create the new period
     const newPeriod = await prisma.competition_periods.create({
       data: {
-        league_id: parseInt(league_id),
+        league_id: leagueIdNum,
         name,
         period_type,
         start_date: new Date(start_date),
