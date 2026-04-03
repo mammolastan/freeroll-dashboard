@@ -12,7 +12,7 @@ export default async function SeasonsPage({ params }: PageProps) {
   const leagueId = await getLeagueIdBySlug(leagueSlug);
 
   return (
-    <div className="">
+    <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-white mb-1">
         Competition Seasons
       </h1>
