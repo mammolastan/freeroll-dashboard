@@ -282,6 +282,8 @@ export function FullAdminScreen({
 
   // Blind schedule edit modal
   const [showBlindEditModal, setShowBlindEditModal] = useState(false);
+  // Track current timer level for locking past blind levels in edit modal
+  const [currentTimerLevel, setCurrentTimerLevel] = useState(1);
 
   // League blind schedules from API
   interface LeagueSchedule {
@@ -346,13 +348,32 @@ export function FullAdminScreen({
   useEffect(() => {
     if (currentDraft) {
       socket.emit("joinRoom", currentDraft.id.toString());
+      // Request timer sync to get current level
+      socket.emit("timer:requestSync", { tournamentId: currentDraft.id });
     }
+
+    // Listen for timer updates to track current level
+    const handleTimerUpdate = (state: { tournamentId: number; currentLevel: number }) => {
+      if (currentDraft && state.tournamentId === currentDraft.id) {
+        setCurrentTimerLevel(state.currentLevel);
+      }
+    };
+    const handleTimerSync = (state: { tournamentId: number; currentLevel: number }) => {
+      if (currentDraft && state.tournamentId === currentDraft.id) {
+        setCurrentTimerLevel(state.currentLevel);
+      }
+    };
+
+    socket.on("timer:update", handleTimerUpdate);
+    socket.on("timer:sync", handleTimerSync);
 
     return () => {
       if (currentDraft) {
         socket.off("updatePlayers");
         socket.off("tournament:updated");
       }
+      socket.off("timer:update", handleTimerUpdate);
+      socket.off("timer:sync", handleTimerSync);
     };
   }, [currentDraft]);
 
@@ -3145,6 +3166,7 @@ export function FullAdminScreen({
                         )?.levels ?? null
                   }
                   isCustomized={Boolean(currentDraft.custom_blind_levels)}
+                  currentTimerLevel={currentTimerLevel}
                   onSave={async (levels: BlindLevel[]) => {
                     const customLevelsJson = JSON.stringify(levels);
                     try {
@@ -3164,9 +3186,10 @@ export function FullAdminScreen({
                           ...currentDraft,
                           custom_blind_levels: customLevelsJson,
                         });
-                        // Reset timer to apply new levels
-                        socket.emit("timer:reset", {
+                        // Update timer blind levels without resetting time/level
+                        socket.emit("timer:updateLevels", {
                           tournamentId: currentDraft.id,
+                          levels: levels,
                         });
                       } else {
                         throw new Error("Failed to save custom blind levels");

@@ -17,8 +17,10 @@ interface BlindScheduleEditModalProps {
   /** True when draft has saved custom_blind_levels (vs editing a preset copy) */
   isCustomized: boolean;
   onSave: (levels: BlindLevel[]) => Promise<void>;
-  /** Refresh league schedule list after “Save to league” succeeds */
+  /** Refresh league schedule list after "Save to league" succeeds */
   onSavedToLeague?: () => void;
+  /** Current blind level the timer is on (1-indexed). Levels <= this are locked by default. */
+  currentTimerLevel?: number;
 }
 
 export function BlindScheduleEditModal({
@@ -29,9 +31,12 @@ export function BlindScheduleEditModal({
   isCustomized,
   onSave,
   onSavedToLeague,
+  currentTimerLevel = 1,
 }: BlindScheduleEditModalProps) {
   const [levels, setLevels] = useState<BlindLevel[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  // "Start New" mode: when true, all levels are unlocked for creating a new schedule
+  const [isStartNewMode, setIsStartNewMode] = useState(false);
 
   const [saveToLeagueOpen, setSaveToLeagueOpen] = useState(false);
   const [saveToLeagueTitle, setSaveToLeagueTitle] = useState("");
@@ -55,6 +60,7 @@ export function BlindScheduleEditModal({
       setSaveToLeagueTitle("");
       setSaveToLeagueDescription("");
       setSaveToLeagueError(null);
+      setIsStartNewMode(false);
     }
   }, [isOpen]);
 
@@ -108,6 +114,11 @@ export function BlindScheduleEditModal({
     field: keyof BlindLevel,
     value: number | boolean,
   ) => {
+    // Don't allow changing locked levels (current or previous)
+    const level = levels[index];
+    if (!isStartNewMode && level && level.level <= currentTimerLevel) {
+      return;
+    }
     setLevels((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -116,6 +127,11 @@ export function BlindScheduleEditModal({
   };
 
   const handleDeleteLevel = (index: number) => {
+    // Don't allow deleting locked levels (current or previous)
+    const level = levels[index];
+    if (!isStartNewMode && level && level.level <= currentTimerLevel) {
+      return;
+    }
     setLevels((prev) => {
       const updated = prev.filter((_, i) => i !== index);
       // Renumber levels
@@ -216,17 +232,144 @@ export function BlindScheduleEditModal({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {levels.map((level, index) => (
-                  <tr
-                    key={index}
-                    className={level.isbreak ? "bg-yellow-50" : ""}
-                  >
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-gray-900">
-                        {level.level}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
+                {levels.map((level, index) => {
+                  // Lock levels at or before current timer level (unless in Start New mode)
+                  const isLocked = !isStartNewMode && level.level <= currentTimerLevel;
+                  return (
+                    <tr
+                      key={index}
+                      className={`${level.isbreak ? "bg-yellow-50" : ""} ${isLocked ? "opacity-60 bg-gray-50" : ""}`}
+                    >
+                      <td className="px-3 py-2">
+                        <span className="font-medium text-gray-900">
+                          {level.level}
+                          {isLocked && <span className="ml-1 text-gray-400 text-xs">🔒</span>}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={level.duration}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "duration",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-20 px-2 py-1 border border-gray-300 rounded text-black text-center ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="1"
+                          disabled={isLocked}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.smallBlind}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "smallBlind",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-24 px-2 py-1 border border-gray-300 rounded text-black text-center ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={level.isbreak || isLocked}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.bigBlind}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "bigBlind",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-24 px-2 py-1 border border-gray-300 rounded text-black text-center ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={level.isbreak || isLocked}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.ante || 0}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "ante",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-20 px-2 py-1 border border-gray-300 rounded text-black text-center ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={level.isbreak || isLocked}
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={level.isbreak || false}
+                          onChange={(e) =>
+                            handleLevelChange(index, "isbreak", e.target.checked)
+                          }
+                          className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isLocked ? "cursor-not-allowed" : ""}`}
+                          disabled={isLocked}
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          onClick={() => handleDeleteLevel(index)}
+                          className={`p-1 rounded transition-colors ${isLocked ? "text-gray-300 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
+                          title={isLocked ? "Cannot delete locked level" : "Delete level"}
+                          disabled={isLocked}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {levels.map((level, index) => {
+              const isLocked = !isStartNewMode && level.level <= currentTimerLevel;
+              return (
+                <div
+                  key={index}
+                  className={`border rounded-lg p-3 ${level.isbreak ? "bg-yellow-50 border-yellow-200" : "bg-white border-gray-200"} ${isLocked ? "opacity-60" : ""}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold text-gray-900">
+                      {level.isbreak ? `Break` : `Level ${level.level}`}
+                      {isLocked && <span className="ml-1 text-gray-400 text-xs">🔒</span>}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteLevel(index)}
+                      className={`p-1.5 rounded transition-colors ${isLocked ? "text-gray-300 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}`}
+                      title={isLocked ? "Cannot delete locked level" : "Delete level"}
+                      disabled={isLocked}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Duration (min)
+                      </label>
                       <input
                         type="number"
                         value={level.duration}
@@ -237,207 +380,98 @@ export function BlindScheduleEditModal({
                             parseInt(e.target.value) || 0,
                           )
                         }
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-black text-center"
+                        className={`w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
                         min="1"
+                        disabled={isLocked}
                       />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.smallBlind}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "smallBlind",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-24 px-2 py-1 border border-gray-300 rounded text-black text-center"
-                        min="0"
-                        disabled={level.isbreak}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.bigBlind}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "bigBlind",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-24 px-2 py-1 border border-gray-300 rounded text-black text-center"
-                        min="0"
-                        disabled={level.isbreak}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.ante || 0}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "ante",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-black text-center"
-                        min="0"
-                        disabled={level.isbreak}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-center">
+                    </div>
+                    <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
+                        id={`break-${index}`}
                         checked={level.isbreak || false}
                         onChange={(e) =>
                           handleLevelChange(index, "isbreak", e.target.checked)
                         }
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isLocked ? "cursor-not-allowed" : ""}`}
+                        disabled={isLocked}
                       />
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        onClick={() => handleDeleteLevel(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete level"
+                      <label
+                        htmlFor={`break-${index}`}
+                        className="text-sm text-gray-700"
                       >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        Break
+                      </label>
+                    </div>
+                  </div>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-3">
-            {levels.map((level, index) => (
-              <div
-                key={index}
-                className={`border rounded-lg p-3 ${level.isbreak ? "bg-yellow-50 border-yellow-200" : "bg-white border-gray-200"}`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-gray-900">
-                    {level.isbreak ? `Break` : `Level ${level.level}`}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteLevel(index)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                    title="Delete level"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {!level.isbreak && (
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Small
+                        </label>
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.smallBlind}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "smallBlind",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={isLocked}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Big
+                        </label>
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.bigBlind}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "bigBlind",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={isLocked}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Ante
+                        </label>
+                        <input
+                          type="number"
+                          step={50}
+                          value={level.ante || 0}
+                          onChange={(e) =>
+                            handleLevelChange(
+                              index,
+                              "ante",
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
+                          className={`w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm ${isLocked ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          min="0"
+                          disabled={isLocked}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Duration (min)
-                    </label>
-                    <input
-                      type="number"
-                      value={level.duration}
-                      onChange={(e) =>
-                        handleLevelChange(
-                          index,
-                          "duration",
-                          parseInt(e.target.value) || 0,
-                        )
-                      }
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center"
-                      min="1"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`break-${index}`}
-                      checked={level.isbreak || false}
-                      onChange={(e) =>
-                        handleLevelChange(index, "isbreak", e.target.checked)
-                      }
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label
-                      htmlFor={`break-${index}`}
-                      className="text-sm text-gray-700"
-                    >
-                      Break
-                    </label>
-                  </div>
-                </div>
-
-                {!level.isbreak && (
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Small
-                      </label>
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.smallBlind}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "smallBlind",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Big
-                      </label>
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.bigBlind}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "bigBlind",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Ante
-                      </label>
-                      <input
-                        type="number"
-                        step={50}
-                        value={level.ante || 0}
-                        onChange={(e) =>
-                          handleLevelChange(
-                            index,
-                            "ante",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-black text-center text-sm"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Add buttons */}
@@ -468,21 +502,36 @@ export function BlindScheduleEditModal({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={openSaveToLeagueDialog}
-            className="px-3 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
-            title="Save these levels as a reusable league schedule"
-          >
-            Save to League
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save local changes"}
-          </button>
+          {isStartNewMode ? (
+            /* Start New Mode: show Save to League button */
+            <button
+              type="button"
+              onClick={openSaveToLeagueDialog}
+              className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm transition-colors"
+              title="Save these levels as a reusable league schedule"
+            >
+              Save to League
+            </button>
+          ) : (
+            /* Normal Mode: show Start New and Save Local Changes buttons */
+            <>
+              <button
+                type="button"
+                onClick={() => setIsStartNewMode(true)}
+                className="px-3 py-2 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm transition-colors"
+                title="Unlock all levels to create an entirely new blind schedule"
+              >
+                Start New
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Local Changes"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -28,13 +28,32 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const navItems = [
     { href: base, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
-    { href: `${base}/blind-schedules`, label: "Blind Schedules", icon: ListOrdered },
+    {
+      href: `${base}/blind-schedules`,
+      label: "Blind Schedules",
+      icon: ListOrdered,
+    },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
-    { href: `${base}/settings`, label: "Identity", icon: Settings },
-    { href: `${base}/access`, label: "Access", icon: Shield },
-    { href: `${base}/scoring`, label: "Scoring", icon: Trophy },
-    { href: `${base}/badges`, label: "Badges", icon: Star },
-    { href: `${base}/game-defaults`, label: "Game Defaults", icon: Gamepad2 },
+    {
+      href: `${base}/settings`,
+      label: "Identity",
+      icon: Settings,
+      isDisabled: true,
+    },
+    { href: `${base}/access`, label: "Access", icon: Shield, isDisabled: true },
+    {
+      href: `${base}/scoring`,
+      label: "Scoring",
+      icon: Trophy,
+      isDisabled: true,
+    },
+    { href: `${base}/badges`, label: "Badges", icon: Star, isDisabled: true },
+    {
+      href: `${base}/game-defaults`,
+      label: "Game Defaults",
+      icon: Gamepad2,
+      isDisabled: true,
+    },
     ...(canManageRoles(role)
       ? [{ href: `${base}/members`, label: "Members", icon: Users }]
       : []),
@@ -49,17 +68,20 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
         <p className="text-sm text-white/60 mt-1 capitalize">{role}</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, isDisabled }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                active
-                  ? "bg-cyan-500/20 text-cyan-300"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+    ${
+      isDisabled
+        ? "line-through opacity-40 cursor-not-allowed"
+        : active
+          ? "bg-cyan-500/20 text-cyan-300"
+          : "text-white/60 hover:text-white hover:bg-white/5"
+    }`}
             >
               <Icon size={16} />
               {label}

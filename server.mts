@@ -1315,6 +1315,38 @@ app.prepare().then(async () => {
         }
       });
 
+      // Update blind levels without resetting timer position (for mid-tournament edits)
+      socket.on("timer:updateLevels", async ({ tournamentId, levels }) => {
+        const timer = await getOrCreateTimerState(tournamentId);
+        if (!timer) {
+          console.error(`Cannot update levels - tournament ${tournamentId} not found`);
+          return;
+        }
+
+        console.log(`Updating blind levels for tournament ${tournamentId} (keeping level ${timer.currentLevel}, time ${timer.timeRemaining}s)`);
+
+        // Update the blind levels while preserving current level and time
+        timer.blindLevels = levels;
+
+        // Save state change to database
+        await saveTimerStateToDB(tournamentId, timer);
+
+        const timerPayload = {
+          tournamentId: timer.tournamentId,
+          currentLevel: timer.currentLevel,
+          timeRemaining: timer.timeRemaining,
+          isRunning: timer.isRunning,
+          isPaused: timer.isPaused,
+          blindLevels: timer.blindLevels,
+          lastUpdate: timer.lastUpdate,
+          serverTime: Date.now(),
+        };
+        io.to(tournamentId.toString()).emit("timer:update", timerPayload);
+        console.log(
+          `Timer levels updated for tournament ${tournamentId} (current level: ${timer.currentLevel}, ${timer.blindLevels.length} total levels)`
+        );
+      });
+
       socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
       });
