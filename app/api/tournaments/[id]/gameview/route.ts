@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Tournament, Player, GameViewData } from "@/lib/realtime/types";
+import { getLeagueConfig } from "@/lib/league-config";
 
 interface TournamentRow {
   id: number;
@@ -12,6 +13,7 @@ interface TournamentRow {
   status: string;
   start_points: number;
   director_name: string | null;
+  league_id: number;
 }
 
 interface PlayerRow {
@@ -57,7 +59,8 @@ export async function GET(
         v.name as venue,
         td.status,
         td.start_points,
-        td.director_name
+        td.director_name,
+        td.league_id
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentId}
@@ -71,6 +74,9 @@ export async function GET(
     }
 
     const tournamentRow = tournamentResult[0];
+
+    // Get league config for timezone
+    const leagueConfig = await getLeagueConfig(tournamentRow.league_id);
 
     // Fetch players with their photo URLs from the players table
     const playersResult = await prisma.$queryRaw<PlayerRow[]>`
@@ -103,6 +109,7 @@ export async function GET(
       max_players: null,
       start_points: Number(tournamentRow.start_points) || 0,
       td: tournamentRow.director_name || null,
+      timezone: leagueConfig.timezone,
     };
 
     // Transform players data

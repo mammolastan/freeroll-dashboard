@@ -1,12 +1,10 @@
 // app/api/rankings/monthly/route.ts
 import { NextResponse } from "next/server";
-import {
-  getCurrentETDate,
-  getMonthDateRange,
-} from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { getLeagueConfig } from "@/lib/league-config";
+import { getLeagueNow, getLeagueMonthRange } from "@/lib/league-time";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -38,6 +36,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const leagueId = await getLeagueIdFromRequest(request);
+
+    // Get league config for timezone
+    const config = await getLeagueConfig(leagueId);
+    const timezone = config.timezone;
 
     // Check for period_id first (new approach)
     const periodIdParam = searchParams.get("period_id");
@@ -79,13 +81,13 @@ export async function GET(request: Request) {
       const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
       // Get the target date (current or previous month)
-      const currentDate = getCurrentETDate();
+      const currentDate = getLeagueNow(timezone);
       targetDate = isCurrentMonth
         ? currentDate
         : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
 
       // Get the date range for the target month
-      const dateRange = getMonthDateRange(targetDate);
+      const dateRange = getLeagueMonthRange(timezone, targetDate);
       startOfMonth = dateRange.startOfMonth;
       endOfMonth = dateRange.endOfMonth;
     }
@@ -224,7 +226,7 @@ export async function GET(request: Request) {
       rankings,
       month: periodName || targetDate.toLocaleString("default", {
         month: "long",
-        timeZone: "America/New_York",
+        timeZone: timezone,
       }),
       year: targetDate.getFullYear(),
       ...(periodId && { period_id: periodId }),

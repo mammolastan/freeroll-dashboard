@@ -7,7 +7,8 @@ import Link from 'next/link';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { PlacementFrequencyChart } from './PlacementFrequencyChart'
 import { DateRangePicker } from './DateRangePicker';
-import { formatGameDate, formatDateRangeText } from '@/lib/utils';
+import { formatDateRangeText } from '@/lib/utils';
+import { formatLeagueDate } from '@/lib/league-time';
 import { TooltipProvider, MobileTooltipTrigger } from "@/components/ui/tooltip"
 import VenueSelector from './VenueSelector';
 import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
@@ -15,7 +16,7 @@ import { HelpCircle, Swords } from "lucide-react"
 import { KnockoutStats } from './KnockoutStats';
 import { PersonalBestCard } from './PersonalBestCard';
 import { useLeagueParam } from '@/lib/useLeagueParam';
-import { useLeaguePrefix } from '@/lib/LeagueContext';
+import { useLeaguePrefix, useLeagueTimezone } from '@/lib/LeagueContext';
 
 interface PlayerStats {
     quarterlyStats: {
@@ -77,6 +78,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     // League param for multi-tenant support
     const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
     const leaguePrefix = useLeaguePrefix();
+    const timezone = useLeagueTimezone();
 
     const [selectedRange, setSelectedRange] = useState(() => {
         if (initialRange) {
@@ -463,7 +465,7 @@ Math: log(total_players + 1 / Placement)`}
                                     >
                                         <div className="font-medium text-gray-800">{game.venue}</div>
                                         <div className="text-sm text-gray-500">
-                                            {formatGameDate(game.date)}
+                                            {formatLeagueDate(game.date, timezone)}
                                         </div>
                                         <div className="mt-1 text-sm">
                                             <span className="text-amber-600">Place: {game.placement}</span>

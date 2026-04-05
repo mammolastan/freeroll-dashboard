@@ -6,19 +6,27 @@ import { usePathname } from 'next/navigation';
 
 interface LeagueContextValue {
   leagueSlug: string | null;
+  timezone: string;
 }
 
-const LeagueContext = createContext<LeagueContextValue>({ leagueSlug: null });
+const DEFAULT_TIMEZONE = 'America/New_York';
+
+const LeagueContext = createContext<LeagueContextValue>({
+  leagueSlug: null,
+  timezone: DEFAULT_TIMEZONE,
+});
 
 export function LeagueProvider({
   slug,
+  timezone = DEFAULT_TIMEZONE,
   children,
 }: {
   slug: string;
+  timezone?: string;
   children: React.ReactNode;
 }) {
   return (
-    <LeagueContext.Provider value={{ leagueSlug: slug }}>
+    <LeagueContext.Provider value={{ leagueSlug: slug, timezone }}>
       {children}
     </LeagueContext.Provider>
   );
@@ -26,6 +34,11 @@ export function LeagueProvider({
 
 export function useLeague() {
   return useContext(LeagueContext);
+}
+
+/** Convenience hook for components that only need the timezone */
+export function useLeagueTimezone(): string {
+  return useContext(LeagueContext).timezone;
 }
 
 // Reserved paths that are NOT league slugs

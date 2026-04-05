@@ -1,6 +1,7 @@
 // app/[leagueSlug]/layout.tsx
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { prisma } from '@/lib/prisma';
+import { getLeagueConfig } from '@/lib/league-config';
 import { notFound } from 'next/navigation';
 
 export default async function LeagueLayout({
@@ -23,8 +24,11 @@ export default async function LeagueLayout({
     notFound();
   }
 
+  // Fetch league config to get timezone
+  const config = await getLeagueConfig(league.id);
+
   return (
-    <LeagueProvider slug={leagueSlug}>
+    <LeagueProvider slug={leagueSlug} timezone={config.timezone}>
       {children}
     </LeagueProvider>
   );

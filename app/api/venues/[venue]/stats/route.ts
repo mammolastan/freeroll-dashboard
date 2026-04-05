@@ -1,9 +1,10 @@
 // app/api/venues/[venue]/stats/route.ts
 import { NextResponse } from "next/server";
-import { getCurrentETDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { Prisma } from "@prisma/client";
+import { getLeagueConfig } from "@/lib/league-config";
+import { getLeagueNow, getLeagueMonthRange, formatLeagueDate } from "@/lib/league-time";
 
 function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   return results.map((record) => {
@@ -17,48 +18,6 @@ function serializeResults(results: RawQueryResult[]): RawQueryResult[] {
   });
 }
 
-// Helper function to create dates in ET
-function createDateFromET(
-  year: number,
-  month: number,
-  day = 1,
-  hour = 0
-): Date {
-  const date = new Date(Date.UTC(year, month, day, hour));
-  return new Date(
-    date.toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
-}
-
-function getDateRangeForMonth(date: Date): {
-  startDate: Date;
-  endDate: Date;
-  monthName: string;
-  year: number;
-} {
-  // Get ET date components
-  const etDate = new Date(
-    date.toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
-  const etYear = etDate.getFullYear();
-  const etMonth = etDate.getMonth();
-
-  // Create start and end dates
-  const startDate = createDateFromET(etYear, etMonth);
-  const endDate = createDateFromET(etYear, etMonth + 1, 0, 23);
-  endDate.setUTCMinutes(59);
-  endDate.setUTCSeconds(59);
-  endDate.setUTCMilliseconds(999);
-
-  // Get the month name directly from the ET date
-  const monthName = etDate.toLocaleString("en-US", {
-    month: "long",
-    timeZone: "America/New_York",
-  });
-
-  return { startDate, endDate, monthName, year: etYear };
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ venue: string }> }
@@ -69,21 +28,31 @@ export async function GET(
     const venue = decodeURIComponent(venueParam);
     const isCurrentMonth = searchParams.get("currentMonth") !== "false";
 
-    // Get current date
-    let baseDate = getCurrentETDate();
+    // Get the venue to find its league
+    const venueRecord = await prisma.venues.findFirst({
+      where: { name: venue },
+      select: { league_id: true },
+    });
+
+    // Get league config for timezone (default to ET if venue not found)
+    const leagueId = venueRecord?.league_id ?? 1;
+    const config = await getLeagueConfig(leagueId);
+    const timezone = config.timezone;
+
+    // Get current date in league timezone
+    let baseDate = getLeagueNow(timezone);
 
     // Adjust for previous month if needed
     if (!isCurrentMonth) {
-      const etDate = new Date(
-        baseDate.toLocaleString("en-US", { timeZone: "America/New_York" })
-      );
-      etDate.setMonth(etDate.getMonth() - 1);
-      baseDate = etDate;
+      baseDate.setMonth(baseDate.getMonth() - 1);
     }
 
-    // Get date range and details
-    const { startDate, endDate, monthName, year } =
-      getDateRangeForMonth(baseDate);
+    // Get date range for the month
+    const { startOfMonth: startDate, endOfMonth: endDate } = getLeagueMonthRange(timezone, baseDate);
+
+    // Get month name and year
+    const monthName = formatLeagueDate(baseDate.toISOString(), timezone, 'monthYear').split(' ')[0];
+    const year = baseDate.getFullYear();
 
     const dateCondition = Prisma.sql`g.date >= DATE(${startDate}) AND g.date <= DATE(${endDate})`;
 

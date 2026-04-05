@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { formatGameDate } from '@/lib/utils'
+import { formatLeagueDate } from '@/lib/league-time'
 import Link from 'next/link'
 import { ArrowLeft, Swords, Search } from 'lucide-react'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
@@ -44,6 +44,7 @@ interface KnockoutStats {
         knockoutCount: number
     }
     headToHead: HeadToHead | null
+    timezone: string
 }
 
 export default function KnockoutsPage({ params }: { params: { uid: string } }) {
@@ -216,7 +217,7 @@ export default function KnockoutsPage({ params }: { params: { uid: string } }) {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            Latest: {formatGameDate(player.games[0].date)} at {player.games[0].venue}
+                                            Latest: {formatLeagueDate(player.games[0].date, stats.timezone)} at {player.games[0].venue}
                                         </div>
                                     </div>
                                 ))}
@@ -256,7 +257,7 @@ export default function KnockoutsPage({ params }: { params: { uid: string } }) {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            Latest: {formatGameDate(player.games[0].date)} at {player.games[0].venue}
+                                            Latest: {formatLeagueDate(player.games[0].date, stats.timezone)} at {player.games[0].venue}
                                         </div>
                                     </div>
                                 ))}
@@ -326,7 +327,7 @@ export default function KnockoutsPage({ params }: { params: { uid: string } }) {
 
                                                 return (
                                                     <tr key={`${game.fileName}-${index}`}>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatGameDate(game.date)}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatLeagueDate(game.date, stats.timezone)}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.venue}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.player1Placement || '-'}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{game.player2Placement || '-'}</td>

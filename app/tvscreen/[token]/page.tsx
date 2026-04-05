@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { TVScreenTimer } from "./TVScreenTimer";
 import { TournamentFeed } from "@/components/TournamentFeed";
-import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
+import { formatTime, formatCutoffTime } from "@/lib/utils";
+import { formatLeagueDate } from "@/lib/league-time";
 import "./tvscreen.css";
 
 interface HourlyWeather {
@@ -127,10 +128,11 @@ export default function TVScreenPage() {
         <h1>{gameData.tournament.title}</h1>
         <div className="tvscreen-header-meta">
           <span>
-            {formatGameDate(
+            {formatLeagueDate(
               typeof gameData.tournament.date === "string"
                 ? gameData.tournament.date
-                : gameData.tournament.date.toISOString()
+                : gameData.tournament.date.toISOString(),
+              gameData.tournament.timezone
             )}
           </span>
           {formatTime(gameData.tournament.time) && (

@@ -9,7 +9,8 @@ import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
 import { QrCode, UserPlus } from "lucide-react";
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
-import { formatGameDate, formatTime, formatCutoffTime } from "@/lib/utils";
+import { formatTime, formatCutoffTime } from "@/lib/utils";
+import { formatLeagueDate, getLeagueNow } from "@/lib/league-time";
 import { TournamentFeed } from "@/components/TournamentFeed";
 
 interface TournamentHeaderData {
@@ -18,9 +19,10 @@ interface TournamentHeaderData {
   time?: string | null;
   venue?: string | null;
   td?: string | null;
+  timezone: string;
 }
 
-function isPastCutoff(date: string | Date, time?: string | null): boolean {
+function isPastCutoff(date: string | Date, time: string | null | undefined, timezone: string): boolean {
   if (!time) return false;
 
   try {
@@ -48,7 +50,9 @@ function isPastCutoff(date: string | Date, time?: string | null): boolean {
     const cutoffDate = new Date(`${dateOnly}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`);
     cutoffDate.setMinutes(cutoffDate.getMinutes() + 100);
 
-    return new Date() > cutoffDate;
+    // Get current time in the league's timezone
+    const now = getLeagueNow(timezone);
+    return now > cutoffDate;
   } catch {
     return false;
   }
@@ -67,10 +71,11 @@ function TournamentHeader({
             {tournament.title}
           </h1>
           <p className="text-gray-400 mt-1">
-            {formatGameDate(
+            {formatLeagueDate(
               typeof tournament.date === "string"
                 ? tournament.date
                 : tournament.date.toISOString(),
+              tournament.timezone
             )}
             {formatTime(tournament.time) && (
               <span className="ml-2 text-cyan-300 font-semibold">
@@ -122,7 +127,8 @@ export default function GameViewPage() {
     const checkCutoff = () => {
       const pastCutoff = isPastCutoff(
         gameData.tournament.date,
-        gameData.tournament.time
+        gameData.tournament.time,
+        gameData.tournament.timezone
       );
       setCheckInDisabled(pastCutoff);
     };
@@ -246,10 +252,11 @@ export default function GameViewPage() {
               showQRCode={showQRCode}
               setShowQRCode={setShowQRCode}
               currentDraft={{
-                tournament_date: formatGameDate(
+                tournament_date: formatLeagueDate(
                   typeof gameData.tournament.date === "string"
                     ? gameData.tournament.date
                     : gameData.tournament.date.toISOString(),
+                  gameData.tournament.timezone
                 ),
                 venue: gameData.tournament.venue || "",
               }}

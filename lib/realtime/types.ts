@@ -31,6 +31,7 @@ export interface Tournament {
   max_players: number | null;
   start_points: number;
   td: string | null; // tournament director name
+  timezone: string; // IANA timezone string (e.g. 'America/New_York')
 }
 
 export interface GameViewData {

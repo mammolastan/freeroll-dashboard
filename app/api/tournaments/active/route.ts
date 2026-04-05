@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types"
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { getLeagueConfig } from "@/lib/league-config";
 
 // Disable caching for this route to always get fresh tournament data
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const revalidate = 0;
 export async function GET(request: NextRequest) {
   try {
     const leagueId = await getLeagueIdFromRequest(request);
+    const leagueConfig = await getLeagueConfig(leagueId);
 
     const activeTournaments = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
@@ -73,6 +75,7 @@ export async function GET(request: NextRequest) {
           total_players: Number(tournament.total_players),
           players_remaining: Number(tournament.players_remaining),
           tournament_time: formattedTime,
+          timezone: leagueConfig.timezone,
         };
       }
     );

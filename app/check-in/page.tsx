@@ -5,7 +5,8 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight } from 'lucide-react';
-import { formatGameDate, formatTime, formatCutoffTime } from '@/lib/utils';
+import { formatTime, formatCutoffTime } from '@/lib/utils';
+import { formatLeagueDate } from '@/lib/league-time';
 
 interface ActiveTournament {
     id: number;
@@ -23,6 +24,7 @@ interface ActiveTournament {
     players_remaining: number;
     created_at: string;
     updated_at: string;
+    timezone: string;
 }
 
 function CheckInPageContent() {
@@ -140,7 +142,7 @@ function CheckInPageContent() {
                                         <div className="flex items-center gap-2 text-gray-300">
                                             <Calendar className="h-4 w-4 text-cyan-400" />
                                             <span className="text-sm">
-                                                {formatGameDate(tournament.tournament_date)}
+                                                {formatLeagueDate(tournament.tournament_date, tournament.timezone)}
                                                 {formatTime(tournament.tournament_time) && (
                                                     <span className="ml-2 text-cyan-300 font-semibold">
                                                         @ {formatTime(tournament.tournament_time)}

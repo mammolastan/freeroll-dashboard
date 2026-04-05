@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Star, Users, ChevronRight } from "lucide-react";
 import RotatingImageLoader from "@/components/ui/RotatingImageLoader";
-import { formatGameDateET } from "@/lib/utils";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { useLeagueParam } from "@/lib/useLeagueParam";
-import { useLeaguePrefix } from "@/lib/LeagueContext";
+import { useLeaguePrefix, useLeagueTimezone } from "@/lib/LeagueContext";
+import { formatLeagueDate } from "@/lib/league-time";
 
 interface TopPlayer {
   name: string;
@@ -29,11 +29,11 @@ interface Game {
 }
 
 //Helper function to format the timestamp
-function formatFetchTimestamp(isoString: string | null): string {
+function formatFetchTimestamp(isoString: string | null, timezone: string): string {
   if (!isoString) return "No data";
 
   return new Date(isoString).toLocaleString("en-US", {
-    timeZone: "America/New_York",
+    timeZone: timezone,
     year: "numeric",
     month: "numeric",
     day: "numeric",
@@ -52,6 +52,7 @@ export default function GamesPage() {
   // League param for multi-tenant support
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
   const leaguePrefix = useLeaguePrefix();
+  const timezone = useLeagueTimezone();
 
   useEffect(() => {
     if (!leagueParamReady) return;
@@ -98,7 +99,7 @@ export default function GamesPage() {
                 {game.venue}
               </CardTitle>
               <p className="text-sm text-gray-600">
-                {formatGameDateET(game.date)}
+                {formatLeagueDate(game.date, timezone)}
               </p>
             </CardHeader>
             <CardContent className="pt-4">
@@ -178,7 +179,7 @@ export default function GamesPage() {
       </div>
       {/* Timestamp display */}
       <div className="text-xs text-gray-400 select-none">
-        Data fetched: {formatFetchTimestamp(fetchTimestamp)}
+        Data fetched: {formatFetchTimestamp(fetchTimestamp, timezone)}
       </div>
     </div>
   );

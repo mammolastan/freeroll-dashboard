@@ -4,10 +4,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Swords, Search } from 'lucide-react';
-import { formatGameDate } from '@/lib/utils';
+import { formatLeagueDate } from '@/lib/league-time';
 import { PlayerSearch } from './PlayerSearch';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useLeagueParam } from '@/lib/useLeagueParam';
+import { useLeagueTimezone } from '@/lib/LeagueContext';
 
 interface KnockoutGame {
     date: string;
@@ -60,6 +61,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
 
     // League param for multi-tenant support
     const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+    const timezone = useLeagueTimezone();
 
     useEffect(() => {
         if (!leagueParamReady) return;
@@ -210,7 +212,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
                                                     </div>
                                                     {player.games && player.games.length > 0 && (
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            Latest: {formatGameDate(player.games[0].date)} at {player.games[0].venue}
+                                                            Latest: {formatLeagueDate(player.games[0].date, timezone)} at {player.games[0].venue}
                                                         </div>
                                                     )}
                                                 </div>
@@ -254,7 +256,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
                                                     </div>
                                                     {player.games && player.games.length > 0 && (
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            Latest: {formatGameDate(player.games[0].date)} at {player.games[0].venue}
+                                                            Latest: {formatLeagueDate(player.games[0].date, timezone)} at {player.games[0].venue}
                                                         </div>
                                                     )}
                                                 </div>
@@ -378,7 +380,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
 
                                                             return (
                                                                 <tr key={`${game.fileName}-${index}`}>
-                                                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">{formatGameDate(game.date)}</td>
+                                                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">{formatLeagueDate(game.date, timezone)}</td>
                                                                     <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">{game.venue}</td>
                                                                     <td className="px-3 py-2 whitespace-nowrap">{outcome}</td>
                                                                 </tr>

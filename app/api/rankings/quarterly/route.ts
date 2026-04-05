@@ -1,13 +1,11 @@
 // app/api/rankings/quarterly/route.ts
 import { NextResponse } from "next/server";
-import {
-  getCurrentETDate,
-  getQuarterDateRange,
-} from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { Prisma } from "@prisma/client";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { getLeagueConfig } from "@/lib/league-config";
+import { getLeagueNow, getLeagueQuarterRange } from "@/lib/league-time";
 
 // Set revalidation period to 6 hours (in seconds)
 export const revalidate = 21600; // 6 * 60 * 60 = 21600 seconds
@@ -33,6 +31,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const leagueId = await getLeagueIdFromRequest(request);
+
+    // Get league config for timezone
+    const config = await getLeagueConfig(leagueId);
+    const timezone = config.timezone;
 
     // Check for period_id first (new approach)
     const periodIdParam = searchParams.get("period_id");
@@ -106,8 +108,8 @@ export async function GET(request: Request) {
         // Fall back to the old currentQuarter logic for backward compatibility
         const isCurrentQuarter = searchParams.get("currentQuarter") !== "false";
 
-        // Get current date in ET
-        const currentDate = getCurrentETDate();
+        // Get current date in league timezone
+        const currentDate = getLeagueNow(timezone);
         const currentYear = currentDate.getFullYear();
         const currentQuarter = getCurrentQuarter(currentDate);
 
@@ -124,8 +126,8 @@ export async function GET(request: Request) {
           : currentYear;
       }
 
-      // Get date range for the quarter using legacy method
-      const dateRange = getQuarterDateRange(targetQuarter, targetYear);
+      // Get date range for the quarter using timezone-aware method
+      const dateRange = getLeagueQuarterRange(timezone, targetQuarter, targetYear);
       startOfQuarter = dateRange.startOfQuarter;
       endOfQuarter = dateRange.endOfQuarter;
     }

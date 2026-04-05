@@ -6,6 +6,8 @@ import { ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import RotatingImageLoader from '@/components/ui/RotatingImageLoader'
 import { useLeagueParam } from '@/lib/useLeagueParam'
+import { useLeagueTimezone } from '@/lib/LeagueContext'
+import { getLeagueNow } from '@/lib/league-time'
 
 interface Venue {
     name: string;
@@ -32,17 +34,19 @@ export default function VenuesPage() {
     const [venueData, setVenueData] = useState<VenueData | null>(null)
     const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null)
     const [loading, setLoading] = useState(true)
-    const [isCurrentMonth, setIsCurrentMonth] = useState(() => {
-        const now = new Date()
-        const etDate = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))
-        const dayOfMonth = etDate.getDate()
-        // If we're in first 7 days, default to previous month
-        return dayOfMonth > 7
-    })
     const [isTransitioning, setIsTransitioning] = useState(false)
 
     // League param for multi-tenant support
     const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam()
+    const timezone = useLeagueTimezone()
+
+    // Determine if we should show current or previous month based on day of month
+    const [isCurrentMonth, setIsCurrentMonth] = useState(() => {
+        const leagueNow = getLeagueNow(timezone)
+        const dayOfMonth = leagueNow.getDate()
+        // If we're in first 7 days, default to previous month
+        return dayOfMonth > 7
+    })
 
     useEffect(() => {
         if (!leagueParamReady) return;

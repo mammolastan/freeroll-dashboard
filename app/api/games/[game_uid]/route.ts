@@ -1,7 +1,8 @@
 // app/api/games/[game_uid]/route.ts
 import { NextResponse } from "next/server";
-import { formatGameDateET } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { getLeagueConfig } from "@/lib/league-config";
+import { formatLeagueDate } from "@/lib/league-time";
 
 export async function GET(
   request: Request,
@@ -60,6 +61,10 @@ export async function GET(
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
+    // Get league config for timezone
+    const config = await getLeagueConfig(game.league_id);
+    const timezone = config.timezone;
+
     // Calculate game statistics
     const totalPlayers = players.length;
     const totalKnockouts = players.reduce(
@@ -72,7 +77,7 @@ export async function GET(
     );
     const averagePoints = totalPoints / totalPlayers;
 
-    const gameDate = formatGameDateET(players[0].game_date.toISOString());
+    const gameDate = formatLeagueDate(players[0].game_date.toISOString(), timezone, 'full');
 
     const gameDetails = {
       players: players.map((player) => ({

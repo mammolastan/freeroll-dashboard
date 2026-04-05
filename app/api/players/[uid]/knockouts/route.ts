@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
+import { getLeagueConfig } from "@/lib/league-config";
 
 export async function GET(
   request: Request,
@@ -39,6 +40,9 @@ export async function GET(
     }
 
     const leagueId = player.league_id;
+
+    // Get league config for timezone
+    const leagueConfig = await getLeagueConfig(leagueId);
 
     // Build date condition for games table
     const dateConditions: Prisma.Sql[] = [];
@@ -261,6 +265,7 @@ export async function GET(
         knockoutCount: Number(totalStats[0]?.knockoutCount || 0),
       },
       headToHead,
+      timezone: leagueConfig.timezone,
     };
 
     return NextResponse.json(response);
