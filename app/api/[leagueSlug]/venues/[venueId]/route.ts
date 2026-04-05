@@ -28,7 +28,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, address, isActive, cutoffTime } = body;
+  const { name, address, notes, isActive, cutoffTime } = body;
 
   try {
     const venue = await prisma.venues.update({
@@ -36,7 +36,8 @@ export async function PUT(
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(address !== undefined && { address: address?.trim() || null }),
-        ...(isActive !== undefined && { is_active: isActive }),
+        ...(notes !== undefined && { notes: notes || null }),
+        ...(isActive !== undefined && { is_active: Boolean(isActive) }),
         ...(cutoffTime !== undefined && {
           cutoff_time: cutoffTime ? parseInt(cutoffTime) : null,
         }),
@@ -48,6 +49,7 @@ export async function PUT(
         id: venue.id,
         name: venue.name,
         address: venue.address,
+        notes: venue.notes,
         isActive: venue.is_active,
         cutoffTime: venue.cutoff_time,
       },

@@ -4,12 +4,28 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Check, MapPin, Clock, Calendar, Trophy } from "lucide-react";
+import dynamic from "next/dynamic";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  MapPin,
+  Clock,
+  Calendar,
+} from "lucide-react";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/ui/RichTextEditor"),
+  { ssr: false }
+);
 
 interface Venue {
   id: number;
   name: string;
   address: string | null;
+  notes: string | null;
   isActive: boolean;
   cutoffTime: number | null;
   gameCount: number;
@@ -29,6 +45,7 @@ export default function VenuesAdminPage() {
   const [formData, setFormData] = useState({
     name: "",
     address: "",
+    notes: "",
     cutoffTime: "",
     isActive: true,
   });
@@ -66,6 +83,7 @@ export default function VenuesAdminPage() {
     setFormData({
       name: "",
       address: "",
+      notes: "",
       cutoffTime: "",
       isActive: true,
     });
@@ -82,6 +100,7 @@ export default function VenuesAdminPage() {
     setFormData({
       name: venue.name,
       address: venue.address || "",
+      notes: venue.notes || "",
       cutoffTime: venue.cutoffTime?.toString() || "",
       isActive: venue.isActive,
     });
@@ -113,6 +132,7 @@ export default function VenuesAdminPage() {
         body: JSON.stringify({
           name: formData.name.trim(),
           address: formData.address.trim() || null,
+          notes: formData.notes || null,
           cutoffTime: formData.cutoffTime || null,
           isActive: formData.isActive,
         }),
@@ -219,6 +239,7 @@ export default function VenuesAdminPage() {
         <p className="text-white/40 text-sm mb-8">
           Manage venues for this league
         </p>
+
         <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
           <p className="text-white/40 text-sm">Loading venues...</p>
         </div>
@@ -243,7 +264,11 @@ export default function VenuesAdminPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-white mb-1">Venues</h2>
-          <p className="text-white/40 text-sm">Manage venues for this league</p>
+          <p className="text-white/40 text-sm">
+            Manage venues for this league
+            <br></br>
+            Active venues will be available when creating a new tournament.
+          </p>
         </div>
         <button
           onClick={openCreateModal}
@@ -313,7 +338,7 @@ export default function VenuesAdminPage() {
       {/* Create/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-md">
+          <div className="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-lg">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
               <h3 className="text-lg font-semibold text-white">
                 {editingVenue ? "Edit Venue" : "Add Venue"}
@@ -355,6 +380,18 @@ export default function VenuesAdminPage() {
                   }
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
                   placeholder="Street address (optional)"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">
+                  Notes
+                </label>
+                <RichTextEditor
+                  content={formData.notes}
+                  onChange={(html) => setFormData({ ...formData, notes: html })}
+                  placeholder="Add venue notes (parking info, contact details, etc.)"
                 />
               </div>
 
@@ -472,7 +509,10 @@ function VenueRow({
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <MapPin size={16} className="text-white/40 flex-shrink-0" />
+          <MapPin
+            size={16}
+            className="text-white/40 flex-shrink-0"
+          />
           <span className="text-white font-medium truncate">{venue.name}</span>
           {!venue.isActive && (
             <span className="px-2 py-0.5 bg-white/10 text-white/50 text-xs rounded">
@@ -483,12 +523,13 @@ function VenueRow({
         <div className="flex items-center gap-4 mt-1 text-white/40 text-sm flex-wrap">
           {/* Game stats */}
           <span className="flex items-center gap-1 flex-shrink-0">
-            <Trophy size={12} className="text-cyan-400" />
             {venue.gameCount} {venue.gameCount === 1 ? "game" : "games"}
           </span>
           <span className="flex items-center gap-1 flex-shrink-0">
             <Calendar size={12} />
-            {venue.lastGameDate ? `Last: ${formatDate(venue.lastGameDate)}` : "No games yet"}
+            {venue.lastGameDate
+              ? `Last: ${formatDate(venue.lastGameDate)}`
+              : "No games yet"}
           </span>
           {venue.cutoffTime && (
             <span className="flex items-center gap-1 flex-shrink-0">

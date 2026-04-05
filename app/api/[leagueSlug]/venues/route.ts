@@ -22,6 +22,7 @@ export async function GET(
     id: number;
     name: string;
     address: string | null;
+    notes: string | null;
     is_active: boolean;
     cutoff_time: number | null;
     game_count: bigint;
@@ -33,6 +34,7 @@ export async function GET(
     v.id,
     v.name,
     v.address,
+    v.notes,
     v.is_active,
     v.cutoff_time,
     COUNT(g.id) as game_count,
@@ -63,6 +65,7 @@ export async function GET(
     id: v.id,
     name: v.name,
     address: v.address,
+    notes: v.notes,
     isActive: v.is_active,
     cutoffTime: v.cutoff_time,
     gameCount: Number(v.game_count),
@@ -86,7 +89,7 @@ export async function POST(
   }
 
   const body = await req.json();
-  const { name, address, isActive, cutoffTime } = body;
+  const { name, address, notes, isActive, cutoffTime } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -98,7 +101,8 @@ export async function POST(
         league_id: leagueId,
         name: name.trim(),
         address: address?.trim() || null,
-        is_active: isActive ?? true,
+        notes: notes || null,
+        is_active: isActive !== undefined ? Boolean(isActive) : true,
         cutoff_time: cutoffTime ? parseInt(cutoffTime) : null,
       },
     });
@@ -109,6 +113,7 @@ export async function POST(
           id: venue.id,
           name: venue.name,
           address: venue.address,
+          notes: venue.notes,
           isActive: venue.is_active,
           cutoffTime: venue.cutoff_time,
         },

@@ -389,6 +389,7 @@ model venues {
   league_id   Int      @default(1)
   name        String   @unique(map: "uq_venues_name") @db.VarChar(255)
   address     String?  @db.VarChar(300)
+  notes       String?  @db.Text
   is_active   Boolean  @default(true)
   cutoff_time Int?
   created     DateTime @default(now()) @db.Timestamp(0)
@@ -477,7 +478,7 @@ model BlindSchedule {
   created_by  String?  @db.VarChar(255)
   created_at  DateTime @default(now()) @db.Timestamp(0)
   updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
-  leagues     leagues? @relation(fields: [league_id], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  leagues     leagues? @relation(fields: [league_id], references: [id], onUpdate: Restrict)
 
   @@index([league_id], map: "idx_league_id")
   @@index([is_active], map: "idx_is_active")

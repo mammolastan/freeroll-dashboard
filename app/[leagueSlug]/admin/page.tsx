@@ -6,6 +6,7 @@ import { getLeagueIdBySlug } from "@/lib/league-utils";
 import { getLeagueConfig } from "@/lib/league-config";
 import { getLeagueRole } from "@/lib/league-auth";
 import { prisma } from "@/lib/prisma";
+import { LeagueAdminsSection } from "./LeagueAdminsSection";
 
 interface PageProps {
   params: Promise<{ leagueSlug: string }>;
@@ -64,6 +65,12 @@ export default async function AdminDashboardPage({ params }: PageProps) {
           </p>
         </div>
       </div>
+
+      <LeagueAdminsSection
+        leagueSlug={leagueSlug}
+        currentUserRole={role}
+        currentUserUid={session!.user.uid}
+      />
 
       <p className="text-white/20 text-xs mt-8">
         League created{" "}

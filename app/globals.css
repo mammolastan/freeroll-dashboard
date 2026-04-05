@@ -78,3 +78,38 @@ a.freeroll-link:active {
   scrollbar-width: thin;
   scrollbar-color: rgba(6, 182, 212, 0.4) rgba(17, 24, 39, 0.8);
 }
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror a {
+  color: rgb(34, 211, 238);
+  text-decoration: underline;
+}
+
+.ProseMirror a:hover {
+  color: rgb(103, 232, 249);
+}
