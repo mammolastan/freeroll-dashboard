@@ -20,25 +20,33 @@ export function getLeagueNow(timezone: string): Date {
 /**
  * Formats a stored ISO date/datetime string for display in the league's timezone.
  *
- * IMPORTANT: For DATE-only values (no time component), the function appends
- * T12:00:00Z (noon UTC) before parsing. This ensures the displayed date is
- * always correct regardless of the league's UTC offset (avoids midnight rollover bugs).
- * Do NOT change this to T00:00:00Z.
+ * IMPORTANT: Calendar dates from the DB (`DATE` / `YYYY-MM-DD`) must not be parsed
+ * as `T00:00:00Z` — in US zones that shows as the previous day. We anchor plain
+ * `YYYY-MM-DD` and UTC-midnight ISO (`…T00:00:00Z`) to `T12:00:00Z` before formatting.
+ * True timestamps with a non-midnight UTC time are left unchanged.
  *
  * Replaces: formatGameDate(), formatETDate(), formatGameDateET()
  */
+function anchorCalendarDateForDisplay(isoString: string): string {
+  const trimmed = isoString.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T12:00:00Z`;
+  }
+  const utcMidnight = trimmed.match(
+    /^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.\d+)?(?:Z|[+-]00:00)$/
+  );
+  if (utcMidnight) {
+    return `${utcMidnight[1]}T12:00:00Z`;
+  }
+  return isoString;
+}
+
 export function formatLeagueDate(
   isoString: string,
   timezone: string,
   format: LeagueDateFormat = 'full'
 ): string {
-  let dateString = isoString;
-
-  // If it's a date-only string (YYYY-MM-DD), anchor to noon UTC
-  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
-    dateString = isoString + 'T12:00:00Z';
-  }
-
+  const dateString = anchorCalendarDateForDisplay(isoString);
   const date = new Date(dateString);
 
   const options: Intl.DateTimeFormatOptions = { timeZone: timezone };

@@ -42,6 +42,8 @@ export class TournamentService {
         max_players: null,
         start_points: data.start_points,
         td: data.director_name,
+        timezone: 'America/New_York', // Default timezone for legacy service
+        allow_chat: true, // Default to allowing chat
       };
     } catch (error) {
       console.error("Error fetching tournament data:", error);

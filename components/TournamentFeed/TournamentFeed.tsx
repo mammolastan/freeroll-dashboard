@@ -43,6 +43,8 @@ interface TournamentFeedProps {
   startPoints?: number;
   /** Player list for the "Players" tab - tab only shows when provided */
   players?: Player[];
+  /** Whether chat is allowed for this tournament (default: true) */
+  allowChat?: boolean;
 }
 
 function PlayersGrid({
@@ -171,6 +173,7 @@ export function TournamentFeed({
   totalPlayers,
   startPoints = 0,
   players,
+  allowChat = true,
 }: TournamentFeedProps) {
   const {
     items,
@@ -198,6 +201,13 @@ export function TournamentFeed({
   const [activeTab, setActiveTab] = useState<FeedTab>("all");
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
+
+  // Reset to "all" tab if chat is disabled and user was on chat tab
+  useEffect(() => {
+    if (!allowChat && activeTab === "chat") {
+      setActiveTab("all");
+    }
+  }, [allowChat, activeTab]);
 
   // Refs for the unified sliding indicator
   const headerContainerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +279,9 @@ export function TournamentFeed({
   const filteredItems = useMemo(() => {
     if (activeTab === "td") {
       // Include both TD messages and photos in the TD tab
-      return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo");
+      return items.filter(
+        (item) => item.item_type === "td_message" || item.item_type === "photo",
+      );
     }
     if (activeTab === "chat") {
       return items.filter((item) => item.item_type === "message");
@@ -279,7 +291,9 @@ export function TournamentFeed({
 
   // TD messages and photos for the middle column on large screens
   const tdMessages = useMemo(() => {
-    return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo");
+    return items.filter(
+      (item) => item.item_type === "td_message" || item.item_type === "photo",
+    );
   }, [items]);
 
   // Checkins and knockouts for the left column on large screens
@@ -317,16 +331,29 @@ export function TournamentFeed({
     });
 
     // New posts: sorted by recency (newest first)
-    newPosts.sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    newPosts.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
 
     // Older posts: sorted by total reactions (most reactions first)
     olderPosts.sort((a, b) => {
-      const aTotals = a.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
-      const bTotals = b.reactions?.totals || { heart: 0, diamond: 0, club: 0, spade: 0 };
-      const aTotal = aTotals.heart + aTotals.diamond + aTotals.club + aTotals.spade;
-      const bTotal = bTotals.heart + bTotals.diamond + bTotals.club + bTotals.spade;
+      const aTotals = a.reactions?.totals || {
+        heart: 0,
+        diamond: 0,
+        club: 0,
+        spade: 0,
+      };
+      const bTotals = b.reactions?.totals || {
+        heart: 0,
+        diamond: 0,
+        club: 0,
+        spade: 0,
+      };
+      const aTotal =
+        aTotals.heart + aTotals.diamond + aTotals.club + aTotals.spade;
+      const bTotal =
+        bTotals.heart + bTotals.diamond + bTotals.club + bTotals.spade;
       return bTotal - aTotal;
     });
 
@@ -335,7 +362,9 @@ export function TournamentFeed({
 
   // Count TD messages and photos for the tab badge
   const tdMessageCount = useMemo(() => {
-    return items.filter((item) => item.item_type === "td_message" || item.item_type === "photo").length;
+    return items.filter(
+      (item) => item.item_type === "td_message" || item.item_type === "photo",
+    ).length;
   }, [items]);
 
   // Count chat messages for the tab badge
@@ -500,26 +529,28 @@ export function TournamentFeed({
               >
                 Feed
               </button>
-              <button
-                ref={chatTabRef}
-                onClick={() => setActiveTab("chat")}
-                className={`px-2 py-1.5 text-xs font-medium transition-colors duration-300 flex items-center gap-1 shrink-0 relative z-10 border border-transparent rounded ${
-                  activeTab === "chat"
-                    ? "text-cyan-300"
-                    : "text-gray-400 hover:text-gray-300 hover:border-gray-600"
-                }`}
-              >
-                <MessageCircle className="h-4 w-4" />
-                {chatMessageCount > 0 && (
-                  <span
-                    className={`text-xs px-1 py-0.5 rounded-full transition-colors duration-300 ${
-                      activeTab === "chat" ? "bg-cyan-500/30" : "bg-gray-700"
-                    }`}
-                  >
-                    {chatMessageCount}
-                  </span>
-                )}
-              </button>
+              {allowChat && (
+                <button
+                  ref={chatTabRef}
+                  onClick={() => setActiveTab("chat")}
+                  className={`px-2 py-1.5 text-xs font-medium transition-colors duration-300 flex items-center gap-1 shrink-0 relative z-10 border border-transparent rounded ${
+                    activeTab === "chat"
+                      ? "text-cyan-300"
+                      : "text-gray-400 hover:text-gray-300 hover:border-gray-600"
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {chatMessageCount > 0 && (
+                    <span
+                      className={`text-xs px-1 py-0.5 rounded-full transition-colors duration-300 ${
+                        activeTab === "chat" ? "bg-cyan-500/30" : "bg-gray-700"
+                      }`}
+                    >
+                      {chatMessageCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 ref={tdTabRef}
                 onClick={() => setActiveTab("td")}
@@ -558,15 +589,21 @@ export function TournamentFeed({
       {/* Message Input + Reaction Balance */}
       {showInput && (
         <div className="border-b border-cyan-500/20">
-          <FeedInput
-            onSubmit={postMessage}
-            posting={posting}
-            canPost={canPost}
-          />
-          {canPost && reactionBalance && (
-            <div className="border-t border-gray-800/50">
-              <ReactionBalance balance={reactionBalance} />
-            </div>
+          {allowChat ? (
+            <>
+              <FeedInput
+                onSubmit={postMessage}
+                posting={posting}
+                canPost={canPost}
+              />
+              {canPost && reactionBalance && (
+                <div className="border-t border-gray-800/50">
+                  <ReactionBalance balance={reactionBalance} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className=""></div>
           )}
         </div>
       )}
@@ -957,76 +994,88 @@ export function TournamentFeed({
           </div>
         </div>
 
-        {/* Right Column - Chat Messages */}
-        <div className="flex-1 flex-shrink-0 flex flex-col">
-          {/* Column Header */}
-          <div className="px-3 py-2 border-b border-cyan-500/20 bg-purple-500/10">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">Chat</span>
-              {chatMessageCount > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
-                  {chatMessageCount}
+        {/* Right Column - Chat Messages (only shown when chat is allowed) */}
+        {allowChat && (
+          <div className="flex-1 flex-shrink-0 flex flex-col">
+            {/* Column Header */}
+            <div className="px-3 py-2 border-b border-cyan-500/20 bg-purple-500/10">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-purple-400" />
+                <span className="text-sm font-medium text-purple-300">
+                  Chat
                 </span>
+                {chatMessageCount > 0 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                    {chatMessageCount}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto scrollbar-styled">
+              {/* Loading State */}
+              {loading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 text-cyan-500 animate-spin" />
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading &&
+                !error &&
+                chatItemsSortedByReactions.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
+                    <p className="text-gray-500 text-sm">
+                      No chat messages yet
+                    </p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      Player messages will appear here
+                    </p>
+                  </div>
+                )}
+
+              {/* Feed Items - sorted by reaction count */}
+              {!loading && !error && chatItemsSortedByReactions.length > 0 && (
+                <div className="divide-y divide-gray-800/50">
+                  {chatItemsSortedByReactions.map((item) => {
+                    const isNew =
+                      Date.now() - new Date(item.created_at).getTime() <
+                      3 * 60 * 1000;
+                    return (
+                      <div
+                        key={item.id}
+                        className={
+                          isNew ? "border-l-2 border-l-emerald-400" : ""
+                        }
+                      >
+                        <FeedItem
+                          item={item}
+                          onDelete={
+                            isAdmin ? (itemId) => deleteItem(itemId) : undefined
+                          }
+                          totalPlayers={totalPlayers}
+                          startPoints={startPoints}
+                          onReact={handleReact}
+                          reactionBalance={reactionBalance}
+                          canReact={canPost}
+                          tournamentId={tournamentId}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Load More Indicator */}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
+                </div>
               )}
             </div>
           </div>
-
-          <div className="flex-1 overflow-y-auto scrollbar-styled">
-            {/* Loading State */}
-            {loading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 text-cyan-500 animate-spin" />
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!loading && !error && chatItemsSortedByReactions.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <MessageCircle className="h-10 w-10 text-gray-600 mb-3" />
-                <p className="text-gray-500 text-sm">No chat messages yet</p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Player messages will appear here
-                </p>
-              </div>
-            )}
-
-            {/* Feed Items - sorted by reaction count */}
-            {!loading && !error && chatItemsSortedByReactions.length > 0 && (
-              <div className="divide-y divide-gray-800/50">
-                {chatItemsSortedByReactions.map((item) => {
-                  const isNew = Date.now() - new Date(item.created_at).getTime() < 3 * 60 * 1000;
-                  return (
-                    <div
-                      key={item.id}
-                      className={isNew ? "border-l-2 border-l-emerald-400" : ""}
-                    >
-                      <FeedItem
-                        item={item}
-                        onDelete={
-                          isAdmin ? (itemId) => deleteItem(itemId) : undefined
-                        }
-                        totalPlayers={totalPlayers}
-                        startPoints={startPoints}
-                        onReact={handleReact}
-                        reactionBalance={reactionBalance}
-                        canReact={canPost}
-                        tournamentId={tournamentId}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Load More Indicator */}
-            {loadingMore && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 text-cyan-500 animate-spin" />
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ export interface Tournament {
   start_points: number;
   td: string | null; // tournament director name
   timezone: string; // IANA timezone string (e.g. 'America/New_York')
+  allow_chat: boolean; // whether players can send chat messages in the feed
 }
 
 export interface GameViewData {

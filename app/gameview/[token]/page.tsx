@@ -282,6 +282,7 @@ export default function GameViewPage() {
             totalPlayers={gameData.players.length}
             startPoints={gameData.tournament.start_points}
             players={gameData.players}
+            allowChat={gameData.tournament.allow_chat}
           />
         </div>
 

@@ -147,6 +147,7 @@ export function FullAdminScreen({
 
   // New tournament modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showGameOptions, setShowGameOptions] = useState(false);
   const [newTournament, setNewTournament] = useState({
     tournament_date: "",
     tournament_time: "",
@@ -154,6 +155,7 @@ export function FullAdminScreen({
     venue_id: null as number | null,
     start_points: 0,
     period_ids: [] as number[],
+    allow_chat: null as boolean | null, // null = use league default
   });
 
   // Competition periods state
@@ -462,7 +464,9 @@ export function FullAdminScreen({
         venue_id: null,
         start_points: 0,
         period_ids: [],
+        allow_chat: null,
       });
+      setShowGameOptions(false);
 
       // Refresh tournaments list
       loadTournaments();
@@ -2257,6 +2261,54 @@ export function FullAdminScreen({
                         placeholder="Starting points"
                       />
                     </div>
+
+                    {/* Game Options Collapsible */}
+                    <div className="border-t pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowGameOptions(!showGameOptions)}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${showGameOptions ? "rotate-180" : ""}`}
+                        />
+                        Game Options
+                      </button>
+                      {showGameOptions && (
+                        <div className="mt-3 space-y-3 pl-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900">
+                                Allow Chat
+                              </label>
+                              <p className="text-xs text-gray-500">
+                                {newTournament.allow_chat === null
+                                  ? "Using league default"
+                                  : newTournament.allow_chat
+                                    ? "Chat enabled"
+                                    : "Chat disabled"}
+                              </p>
+                            </div>
+                            <select
+                              value={newTournament.allow_chat === null ? "default" : newTournament.allow_chat ? "on" : "off"}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setNewTournament({
+                                  ...newTournament,
+                                  allow_chat: value === "default" ? null : value === "on",
+                                });
+                              }}
+                              className="px-3 py-1.5 border rounded text-black text-sm"
+                            >
+                              <option value="default">League Default</option>
+                              <option value="on">On</option>
+                              <option value="off">Off</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex gap-2 pt-4">
                       <button
                         onClick={createTournament}

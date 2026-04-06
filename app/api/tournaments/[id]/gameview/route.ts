@@ -14,6 +14,7 @@ interface TournamentRow {
   start_points: number;
   director_name: string | null;
   league_id: number;
+  allow_chat: boolean | null;
 }
 
 interface PlayerRow {
@@ -60,7 +61,8 @@ export async function GET(
         td.status,
         td.start_points,
         td.director_name,
-        td.league_id
+        td.league_id,
+        td.allow_chat
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentId}
@@ -75,8 +77,14 @@ export async function GET(
 
     const tournamentRow = tournamentResult[0];
 
-    // Get league config for timezone
+    // Get league config for timezone and defaults
     const leagueConfig = await getLeagueConfig(tournamentRow.league_id);
+
+    // Resolve effective allow_chat value (tournament override or league default)
+    // Note: MySQL returns 0/1 for booleans in raw queries, need to check for null explicitly
+    const effectiveAllowChat = tournamentRow.allow_chat === null
+      ? leagueConfig.gameDefaults.allowChat
+      : Boolean(tournamentRow.allow_chat);
 
     // Fetch players with their photo URLs from the players table
     const playersResult = await prisma.$queryRaw<PlayerRow[]>`
@@ -110,6 +118,7 @@ export async function GET(
       start_points: Number(tournamentRow.start_points) || 0,
       td: tournamentRow.director_name || null,
       timezone: leagueConfig.timezone,
+      allow_chat: effectiveAllowChat,
     };
 
     // Transform players data

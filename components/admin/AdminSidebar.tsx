@@ -47,7 +47,6 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       href: `${base}/game-defaults`,
       label: "Game Defaults",
       icon: Gamepad2,
-      isDisabled: true,
     },
     ...(canManageRoles(role)
       ? [{ href: `${base}/members`, label: "Members", icon: Users }]

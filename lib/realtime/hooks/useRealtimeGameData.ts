@@ -202,6 +202,8 @@ export function useRealtimeGameData(tournamentId: string | number) {
           max_players: null,
           start_points: 0,
           td: null,
+          timezone: 'America/New_York',
+          allow_chat: true,
         },
         players
       }));
