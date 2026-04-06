@@ -44,6 +44,9 @@ export default function CropModal({ imageSrc, onCropComplete, onCancel }: CropMo
             throw new Error("No crop area selected");
         }
 
+        // Max output dimension - matches server-side Sharp resize
+        const MAX_DIMENSION = 800;
+
         return new Promise((resolve, reject) => {
             const image = new Image();
             image.src = imageSrc;
@@ -56,24 +59,32 @@ export default function CropModal({ imageSrc, onCropComplete, onCancel }: CropMo
                     return;
                 }
 
-                // Set canvas size to the cropped area
-                canvas.width = croppedAreaPixels.width;
-                canvas.height = croppedAreaPixels.height;
+                // Calculate output size (resize to max 800x800, maintaining aspect ratio)
+                const cropWidth = croppedAreaPixels.width;
+                const cropHeight = croppedAreaPixels.height;
+                const scale = Math.min(1, MAX_DIMENSION / Math.max(cropWidth, cropHeight));
+                const outputWidth = Math.round(cropWidth * scale);
+                const outputHeight = Math.round(cropHeight * scale);
 
-                // Draw the cropped image
+                // Set canvas to the resized output dimensions
+                canvas.width = outputWidth;
+                canvas.height = outputHeight;
+
+                // Draw the cropped and resized image
                 ctx.drawImage(
                     image,
                     croppedAreaPixels.x,
                     croppedAreaPixels.y,
-                    croppedAreaPixels.width,
-                    croppedAreaPixels.height,
+                    cropWidth,
+                    cropHeight,
                     0,
                     0,
-                    croppedAreaPixels.width,
-                    croppedAreaPixels.height
+                    outputWidth,
+                    outputHeight
                 );
 
-                // Convert to blob as JPEG with compression (Sharp converts to WebP server-side anyway)
+                // Convert to PNG blob (preserves transparency, WebP conversion happens server-side)
+                // At 800x800 max, PNG size is reasonable (~1-3MB)
                 canvas.toBlob(
                     (blob) => {
                         if (blob) {
@@ -82,8 +93,7 @@ export default function CropModal({ imageSrc, onCropComplete, onCancel }: CropMo
                             reject(new Error("Could not create blob"));
                         }
                     },
-                    "image/jpeg",
-                    0.9  // 90% quality - good balance of size and quality
+                    "image/png"
                 );
             };
             image.onerror = () => reject(new Error("Could not load image"));
