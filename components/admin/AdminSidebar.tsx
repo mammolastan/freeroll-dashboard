@@ -34,12 +34,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       icon: ListOrdered,
     },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
-    {
-      href: `${base}/settings`,
-      label: "Identity",
-      icon: Settings,
-      isDisabled: true,
-    },
+    { href: `${base}/settings`, label: "Identity", icon: Settings },
     { href: `${base}/access`, label: "Access", icon: Shield, isDisabled: true },
     {
       href: `${base}/scoring`,
