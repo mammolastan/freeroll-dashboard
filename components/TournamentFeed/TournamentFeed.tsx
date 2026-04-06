@@ -602,9 +602,7 @@ export function TournamentFeed({
                 </div>
               )}
             </>
-          ) : (
-            <div className=""></div>
-          )}
+          ) : null}
         </div>
       )}
 

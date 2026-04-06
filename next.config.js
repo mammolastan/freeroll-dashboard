@@ -1,5 +1,9 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Avoid picking a parent folder when ~/package-lock.json exists (monorepo-ish layout)
+  outputFileTracingRoot: path.join(__dirname),
   output: "standalone", // Optimizes the output for production
   poweredByHeader: false,
   generateEtags: true,

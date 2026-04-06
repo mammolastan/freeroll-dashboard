@@ -8,6 +8,11 @@ import { PrismaClient } from "@prisma/client";
 import { resolveBlindSchedule, BlindLevel } from "./lib/blindLevels.mjs";
 import { TypedServer } from "./types/socket.js";
 import { AuditActionType, AuditActionCategory, AuditLogValue, AuditValue } from "./types/audit.js";
+import type { LeagueConfig } from "./types/league-config.js";
+import { DEFAULT_LEAGUE_CONFIG as DEFAULT_LEAGUE_CONFIG_MJS } from "./types/league-config-defaults.mjs";
+import type { Tournament } from "./lib/realtime/types.js";
+
+const DEFAULT_LEAGUE_CONFIG = DEFAULT_LEAGUE_CONFIG_MJS as LeagueConfig;
 
 // Initialize Prisma Client
 const globalForPrisma = globalThis as unknown as {
@@ -571,9 +576,52 @@ async function loadTimerStateFromDB(
   }
 }
 
-async function getTournamentData(tournamentDraftId: number) {
+// Loaded inline so `npm run dev:socket` (ESM + ts-node) does not import
+// fetch-tournament-realtime-snapshot.ts, which ts-node may compile as CJS and
+// break named ESM imports from server.mts.
+async function getLeagueConfigFromDb(leagueId: number): Promise<LeagueConfig> {
+  const league = await prisma.leagues.findUnique({
+    where: { id: leagueId },
+    select: { league_settings: true },
+  });
+
+  if (!league?.league_settings) {
+    return { ...DEFAULT_LEAGUE_CONFIG };
+  }
+
   try {
-    const tournament = await prisma.$queryRaw<RawQueryResult[]>`
+    const stored = JSON.parse(league.league_settings) as Partial<LeagueConfig>;
+    return {
+      ...DEFAULT_LEAGUE_CONFIG,
+      ...stored,
+      gameDefaults: {
+        ...DEFAULT_LEAGUE_CONFIG.gameDefaults,
+        ...(stored.gameDefaults ?? {}),
+      },
+      socialLinks: {
+        ...DEFAULT_LEAGUE_CONFIG.socialLinks,
+        ...(stored.socialLinks ?? {}),
+      },
+    };
+  } catch {
+    console.error(
+      `[Server] Failed to parse league_settings for league ${leagueId}`,
+    );
+    return { ...DEFAULT_LEAGUE_CONFIG };
+  }
+}
+
+function normalizeTournamentTimeForServer(raw: unknown): string | null {
+  if (raw == null) return null;
+  if (Buffer.isBuffer(raw)) return raw.toString("utf-8");
+  return String(raw);
+}
+
+async function getTournamentData(
+  tournamentDraftId: number,
+): Promise<Tournament | null> {
+  try {
+    const tournamentResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.id,
         CONCAT(
@@ -583,45 +631,43 @@ async function getTournamentData(tournamentDraftId: number) {
         ) as title,
         td.tournament_date,
         td.tournament_time,
-        td.director_name,
-        v.name as venue_name,
+        v.name as venue,
         td.status,
-        td.start_points
+        td.start_points,
+        td.director_name,
+        td.league_id,
+        td.allow_chat
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
       LIMIT 1
     `;
 
-    if (!Array.isArray(tournament) || tournament.length === 0) return null;
-
-    const data = tournament[0];
-
-    // Convert tournament_time Buffer to string if it exists
-    let timeString = null;
-    if (data.tournament_time) {
-      if (Buffer.isBuffer(data.tournament_time)) {
-        timeString = data.tournament_time.toString("utf-8");
-      } else {
-        timeString = String(data.tournament_time);
-      }
+    if (!Array.isArray(tournamentResult) || tournamentResult.length === 0) {
+      return null;
     }
 
-    const venueName =
-      data.venue_name !== null && data.venue_name !== undefined
-        ? String(data.venue_name)
-        : null;
+    const row = tournamentResult[0];
+    const leagueConfig = await getLeagueConfigFromDb(Number(row.league_id));
+
+    const allowRaw = row.allow_chat;
+    const effectiveAllowChat =
+      allowRaw === null || allowRaw === undefined
+        ? leagueConfig.gameDefaults.allowChat
+        : Boolean(allowRaw);
 
     return {
-      id: Number(data.id),
-      title: data.title != null ? String(data.title) : "Tournament",
-      date: data.tournament_date,
-      time: timeString,
-      venue: venueName,
-      status: String(data.status),
+      id: Number(row.id),
+      title: row.title != null ? String(row.title) : "Tournament",
+      date: new Date(row.tournament_date as string | Date),
+      time: normalizeTournamentTimeForServer(row.tournament_time),
+      venue: row.venue != null ? String(row.venue) : null,
+      status: (String(row.status) as Tournament["status"]) || "active",
       max_players: null,
-      start_points: Number(data.start_points) || 0,
-      td: data.director_name ? String(data.director_name) : null,
+      start_points: Number(row.start_points) || 0,
+      td: row.director_name ? String(row.director_name) : null,
+      timezone: leagueConfig.timezone,
+      allow_chat: effectiveAllowChat,
     };
   } catch (error) {
     console.error("Error fetching tournament data:", error);

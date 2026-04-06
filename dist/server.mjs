@@ -6,6 +6,8 @@ import next from "next";
 import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import { resolveBlindSchedule } from "./lib/blindLevels.mjs";
+import { DEFAULT_LEAGUE_CONFIG as DEFAULT_LEAGUE_CONFIG_MJS } from "./types/league-config-defaults.mjs";
+const DEFAULT_LEAGUE_CONFIG = DEFAULT_LEAGUE_CONFIG_MJS;
 // Initialize Prisma Client
 const globalForPrisma = globalThis;
 const prisma = (_a = globalForPrisma.prisma) !== null && _a !== void 0 ? _a : new PrismaClient();
@@ -456,9 +458,37 @@ async function loadTimerStateFromDB(tournamentId) {
         return null;
     }
 }
+// Loaded inline so `npm run dev:socket` (ESM + ts-node) does not import
+// fetch-tournament-realtime-snapshot.ts, which ts-node may compile as CJS and
+// break named ESM imports from server.mts.
+async function getLeagueConfigFromDb(leagueId) {
+    var _a, _b;
+    const league = await prisma.leagues.findUnique({
+        where: { id: leagueId },
+        select: { league_settings: true },
+    });
+    if (!(league === null || league === void 0 ? void 0 : league.league_settings)) {
+        return Object.assign({}, DEFAULT_LEAGUE_CONFIG);
+    }
+    try {
+        const stored = JSON.parse(league.league_settings);
+        return Object.assign(Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG), stored), { gameDefaults: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.gameDefaults), ((_a = stored.gameDefaults) !== null && _a !== void 0 ? _a : {})), socialLinks: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.socialLinks), ((_b = stored.socialLinks) !== null && _b !== void 0 ? _b : {})) });
+    }
+    catch (_c) {
+        console.error(`[Server] Failed to parse league_settings for league ${leagueId}`);
+        return Object.assign({}, DEFAULT_LEAGUE_CONFIG);
+    }
+}
+function normalizeTournamentTimeForServer(raw) {
+    if (raw == null)
+        return null;
+    if (Buffer.isBuffer(raw))
+        return raw.toString("utf-8");
+    return String(raw);
+}
 async function getTournamentData(tournamentDraftId) {
     try {
-        const tournament = await prisma.$queryRaw `
+        const tournamentResult = await prisma.$queryRaw `
       SELECT
         td.id,
         CONCAT(
@@ -468,41 +498,38 @@ async function getTournamentData(tournamentDraftId) {
         ) as title,
         td.tournament_date,
         td.tournament_time,
-        td.director_name,
-        v.name as venue_name,
+        v.name as venue,
         td.status,
-        td.start_points
+        td.start_points,
+        td.director_name,
+        td.league_id,
+        td.allow_chat
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
       LIMIT 1
     `;
-        if (!Array.isArray(tournament) || tournament.length === 0)
+        if (!Array.isArray(tournamentResult) || tournamentResult.length === 0) {
             return null;
-        const data = tournament[0];
-        // Convert tournament_time Buffer to string if it exists
-        let timeString = null;
-        if (data.tournament_time) {
-            if (Buffer.isBuffer(data.tournament_time)) {
-                timeString = data.tournament_time.toString("utf-8");
-            }
-            else {
-                timeString = String(data.tournament_time);
-            }
         }
-        const venueName = data.venue_name !== null && data.venue_name !== undefined
-            ? String(data.venue_name)
-            : null;
+        const row = tournamentResult[0];
+        const leagueConfig = await getLeagueConfigFromDb(Number(row.league_id));
+        const allowRaw = row.allow_chat;
+        const effectiveAllowChat = allowRaw === null || allowRaw === undefined
+            ? leagueConfig.gameDefaults.allowChat
+            : Boolean(allowRaw);
         return {
-            id: Number(data.id),
-            title: data.title != null ? String(data.title) : "Tournament",
-            date: data.tournament_date,
-            time: timeString,
-            venue: venueName,
-            status: String(data.status),
+            id: Number(row.id),
+            title: row.title != null ? String(row.title) : "Tournament",
+            date: new Date(row.tournament_date),
+            time: normalizeTournamentTimeForServer(row.tournament_time),
+            venue: row.venue != null ? String(row.venue) : null,
+            status: String(row.status) || "active",
             max_players: null,
-            start_points: Number(data.start_points) || 0,
-            td: data.director_name ? String(data.director_name) : null,
+            start_points: Number(row.start_points) || 0,
+            td: row.director_name ? String(row.director_name) : null,
+            timezone: leagueConfig.timezone,
+            allow_chat: effectiveAllowChat,
         };
     }
     catch (error) {
@@ -1119,6 +1146,31 @@ app.prepare().then(async () => {
                     console.error("Error changing timer schedule:", error);
                     socket.emit("timer:error", { message: "Failed to change schedule" });
                 }
+            });
+            // Update blind levels without resetting timer position (for mid-tournament edits)
+            socket.on("timer:updateLevels", async ({ tournamentId, levels }) => {
+                const timer = await getOrCreateTimerState(tournamentId);
+                if (!timer) {
+                    console.error(`Cannot update levels - tournament ${tournamentId} not found`);
+                    return;
+                }
+                console.log(`Updating blind levels for tournament ${tournamentId} (keeping level ${timer.currentLevel}, time ${timer.timeRemaining}s)`);
+                // Update the blind levels while preserving current level and time
+                timer.blindLevels = levels;
+                // Save state change to database
+                await saveTimerStateToDB(tournamentId, timer);
+                const timerPayload = {
+                    tournamentId: timer.tournamentId,
+                    currentLevel: timer.currentLevel,
+                    timeRemaining: timer.timeRemaining,
+                    isRunning: timer.isRunning,
+                    isPaused: timer.isPaused,
+                    blindLevels: timer.blindLevels,
+                    lastUpdate: timer.lastUpdate,
+                    serverTime: Date.now(),
+                };
+                io.to(tournamentId.toString()).emit("timer:update", timerPayload);
+                console.log(`Timer levels updated for tournament ${tournamentId} (current level: ${timer.currentLevel}, ${timer.blindLevels.length} total levels)`);
             });
             socket.on("disconnect", () => {
                 console.log(`User disconnected: ${socket.id}`);

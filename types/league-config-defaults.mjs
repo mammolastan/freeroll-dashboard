@@ -1,0 +1,51 @@
+/**
+ * Default league_settings shape — plain ESM so server.mts can import it without
+ * ts-node loading types/league-config.ts (avoids CJS/ESM and untranspiled .ts issues).
+ * Keep in sync with DEFAULT_LEAGUE_CONFIG in types/league-config.ts.
+ */
+export const DEFAULT_LEAGUE_CONFIG = {
+  leagueName: "",
+  leagueImageUrl: null,
+  contactEmail: null,
+  timezone: "America/New_York",
+  socialLinks: {},
+  allowSelfRegistration: false,
+  requireEmailVerification: false,
+  allowGuestCheckIn: false,
+  allowSelfCheckIn: true,
+  lateRegistrationWindowMinutes: 30,
+  allowPlayerProfiles: true,
+  allowProfilePictures: true,
+  allowNicknames: true,
+  showStatsPublicly: true,
+  leaderboardPublic: true,
+  gameHistoryPublic: true,
+  minimumGamesForRanking: 1,
+  badgesEnabled: true,
+  enabledBadgeIds: [],
+  placementPoints: [
+    { place: 1, points: 10 },
+    { place: 2, points: 7 },
+    { place: 3, points: 5 },
+    { place: 4, points: 4 },
+    { place: 5, points: 3 },
+    { place: 6, points: 2 },
+    { place: 7, points: 1 },
+    { place: 8, points: 1 },
+  ],
+  participationPoints: 1,
+  knockoutPoints: 1,
+  bonusPointsEnabled: true,
+  tiebreakerRule: "most_knockouts",
+  tournamentFeedEnabled: true,
+  chatEnabled: true,
+  gameDefaults: {
+    allowChat: true,
+    allowTvScreen: true,
+    allowSelfCheckIn: true,
+    showInActiveGames: true,
+    blindSchedule: "standard",
+    startPoints: 1,
+  },
+  pushNotificationsEnabled: false,
+};

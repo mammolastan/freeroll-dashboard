@@ -213,10 +213,27 @@ export function useRealtimeGameData(tournamentId: string | number) {
     // Handle tournament updates
     socket.on("tournament:updated", (event: { data: { tournament: Tournament } }) => {
       console.log("Tournament updated:", event.data.tournament);
-      setGameData(prev => ({
-        ...prev!,
-        tournament: event.data.tournament
-      }));
+      setGameData(prev => {
+        if (!prev) {
+          return { tournament: event.data.tournament, players: [] };
+        }
+        const incoming = event.data.tournament;
+        return {
+          ...prev,
+          tournament: {
+            ...prev.tournament,
+            ...incoming,
+            allow_chat:
+              incoming.allow_chat !== undefined
+                ? incoming.allow_chat
+                : prev.tournament.allow_chat,
+            timezone:
+              incoming.timezone !== undefined
+                ? incoming.timezone
+                : prev.tournament.timezone,
+          },
+        };
+      });
     });
 
     // Handle player updates

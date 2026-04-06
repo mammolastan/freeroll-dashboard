@@ -1,21 +1,8 @@
 // app/api/tournaments/[id]/gameview/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Tournament, Player, GameViewData } from "@/lib/realtime/types";
-import { getLeagueConfig } from "@/lib/league-config";
-
-interface TournamentRow {
-  id: number;
-  title: string;
-  tournament_date: string | Date;
-  tournament_time: string | null;
-  venue: string | null;
-  status: string;
-  start_points: number;
-  director_name: string | null;
-  league_id: number;
-  allow_chat: boolean | null;
-}
+import { Player, GameViewData } from "@/lib/realtime/types";
+import { fetchTournamentRealtimeSnapshot } from "@/lib/fetch-tournament-realtime-snapshot";
 
 interface PlayerRow {
   id: number;
@@ -46,45 +33,14 @@ export async function GET(
       );
     }
 
-    // Fetch tournament data — venue label comes from venues.name via venue_id
-    const tournamentResult = await prisma.$queryRaw<TournamentRow[]>`
-      SELECT
-        td.id,
-        CONCAT(
-          COALESCE(v.name, 'Tournament'),
-          ' - ',
-          DATE_FORMAT(td.tournament_date, '%m/%d/%Y')
-        ) as title,
-        td.tournament_date,
-        td.tournament_time,
-        v.name as venue,
-        td.status,
-        td.start_points,
-        td.director_name,
-        td.league_id,
-        td.allow_chat
-      FROM tournament_drafts td
-      LEFT JOIN venues v ON td.venue_id = v.id
-      WHERE td.id = ${tournamentId}
-    `;
+    const tournament = await fetchTournamentRealtimeSnapshot(tournamentId);
 
-    if (!tournamentResult || tournamentResult.length === 0) {
+    if (!tournament) {
       return NextResponse.json(
         { error: "Tournament not found" },
         { status: 404 }
       );
     }
-
-    const tournamentRow = tournamentResult[0];
-
-    // Get league config for timezone and defaults
-    const leagueConfig = await getLeagueConfig(tournamentRow.league_id);
-
-    // Resolve effective allow_chat value (tournament override or league default)
-    // Note: MySQL returns 0/1 for booleans in raw queries, need to check for null explicitly
-    const effectiveAllowChat = tournamentRow.allow_chat === null
-      ? leagueConfig.gameDefaults.allowChat
-      : Boolean(tournamentRow.allow_chat);
 
     // Fetch players with their photo URLs from the players table
     const playersResult = await prisma.$queryRaw<PlayerRow[]>`
@@ -105,21 +61,6 @@ export async function GET(
       WHERE tdp.tournament_draft_id = ${tournamentId}
       ORDER BY tdp.created_at ASC
     `;
-
-    // Transform tournament data
-    const tournament: Tournament = {
-      id: tournamentRow.id,
-      title: tournamentRow.title,
-      date: new Date(tournamentRow.tournament_date),
-      time: tournamentRow.tournament_time,
-      venue: tournamentRow.venue,
-      status: (tournamentRow.status as Tournament['status']) || 'active',
-      max_players: null,
-      start_points: Number(tournamentRow.start_points) || 0,
-      td: tournamentRow.director_name || null,
-      timezone: leagueConfig.timezone,
-      allow_chat: effectiveAllowChat,
-    };
 
     // Transform players data
     const players: Player[] = playersResult.map((row) => {
