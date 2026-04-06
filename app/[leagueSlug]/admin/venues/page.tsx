@@ -7,7 +7,6 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   Plus,
-  Pencil,
   Trash2,
   X,
   Check,
@@ -505,7 +504,8 @@ function VenueRow({
 
   return (
     <div
-      className={`px-4 py-3 flex items-center justify-between gap-4 ${rowBg}`}
+      onClick={onEdit}
+      className={`px-4 py-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors ${rowBg}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -539,7 +539,7 @@ function VenueRow({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         {deleteConfirm ? (
           <>
             <span className="text-red-400 text-sm mr-2">Delete?</span>
@@ -560,13 +560,6 @@ function VenueRow({
           </>
         ) : (
           <>
-            <button
-              onClick={onEdit}
-              className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded transition-colors"
-              title="Edit venue"
-            >
-              <Pencil size={16} />
-            </button>
             <button
               onClick={onDelete}
               className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
