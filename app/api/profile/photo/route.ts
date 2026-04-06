@@ -8,6 +8,7 @@ import { unlink, mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import sharp from "sharp";
+import { logError } from "@/lib/error-logger";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -34,12 +35,20 @@ async function ensureUploadDir() {
 
 // POST - Upload photo
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const user_agent = request.headers.get("user-agent") ?? null;
+
+  let player_uid: string | null = null;
+
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    player_uid = session.user.uid;
+    const baseLogCtx = { player_uid, ip_address: ip, user_agent };
 
     const formData = await request.formData();
     const file = formData.get("photo") as File | null;
@@ -57,7 +66,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size
+    // Log file metadata for debugging
+    console.log(`[photo-upload] Received file: name=${file.name}, type=${file.type}, size=${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+
     if (file.size > MAX_FILE_SIZE) {
+      await logError({
+        error_code: "PHOTO_UPLOAD_FILE_TOO_LARGE_SERVER",
+        feature: "photo_upload",
+        severity: "warn",
+        message: `Server rejected file: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)} MB) exceeds ${MAX_FILE_SIZE} byte limit`,
+        context: { ...baseLogCtx, file_name: file.name, file_size: file.size, file_type: file.type, limit_bytes: MAX_FILE_SIZE },
+        player_uid,
+      });
       return NextResponse.json(
         { error: "File too large. Maximum size is 10MB" },
         { status: 400 }
@@ -94,15 +114,27 @@ export async function POST(request: NextRequest) {
     const isGif = file.type === "image/gif";
 
     // Process and compress image with Sharp
-    // Resize to max dimension while maintaining aspect ratio, convert to WebP
-    // animated: true preserves GIF animations as animated WebP
-    const processedBuffer = await sharp(buffer, { animated: true })
-      .resize(MAX_DIMENSION, MAX_DIMENSION, {
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: WEBP_QUALITY })
-      .toBuffer();
+    let processedBuffer: Buffer;
+    try {
+      processedBuffer = await sharp(buffer, { animated: true })
+        .resize(MAX_DIMENSION, MAX_DIMENSION, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+    } catch (err) {
+      await logError({
+        error_code: "PHOTO_UPLOAD_SHARP_ERROR",
+        feature: "photo_upload",
+        severity: "error",
+        message: err instanceof Error ? err.message : "Image processing failed",
+        error: err,
+        context: { ...baseLogCtx, file_name: file.name, file_size: file.size, file_type: file.type },
+        player_uid,
+      });
+      return NextResponse.json({ error: "Image processing failed" }, { status: 500 });
+    }
 
     // Check file size limit for animated GIFs
     if (isGif && processedBuffer.length > MAX_GIF_OUTPUT_SIZE) {
@@ -114,19 +146,53 @@ export async function POST(request: NextRequest) {
     }
 
     // Write processed image to file
-    await writeFile(filepath, processedBuffer);
+    try {
+      await writeFile(filepath, processedBuffer);
+    } catch (err) {
+      await logError({
+        error_code: "PHOTO_UPLOAD_FILE_WRITE_ERROR",
+        feature: "photo_upload",
+        severity: "fatal",
+        message: err instanceof Error ? err.message : "Disk write failed",
+        error: err,
+        context: { ...baseLogCtx, filepath },
+        player_uid,
+      });
+      return NextResponse.json({ error: "Could not save photo" }, { status: 500 });
+    }
 
     // Update database with cache-busting timestamp
     const timestamp = Date.now();
     const photoUrl = `/api/uploads/avatars/${filename}?t=${timestamp}`;
-    await prisma.players_v2.update({
-      where: { uid: session.user.uid },
-      data: { photo_url: photoUrl },
-    });
+    try {
+      await prisma.players_v2.update({
+        where: { uid: session.user.uid },
+        data: { photo_url: photoUrl },
+      });
+    } catch (err) {
+      await logError({
+        error_code: "PHOTO_UPLOAD_SAVE_FAILED",
+        feature: "photo_upload",
+        severity: "error",
+        message: err instanceof Error ? err.message : "DB update failed",
+        error: err,
+        context: { ...baseLogCtx },
+        player_uid,
+      });
+      return NextResponse.json({ error: "Could not update profile" }, { status: 500 });
+    }
 
     return NextResponse.json({ photo_url: photoUrl });
   } catch (error) {
-    console.error("Photo upload error:", error);
+    await logError({
+      error_code: "PHOTO_UPLOAD_SERVER_ERROR",
+      feature: "photo_upload",
+      severity: "fatal",
+      message: error instanceof Error ? error.message : "Unhandled upload error",
+      error: error,
+      context: { ip_address: ip, user_agent },
+      player_uid,
+    });
     return NextResponse.json(
       { error: "Failed to upload photo" },
       { status: 500 }

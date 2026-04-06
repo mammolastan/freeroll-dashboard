@@ -73,7 +73,7 @@ export default function CropModal({ imageSrc, onCropComplete, onCancel }: CropMo
                     croppedAreaPixels.height
                 );
 
-                // Convert to blob (PNG to preserve transparency - Sharp will convert to WebP server-side)
+                // Convert to blob as JPEG with compression (Sharp converts to WebP server-side anyway)
                 canvas.toBlob(
                     (blob) => {
                         if (blob) {
@@ -82,7 +82,8 @@ export default function CropModal({ imageSrc, onCropComplete, onCancel }: CropMo
                             reject(new Error("Could not create blob"));
                         }
                     },
-                    "image/png"
+                    "image/jpeg",
+                    0.9  // 90% quality - good balance of size and quality
                 );
             };
             image.onerror = () => reject(new Error("Could not load image"));

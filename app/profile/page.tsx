@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Camera, User, Save, Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
 import CropModal from "./CropModal";
+import { logClientError } from "@/lib/client-error-logger";
 
 export default function ProfilePage() {
   const { data: session, status, update: updateSession } = useSession();
@@ -121,12 +122,26 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
+      logClientError({
+        error_code: "PHOTO_UPLOAD_INVALID_TYPE",
+        feature: "photo_upload",
+        severity: "warn",
+        message: `User selected unsupported file type: ${file.type}`,
+        context: { file_type: file.type, file_name: file.name },
+      });
       setMessage({ type: "error", text: "Please select an image file" });
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
+      logClientError({
+        error_code: "PHOTO_UPLOAD_FILE_TOO_LARGE",
+        feature: "photo_upload",
+        severity: "warn",
+        message: `User selected file too large: ${file.size} bytes`,
+        context: { file_size: file.size, file_name: file.name, limit_bytes: 10 * 1024 * 1024 },
+      });
       setMessage({ type: "error", text: "Image must be less than 10MB" });
       return;
     }
@@ -180,13 +195,28 @@ export default function ProfilePage() {
           // Ignore session update errors - photo is already uploaded
         });
       } else {
-        const error = await res.json();
+        const body = await res.json().catch(() => ({}));
+        logClientError({
+          error_code: "PHOTO_UPLOAD_SERVER_ERROR",
+          feature: "photo_upload",
+          severity: "error",
+          message: `Upload API returned ${res.status}: ${body?.error ?? "unknown"}`,
+          context: { http_status: res.status, server_message: body?.error },
+        });
         setMessage({
           type: "error",
-          text: error.error || "Failed to upload photo",
+          text: body.error || "Failed to upload photo",
         });
       }
-    } catch {
+    } catch (err) {
+      logClientError({
+        error_code: "PHOTO_UPLOAD_CLIENT_ERROR",
+        feature: "photo_upload",
+        severity: "error",
+        message: err instanceof Error ? err.message : "Network error during photo upload",
+        error: err,
+        context: { file_name: file.name, file_size: file.size },
+      });
       setMessage({ type: "error", text: "Failed to upload photo" });
     } finally {
       setIsUploadingPhoto(false);
@@ -222,13 +252,28 @@ export default function ProfilePage() {
           // Ignore session update errors - photo is already uploaded
         });
       } else {
-        const error = await res.json();
+        const body = await res.json().catch(() => ({}));
+        logClientError({
+          error_code: "PHOTO_UPLOAD_SERVER_ERROR",
+          feature: "photo_upload",
+          severity: "error",
+          message: `Upload API returned ${res.status}: ${body?.error ?? "unknown"}`,
+          context: { http_status: res.status, server_message: body?.error },
+        });
         setMessage({
           type: "error",
-          text: error.error || "Failed to upload photo",
+          text: body.error || "Failed to upload photo",
         });
       }
-    } catch {
+    } catch (err) {
+      logClientError({
+        error_code: "PHOTO_UPLOAD_CLIENT_ERROR",
+        feature: "photo_upload",
+        severity: "error",
+        message: err instanceof Error ? err.message : "Network error during photo upload",
+        error: err,
+        context: { file_name: selectedFileName, blob_size: croppedBlob.size },
+      });
       setMessage({ type: "error", text: "Failed to upload photo" });
     } finally {
       setIsUploadingPhoto(false);

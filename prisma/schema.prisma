@@ -541,3 +541,28 @@ enum tournament_draft_action_log_status {
   applied
   undone
 }
+
+model AppErrorLog {
+  id          Int       @id @default(autoincrement())
+  error_code  String    @db.VarChar(100)
+  feature     String    @db.VarChar(50)
+  severity    String    @default("error") @db.VarChar(10)
+  message     String    @db.Text
+  stack       String?   @db.Text
+  context     String?   @db.LongText
+  player_uid  String?   @db.VarChar(50)
+  league_id   Int?
+  url         String?   @db.VarChar(500)
+  user_agent  String?   @db.VarChar(500)
+  ip_address  String?   @db.VarChar(45)
+  resolved    Boolean   @default(false)
+  resolved_at DateTime?
+  created_at  DateTime  @default(now())
+
+  @@index([feature])
+  @@index([error_code])
+  @@index([player_uid])
+  @@index([severity])
+  @@index([created_at])
+  @@map("app_error_logs")
+}
