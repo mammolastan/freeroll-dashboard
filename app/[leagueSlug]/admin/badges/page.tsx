@@ -35,6 +35,11 @@ export default function BadgesAdminPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
 
+  // Badge toggle state
+  const [badgesEnabled, setBadgesEnabled] = useState(true);
+  const [badgesEnabledLoading, setBadgesEnabledLoading] = useState(true);
+  const [badgesToggleSaving, setBadgesToggleSaving] = useState(false);
+
   // Assign form state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
@@ -75,6 +80,47 @@ export default function BadgesAdminPage() {
   useEffect(() => {
     fetchBadges();
   }, [fetchBadges]);
+
+  // Fetch badgesEnabled setting from league config
+  useEffect(() => {
+    async function fetchBadgesEnabled() {
+      try {
+        const res = await fetch(`/api/${leagueSlug}/admin/config`);
+        if (!res.ok) throw new Error("Failed to fetch config");
+        const data = await res.json();
+        setBadgesEnabled(data.config?.badgesEnabled ?? true);
+      } catch (error) {
+        console.error("Error fetching badges enabled setting:", error);
+      } finally {
+        setBadgesEnabledLoading(false);
+      }
+    }
+    fetchBadgesEnabled();
+  }, [leagueSlug]);
+
+  // Toggle badges enabled/disabled
+  const handleToggleBadgesEnabled = async () => {
+    setBadgesToggleSaving(true);
+    const newValue = !badgesEnabled;
+    try {
+      const res = await fetch(`/api/${leagueSlug}/admin/config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ badgesEnabled: newValue }),
+      });
+      if (!res.ok) throw new Error("Failed to update config");
+      setBadgesEnabled(newValue);
+      showToast(
+        newValue ? "Badges enabled for this league" : "Badges disabled for this league",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error updating badges enabled:", error);
+      showToast("Failed to update badge setting", "error");
+    } finally {
+      setBadgesToggleSaving(false);
+    }
+  };
 
   // Debounced player search
   useEffect(() => {
@@ -199,6 +245,33 @@ export default function BadgesAdminPage() {
           <br />
           Click on a badge to view details and assign it manually.
         </p>
+      </div>
+
+      {/* Badges Enabled Toggle */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-medium">Display Badges</h3>
+            <p className="text-white/40 text-sm mt-0.5">
+              When disabled, badges will not be shown anywhere in the app for this league.
+            </p>
+          </div>
+          <button
+            onClick={handleToggleBadgesEnabled}
+            disabled={badgesEnabledLoading || badgesToggleSaving}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+              badgesEnabled ? "bg-cyan-600" : "bg-white/20"
+            }`}
+            role="switch"
+            aria-checked={badgesEnabled}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                badgesEnabled ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Badges List */}

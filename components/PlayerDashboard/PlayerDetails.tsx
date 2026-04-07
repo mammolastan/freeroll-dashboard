@@ -74,9 +74,10 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     const [badges, setBadges] = useState<BadgeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [badgesLoading, setBadgesLoading] = useState(true);
+    const [badgesEnabled, setBadgesEnabled] = useState(true);
 
     // League param for multi-tenant support
-    const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+    const { appendLeagueParam, getLeagueConfigUrl, isReady: leagueParamReady } = useLeagueParam();
     const leaguePrefix = useLeaguePrefix();
     const timezone = useLeagueTimezone();
 
@@ -192,9 +193,33 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
         }
     }, [playerUID, startDate, endDate, isCustomRange, customStartDate, customEndDate, selectedVenue, leagueParamReady, fetchPlayerStats]);
 
-    // Fetch player badges
+    // Fetch league config to check if badges are enabled
     useEffect(() => {
         if (!leagueParamReady) return;
+
+        async function fetchLeagueConfig() {
+            try {
+                const response = await fetch(getLeagueConfigUrl());
+                if (!response.ok) throw new Error('Failed to fetch league config');
+                const data = await response.json();
+                setBadgesEnabled(data.badgesEnabled ?? true);
+            } catch (error) {
+                console.error('Error fetching league config:', error);
+                // Default to true if fetch fails
+                setBadgesEnabled(true);
+            }
+        }
+
+        fetchLeagueConfig();
+    }, [leagueParamReady, getLeagueConfigUrl]);
+
+    // Fetch player badges (only if badges are enabled)
+    useEffect(() => {
+        if (!leagueParamReady) return;
+        if (!badgesEnabled) {
+            setBadgesLoading(false);
+            return;
+        }
 
         if (playerUID) {
             setBadgesLoading(true);
@@ -211,7 +236,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                     setBadgesLoading(false);
                 });
         }
-    }, [playerUID, leagueParamReady, appendLeagueParam]);
+    }, [playerUID, leagueParamReady, appendLeagueParam, badgesEnabled]);
 
     if (loading) {
         return (
@@ -238,7 +263,7 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
                 <div className="flex flex-col justify-between items-center gap-4">
 
                     {/* Player Badges Display */}
-                    {!badgesLoading && badges.length > 0 && (
+                    {badgesEnabled && !badgesLoading && badges.length > 0 && (
                         <div className="items-center text-center m-2">
                             <h3>Achievements</h3>
                             <BadgeGroup badges={badges} size="large" />

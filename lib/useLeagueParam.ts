@@ -4,6 +4,27 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useLeague } from "@/lib/LeagueContext";
 
 /**
+ * Public league config lives at `/api/[leagueSlug]/config`. When a slug is
+ * known (path or `?league=`), use that URL. Otherwise fall back to
+ * `/api/config` with `?league_id=` when only the numeric id is present.
+ */
+export function buildLeagueConfigUrl(args: {
+  contextSlug?: string | null;
+  querySlug?: string | null;
+  queryLeagueId?: string | null;
+}): string {
+  const activeSlug = args.contextSlug ?? args.querySlug ?? null;
+  const activeId = args.contextSlug ? null : args.queryLeagueId;
+  if (activeSlug) {
+    return `/api/${encodeURIComponent(activeSlug)}/config`;
+  }
+  if (activeId) {
+    return `/api/config?league_id=${encodeURIComponent(activeId)}`;
+  }
+  return "/api/config";
+}
+
+/**
  * Hook to read league params from URL and provide helpers for API calls.
  *
  * Priority order:
@@ -17,6 +38,9 @@ import { useLeague } from "@/lib/LeagueContext";
  *   // Option 1: Append to URL string
  *   fetch(appendLeagueParam('/api/rankings/quarterly'))
  *   fetch(appendLeagueParam(`/api/venues/list?currentMonth=${isCurrentMonth}`))
+ *
+ *   // League-scoped public config (path /api/[slug]/config, not ?league= on /api/config)
+ *   fetch(getLeagueConfigUrl())
  *
  *   // Option 2: Use query string directly
  *   fetch(`/api/rankings/quarterly?${leagueQueryString}`)
@@ -56,6 +80,14 @@ export function useLeagueParam() {
     return `${url}${separator}${leagueQueryString}`;
   }, [contextSlug]);
 
+  const getLeagueConfigUrl = useCallback((): string => {
+    return buildLeagueConfigUrl({
+      contextSlug,
+      querySlug: paramsRef.current.leagueSlug,
+      queryLeagueId: paramsRef.current.leagueId,
+    });
+  }, [contextSlug]);
+
   // Build the query string portion for league params
   const activeSlug = contextSlug ?? paramsRef.current.leagueSlug;
   const activeId = contextSlug ? null : paramsRef.current.leagueId;
@@ -72,6 +104,7 @@ export function useLeagueParam() {
     leagueId: activeId,
     leagueQueryString,
     appendLeagueParam,
+    getLeagueConfigUrl,
     hasLeagueParam: Boolean(activeSlug || activeId),
     isReady,
   };
@@ -84,11 +117,13 @@ export function useLeagueParam() {
 export function getLeagueParamFromURL(): {
   leagueQueryString: string;
   appendLeagueParam: (url: string) => string;
+  getLeagueConfigUrl: () => string;
 } {
   if (typeof window === "undefined") {
     return {
       leagueQueryString: "",
       appendLeagueParam: (url: string) => url,
+      getLeagueConfigUrl: () => "/api/config",
     };
   }
 
@@ -106,5 +141,11 @@ export function getLeagueParamFromURL(): {
     return `${url}${separator}${leagueQueryString}`;
   };
 
-  return { leagueQueryString, appendLeagueParam };
+  const getLeagueConfigUrl = (): string =>
+    buildLeagueConfigUrl({
+      querySlug: leagueSlug,
+      queryLeagueId: leagueId,
+    });
+
+  return { leagueQueryString, appendLeagueParam, getLeagueConfigUrl };
 }

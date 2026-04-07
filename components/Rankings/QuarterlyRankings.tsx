@@ -82,6 +82,7 @@ export default function QuarterlyRankings() {
   const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [badgesLoading, setBadgesLoading] = useState(false);
+  const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
@@ -98,7 +99,7 @@ export default function QuarterlyRankings() {
   const [reviewTarget, setReviewTarget] = useState<{ uid: string; name: string } | null>(null);
 
   // League param for multi-tenant support
-  const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+  const { appendLeagueParam, getLeagueConfigUrl, isReady: leagueParamReady } = useLeagueParam();
 
   // Competition periods state
   const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
@@ -131,6 +132,26 @@ export default function QuarterlyRankings() {
 
     fetchPeriods();
   }, [leagueParamReady, appendLeagueParam]);
+
+  // Fetch league config to check if badges are enabled
+  useEffect(() => {
+    if (!leagueParamReady) return;
+
+    async function fetchLeagueConfig() {
+      try {
+        const response = await fetch(getLeagueConfigUrl());
+        if (!response.ok) throw new Error("Failed to fetch league config");
+        const data = await response.json();
+        setBadgesEnabled(data.badgesEnabled ?? true);
+      } catch (error) {
+        console.error("Error fetching league config:", error);
+        // Default to true if fetch fails
+        setBadgesEnabled(true);
+      }
+    }
+
+    fetchLeagueConfig();
+  }, [leagueParamReady, getLeagueConfigUrl]);
 
   // Update URL when period changes
   const updateURL = (periodId: number) => {
@@ -179,9 +200,10 @@ export default function QuarterlyRankings() {
   // Get the selected period's name for display
   const selectedPeriod = periods.find(p => p.id === selectedPeriodId);
 
-  // Fetch badges for visible players
+  // Fetch badges for visible players (only if badges are enabled)
   useEffect(() => {
     if (!rankingsData?.rankings || rankingsData.rankings.length === 0) return;
+    if (!badgesEnabled) return;
 
     // Skip fetching if we already have badges data for the players
     const alreadyHaveBadges = rankingsData.rankings.some(
@@ -237,7 +259,7 @@ export default function QuarterlyRankings() {
     };
 
     fetchBadges();
-  }, [rankingsData]);
+  }, [rankingsData, badgesEnabled]);
 
   const handleSort = (field: SortField) => {
     setSortConfig((prevConfig) => ({
