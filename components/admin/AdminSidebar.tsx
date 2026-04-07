@@ -42,7 +42,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       icon: Trophy,
       isDisabled: true,
     },
-    { href: `${base}/badges`, label: "Badges", icon: Star, isDisabled: true },
+    { href: `${base}/badges`, label: "Badges", icon: Star },
     {
       href: `${base}/game-defaults`,
       label: "Game Defaults",
