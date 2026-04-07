@@ -33,7 +33,7 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
         COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname,
         p.photo_url
       FROM tournament_draft_players tdp
-      LEFT JOIN players p ON tdp.player_uid = p.uid
+      LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
       WHERE tdp.tournament_draft_id = ${tournamentDraftId}
       ORDER BY tdp.created_at ASC
     `;

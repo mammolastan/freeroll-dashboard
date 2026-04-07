@@ -21,7 +21,7 @@ export async function GET(
         tdp.*,
         COALESCE(tdp.player_nickname, p.nickname) as player_nickname
       FROM tournament_draft_players tdp
-      LEFT JOIN players p ON tdp.player_uid = p.UID
+      LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
       WHERE tdp.tournament_draft_id = ${draftId}
       ORDER BY tdp.created_at ASC
     `;
