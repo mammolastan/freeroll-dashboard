@@ -20,9 +20,15 @@ interface TournamentHeaderData {
   venue?: string | null;
   td?: string | null;
   timezone: string;
+  cutoffMinutes: number;
 }
 
-function isPastCutoff(date: string | Date, time: string | null | undefined, timezone: string): boolean {
+function isPastCutoff(
+  date: string | Date,
+  time: string | null | undefined,
+  timezone: string,
+  cutoffMinutes: number = 100,
+): boolean {
   if (!time) return false;
 
   try {
@@ -46,9 +52,9 @@ function isPastCutoff(date: string | Date, time: string | null | undefined, time
       minutes = parseInt(parts[1], 10);
     }
 
-    // Create cutoff datetime (start time + 100 minutes)
+    // Create cutoff datetime (start time + cutoffMinutes)
     const cutoffDate = new Date(`${dateOnly}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`);
-    cutoffDate.setMinutes(cutoffDate.getMinutes() + 100);
+    cutoffDate.setMinutes(cutoffDate.getMinutes() + cutoffMinutes);
 
     // Get current time in the league's timezone
     const now = getLeagueNow(timezone);
@@ -91,9 +97,9 @@ function TournamentHeader({
               )}
             </p>
           )}
-          {formatCutoffTime(tournament.time) && (
+          {formatCutoffTime(tournament.time, tournament.cutoffMinutes) && (
             <p className="text-yellow-400 text-sm mt-1">
-              Cutoff Time: {formatCutoffTime(tournament.time)}
+              Cutoff Time: {formatCutoffTime(tournament.time, tournament.cutoffMinutes)}
             </p>
           )}
         </div>
@@ -128,7 +134,8 @@ export default function GameViewPage() {
       const pastCutoff = isPastCutoff(
         gameData.tournament.date,
         gameData.tournament.time,
-        gameData.tournament.timezone
+        gameData.tournament.timezone,
+        gameData.tournament.cutoffMinutes,
       );
       setCheckInDisabled(pastCutoff);
     };

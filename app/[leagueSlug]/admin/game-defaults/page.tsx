@@ -1,6 +1,8 @@
-import { getLeagueIdBySlug } from '@/lib/league-utils';
-import { getLeagueConfig } from '@/lib/league-config';
-import GameDefaultsForm from '@/components/admin/GameDefaultsForm';
+// app/[leagueSlug]/admin/game-defaults/page.tsx
+
+import { getLeagueIdBySlug } from "@/lib/league-utils";
+import { getLeagueConfig } from "@/lib/league-config";
+import GameDefaultsForm from "@/components/admin/GameDefaultsForm";
 
 interface PageProps {
   params: Promise<{ leagueSlug: string }>;

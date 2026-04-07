@@ -11,6 +11,7 @@ interface TournamentDraftRow {
   tournament_date: string | Date;
   tournament_time: unknown;
   venue: string | null;
+  venue_cutoff_time: number | null;
   status: string;
   start_points: number;
   director_name: string | null;
@@ -38,6 +39,7 @@ export async function fetchTournamentRealtimeSnapshot(
       td.tournament_date,
       td.tournament_time,
       v.name as venue,
+      v.cutoff_time as venue_cutoff_time,
       td.status,
       td.start_points,
       td.director_name,
@@ -58,6 +60,11 @@ export async function fetchTournamentRealtimeSnapshot(
       ? leagueConfig.gameDefaults.allowChat
       : Boolean(row.allow_chat);
 
+  const cutoffMinutes =
+    row.venue_cutoff_time != null
+      ? Number(row.venue_cutoff_time)
+      : leagueConfig.gameDefaults.lateRegistrationWindowMinutes;
+
   return {
     id: row.id,
     title: row.title != null ? String(row.title) : "Tournament",
@@ -70,5 +77,6 @@ export async function fetchTournamentRealtimeSnapshot(
     td: row.director_name ? String(row.director_name) : null,
     timezone: leagueConfig.timezone,
     allow_chat: effectiveAllowChat,
+    cutoffMinutes,
   };
 }

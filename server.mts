@@ -576,9 +576,9 @@ async function loadTimerStateFromDB(
   }
 }
 
-// Loaded inline so `npm run dev:socket` (ESM + ts-node) does not import
-// fetch-tournament-realtime-snapshot.ts, which ts-node may compile as CJS and
-// break named ESM imports from server.mts.
+// Loaded inline so `npm run dev:socket` (tsx) does not import
+// fetch-tournament-realtime-snapshot.ts, which could mix CJS/ESM and break
+// named ESM imports from server.mts.
 async function getLeagueConfigFromDb(leagueId: number): Promise<LeagueConfig> {
   const league = await prisma.leagues.findUnique({
     where: { id: leagueId },

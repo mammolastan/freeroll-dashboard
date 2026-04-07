@@ -198,7 +198,10 @@ export function formatTime(timeString?: string | null | unknown): string | null 
   }
 }
 
-export function formatCutoffTime(timeString?: string | null | unknown): string | null {
+export function formatCutoffTime(
+  timeString?: string | null | unknown,
+  cutoffMinutes: number = 100,
+): string | null {
   if (!timeString) return null;
 
   try {
@@ -218,14 +221,13 @@ export function formatCutoffTime(timeString?: string | null | unknown): string |
       minutes = parseInt(parts[1], 10);
     }
 
-    // Add 100 minutes
-    const totalMinutes = hours * 60 + minutes + 100;
+    const totalMinutes = hours * 60 + minutes + cutoffMinutes;
     const cutoffHours = Math.floor(totalMinutes / 60) % 24;
-    const cutoffMinutes = totalMinutes % 60;
+    const cutoffMins = totalMinutes % 60;
 
     const ampm = cutoffHours >= 12 ? 'PM' : 'AM';
     const displayHour = cutoffHours % 12 || 12;
-    return `${displayHour}:${cutoffMinutes.toString().padStart(2, '0')} ${ampm}`;
+    return `${displayHour}:${cutoffMins.toString().padStart(2, '0')} ${ampm}`;
   } catch (error) {
     console.error('Error calculating cutoff time:', timeString, error);
     return null;

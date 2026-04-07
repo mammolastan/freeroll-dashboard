@@ -60,6 +60,7 @@ export interface LeagueConfig {
     showInActiveGames: boolean;
     blindSchedule: string;
     startPoints: number;
+    lateRegistrationWindowMinutes: number;
   };
 
   // Notifications
@@ -109,6 +110,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     showInActiveGames: true,
     blindSchedule: 'standard',
     startPoints: 1,
+    lateRegistrationWindowMinutes: 100,
   },
   pushNotificationsEnabled: false,
 };

@@ -11,13 +11,19 @@ interface Props {
 export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
   const [form, setForm] = useState({
     allowChat: initialConfig.gameDefaults.allowChat,
+    lateRegistrationWindowMinutes: initialConfig.gameDefaults.lateRegistrationWindowMinutes,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handleToggle(field: keyof typeof form) {
+  function handleToggle(field: 'allowChat') {
     setForm(prev => ({ ...prev, [field]: !prev[field] }));
+    setSaved(false);
+  }
+
+  function handleNumberChange(field: 'lateRegistrationWindowMinutes', value: number) {
+    setForm(prev => ({ ...prev, [field]: value }));
     setSaved(false);
   }
 
@@ -29,6 +35,7 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
         gameDefaults: {
           ...initialConfig.gameDefaults,
           allowChat: form.allowChat,
+          lateRegistrationWindowMinutes: form.lateRegistrationWindowMinutes,
         },
       };
 
@@ -73,6 +80,31 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
               }`}
             />
           </button>
+        </div>
+      </div>
+
+      {/* Late Registration Window */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-medium">Late Registration Window</h3>
+            <p className="text-white/40 text-sm mt-1">
+              Minutes after tournament start time that players can still check in.
+              Individual venues can override this value.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              max="300"
+              value={form.lateRegistrationWindowMinutes}
+              onChange={(e) => handleNumberChange('lateRegistrationWindowMinutes', parseInt(e.target.value) || 0)}
+              className="w-20 px-3 py-2 bg-gray-800 border border-white/20 rounded-lg text-white text-center
+                         focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            />
+            <span className="text-white/60 text-sm">minutes</span>
+          </div>
         </div>
       </div>
 

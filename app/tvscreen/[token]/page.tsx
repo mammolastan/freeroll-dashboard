@@ -145,9 +145,9 @@ export default function TVScreenPage() {
               📍 {gameData.tournament.venue}
             </span>
           )}
-          {formatCutoffTime(gameData.tournament.time) && (
+          {formatCutoffTime(gameData.tournament.time, gameData.tournament.cutoffMinutes) && (
             <span className="tvscreen-header-cutoff">
-              ⏰ Cutoff: {formatCutoffTime(gameData.tournament.time)}
+              ⏰ Cutoff: {formatCutoffTime(gameData.tournament.time, gameData.tournament.cutoffMinutes)}
             </span>
           )}
         </div>

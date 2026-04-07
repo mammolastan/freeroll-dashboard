@@ -25,6 +25,7 @@ interface ActiveTournament {
     created_at: string;
     updated_at: string;
     timezone: string;
+    cutoffMinutes: number;
 }
 
 function CheckInPageContent() {
@@ -152,11 +153,11 @@ function CheckInPageContent() {
                                         </div>
 
                                         {/* Cutoff Time */}
-                                        {formatCutoffTime(tournament.tournament_time) && (
+                                        {formatCutoffTime(tournament.tournament_time, tournament.cutoffMinutes) && (
                                             <div className="flex items-center gap-2 text-yellow-400">
                                                 <Clock className="h-4 w-4 text-yellow-400" />
                                                 <span className="text-sm">
-                                                    Cutoff Time: {formatCutoffTime(tournament.tournament_time)}
+                                                    Cutoff Time: {formatCutoffTime(tournament.tournament_time, tournament.cutoffMinutes)}
                                                 </span>
                                             </div>
                                         )}

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         td.tournament_time,
         td.director_name,
         v.name AS venue,
+        v.cutoff_time AS venue_cutoff_time,
         td.start_points,
         td.status,
         td.blind_schedule,
@@ -68,6 +69,11 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        const cutoffMinutes =
+          tournament.venue_cutoff_time != null
+            ? Number(tournament.venue_cutoff_time)
+            : leagueConfig.gameDefaults.lateRegistrationWindowMinutes;
+
         return {
           ...tournament,
           id: Number(tournament.id),
@@ -76,6 +82,7 @@ export async function GET(request: NextRequest) {
           players_remaining: Number(tournament.players_remaining),
           tournament_time: formattedTime,
           timezone: leagueConfig.timezone,
+          cutoffMinutes,
         };
       }
     );

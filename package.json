@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:socket": "node --import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"ts-node/esm\", pathToFileURL(\"./\"));' server.mts",
+    "dev:socket": "tsx server.mts",
     "build": "prisma generate && next build",
     "build:server": "tsc -p tsconfig.server.json",
     "start:server": "node dist/server.js",
@@ -58,6 +58,7 @@
     "prisma": "^6.13.0",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.2"
   },
   "overrides": {

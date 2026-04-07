@@ -33,6 +33,7 @@ export interface Tournament {
   td: string | null; // tournament director name
   timezone: string; // IANA timezone string (e.g. 'America/New_York')
   allow_chat: boolean; // whether players can send chat messages in the feed
+  cutoffMinutes: number; // resolved cutoff (venue override ?? league default)
 }
 
 export interface GameViewData {
