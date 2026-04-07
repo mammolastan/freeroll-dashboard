@@ -101,10 +101,7 @@ export default function ForgotPasswordPage() {
           Forgot Password?
         </h1>
 
-        <p className="text-gray-600 mb-6">
-          No worries! Enter your email address and we&apos;ll send you a link to
-          reset your password.
-        </p>
+        <p className="text-gray-600 mb-6">Dumbass.</p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -112,7 +109,10 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
           <div>
             <label
               htmlFor="email"
