@@ -46,6 +46,7 @@ export const DEFAULT_LEAGUE_CONFIG = {
     showInActiveGames: true,
     blindSchedule: "standard",
     startPoints: 1,
+    lateRegistrationWindowMinutes: 100,
   },
   pushNotificationsEnabled: false,
 };

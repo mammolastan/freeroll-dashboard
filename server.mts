@@ -668,6 +668,7 @@ async function getTournamentData(
       td: row.director_name ? String(row.director_name) : null,
       timezone: leagueConfig.timezone,
       allow_chat: effectiveAllowChat,
+      cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
     };
   } catch (error) {
     console.error("Error fetching tournament data:", error);
