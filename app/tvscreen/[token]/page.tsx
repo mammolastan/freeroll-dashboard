@@ -29,12 +29,29 @@ const getWeatherIcon = (code: number): string => {
 
 export default function TVScreenPage() {
   const { token } = useParams();
-  const { gameData, computedStats, loading, error } = useRealtimeGameData(
+  const { gameData, computedStats, loading, error, connectionStatus } = useRealtimeGameData(
     token as string
   );
 
   const [currentTime, setCurrentTime] = useState<string>("");
   const [weather, setWeather] = useState<HourlyWeather[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  // Track browser online/offline status for immediate feedback
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -195,8 +212,24 @@ export default function TVScreenPage() {
         />
       </div>
 
-      {/* Live indicator */}
-      <div className="tvscreen-live-indicator">🔴 Live</div>
+      {/* Connection status indicator */}
+      {!isOnline || connectionStatus === 'disconnected' || connectionStatus === 'reconnecting' || connectionStatus === 'connecting' ? (
+        <div className="tvscreen-connection-banner">
+          <span className="tvscreen-connection-banner-icon">
+            {!isOnline ? '📡' : connectionStatus === 'disconnected' ? '⚠️' : '🔄'}
+          </span>
+          <span className="tvscreen-connection-banner-text">
+            {!isOnline && 'Offline - Timer may be out of sync'}
+            {isOnline && connectionStatus === 'disconnected' && 'Disconnected - Timer may be out of sync'}
+            {isOnline && connectionStatus === 'reconnecting' && 'Reconnecting...'}
+            {isOnline && connectionStatus === 'connecting' && 'Connecting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="tvscreen-connection-indicator tvscreen-connection-indicator--connected">
+          🟢 Live
+        </div>
+      )}
 
       {/* Weather and clock */}
       <div className="tvscreen-top-bar">
