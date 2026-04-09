@@ -5,6 +5,7 @@ import { getLeagueIdBySlug } from '@/lib/league-utils';
 import { getLeagueRole, canAccessAdmin } from '@/lib/league-auth';
 import { getLeagueConfig, saveLeagueConfig } from '@/lib/league-config';
 import { LeagueConfig } from '@/types/league-config';
+import { prisma } from '@/lib/prisma';
 
 interface RouteParams {
   params: Promise<{ leagueSlug: string }>;
@@ -48,11 +49,21 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let body: Partial<LeagueConfig>;
+  let body: Partial<LeagueConfig> & { leagueName?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Handle leagueName separately - save to leagues.name column
+  if (body.leagueName !== undefined) {
+    await prisma.leagues.update({
+      where: { id: leagueId },
+      data: { name: body.leagueName },
+    });
+    // Remove from body so it doesn't get saved to league_settings JSON
+    delete body.leagueName;
   }
 
   await saveLeagueConfig(leagueId, body);

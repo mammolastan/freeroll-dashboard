@@ -3,6 +3,30 @@ import { LeagueProvider } from '@/lib/LeagueContext';
 import { prisma } from '@/lib/prisma';
 import { getLeagueConfig } from '@/lib/league-config';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ leagueSlug: string }>;
+}): Promise<Metadata> {
+  const { leagueSlug } = await params;
+
+  const league = await prisma.leagues.findUnique({
+    where: { slug: leagueSlug },
+    select: { name: true },
+  });
+
+  const leagueName = league?.name ?? 'League';
+
+  return {
+    title: {
+      default: `${leagueName} Player Dashboard`,
+      template: `%s | ${leagueName}`,
+    },
+    description: `Dashboard for ${leagueName} poker tournament player statistics`,
+  };
+}
 
 export default async function LeagueLayout({
   children,

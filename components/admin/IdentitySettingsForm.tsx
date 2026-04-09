@@ -16,11 +16,12 @@ const TIMEZONES = [
 interface Props {
   leagueSlug: string;
   initialConfig: LeagueConfig;
+  initialLeagueName: string;
 }
 
-export default function IdentitySettingsForm({ leagueSlug, initialConfig }: Props) {
+export default function IdentitySettingsForm({ leagueSlug, initialConfig, initialLeagueName }: Props) {
   const [form, setForm] = useState({
-    leagueName:     initialConfig.leagueName,
+    leagueName:     initialLeagueName,
     leagueImageUrl: initialConfig.leagueImageUrl ?? '',
     contactEmail:   initialConfig.contactEmail ?? '',
     timezone:       initialConfig.timezone,
