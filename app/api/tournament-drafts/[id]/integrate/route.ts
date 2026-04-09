@@ -134,53 +134,6 @@ function calculatePlayerScore(placement: number, totalPlayers: number): number {
   return Math.log((totalPlayers + 1) / placement);
 }
 
-function generateFileName(
-  date: string,
-  venue: string,
-  director_name: string,
-  time?: string | Date | null
-): string {
-  const gameDate = new Date(date);
-  const month = (gameDate.getMonth() + 1).toString().padStart(2, "0");
-  const day = gameDate.getDate().toString().padStart(2, "0");
-  const cleanVenue = venue.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-  const cleanDirector = director_name
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9_]/g, "");
-
-  // Format time if provided (e.g., "14:30" -> "1430")
-  let timeString = "";
-  if (time) {
-    let hours: string;
-    let minutes: string;
-
-    if (time instanceof Date) {
-      // MySQL TIME column returns as Date object via Prisma $queryRaw
-      hours = time.getUTCHours().toString().padStart(2, "0");
-      minutes = time.getUTCMinutes().toString().padStart(2, "0");
-    } else if (typeof time === "string") {
-      // Handle string format "HH:MM" or "HH:MM:SS"
-      const timeMatch = time.match(/^(\d{2}):?(\d{2})/);
-      if (timeMatch) {
-        hours = timeMatch[1];
-        minutes = timeMatch[2];
-      } else {
-        hours = "";
-        minutes = "";
-      }
-    } else {
-      hours = "";
-      minutes = "";
-    }
-
-    if (hours && minutes) {
-      timeString = "_" + hours + minutes;
-    }
-  }
-
-  return `SYS-${month}${day}${timeString}_${cleanVenue}_${cleanDirector}`;
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -238,14 +191,7 @@ export async function POST(
           throw new Error("Venue not found for this tournament");
         }
 
-        // 6. Generate unique filename & UID for the game
-        const fileName = generateFileName(
-          draft.tournament_date,
-          venue.name,
-          draft.director_name,
-          draft.tournament_time
-        );
-
+        // 6. Generate unique UID for the game
         const gameUID = "SYS-G-" + uuidv4();
 
         // 7. Create game record
@@ -417,7 +363,6 @@ export async function POST(
         UPDATE tournament_drafts
         SET status = 'integrated',
             game_uid = ${gameUID},
-            file_name = ${fileName},
             timer_is_running = false,
             timer_is_paused = false,
             timer_remaining_seconds = NULL,
@@ -476,7 +421,6 @@ export async function POST(
 
         return {
           success: true,
-          fileName,
           gameUID,
           playersIntegrated: playersWithPlacements.length,
           playersWithPlacements: playersWithPlacements.map((p) => ({
@@ -526,7 +470,6 @@ export async function POST(
         newValue: {
           status: "integrated",
           gameUid: result.gameUID,
-          fileName: result.fileName,
         },
         metadata: withActorMetadata(actor, {
           tournamentDraftId: draftId,

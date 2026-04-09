@@ -8,7 +8,6 @@ interface DraftTournament {
   id: number;
   status: string;
   game_uid: string | null;
-  file_name: string | null;
   tournament_date: Date;
   venue: string;
   director_name: string;
@@ -198,11 +197,10 @@ export async function POST(
 
       // 7. Reset tournament draft status and clear integration fields
       await tx.$queryRaw`
-        UPDATE tournament_drafts 
-        SET 
+        UPDATE tournament_drafts
+        SET
           status = 'in_progress',
           game_uid = NULL,
-          file_name = NULL,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
@@ -217,7 +215,6 @@ export async function POST(
         newPlayersFound: newPlayersToRemove.length,
         revertedFrom: {
           gameUID: draft.game_uid,
-          fileName: draft.file_name,
         },
         // Additional data for audit logging
         _auditData: {
@@ -267,7 +264,6 @@ export async function POST(
         previousValue: {
           status: "integrated",
           gameUid: result.revertedFrom.gameUID,
-          fileName: result.revertedFrom.fileName,
           playerCount: playersRemoved.length,
           totalPointsAwarded: totalPointsRemoved,
         },

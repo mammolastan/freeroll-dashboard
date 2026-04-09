@@ -1391,7 +1391,7 @@ export function FullAdminScreen({
       if (response.ok) {
         const result = await response.json();
         alert(
-          `Tournament integrated successfully!\n\nFile: ${result.fileName}\nPlayers: ${result.playersIntegrated}\n\nPlacements calculated based on KO positions.`,
+          `Tournament integrated successfully!\n\nPlayers: ${result.playersIntegrated}\n\nPlacements calculated based on KO positions.`,
         );
 
         // Refresh tournament data

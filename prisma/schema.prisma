@@ -72,7 +72,6 @@ model TournamentDraft {
   created_at              DateTime                @default(now()) @db.Timestamp(0)
   updated_at              DateTime                @default(now()) @updatedAt @db.Timestamp(0)
   game_uid                String?                 @db.VarChar(100)
-  file_name               String?                 @db.VarChar(255)
   blind_schedule          String?                 @default("1") @db.VarChar(50)
   custom_blind_levels     String?                 @db.LongText
   check_in_token          String?                 @db.VarChar(36)
