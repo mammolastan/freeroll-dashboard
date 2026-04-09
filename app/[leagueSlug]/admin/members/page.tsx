@@ -63,7 +63,7 @@ export default function MembersPage() {
     "all" | "claimed" | "unclaimed"
   >("all");
   const [photoFilter, setPhotoFilter] = useState<"all" | "with" | "without">(
-    "all"
+    "all",
   );
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -124,7 +124,7 @@ export default function MembersPage() {
       if (photoFilter !== "all") params.set("photo", photoFilter);
 
       const res = await fetch(
-        `/api/${leagueSlug}/admin/players?${params.toString()}`
+        `/api/${leagueSlug}/admin/players?${params.toString()}`,
       );
       if (!res.ok) throw new Error("Failed to fetch players");
       const data = await res.json();
@@ -215,7 +215,7 @@ export default function MembersPage() {
     ) {
       showToast(
         "At least a first name, last name, or nickname is required",
-        "error"
+        "error",
       );
       return;
     }
@@ -246,7 +246,7 @@ export default function MembersPage() {
         fetchPlayers();
         showToast(
           editingPlayer ? "Player updated" : "Player created",
-          "success"
+          "success",
         );
       } else {
         const err = await res.json();
@@ -266,7 +266,7 @@ export default function MembersPage() {
         `/api/${leagueSlug}/admin/players/${player.uid}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (res.ok) {
@@ -365,25 +365,45 @@ export default function MembersPage() {
           value={sortBy}
           onChange={(e) => {
             setSortBy(
-              e.target.value as "recent" | "games" | "created" | "claimed" | "photo"
+              e.target.value as
+                | "recent"
+                | "games"
+                | "created"
+                | "claimed"
+                | "photo",
             );
             setOffset(0);
           }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
         >
-          <option value="recent" className="bg-zinc-900">
+          <option
+            value="recent"
+            className="bg-zinc-900"
+          >
             Sort: Recent activity
           </option>
-          <option value="games" className="bg-zinc-900">
+          <option
+            value="games"
+            className="bg-zinc-900"
+          >
             Sort: Total games played
           </option>
-          <option value="created" className="bg-zinc-900">
+          <option
+            value="created"
+            className="bg-zinc-900"
+          >
             Sort: Created date
           </option>
-          <option value="claimed" className="bg-zinc-900">
+          <option
+            value="claimed"
+            className="bg-zinc-900"
+          >
             Sort: Is claimed
           </option>
-          <option value="photo" className="bg-zinc-900">
+          <option
+            value="photo"
+            className="bg-zinc-900"
+          >
             Sort: Has photo
           </option>
         </select>
@@ -396,10 +416,16 @@ export default function MembersPage() {
           }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
         >
-          <option value="desc" className="bg-zinc-900">
+          <option
+            value="desc"
+            className="bg-zinc-900"
+          >
             Order: Descending
           </option>
-          <option value="asc" className="bg-zinc-900">
+          <option
+            value="asc"
+            className="bg-zinc-900"
+          >
             Order: Ascending
           </option>
         </select>
@@ -412,13 +438,22 @@ export default function MembersPage() {
           }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
         >
-          <option value="all" className="bg-zinc-900">
+          <option
+            value="all"
+            className="bg-zinc-900"
+          >
             Claimed: All
           </option>
-          <option value="claimed" className="bg-zinc-900">
+          <option
+            value="claimed"
+            className="bg-zinc-900"
+          >
             Claimed only
           </option>
-          <option value="unclaimed" className="bg-zinc-900">
+          <option
+            value="unclaimed"
+            className="bg-zinc-900"
+          >
             Unclaimed only
           </option>
         </select>
@@ -431,13 +466,22 @@ export default function MembersPage() {
           }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
         >
-          <option value="all" className="bg-zinc-900">
+          <option
+            value="all"
+            className="bg-zinc-900"
+          >
             Photo: All
           </option>
-          <option value="with" className="bg-zinc-900">
+          <option
+            value="with"
+            className="bg-zinc-900"
+          >
             With photo
           </option>
-          <option value="without" className="bg-zinc-900">
+          <option
+            value="without"
+            className="bg-zinc-900"
+          >
             Without photo
           </option>
         </select>
@@ -484,7 +528,10 @@ export default function MembersPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User size={20} className="text-white/40" />
+                        <User
+                          size={20}
+                          className="text-white/40"
+                        />
                       )}
                     </div>
 
@@ -609,7 +656,10 @@ export default function MembersPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User size={32} className="text-white/40" />
+                        <User
+                          size={32}
+                          className="text-white/40"
+                        />
                       )}
                     </div>
                     <div>
@@ -625,17 +675,24 @@ export default function MembersPage() {
                   {/* Stats grid */}
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2 text-white/60">
-                      <Trophy size={14} className="text-amber-400" />
+                      <Trophy
+                        size={14}
+                        className="text-amber-400"
+                      />
                       <span>{detailPlayer.gameCount} games played</span>
                     </div>
                     <div className="flex items-center gap-2 text-white/60">
-                      <Target size={14} className="text-red-400" />
+                      <Target
+                        size={14}
+                        className="text-red-400"
+                      />
                       <span>{detailPlayer.knockoutCount || 0} knockouts</span>
                     </div>
                     <div className="flex items-center gap-2 text-white/60">
                       <Calendar size={14} />
                       <span>
-                        First game: {formatDate(detailPlayer.firstGameDate || null)}
+                        First game:{" "}
+                        {formatDate(detailPlayer.firstGameDate || null)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-white/60">
@@ -697,191 +754,216 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Form Fields */}
-              <div className="grid grid-cols-2 gap-4">
+              <form
+                className="contents"
+                autoComplete="off"
+                onSubmit={(e) => e.preventDefault()}
+              >
+                {/* Form Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      name="fr-player-first"
+                      autoComplete="off"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
+                      placeholder="John"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="fr-player-last"
+                      autoComplete="off"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
+                      placeholder="Doe"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1.5">
-                    First Name
+                    Nickname
                   </label>
                   <input
                     type="text"
-                    value={formData.firstName}
+                    name="fr-player-nickname"
+                    autoComplete="off"
+                    value={formData.nickname}
                     onChange={(e) =>
-                      setFormData({ ...formData, firstName: e.target.value })
+                      setFormData({ ...formData, nickname: e.target.value })
                     }
                     className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                    placeholder="John"
+                    placeholder="The Shark"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1.5">
-                    Last Name
+                    Email
                   </label>
                   <input
                     type="text"
-                    value={formData.lastName}
+                    inputMode="email"
+                    name="fr-player-email"
+                    autoComplete="off"
+                    value={formData.email}
                     onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
+                      setFormData({ ...formData, email: e.target.value })
                     }
                     className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                    placeholder="Doe"
+                    placeholder="player@example.com"
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">
-                  Nickname
-                </label>
-                <input
-                  type="text"
-                  value={formData.nickname}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nickname: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                  placeholder="The Shark"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                  placeholder="player@example.com"
-                />
-                <p className="text-white/40 text-xs mt-1">
-                  {editingPlayer
-                    ? "Changing email will update the player's login credentials"
-                    : "Adding an email allows the player to claim this profile"}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1.5">
-                    Favorite Hand
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.favoriteHand}
-                    onChange={(e) =>
-                      setFormData({ ...formData, favoriteHand: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                    placeholder="A-A"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1.5">
-                    Favorite Pro
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.favoritePro}
-                    onChange={(e) =>
-                      setFormData({ ...formData, favoritePro: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                    placeholder="Phil Ivey"
-                  />
-                </div>
-              </div>
-
-              {/* Admin Toggle */}
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  <label className="text-sm font-medium text-white/70">
-                    League Admin
-                  </label>
-                  <p className="text-white/40 text-xs">
-                    Admins can manage tournaments and players
+                  <p className="text-white/40 text-xs mt-1">
+                    {editingPlayer
+                      ? "Changing email will update the player's login credentials"
+                      : "Adding an email allows the player to claim this profile"}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, isAdmin: !formData.isAdmin })
-                  }
-                  className={`relative w-10 h-6 rounded-full transition-colors ${
-                    formData.isAdmin ? "bg-amber-600" : "bg-white/20"
-                  }`}
-                  role="switch"
-                  aria-checked={formData.isAdmin}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      formData.isAdmin ? "translate-x-4" : "translate-x-0"
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">
+                      Favorite Hand
+                    </label>
+                    <input
+                      type="text"
+                      name="fr-player-fav-hand"
+                      autoComplete="off"
+                      value={formData.favoriteHand}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          favoriteHand: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
+                      placeholder="A-A"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">
+                      Favorite Pro
+                    </label>
+                    <input
+                      type="text"
+                      name="fr-player-fav-pro"
+                      autoComplete="off"
+                      value={formData.favoritePro}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          favoritePro: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
+                      placeholder="Phil Ivey"
+                    />
+                  </div>
+                </div>
+
+                {/* Admin Toggle */}
+                <div className="flex items-center justify-between pt-2">
+                  <div>
+                    <label className="text-sm font-medium text-white/70">
+                      League Admin
+                    </label>
+                    <p className="text-white/40 text-xs">
+                      Admins can manage tournaments and players
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, isAdmin: !formData.isAdmin })
+                    }
+                    className={`relative w-10 h-6 rounded-full transition-colors ${
+                      formData.isAdmin ? "bg-amber-600" : "bg-white/20"
                     }`}
-                  />
-                </button>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 transition-colors"
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingPlayer
-                      ? "Save Changes"
-                      : "Add Player"}
-                </button>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-
-              {/* Delete section (only for editing) */}
-              {editingPlayer && (
-                <div className="pt-4 border-t border-white/10">
-                  {deleteConfirm === editingPlayer.uid ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-400 text-sm flex-1">
-                        Delete this player? This cannot be undone.
-                      </span>
-                      <button
-                        onClick={() => handleDelete(editingPlayer)}
-                        className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg hover:bg-white/20 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(editingPlayer.uid)}
-                      className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition-colors"
-                    >
-                      <Trash2 size={16} />
-                      Delete Player
-                    </button>
-                  )}
-                  <p className="text-white/30 text-xs mt-2">
-                    Note: Players with game history cannot be deleted
-                  </p>
+                    role="switch"
+                    aria-checked={formData.isAdmin}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        formData.isAdmin ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
                 </div>
-              )}
+
+                {/* Buttons */}
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 transition-colors"
+                  >
+                    {saving
+                      ? "Saving..."
+                      : editingPlayer
+                        ? "Save Changes"
+                        : "Add Player"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* Delete section (only for editing) */}
+                {editingPlayer && (
+                  <div className="pt-4 border-t border-white/10">
+                    {deleteConfirm === editingPlayer.uid ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-400 text-sm flex-1">
+                          Delete this player? This cannot be undone.
+                        </span>
+                        <button
+                          onClick={() => handleDelete(editingPlayer)}
+                          className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg hover:bg-white/20 transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirm(editingPlayer.uid)}
+                        className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm transition-colors"
+                      >
+                        <Trash2 size={16} />
+                        Delete Player
+                      </button>
+                    )}
+                    <p className="text-white/30 text-xs mt-2">
+                      Note: Players with game history cannot be deleted
+                    </p>
+                  </div>
+                )}
+              </form>
             </div>
           </div>
         </div>
