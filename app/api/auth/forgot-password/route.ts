@@ -19,9 +19,10 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find player by email
+    // Find player by email with their league
     const player = await prisma.players_v2.findFirst({
       where: { email: normalizedEmail },
+      include: { leagues: true },
     });
 
     // Always return success to prevent email enumeration
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
       // Send the email with the plain token (user will use this)
       try {
-        await sendPasswordResetEmail(normalizedEmail, resetToken);
+        await sendPasswordResetEmail(normalizedEmail, resetToken, player.leagues.name);
       } catch (emailError) {
         console.error("Failed to send password reset email:", emailError);
         // Don't reveal email sending failure to prevent enumeration

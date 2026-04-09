@@ -38,15 +38,16 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
 
 export async function sendPasswordResetEmail(
   email: string,
-  resetToken: string
+  resetToken: string,
+  leagueName: string
 ) {
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
-  const subject = "Reset Your Password - Open Tab League";
+  const subject = `Reset Your Password - ${leagueName} on Open Tab League`;
 
   const text = `
-You requested a password reset for your Open Tab League account.
+You requested a password reset for your your player account with ${leagueName} on Open Tab League.
 
 Click the link below to reset your password:
 ${resetUrl}
