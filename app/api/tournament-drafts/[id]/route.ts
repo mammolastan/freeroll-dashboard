@@ -97,11 +97,13 @@ export async function PUT(
       director_name,
       venue_id,
       start_points,
+      allow_chat,
+      allow_self_checkin,
     } = body;
 
     // Get current state before updating for audit comparison (also verifies league ownership)
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT tournament_date, tournament_time, director_name, venue_id, start_points
+      SELECT tournament_date, tournament_time, director_name, venue_id, start_points, allow_chat, allow_self_checkin
       FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
     `;
 
@@ -122,6 +124,8 @@ export async function PUT(
         director_name = ${director_name},
         venue_id = ${venue_id || null},
         start_points = ${start_points || 0},
+        allow_chat = ${allow_chat ?? null},
+        allow_self_checkin = ${allow_self_checkin ?? null},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${draftId}
     `;
@@ -150,6 +154,8 @@ export async function PUT(
         "director_name",
         "venue_id",
         "start_points",
+        "allow_chat",
+        "allow_self_checkin",
       ];
 
       const newValues: Record<string, unknown> = {
@@ -158,6 +164,8 @@ export async function PUT(
         director_name,
         venue_id: venue_id || null,
         start_points: start_points || 0,
+        allow_chat: allow_chat ?? null,
+        allow_self_checkin: allow_self_checkin ?? null,
       };
 
       for (const field of fieldsToTrack) {

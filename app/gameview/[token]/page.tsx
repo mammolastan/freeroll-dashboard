@@ -228,22 +228,32 @@ export default function GameViewPage() {
 
         {/* Check In Button */}
         <div className="mb-6 flex justify-center gap-4">
-          <button
-            onClick={handleCheckInClick}
-            disabled={gettingToken || checkInDisabled}
-            className={`${
-              checkInDisabled
-                ? "bg-gray-700 cursor-not-allowed border-gray-600"
-                : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
-            } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
-          >
-            <UserPlus size={20} />
-            {checkInDisabled
-              ? "Check-In Closed"
-              : gettingToken
-                ? "Getting Ready..."
-                : "Check In"}
-          </button>
+          {gameData.tournament.allow_self_checkin ? (
+            <button
+              onClick={handleCheckInClick}
+              disabled={gettingToken || checkInDisabled}
+              className={`${
+                checkInDisabled
+                  ? "bg-gray-700 cursor-not-allowed border-gray-600"
+                  : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+              } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
+            >
+              <UserPlus size={20} />
+              {checkInDisabled
+                ? "Check-In Closed"
+                : gettingToken
+                  ? "Getting Ready..."
+                  : "Check In"}
+            </button>
+          ) : (
+            <button
+              disabled
+              className="bg-gray-700 cursor-not-allowed border-gray-600 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 border"
+            >
+              <UserPlus size={20} />
+              Check-in with TD
+            </button>
+          )}
 
           {/* Share Button */}
           <button

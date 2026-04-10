@@ -17,6 +17,7 @@ interface TournamentDraftRow {
   director_name: string | null;
   league_id: number;
   allow_chat: boolean | null | number;
+  allow_self_checkin: boolean | null | number;
 }
 
 function normalizeTournamentTime(raw: unknown): string | null {
@@ -44,7 +45,8 @@ export async function fetchTournamentRealtimeSnapshot(
       td.start_points,
       td.director_name,
       td.league_id,
-      td.allow_chat
+      td.allow_chat,
+      td.allow_self_checkin
     FROM tournament_drafts td
     LEFT JOIN venues v ON td.venue_id = v.id
     WHERE td.id = ${tournamentId}
@@ -59,6 +61,11 @@ export async function fetchTournamentRealtimeSnapshot(
     row.allow_chat === null || row.allow_chat === undefined
       ? leagueConfig.gameDefaults.allowChat
       : Boolean(row.allow_chat);
+
+  const effectiveAllowSelfCheckin =
+    row.allow_self_checkin === null || row.allow_self_checkin === undefined
+      ? leagueConfig.gameDefaults.allowSelfCheckIn
+      : Boolean(row.allow_self_checkin);
 
   const cutoffMinutes =
     row.venue_cutoff_time != null
@@ -77,6 +84,7 @@ export async function fetchTournamentRealtimeSnapshot(
     td: row.director_name ? String(row.director_name) : null,
     timezone: leagueConfig.timezone,
     allow_chat: effectiveAllowChat,
+    allow_self_checkin: effectiveAllowSelfCheckin,
     cutoffMinutes,
   };
 }

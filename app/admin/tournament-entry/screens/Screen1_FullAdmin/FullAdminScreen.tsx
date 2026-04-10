@@ -58,6 +58,8 @@ interface TournamentDraft {
   blind_schedule?: string;
   custom_blind_levels?: string | null;
   period_ids?: string | null;
+  allow_chat?: boolean | null;
+  allow_self_checkin?: boolean | null;
 }
 
 interface VenueOption {
@@ -156,6 +158,7 @@ export function FullAdminScreen({
     start_points: 0,
     period_ids: [] as number[],
     allow_chat: null as boolean | null, // null = use league default
+    allow_self_checkin: null as boolean | null, // null = use league default
   });
 
   // Competition periods state
@@ -355,12 +358,18 @@ export function FullAdminScreen({
     }
 
     // Listen for timer updates to track current level
-    const handleTimerUpdate = (state: { tournamentId: number; currentLevel: number }) => {
+    const handleTimerUpdate = (state: {
+      tournamentId: number;
+      currentLevel: number;
+    }) => {
       if (currentDraft && state.tournamentId === currentDraft.id) {
         setCurrentTimerLevel(state.currentLevel);
       }
     };
-    const handleTimerSync = (state: { tournamentId: number; currentLevel: number }) => {
+    const handleTimerSync = (state: {
+      tournamentId: number;
+      currentLevel: number;
+    }) => {
       if (currentDraft && state.tournamentId === currentDraft.id) {
         setCurrentTimerLevel(state.currentLevel);
       }
@@ -465,6 +474,7 @@ export function FullAdminScreen({
         start_points: 0,
         period_ids: [],
         allow_chat: null,
+        allow_self_checkin: null,
       });
       setShowGameOptions(false);
 
@@ -575,7 +585,7 @@ export function FullAdminScreen({
   // Update tournament field
   const updateTournamentField = async (
     field: string,
-    value: string | number | null,
+    value: string | number | boolean | null,
   ) => {
     if (!currentDraft || currentDraft.status === "integrated") return;
 
@@ -592,6 +602,11 @@ export function FullAdminScreen({
         venue_id: field === "venue_id" ? value : currentDraft.venue_id,
         start_points:
           field === "start_points" ? value : currentDraft.start_points,
+        allow_chat: field === "allow_chat" ? value : currentDraft.allow_chat,
+        allow_self_checkin:
+          field === "allow_self_checkin"
+            ? value
+            : currentDraft.allow_self_checkin,
       };
 
       const response = await fetch(
@@ -2290,12 +2305,56 @@ export function FullAdminScreen({
                               </p>
                             </div>
                             <select
-                              value={newTournament.allow_chat === null ? "default" : newTournament.allow_chat ? "on" : "off"}
+                              value={
+                                newTournament.allow_chat === null
+                                  ? "default"
+                                  : newTournament.allow_chat
+                                    ? "on"
+                                    : "off"
+                              }
                               onChange={(e) => {
                                 const value = e.target.value;
                                 setNewTournament({
                                   ...newTournament,
-                                  allow_chat: value === "default" ? null : value === "on",
+                                  allow_chat:
+                                    value === "default" ? null : value === "on",
+                                });
+                              }}
+                              className="px-3 py-1.5 border rounded text-black text-sm"
+                            >
+                              <option value="default">League Default</option>
+                              <option value="on">On</option>
+                              <option value="off">Off</option>
+                            </select>
+                          </div>
+                          {/* Allow Self Check-In */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900">
+                                Allow Self Check-In
+                              </label>
+                              <p className="text-xs text-gray-500">
+                                {newTournament.allow_self_checkin === null
+                                  ? "Using league default"
+                                  : newTournament.allow_self_checkin
+                                    ? "Self check-in enabled"
+                                    : "Self check-in disabled"}
+                              </p>
+                            </div>
+                            <select
+                              value={
+                                newTournament.allow_self_checkin === null
+                                  ? "default"
+                                  : newTournament.allow_self_checkin
+                                    ? "on"
+                                    : "off"
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setNewTournament({
+                                  ...newTournament,
+                                  allow_self_checkin:
+                                    value === "default" ? null : value === "on",
                                 });
                               }}
                               className="px-3 py-1.5 border rounded text-black text-sm"
@@ -2525,937 +2584,989 @@ export function FullAdminScreen({
       />
 
       <div className="max-w-6xl mx-auto">
-        <Card className="mb-6">
-          <CardHeader></CardHeader>
-          <CardContent>
-            {/* Tournament Status */}
-            {currentDraft && (
-              <div className="mb-6">
-                {/* // Action Buttons */}
-                <div className="flex flex-row gap-2">
-                  <button
-                    onClick={() => {
-                      clearTournamentState();
-                      setCurrentView("welcome");
-                    }}
-                    className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
-                  >
-                    <ArrowLeft size={16} />
-                    Back to Tournaments
-                  </button>
+        {/* Tournament Status */}
+        {currentDraft && (
+          <div className="mb-6">
+            {/* // Action Buttons */}
+            <div className="flex flex-row gap-2">
+              <button
+                onClick={() => {
+                  clearTournamentState();
+                  setCurrentView("welcome");
+                }}
+                className="flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+              >
+                <ArrowLeft size={16} />
+                Back to Tournaments
+              </button>
 
-                  <button
-                    onClick={exportTournament}
-                    className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                  >
-                    <Download size={16} />
-                    Export
-                  </button>
+              <button
+                onClick={exportTournament}
+                className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+              >
+                <Download size={16} />
+                Export
+              </button>
 
-                  {/* QR Code */}
-                  {currentDraft?.status === "in_progress" && (
-                    <button
-                      onClick={generateCheckInQR}
-                      disabled={generatingQR}
-                      className="flex items-center gap-2  px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <QrCode className="h-4 w-4" />
-                      {generatingQR ? "Generating..." : "QR"}
-                    </button>
+              {/* QR Code */}
+              {currentDraft?.status === "in_progress" && (
+                <button
+                  onClick={generateCheckInQR}
+                  disabled={generatingQR}
+                  className="flex items-center gap-2  px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <QrCode className="h-4 w-4" />
+                  {generatingQR ? "Generating..." : "QR"}
+                </button>
+              )}
+            </div>
+
+            {/* Tournament Info Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between my-5 gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {currentDraft?.venue} <br />{" "}
+                  {formatGameDate(currentDraft?.tournament_date || "")}
+                  {formatTime(currentDraft?.tournament_time) && (
+                    <>
+                      <br />
+                      <span className="text-sm">
+                        {formatTime(currentDraft?.tournament_time)}
+                      </span>
+                    </>
                   )}
-                </div>
+                </h2>
+                <p className="text-gray-600">
+                  Director: {currentDraft?.director_name} | Players:{" "}
+                  {players.length}
+                </p>
 
-                {/* Tournament Info Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between my-5 gap-3">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {currentDraft?.venue} <br />{" "}
-                      {formatGameDate(currentDraft?.tournament_date || "")}
-                      {formatTime(currentDraft?.tournament_time) && (
+                {/* Competition Periods Display/Edit */}
+                <div className="mt-2">
+                  {!editingPeriods ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-gray-500">Periods:</span>
+                      {periodsLoading ? (
+                        <span className="text-xs text-gray-400">
+                          Loading...
+                        </span>
+                      ) : draftPeriodIds.length > 0 ? (
                         <>
-                          <br />
-                          <span className="text-sm">
-                            {formatTime(currentDraft?.tournament_time)}
-                          </span>
+                          {availablePeriods
+                            .filter((p) => draftPeriodIds.includes(p.id))
+                            .map((period) => (
+                              <span
+                                key={period.id}
+                                className={`text-xs px-2 py-0.5 rounded ${
+                                  period.period_type === "monthly"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
+                                {period.name}
+                              </span>
+                            ))}
                         </>
+                      ) : (
+                        <span className="text-xs text-amber-600">
+                          None assigned
+                        </span>
                       )}
-                    </h2>
-                    <p className="text-gray-600">
-                      Director: {currentDraft?.director_name} | Players:{" "}
-                      {players.length}
-                    </p>
-
-                    {/* Competition Periods Display/Edit */}
-                    <div className="mt-2">
-                      {!editingPeriods ? (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-gray-500">
-                            Periods:
-                          </span>
-                          {periodsLoading ? (
-                            <span className="text-xs text-gray-400">
-                              Loading...
-                            </span>
-                          ) : draftPeriodIds.length > 0 ? (
-                            <>
+                      {currentDraft?.status === "in_progress" && (
+                        <button
+                          onClick={() => setEditingPeriods(true)}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                      <div className="text-sm font-medium text-gray-700 mb-2">
+                        Select Competition Periods
+                      </div>
+                      <div className="space-y-2">
+                        {/* Monthly Periods */}
+                        {availablePeriods.filter(
+                          (p) => p.period_type === "monthly",
+                        ).length > 0 && (
+                          <div>
+                            <div className="text-xs font-medium text-gray-600 mb-1">
+                              Monthly
+                            </div>
+                            <div className="flex flex-wrap gap-1">
                               {availablePeriods
-                                .filter((p) => draftPeriodIds.includes(p.id))
+                                .filter((p) => p.period_type === "monthly")
                                 .map((period) => (
-                                  <span
+                                  <label
                                     key={period.id}
-                                    className={`text-xs px-2 py-0.5 rounded ${
-                                      period.period_type === "monthly"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-green-100 text-green-800"
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
+                                      draftPeriodIds.includes(period.id)
+                                        ? "bg-blue-100 border-blue-500 text-blue-800"
+                                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
                                     }`}
                                   >
+                                    <input
+                                      type="checkbox"
+                                      checked={draftPeriodIds.includes(
+                                        period.id,
+                                      )}
+                                      onChange={(e) => {
+                                        const newIds = e.target.checked
+                                          ? [...draftPeriodIds, period.id]
+                                          : draftPeriodIds.filter(
+                                              (id) => id !== period.id,
+                                            );
+                                        setDraftPeriodIds(newIds);
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    {draftPeriodIds.includes(period.id) && (
+                                      <Check
+                                        size={10}
+                                        className="text-blue-600"
+                                      />
+                                    )}
                                     {period.name}
-                                  </span>
+                                  </label>
                                 ))}
-                            </>
-                          ) : (
-                            <span className="text-xs text-amber-600">
-                              None assigned
-                            </span>
-                          )}
-                          {currentDraft?.status === "in_progress" && (
-                            <button
-                              onClick={() => setEditingPeriods(true)}
-                              className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 p-3 rounded-lg border">
-                          <div className="text-sm font-medium text-gray-700 mb-2">
-                            Select Competition Periods
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            {/* Monthly Periods */}
-                            {availablePeriods.filter(
-                              (p) => p.period_type === "monthly",
-                            ).length > 0 && (
-                              <div>
-                                <div className="text-xs font-medium text-gray-600 mb-1">
-                                  Monthly
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {availablePeriods
-                                    .filter((p) => p.period_type === "monthly")
-                                    .map((period) => (
-                                      <label
-                                        key={period.id}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
-                                          draftPeriodIds.includes(period.id)
-                                            ? "bg-blue-100 border-blue-500 text-blue-800"
-                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
-                                        }`}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={draftPeriodIds.includes(
-                                            period.id,
-                                          )}
-                                          onChange={(e) => {
-                                            const newIds = e.target.checked
-                                              ? [...draftPeriodIds, period.id]
-                                              : draftPeriodIds.filter(
-                                                  (id) => id !== period.id,
-                                                );
-                                            setDraftPeriodIds(newIds);
-                                          }}
-                                          className="sr-only"
-                                        />
-                                        {draftPeriodIds.includes(period.id) && (
-                                          <Check
-                                            size={10}
-                                            className="text-blue-600"
-                                          />
-                                        )}
-                                        {period.name}
-                                      </label>
-                                    ))}
-                                </div>
-                              </div>
-                            )}
+                        )}
 
-                            {/* Quarterly Periods */}
-                            {availablePeriods.filter(
-                              (p) => p.period_type === "quarterly",
-                            ).length > 0 && (
-                              <div>
-                                <div className="text-xs font-medium text-gray-600 mb-1">
-                                  Quarterly
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {availablePeriods
-                                    .filter(
-                                      (p) => p.period_type === "quarterly",
-                                    )
-                                    .map((period) => (
-                                      <label
-                                        key={period.id}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
-                                          draftPeriodIds.includes(period.id)
-                                            ? "bg-green-100 border-green-500 text-green-800"
-                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
-                                        }`}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={draftPeriodIds.includes(
-                                            period.id,
-                                          )}
-                                          onChange={(e) => {
-                                            const newIds = e.target.checked
-                                              ? [...draftPeriodIds, period.id]
-                                              : draftPeriodIds.filter(
-                                                  (id) => id !== period.id,
-                                                );
-                                            setDraftPeriodIds(newIds);
-                                          }}
-                                          className="sr-only"
-                                        />
-                                        {draftPeriodIds.includes(period.id) && (
-                                          <Check
-                                            size={10}
-                                            className="text-green-600"
-                                          />
-                                        )}
-                                        {period.name}
-                                      </label>
-                                    ))}
-                                </div>
-                              </div>
-                            )}
+                        {/* Quarterly Periods */}
+                        {availablePeriods.filter(
+                          (p) => p.period_type === "quarterly",
+                        ).length > 0 && (
+                          <div>
+                            <div className="text-xs font-medium text-gray-600 mb-1">
+                              Quarterly
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {availablePeriods
+                                .filter((p) => p.period_type === "quarterly")
+                                .map((period) => (
+                                  <label
+                                    key={period.id}
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-xs ${
+                                      draftPeriodIds.includes(period.id)
+                                        ? "bg-green-100 border-green-500 text-green-800"
+                                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={draftPeriodIds.includes(
+                                        period.id,
+                                      )}
+                                      onChange={(e) => {
+                                        const newIds = e.target.checked
+                                          ? [...draftPeriodIds, period.id]
+                                          : draftPeriodIds.filter(
+                                              (id) => id !== period.id,
+                                            );
+                                        setDraftPeriodIds(newIds);
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    {draftPeriodIds.includes(period.id) && (
+                                      <Check
+                                        size={10}
+                                        className="text-green-600"
+                                      />
+                                    )}
+                                    {period.name}
+                                  </label>
+                                ))}
+                            </div>
                           </div>
-
-                          <div className="flex gap-2 mt-3">
-                            <button
-                              onClick={savePeriods}
-                              disabled={savingPeriods}
-                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs disabled:opacity-50"
-                            >
-                              {savingPeriods ? "Saving..." : "Save"}
-                            </button>
-                            <button
-                              onClick={() => {
-                                // Reset to original
-                                if (currentDraft?.period_ids) {
-                                  try {
-                                    const ids = JSON.parse(
-                                      currentDraft.period_ids,
-                                    );
-                                    setDraftPeriodIds(
-                                      Array.isArray(ids) ? ids : [],
-                                    );
-                                  } catch {
-                                    setDraftPeriodIds([]);
-                                  }
-                                } else {
-                                  setDraftPeriodIds([]);
-                                }
-                                setEditingPeriods(false);
-                              }}
-                              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Buttons and info */}
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm text-gray-500">
-                      <div>
-                        Last updated: {lastUpdated.toLocaleTimeString()}
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        Auto-refreshing
+
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={savePeriods}
+                          disabled={savingPeriods}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs disabled:opacity-50"
+                        >
+                          {savingPeriods ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Reset to original
+                            if (currentDraft?.period_ids) {
+                              try {
+                                const ids = JSON.parse(currentDraft.period_ids);
+                                setDraftPeriodIds(
+                                  Array.isArray(ids) ? ids : [],
+                                );
+                              } catch {
+                                setDraftPeriodIds([]);
+                              }
+                            } else {
+                              setDraftPeriodIds([]);
+                            }
+                            setEditingPeriods(false);
+                          }}
+                          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Buttons and info */}
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-500">
+                  <div>Last updated: {lastUpdated.toLocaleTimeString()}</div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Auto-refreshing
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Status Banner */}
-                {currentDraft && (
-                  <div
-                    className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
+            {/* Status Banner */}
+            {currentDraft && (
+              <div
+                className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
+                  currentDraft.status === "integrated"
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-blue-50 border border-blue-200"
+                }`}
+              >
+                <div>
+                  <span
+                    className={`font-medium ${
                       currentDraft.status === "integrated"
-                        ? "bg-green-50 border border-green-200"
-                        : "bg-blue-50 border border-blue-200"
+                        ? "text-green-900"
+                        : "text-blue-900"
                     }`}
                   >
-                    <div>
-                      <span
-                        className={`font-medium ${
-                          currentDraft.status === "integrated"
-                            ? "text-green-900"
-                            : "text-blue-900"
-                        }`}
-                      >
-                        Status:{" "}
-                        {currentDraft.status.charAt(0).toUpperCase() +
-                          currentDraft.status.slice(1)}
-                      </span>
-                    </div>
-                    <div>
-                      <span
-                        className={`text-sm ${
-                          currentDraft.status === "integrated"
-                            ? "text-green-700"
-                            : "text-blue-700"
-                        }`}
-                      >
-                        {currentDraft.status === "integrated"
-                          ? "✅ Tournament completed and integrated"
-                          : "🔄 Tournament in progress - players can check in"}
-                      </span>
-                      {currentDraft.status === "integrated" && (
-                        <div className="mt-3 space-y-2">
-                          <div className="text-sm text-blue-700">
-                            ✅ This tournament has been integrated into the main
-                            system.
-                          </div>
-                          <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
-                            <button
-                              onClick={revertIntegration}
-                              disabled={isReverting}
-                              className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
-                            >
-                              {isReverting ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Reverting...
-                                </>
-                              ) : (
-                                <>
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
-                                    />
-                                  </svg>
-                                  Revert to Draft
-                                </>
-                              )}
-                            </button>
-                            <span className="text-xs text-orange-700">
-                              ⚠️ This will delete main database entries and
-                              restore draft status
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {currentDraft.status === "in_progress" && (
-                        <div className="mt-2 text-sm text-blue-700">
-                          📝 Draft mode - You can add/edit players and then
-                          integrate when ready.
-                        </div>
-                      )}
-                    </div>
-                    {/* Integration Preview */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setShowIntegrationPreview(!showIntegrationPreview)
-                        }
-                        disabled={
-                          players.length === 0 ||
-                          currentDraft?.status === "integrated"
-                        }
-                        className={`px-3 py-1 text-sm flex items-center gap-2 ${
-                          players.length > 0 &&
-                          currentDraft?.status !== "integrated"
-                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                            : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        }`}
-                      >
-                        <Trophy className="h-4 w-4" />
-                        {currentDraft?.status === "integrated"
-                          ? "Already Integrated"
-                          : showIntegrationPreview
-                            ? "Hide Integration Preview"
-                            : "Preview Integration"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {showQRCode && (
-              <QRCodeModal
-                checkInUrl={checkInUrl}
-                showQRCode={showQRCode}
-                setShowQRCode={setShowQRCode}
-                currentDraft={currentDraft}
-              />
-            )}
-
-            {/* Move Knockout Modal */}
-            {moveKnockoutModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Move Knockout Position
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Select the player after which{" "}
-                    <span className="font-medium">
-                      {moveKnockoutModal.playerName}
-                    </span>{" "}
-                    should be knocked out:
-                  </p>
-                  <div className="max-h-64 overflow-y-auto border rounded mb-4">
-                    {/* List all knocked out players except the one being moved */}
-                    {players
-                      .filter(
-                        (p) =>
-                          p.knockedout_at &&
-                          p.id !== moveKnockoutModal.playerId,
-                      )
-                      .sort((a, b) => {
-                        const timeA = new Date(a.knockedout_at!).getTime();
-                        const timeB = new Date(b.knockedout_at!).getTime();
-                        if (timeA !== timeB) return timeB - timeA;
-                        return a.id - b.id;
-                      })
-                      .map((p, index) => {
-                        const position = koPositionsMap.get(p.id);
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() =>
-                              handleMoveKnockout(
-                                moveKnockoutModal.playerId,
-                                p.id,
-                              )
-                            }
-                            className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
-                          >
-                            <span className="font-medium">
-                              {index === 0 ? "Latest KO" : `#${position} KO`}
-                            </span>{" "}
-                            - {p.player_name}
-                            {p.player_nickname && ` (${p.player_nickname})`}
-                          </button>
-                        );
-                      })}
-                    {/* Option to be first knockout */}
-                    <button
-                      onClick={() =>
-                        handleMoveKnockout(moveKnockoutModal.playerId, null)
-                      }
-                      className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
-                    >
-                      <span className="font-medium">Be the first knockout</span>
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setMoveKnockoutModal(null)}
-                    className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                    Status:{" "}
+                    {currentDraft.status.charAt(0).toUpperCase() +
+                      currentDraft.status.slice(1)}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    className={`text-sm ${
+                      currentDraft.status === "integrated"
+                        ? "text-green-700"
+                        : "text-blue-700"
+                    }`}
                   >
-                    Cancel
+                    {currentDraft.status === "integrated"
+                      ? "✅ Tournament completed and integrated"
+                      : "🔄 Tournament in progress - players can check in"}
+                  </span>
+                  {currentDraft.status === "integrated" && (
+                    <div className="mt-3 space-y-2">
+                      <div className="text-sm text-blue-700">
+                        ✅ This tournament has been integrated into the main
+                        system.
+                      </div>
+                      <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
+                        <button
+                          onClick={revertIntegration}
+                          disabled={isReverting}
+                          className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
+                        >
+                          {isReverting ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Reverting...
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                                />
+                              </svg>
+                              Revert to Draft
+                            </>
+                          )}
+                        </button>
+                        <span className="text-xs text-orange-700">
+                          ⚠️ This will delete main database entries and restore
+                          draft status
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {currentDraft.status === "in_progress" && (
+                    <div className="mt-2 text-sm text-blue-700">
+                      📝 Draft mode - You can add/edit players and then
+                      integrate when ready.
+                    </div>
+                  )}
+                </div>
+                {/* Integration Preview */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setShowIntegrationPreview(!showIntegrationPreview)
+                    }
+                    disabled={
+                      players.length === 0 ||
+                      currentDraft?.status === "integrated"
+                    }
+                    className={`px-3 py-1 text-sm flex items-center gap-2 ${
+                      players.length > 0 &&
+                      currentDraft?.status !== "integrated"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    }`}
+                  >
+                    <Trophy className="h-4 w-4" />
+                    {currentDraft?.status === "integrated"
+                      ? "Already Integrated"
+                      : showIntegrationPreview
+                        ? "Hide Integration Preview"
+                        : "Preview Integration"}
                   </button>
                 </div>
               </div>
             )}
+          </div>
+        )}
+        {showQRCode && (
+          <QRCodeModal
+            checkInUrl={checkInUrl}
+            showQRCode={showQRCode}
+            setShowQRCode={setShowQRCode}
+            currentDraft={currentDraft}
+          />
+        )}
 
-            {/* Tournament Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={formatDateForInput(
-                    currentDraft?.tournament_date || "",
-                  )}
-                  onChange={(e) =>
-                    updateTournamentField("tournament_date", e.target.value)
+        {/* Move Knockout Modal */}
+        {moveKnockoutModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Move Knockout Position
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Select the player after which{" "}
+                <span className="font-medium">
+                  {moveKnockoutModal.playerName}
+                </span>{" "}
+                should be knocked out:
+              </p>
+              <div className="max-h-64 overflow-y-auto border rounded mb-4">
+                {/* List all knocked out players except the one being moved */}
+                {players
+                  .filter(
+                    (p) =>
+                      p.knockedout_at && p.id !== moveKnockoutModal.playerId,
+                  )
+                  .sort((a, b) => {
+                    const timeA = new Date(a.knockedout_at!).getTime();
+                    const timeB = new Date(b.knockedout_at!).getTime();
+                    if (timeA !== timeB) return timeB - timeA;
+                    return a.id - b.id;
+                  })
+                  .map((p, index) => {
+                    const position = koPositionsMap.get(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() =>
+                          handleMoveKnockout(moveKnockoutModal.playerId, p.id)
+                        }
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
+                      >
+                        <span className="font-medium">
+                          {index === 0 ? "Latest KO" : `#${position} KO`}
+                        </span>{" "}
+                        - {p.player_name}
+                        {p.player_nickname && ` (${p.player_nickname})`}
+                      </button>
+                    );
+                  })}
+                {/* Option to be first knockout */}
+                <button
+                  onClick={() =>
+                    handleMoveKnockout(moveKnockoutModal.playerId, null)
                   }
-                  className="w-full px-3 py-2 border rounded text-black"
-                  disabled={currentDraft?.status === "integrated"}
-                />
+                  className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
+                >
+                  <span className="font-medium">Be the first knockout</span>
+                </button>
+              </div>
+              <button
+                onClick={() => setMoveKnockoutModal(null)}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tournament Metadata */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+          {/* Date & Time - grouped on small screens */}
+          <div className="grid grid-cols-2 lg:contents gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                value={formatDateForInput(currentDraft?.tournament_date || "")}
+                onChange={(e) =>
+                  updateTournamentField("tournament_date", e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded text-black"
+                disabled={currentDraft?.status === "integrated"}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                value={currentDraft?.tournament_time || ""}
+                onChange={(e) =>
+                  updateTournamentField("tournament_time", e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded text-black"
+                disabled={currentDraft?.status === "integrated"}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Venue
+            </label>
+            <div className="w-full px-3 py-2 border rounded text-black bg-gray-50">
+              {currentDraft?.venue || "No venue set"}
+            </div>
+          </div>
+          {/* Director & Start Points - grouped on small screens */}
+          <div className="grid grid-cols-2 lg:contents gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Director
+              </label>
+              <input
+                type="text"
+                value={currentDraft?.director_name || ""}
+                onChange={(e) =>
+                  updateTournamentField("director_name", e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded text-black"
+                placeholder="Director name"
+                disabled={currentDraft?.status === "integrated"}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Start Points
+              </label>
+              <input
+                type="number"
+                value={currentDraft?.start_points || 0}
+                onChange={(e) =>
+                  updateTournamentField(
+                    "start_points",
+                    parseInt(e.target.value) || 0,
+                  )
+                }
+                className="w-full px-3 py-2 border rounded text-black"
+                disabled={currentDraft?.status === "integrated"}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Game Options */}
+        <div className="mb-6 p-4 bg-gray-50 rounded border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-gray-900">
+                  Chat
+                </label>
+              </div>
+              <select
+                value={
+                  currentDraft?.allow_chat === null
+                    ? "default"
+                    : currentDraft?.allow_chat
+                      ? "on"
+                      : "off"
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateTournamentField(
+                    "allow_chat",
+                    value === "default" ? null : value === "on",
+                  );
+                }}
+                className="px-3 py-1.5 border rounded text-black text-sm"
+                disabled={currentDraft?.status === "integrated"}
+              >
+                <option value="default">League Default</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-gray-900">
+                  Self Check-In
+                </label>
+              </div>
+              <select
+                value={
+                  currentDraft?.allow_self_checkin === null
+                    ? "default"
+                    : currentDraft?.allow_self_checkin
+                      ? "on"
+                      : "off"
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateTournamentField(
+                    "allow_self_checkin",
+                    value === "default" ? null : value === "on",
+                  );
+                }}
+                className="px-3 py-1.5 border rounded text-black text-sm"
+                disabled={currentDraft?.status === "integrated"}
+              >
+                <option value="default">League Default</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Tournament Summary */}
+        {displayPlayers.length > 0 && (
+          <div className="mb-6 p-4 bg-gray-50 rounded">
+            <h4 className="font-semibold text-black mb-2">
+              Tournament Summary
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-black">Total Players:</span>
+                <span className="ml-2 text-black font-medium">
+                  {displayPlayers.length}
+                </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={currentDraft?.tournament_time || ""}
-                  onChange={(e) =>
-                    updateTournamentField("tournament_time", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border rounded text-black"
-                  disabled={currentDraft?.status === "integrated"}
-                />
+                <span className="text-black">Players Remaining:</span>
+                <span className="ml-2 text-black font-medium">
+                  {displayPlayers.length -
+                    displayPlayers.filter((p) => p.hitman_name !== null).length}
+                </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Venue
-                </label>
-                <div className="w-full px-3 py-2 border rounded text-black bg-gray-50">
-                  {currentDraft?.venue || "No venue set"}
-                </div>
+                <span className="text-black">New Players:</span>
+                <span className="ml-2 font-medium text-black ">
+                  {displayPlayers.filter((p) => p.is_new_player).length}
+                </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Director
-                </label>
-                <input
-                  type="text"
-                  value={currentDraft?.director_name || ""}
-                  onChange={(e) =>
-                    updateTournamentField("director_name", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border rounded text-black"
-                  placeholder="Director name"
-                  disabled={currentDraft?.status === "integrated"}
-                />
+                <span className="text-black">With Hitmen:</span>
+                <span className="ml-2 font-medium text-black ">
+                  {displayPlayers.filter((p) => p.hitman_name !== null).length}
+                </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Start Points
-                </label>
-                <input
-                  type="number"
-                  value={currentDraft?.start_points || 0}
-                  onChange={(e) =>
-                    updateTournamentField(
-                      "start_points",
-                      parseInt(e.target.value) || 0,
-                    )
-                  }
-                  className="w-full px-3 py-2 border rounded text-black"
-                  disabled={currentDraft?.status === "integrated"}
-                />
+                <span className="text-black">With Placements:</span>
+                <span className="ml-2 font-medium text-black ">
+                  {displayPlayers.filter((p) => p.placement !== null).length}
+                </span>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Tournament Summary */}
-            {displayPlayers.length > 0 && (
-              <div className="mb-6 p-4 bg-gray-50 rounded">
-                <h4 className="font-semibold text-black mb-2">
-                  Tournament Summary
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-black">Total Players:</span>
-                    <span className="ml-2 text-black font-medium">
-                      {displayPlayers.length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-black">Players Remaining:</span>
-                    <span className="ml-2 text-black font-medium">
-                      {displayPlayers.length -
-                        displayPlayers.filter((p) => p.hitman_name !== null)
-                          .length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-black">New Players:</span>
-                    <span className="ml-2 font-medium text-black ">
-                      {displayPlayers.filter((p) => p.is_new_player).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-black">With Hitmen:</span>
-                    <span className="ml-2 font-medium text-black ">
-                      {
-                        displayPlayers.filter((p) => p.hitman_name !== null)
-                          .length
-                      }
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-black">With Placements:</span>
-                    <span className="ml-2 font-medium text-black ">
-                      {
-                        displayPlayers.filter((p) => p.placement !== null)
-                          .length
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+        {showIntegrationPreview &&
+          players.length > 0 &&
+          currentDraft &&
+          currentDraft.status !== "integrated" && (
+            <TournamentValidationStatus
+              players={players}
+              isIntegrated={false}
+              isIntegrating={isIntegrating}
+              onIntegrate={integrateToMainSystem}
+              onAutoCalculateKOPositions={autoCalculateKOPositions}
+            />
+          )}
 
-            {showIntegrationPreview &&
-              players.length > 0 &&
-              currentDraft &&
-              currentDraft.status !== "integrated" && (
-                <TournamentValidationStatus
-                  players={players}
-                  isIntegrated={false}
-                  isIntegrating={isIntegrating}
-                  onIntegrate={integrateToMainSystem}
-                  onAutoCalculateKOPositions={autoCalculateKOPositions}
-                />
-              )}
+        {/* Blind Schedule Selector & Game Timer */}
+        {currentDraft && (
+          <div className="mb-6">
+            {/* Blind Schedule Selector */}
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-lg">Blind Schedule</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:flex-wrap">
+                  <label className="text-sm font-medium text-gray-700">
+                    Schedule Type:
+                  </label>
+                  <select
+                    value={currentDraft.blind_schedule || ""}
+                    onChange={async (e) => {
+                      const newSchedule = e.target.value;
+                      try {
+                        const response = await fetch(
+                          `/api/tournament-drafts/${currentDraft.id}`,
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              blind_schedule: newSchedule,
+                            }),
+                          },
+                        );
 
-            {/* Blind Schedule Selector & Game Timer */}
-            {currentDraft && (
-              <div className="mb-6">
-                {/* Blind Schedule Selector */}
-                <Card className="mb-4">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Blind Schedule</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:flex-wrap">
-                      <label className="text-sm font-medium text-gray-700">
-                        Schedule Type:
-                      </label>
-                      <select
-                        value={currentDraft.blind_schedule || ""}
-                        onChange={async (e) => {
-                          const newSchedule = e.target.value;
-                          try {
-                            const response = await fetch(
-                              `/api/tournament-drafts/${currentDraft.id}`,
-                              {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ blind_schedule: newSchedule }),
-                              },
-                            );
-
-                            if (response.ok) {
-                              updateCurrentDraft({
-                                ...currentDraft,
-                                blind_schedule: newSchedule,
-                                custom_blind_levels: null,
-                              });
-                              socket.emit("timer:reset", { tournamentId: currentDraft.id });
-                            } else {
-                              console.error("Failed to update blind schedule");
-                            }
-                          } catch (error) {
-                            console.error("Error updating blind schedule:", error);
-                          }
-                        }}
-                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 text-black rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={currentDraft.status === "integrated"}
-                      >
-                        {leagueSchedules.length === 0 && (
-                          <option value="">Loading schedules...</option>
-                        )}
-                        {leagueSchedules.filter((s) => !s.isSystem).length > 0 && (
-                          <optgroup label="League Schedules">
-                            {leagueSchedules
-                              .filter((s) => !s.isSystem)
-                              .map((s) => (
-                                <option key={s.id} value={String(s.id)}>
-                                  {s.name}{s.description ? ` - ${s.description}` : ""}
-                                </option>
-                              ))}
-                          </optgroup>
-                        )}
-                        <optgroup label="System Schedules">
-                          {leagueSchedules
-                            .filter((s) => s.isSystem)
-                            .map((s) => (
-                              <option key={s.id} value={String(s.id)}>
-                                {s.name}{s.description ? ` - ${s.description}` : ""}
-                              </option>
-                            ))}
-                        </optgroup>
-                      </select>
-                      <button
-                        onClick={() => setShowBlindEditModal(true)}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-                        disabled={currentDraft.status === "integrated"}
-                      >
-                        Edit Blind Schedule
-                      </button>
-                      {currentDraft.custom_blind_levels && (
-                        <span className="text-sm text-blue-600 font-medium">
-                          (Customized)
-                        </span>
-                      )}
-                      {currentDraft.status === "integrated" && (
-                        <span className="text-sm text-gray-500">
-                          Cannot change schedule for integrated tournaments
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Blind Schedule Edit Modal */}
-                <BlindScheduleEditModal
-                  isOpen={showBlindEditModal}
-                  onClose={() => setShowBlindEditModal(false)}
-                  tournamentId={currentDraft.id}
-                  currentScheduleId={currentDraft.blind_schedule || "1"}
-                  currentScheduleName={
-                    leagueSchedules.find(
-                      (s) => String(s.id) === String(currentDraft.blind_schedule ?? ""),
-                    )?.name ?? "Custom"
-                  }
-                  customLevels={
-                    currentDraft.custom_blind_levels
-                      ? (JSON.parse(currentDraft.custom_blind_levels) as BlindLevel[])
-                      : leagueSchedules.find(
-                          (s) => String(s.id) === String(currentDraft.blind_schedule ?? ""),
-                        )?.levels ?? null
-                  }
-                  isCustomized={Boolean(currentDraft.custom_blind_levels)}
-                  currentTimerLevel={currentTimerLevel}
-                  onSave={async (levels: BlindLevel[]) => {
-                    const customLevelsJson = JSON.stringify(levels);
-                    try {
-                      const response = await fetch(
-                        `/api/tournament-drafts/${currentDraft.id}`,
-                        {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            custom_blind_levels: customLevelsJson,
-                          }),
-                        },
-                      );
-
-                      if (response.ok) {
-                        updateCurrentDraft({
-                          ...currentDraft,
-                          custom_blind_levels: customLevelsJson,
-                        });
-                        // Update timer blind levels without resetting time/level
-                        socket.emit("timer:updateLevels", {
-                          tournamentId: currentDraft.id,
-                          levels: levels,
-                        });
-                      } else {
-                        throw new Error("Failed to save custom blind levels");
-                      }
-                    } catch (error) {
-                      console.error("Error saving blind schedule:", error);
-                      throw error;
-                    }
-                  }}
-                  onSavedToLeague={loadBlindSchedules}
-                />
-
-                {/* Game Timer */}
-                <GameTimer
-                  tournamentId={currentDraft.id}
-                  playersRemaining={computedStats?.playersRemaining}
-                  isAdmin={true}
-                  blindScheduleName={getBlindScheduleDisplayName(
-                    currentDraft,
-                    leagueSchedules,
-                  )}
-                />
-              </div>
-            )}
-
-            {/* Add Player Section */}
-            {currentDraft?.status !== "integrated" && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Add Playerz
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
-                    onFocus={() => {
-                      if (newPlayerName.length >= 2) {
-                        setShowPlayerDropdown(true);
+                        if (response.ok) {
+                          updateCurrentDraft({
+                            ...currentDraft,
+                            blind_schedule: newSchedule,
+                            custom_blind_levels: null,
+                          });
+                          socket.emit("timer:reset", {
+                            tournamentId: currentDraft.id,
+                          });
+                        } else {
+                          console.error("Failed to update blind schedule");
+                        }
+                      } catch (error) {
+                        console.error("Error updating blind schedule:", error);
                       }
                     }}
-                    className="w-full px-3 py-2 pr-8 border rounded text-black"
-                    placeholder="Start typing player name..."
-                    id="player-search-input"
-                  />
-
-                  {/* Close button - only show when dropdown is open */}
-                  {showPlayerDropdown && (
-                    <button
-                      type="button"
-                      onClick={() => setShowPlayerDropdown(false)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-
-                  {showPlayerDropdown && (
-                    <PlayerSearchDropdown
-                      searchResults={playerSearchResults}
-                      isSearching={isSearching}
-                      checkedInPlayers={players
-                        .filter((p) => p.player_name)
-                        .map((p) => ({
-                          player_uid: p.player_uid,
-                          player_name: p.player_name,
-                        }))}
-                      onSelectPlayer={(player) =>
-                        addPlayer({
-                          name: player.Name,
-                          nickname: player.nickname ?? undefined,
-                          uid: player.UID,
-                        })
-                      }
-                      onAddNewPlayer={(name) =>
-                        addPlayer({ name, isNew: true })
-                      }
-                      showAddNewOption={true}
-                      newPlayerName={newPlayerName}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Players List */}
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <h3
-                    className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                    onClick={resetToDefaultSort}
-                    title={
-                      sortBy === "insertion"
-                        ? `Click to sort ${sortOrder === "desc" ? "oldest first" : "newest first"}`
-                        : "Click to sort by insertion order (newest first)"
-                    }
+                    className="w-full sm:w-auto px-3 py-2 border border-gray-300 text-black rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={currentDraft.status === "integrated"}
                   >
-                    Players ({getFilteredAndSortedPlayers().length})
-                  </h3>
-                  {sortBy === "insertion" && (
-                    <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
-                      Insertion Order
-                      <span className="text-xs">
-                        {sortOrder === "desc" ? "↓" : "↑"}
-                      </span>
+                    {leagueSchedules.length === 0 && (
+                      <option value="">Loading schedules...</option>
+                    )}
+                    {leagueSchedules.filter((s) => !s.isSystem).length > 0 && (
+                      <optgroup label="League Schedules">
+                        {leagueSchedules
+                          .filter((s) => !s.isSystem)
+                          .map((s) => (
+                            <option
+                              key={s.id}
+                              value={String(s.id)}
+                            >
+                              {s.name}
+                              {s.description ? ` - ${s.description}` : ""}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="System Schedules">
+                      {leagueSchedules
+                        .filter((s) => s.isSystem)
+                        .map((s) => (
+                          <option
+                            key={s.id}
+                            value={String(s.id)}
+                          >
+                            {s.name}
+                            {s.description ? ` - ${s.description}` : ""}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                  <button
+                    onClick={() => setShowBlindEditModal(true)}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+                    disabled={currentDraft.status === "integrated"}
+                  >
+                    Edit Blind Schedule
+                  </button>
+                  {currentDraft.custom_blind_levels && (
+                    <span className="text-sm text-blue-600 font-medium">
+                      (Customized)
+                    </span>
+                  )}
+                  {currentDraft.status === "integrated" && (
+                    <span className="text-sm text-gray-500">
+                      Cannot change schedule for integrated tournaments
                     </span>
                   )}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {getFilteredAndSortedPlayers().length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No players added yet. Start typing a name above to add
-                  players.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {/* Column Headers */}
-                  <div className="grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
-                    <div
-                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "name" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded -ml-2" : ""}`}
-                      onClick={() => handleSort("name")}
-                    >
-                      Player Name
-                      {sortBy === "name" && (
-                        <span className="text-xs">
-                          {sortOrder === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "checked_in_at" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
-                      onClick={() => handleSort("checked_in_at")}
-                    >
-                      Time
-                      {sortBy === "checked_in_at" && (
-                        <span className="text-xs">
-                          {sortOrder === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </div>
-                    <div>Hitman</div>
-                    <div
-                      className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "ko_position" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
-                      onClick={() => handleSort("ko_position")}
-                    >
-                      KO #
-                      {sortBy === "ko_position" && (
-                        <span className="text-xs">
-                          {sortOrder === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-center">Actions</div>
-                  </div>
+            {/* Blind Schedule Edit Modal */}
+            <BlindScheduleEditModal
+              isOpen={showBlindEditModal}
+              onClose={() => setShowBlindEditModal(false)}
+              tournamentId={currentDraft.id}
+              currentScheduleId={currentDraft.blind_schedule || "1"}
+              currentScheduleName={
+                leagueSchedules.find(
+                  (s) =>
+                    String(s.id) === String(currentDraft.blind_schedule ?? ""),
+                )?.name ?? "Custom"
+              }
+              customLevels={
+                currentDraft.custom_blind_levels
+                  ? (JSON.parse(
+                      currentDraft.custom_blind_levels,
+                    ) as BlindLevel[])
+                  : (leagueSchedules.find(
+                      (s) =>
+                        String(s.id) ===
+                        String(currentDraft.blind_schedule ?? ""),
+                    )?.levels ?? null)
+              }
+              isCustomized={Boolean(currentDraft.custom_blind_levels)}
+              currentTimerLevel={currentTimerLevel}
+              onSave={async (levels: BlindLevel[]) => {
+                const customLevelsJson = JSON.stringify(levels);
+                try {
+                  const response = await fetch(
+                    `/api/tournament-drafts/${currentDraft.id}`,
+                    {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        custom_blind_levels: customLevelsJson,
+                      }),
+                    },
+                  );
 
-                  {/* Player Rows */}
-                  {getFilteredAndSortedPlayers().map((player) => (
-                    <PlayerRow
-                      key={player.id}
-                      player={player}
-                      isIntegrated={currentDraft?.status === "integrated"}
-                      hitmanSearchValue={
-                        hitmanSearchValues[player.id] ??
-                        player.hitman_name ??
-                        ""
-                      }
-                      hitmanDropdownVisible={
-                        hitmanDropdownVisible[player.id] ?? false
-                      }
-                      hitmanHighlightedIndex={
-                        hitmanHighlightedIndex[player.id] ?? -1
-                      }
-                      hitmanCandidates={getHitmanCandidates(
-                        player.id,
-                        hitmanSearchValues[player.id] || "",
-                      )}
-                      calculatedKoPosition={
-                        koPositionsMap.get(player.id) ?? null
-                      }
-                      onHitmanSearchChange={(value) =>
-                        handleHitmanSearchChange(player.id, value)
-                      }
-                      onHitmanFocus={() => handleHitmanFocus(player.id)}
-                      onHitmanBlur={() => handleHitmanBlur(player.id)}
-                      onHitmanKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
-                      onHitmanSelect={(hitmanName) =>
-                        selectHitman(player.id, hitmanName)
-                      }
-                      onCrosshairClick={() => handleCrosshairClick(player.id)}
-                      onMoveKnockout={() =>
-                        setMoveKnockoutModal({
-                          playerId: player.id,
-                          playerName: player.player_name,
-                        })
-                      }
-                      onRemove={() => {
-                        if (
-                          confirm(
-                            `Remove ${player.player_name} from tournament?`,
-                          )
-                        ) {
-                          removePlayer(player.id);
-                        }
-                      }}
-                      renderPlayerIndicator={renderPlayerIndicator}
-                    />
-                  ))}
-                </div>
+                  if (response.ok) {
+                    updateCurrentDraft({
+                      ...currentDraft,
+                      custom_blind_levels: customLevelsJson,
+                    });
+                    // Update timer blind levels without resetting time/level
+                    socket.emit("timer:updateLevels", {
+                      tournamentId: currentDraft.id,
+                      levels: levels,
+                    });
+                  } else {
+                    throw new Error("Failed to save custom blind levels");
+                  }
+                } catch (error) {
+                  console.error("Error saving blind schedule:", error);
+                  throw error;
+                }
+              }}
+              onSavedToLeague={loadBlindSchedules}
+            />
+
+            {/* Game Timer */}
+            <GameTimer
+              tournamentId={currentDraft.id}
+              playersRemaining={computedStats?.playersRemaining}
+              isAdmin={true}
+              blindScheduleName={getBlindScheduleDisplayName(
+                currentDraft,
+                leagueSchedules,
+              )}
+            />
+          </div>
+        )}
+
+        {/* Add Player Section */}
+        {currentDraft?.status !== "integrated" && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Add Playerz
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                onFocus={() => {
+                  if (newPlayerName.length >= 2) {
+                    setShowPlayerDropdown(true);
+                  }
+                }}
+                className="w-full px-3 py-2 pr-8 border rounded text-black"
+                placeholder="Start typing player name..."
+                id="player-search-input"
+              />
+
+              {/* Close button - only show when dropdown is open */}
+              {showPlayerDropdown && (
+                <button
+                  type="button"
+                  onClick={() => setShowPlayerDropdown(false)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  <X size={16} />
+                </button>
+              )}
+
+              {showPlayerDropdown && (
+                <PlayerSearchDropdown
+                  searchResults={playerSearchResults}
+                  isSearching={isSearching}
+                  checkedInPlayers={players
+                    .filter((p) => p.player_name)
+                    .map((p) => ({
+                      player_uid: p.player_uid,
+                      player_name: p.player_name,
+                    }))}
+                  onSelectPlayer={(player) =>
+                    addPlayer({
+                      name: player.Name,
+                      nickname: player.nickname ?? undefined,
+                      uid: player.UID,
+                    })
+                  }
+                  onAddNewPlayer={(name) => addPlayer({ name, isNew: true })}
+                  showAddNewOption={true}
+                  newPlayerName={newPlayerName}
+                />
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Players List */}
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <h3
+                className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={resetToDefaultSort}
+                title={
+                  sortBy === "insertion"
+                    ? `Click to sort ${sortOrder === "desc" ? "oldest first" : "newest first"}`
+                    : "Click to sort by insertion order (newest first)"
+                }
+              >
+                Players ({getFilteredAndSortedPlayers().length})
+              </h3>
+              {sortBy === "insertion" && (
+                <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                  Insertion Order
+                  <span className="text-xs">
+                    {sortOrder === "desc" ? "↓" : "↑"}
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {getFilteredAndSortedPlayers().length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No players added yet. Start typing a name above to add players.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Column Headers */}
+              <div className="grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b-2 border-gray-300 bg-gray-50 font-semibold text-gray-700">
+                <div
+                  className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "name" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded -ml-2" : ""}`}
+                  onClick={() => handleSort("name")}
+                >
+                  Player Name
+                  {sortBy === "name" && (
+                    <span className="text-xs">
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </span>
+                  )}
+                </div>
+                <div
+                  className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "checked_in_at" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
+                  onClick={() => handleSort("checked_in_at")}
+                >
+                  Time
+                  {sortBy === "checked_in_at" && (
+                    <span className="text-xs">
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </span>
+                  )}
+                </div>
+                <div>Hitman</div>
+                <div
+                  className={`flex items-center gap-1 cursor-pointer hover:text-blue-600 ${sortBy === "ko_position" ? "bg-blue-100 text-blue-700 px-2 py-1 rounded" : ""}`}
+                  onClick={() => handleSort("ko_position")}
+                >
+                  KO #
+                  {sortBy === "ko_position" && (
+                    <span className="text-xs">
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </span>
+                  )}
+                </div>
+                <div className="text-center">Actions</div>
+              </div>
+
+              {/* Player Rows */}
+              {getFilteredAndSortedPlayers().map((player) => (
+                <PlayerRow
+                  key={player.id}
+                  player={player}
+                  isIntegrated={currentDraft?.status === "integrated"}
+                  hitmanSearchValue={
+                    hitmanSearchValues[player.id] ?? player.hitman_name ?? ""
+                  }
+                  hitmanDropdownVisible={
+                    hitmanDropdownVisible[player.id] ?? false
+                  }
+                  hitmanHighlightedIndex={
+                    hitmanHighlightedIndex[player.id] ?? -1
+                  }
+                  hitmanCandidates={getHitmanCandidates(
+                    player.id,
+                    hitmanSearchValues[player.id] || "",
+                  )}
+                  calculatedKoPosition={koPositionsMap.get(player.id) ?? null}
+                  onHitmanSearchChange={(value) =>
+                    handleHitmanSearchChange(player.id, value)
+                  }
+                  onHitmanFocus={() => handleHitmanFocus(player.id)}
+                  onHitmanBlur={() => handleHitmanBlur(player.id)}
+                  onHitmanKeyDown={(e) => handleHitmanKeyDown(player.id, e)}
+                  onHitmanSelect={(hitmanName) =>
+                    selectHitman(player.id, hitmanName)
+                  }
+                  onCrosshairClick={() => handleCrosshairClick(player.id)}
+                  onMoveKnockout={() =>
+                    setMoveKnockoutModal({
+                      playerId: player.id,
+                      playerName: player.player_name,
+                    })
+                  }
+                  onRemove={() => {
+                    if (
+                      confirm(`Remove ${player.player_name} from tournament?`)
+                    ) {
+                      removePlayer(player.id);
+                    }
+                  }}
+                  renderPlayerIndicator={renderPlayerIndicator}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

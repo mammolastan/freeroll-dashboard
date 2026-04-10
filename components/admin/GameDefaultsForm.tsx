@@ -11,13 +11,14 @@ interface Props {
 export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
   const [form, setForm] = useState({
     allowChat: initialConfig.gameDefaults.allowChat,
+    allowSelfCheckIn: initialConfig.gameDefaults.allowSelfCheckIn,
     lateRegistrationWindowMinutes: initialConfig.gameDefaults.lateRegistrationWindowMinutes,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handleToggle(field: 'allowChat') {
+  function handleToggle(field: 'allowChat' | 'allowSelfCheckIn') {
     setForm(prev => ({ ...prev, [field]: !prev[field] }));
     setSaved(false);
   }
@@ -35,6 +36,7 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
         gameDefaults: {
           ...initialConfig.gameDefaults,
           allowChat: form.allowChat,
+          allowSelfCheckIn: form.allowSelfCheckIn,
           lateRegistrationWindowMinutes: form.lateRegistrationWindowMinutes,
         },
       };
@@ -77,6 +79,33 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
             <span
               className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                 form.allowChat ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Allow Self Check-In Toggle */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-medium">Allow Self Check-In</h3>
+            <p className="text-white/40 text-sm mt-1">
+              When enabled, players can check themselves in from the public game view page
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.allowSelfCheckIn}
+            onClick={() => handleToggle('allowSelfCheckIn')}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+              form.allowSelfCheckIn ? 'bg-cyan-600' : 'bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                form.allowSelfCheckIn ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
           </button>

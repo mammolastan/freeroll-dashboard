@@ -84,6 +84,7 @@ model TournamentDraft {
   league_id               Int                     @default(1)
   venue_id                Int?
   allow_chat              Boolean?
+  allow_self_checkin      Boolean?
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]

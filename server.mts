@@ -636,7 +636,8 @@ async function getTournamentData(
         td.start_points,
         td.director_name,
         td.league_id,
-        td.allow_chat
+        td.allow_chat,
+        td.allow_self_checkin
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
@@ -656,6 +657,12 @@ async function getTournamentData(
         ? leagueConfig.gameDefaults.allowChat
         : Boolean(allowRaw);
 
+    const allowSelfCheckinRaw = row.allow_self_checkin;
+    const effectiveAllowSelfCheckin =
+      allowSelfCheckinRaw === null || allowSelfCheckinRaw === undefined
+        ? leagueConfig.gameDefaults.allowSelfCheckIn
+        : Boolean(allowSelfCheckinRaw);
+
     return {
       id: Number(row.id),
       title: row.title != null ? String(row.title) : "Tournament",
@@ -668,6 +675,7 @@ async function getTournamentData(
       td: row.director_name ? String(row.director_name) : null,
       timezone: leagueConfig.timezone,
       allow_chat: effectiveAllowChat,
+      allow_self_checkin: effectiveAllowSelfCheckin,
       cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
     };
   } catch (error) {
