@@ -110,7 +110,7 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
 
   const hitmanDisplay =
     item.hitman_name && item.hitman_name !== "unknown"
-      ? item.hitman_name
+      ? `${item.hitman_name}`
       : null;
 
   const isBubble = placement === 9;
@@ -217,10 +217,16 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
 
               {/* Hitman / Action text */}
               <span className="text-sm">
-                <span className="text-gray-500 text-xs">KO&apos;d by </span>
-                <span className="text-cyan-400 font-medium">
-                  {hitmanDisplay || "unknown"}
-                </span>
+                <span className="text-gray-500 text-xs">KO&apos;d</span>
+
+                {hitmanDisplay && (
+                  <>
+                    <span className="text-gray-500 text-xs"> by </span>
+                    <span className="text-cyan-400 font-medium">
+                      {hitmanDisplay}
+                    </span>
+                  </>
+                )}
               </span>
             </>
           )}
@@ -469,7 +475,10 @@ function PhotoModal({
       </button>
 
       {/* Image */}
-      <div onClick={(e) => e.stopPropagation()} className="relative">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative"
+      >
         <Image
           src={photoUrl}
           alt="Tournament photo"
