@@ -150,6 +150,13 @@ export function FullAdminScreen({
   // New tournament modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGameOptions, setShowGameOptions] = useState(false);
+
+  // League game defaults (fetched from config)
+  const [leagueGameDefaults, setLeagueGameDefaults] = useState({
+    allowChat: true,
+    allowSelfCheckIn: true,
+  });
+
   const [newTournament, setNewTournament] = useState({
     tournament_date: "",
     tournament_time: "",
@@ -157,8 +164,8 @@ export function FullAdminScreen({
     venue_id: null as number | null,
     start_points: 0,
     period_ids: [] as number[],
-    allow_chat: null as boolean | null, // null = use league default
-    allow_self_checkin: null as boolean | null, // null = use league default
+    allow_chat: true, // Will be set from league defaults on load
+    allow_self_checkin: true, // Will be set from league defaults on load
   });
 
   // Competition periods state
@@ -333,6 +340,34 @@ export function FullAdminScreen({
     [displayPlayers],
   );
 
+  // Fetch league game defaults on mount
+  useEffect(() => {
+    async function fetchLeagueConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.gameDefaults) {
+            const defaults = {
+              allowChat: data.gameDefaults.allowChat ?? true,
+              allowSelfCheckIn: data.gameDefaults.allowSelfCheckIn ?? true,
+            };
+            setLeagueGameDefaults(defaults);
+            // Update newTournament with league defaults
+            setNewTournament(prev => ({
+              ...prev,
+              allow_chat: defaults.allowChat,
+              allow_self_checkin: defaults.allowSelfCheckIn,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch league config:', err);
+      }
+    }
+    fetchLeagueConfig();
+  }, []);
+
   // Sync currentDraft with parent prop
   useEffect(() => {
     if (currentDraftProp?.id !== currentDraft?.id) {
@@ -473,8 +508,8 @@ export function FullAdminScreen({
         venue_id: null,
         start_points: 0,
         period_ids: [],
-        allow_chat: null,
-        allow_self_checkin: null,
+        allow_chat: leagueGameDefaults.allowChat,
+        allow_self_checkin: leagueGameDefaults.allowSelfCheckIn,
       });
       setShowGameOptions(false);
 
@@ -2297,32 +2332,21 @@ export function FullAdminScreen({
                                 Allow Chat
                               </label>
                               <p className="text-xs text-gray-500">
-                                {newTournament.allow_chat === null
-                                  ? "Using league default"
-                                  : newTournament.allow_chat
-                                    ? "Chat enabled"
-                                    : "Chat disabled"}
+                                {newTournament.allow_chat
+                                  ? "Chat enabled"
+                                  : "Chat disabled"}
                               </p>
                             </div>
                             <select
-                              value={
-                                newTournament.allow_chat === null
-                                  ? "default"
-                                  : newTournament.allow_chat
-                                    ? "on"
-                                    : "off"
-                              }
+                              value={newTournament.allow_chat ? "on" : "off"}
                               onChange={(e) => {
-                                const value = e.target.value;
                                 setNewTournament({
                                   ...newTournament,
-                                  allow_chat:
-                                    value === "default" ? null : value === "on",
+                                  allow_chat: e.target.value === "on",
                                 });
                               }}
                               className="px-3 py-1.5 border rounded text-black text-sm"
                             >
-                              <option value="default">League Default</option>
                               <option value="on">On</option>
                               <option value="off">Off</option>
                             </select>
@@ -2334,32 +2358,21 @@ export function FullAdminScreen({
                                 Allow Self Check-In
                               </label>
                               <p className="text-xs text-gray-500">
-                                {newTournament.allow_self_checkin === null
-                                  ? "Using league default"
-                                  : newTournament.allow_self_checkin
-                                    ? "Self check-in enabled"
-                                    : "Self check-in disabled"}
+                                {newTournament.allow_self_checkin
+                                  ? "Self check-in enabled"
+                                  : "Self check-in disabled"}
                               </p>
                             </div>
                             <select
-                              value={
-                                newTournament.allow_self_checkin === null
-                                  ? "default"
-                                  : newTournament.allow_self_checkin
-                                    ? "on"
-                                    : "off"
-                              }
+                              value={newTournament.allow_self_checkin ? "on" : "off"}
                               onChange={(e) => {
-                                const value = e.target.value;
                                 setNewTournament({
                                   ...newTournament,
-                                  allow_self_checkin:
-                                    value === "default" ? null : value === "on",
+                                  allow_self_checkin: e.target.value === "on",
                                 });
                               }}
                               className="px-3 py-1.5 border rounded text-black text-sm"
                             >
-                              <option value="default">League Default</option>
                               <option value="on">On</option>
                               <option value="off">Off</option>
                             </select>
@@ -3107,23 +3120,19 @@ export function FullAdminScreen({
               </div>
               <select
                 value={
-                  currentDraft?.allow_chat === null
-                    ? "default"
-                    : currentDraft?.allow_chat
-                      ? "on"
-                      : "off"
+                  (currentDraft?.allow_chat ?? leagueGameDefaults.allowChat)
+                    ? "on"
+                    : "off"
                 }
                 onChange={(e) => {
-                  const value = e.target.value;
                   updateTournamentField(
                     "allow_chat",
-                    value === "default" ? null : value === "on",
+                    e.target.value === "on",
                   );
                 }}
                 className="px-3 py-1.5 border rounded text-black text-sm"
                 disabled={currentDraft?.status === "integrated"}
               >
-                <option value="default">League Default</option>
                 <option value="on">On</option>
                 <option value="off">Off</option>
               </select>
@@ -3136,23 +3145,19 @@ export function FullAdminScreen({
               </div>
               <select
                 value={
-                  currentDraft?.allow_self_checkin === null
-                    ? "default"
-                    : currentDraft?.allow_self_checkin
-                      ? "on"
-                      : "off"
+                  (currentDraft?.allow_self_checkin ?? leagueGameDefaults.allowSelfCheckIn)
+                    ? "on"
+                    : "off"
                 }
                 onChange={(e) => {
-                  const value = e.target.value;
                   updateTournamentField(
                     "allow_self_checkin",
-                    value === "default" ? null : value === "on",
+                    e.target.value === "on",
                   );
                 }}
                 className="px-3 py-1.5 border rounded text-black text-sm"
                 disabled={currentDraft?.status === "integrated"}
               >
-                <option value="default">League Default</option>
                 <option value="on">On</option>
                 <option value="off">Off</option>
               </select>

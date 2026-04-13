@@ -42,10 +42,10 @@ export default async function AdminDashboardPage({ params }: PageProps) {
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-5">
           <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-            Self Registration
+            Self Check-In
           </p>
           <p className="text-white font-medium">
-            {config.allowSelfRegistration ? "Enabled" : "Disabled"}
+            {config.gameDefaults.allowSelfCheckIn ? "Enabled" : "Disabled"}
           </p>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-5">
@@ -61,7 +61,7 @@ export default async function AdminDashboardPage({ params }: PageProps) {
             Chat
           </p>
           <p className="text-white font-medium">
-            {config.chatEnabled ? "Enabled" : "Disabled"}
+            {config.gameDefaults.allowChat ? "Enabled" : "Disabled"}
           </p>
         </div>
       </div>

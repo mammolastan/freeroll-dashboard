@@ -24,5 +24,6 @@ export async function GET(req: NextRequest) {
     allowNicknames: config.allowNicknames,
     chatEnabled: config.chatEnabled,
     tournamentFeedEnabled: config.tournamentFeedEnabled,
+    gameDefaults: config.gameDefaults,
   });
 }
