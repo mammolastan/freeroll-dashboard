@@ -560,13 +560,15 @@ function VenueRow({
           </>
         ) : (
           <>
-            <button
-              onClick={onDelete}
-              className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-              title="Delete venue"
-            >
-              <Trash2 size={16} />
-            </button>
+            {venue.gameCount === 0 && (
+              <button
+                onClick={onDelete}
+                className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                title="Delete venue"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button
               onClick={onToggleActive}
               className={`relative w-10 h-6 rounded-full transition-colors ${

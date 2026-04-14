@@ -36,12 +36,12 @@ const ACTION_TYPE_CONFIG: Record<
   PLAYER_CHECKED_IN: {
     label: "Check-in",
     color: "bg-blue-100 text-blue-800",
-    icon: "v",
+    icon: "✅",
   },
   PLAYER_CHECK_IN_REVERSED: {
     label: "Check-in Reversed",
     color: "bg-yellow-100 text-yellow-800",
-    icon: "x",
+    icon: "◀️",
   },
   KNOCKOUT_RECORDED: {
     label: "Knockout",
