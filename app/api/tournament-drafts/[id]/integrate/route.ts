@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { logError } from "@/lib/error-logger";
 import { getPointsForPlacement } from "@/lib/scoring";
 import { DEFAULT_SCORING_SYSTEM, ScoringSystemConfig, LeagueConfig } from "@/types/league-config";
 
@@ -309,7 +310,11 @@ export async function POST(
 
           const playerId = playerIdMap.get(player.player_uid);
           if (!playerId) {
-            throw new Error(`Could not find player_id for uid: ${player.player_uid}`);
+            throw new Error(
+              `Could not find player_id for uid: ${player.player_uid}. ` +
+              `Player: "${player.player_name}", is_new_player: ${player.is_new_player}, draft_id: ${draftId}. ` +
+              `This may indicate a data inconsistency - the player_uid in tournament_draft_players does not exist in players_v2.`
+            );
           }
 
           // Calculate points and score
@@ -566,6 +571,22 @@ export async function POST(
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("Integration error:", error);
+
+    // Log error to app_error_logs
+    await logError({
+      error_code: "TOURNAMENT_INTEGRATION_FAILED",
+      feature: "tournament-integration",
+      severity: "error",
+      message: error instanceof Error ? error.message : "Unknown integration error",
+      error: error,
+      context: {
+        tournamentDraftId: draftId,
+        endpoint: `/api/tournament-drafts/${draftId}/integrate`,
+      },
+      ip_address: ipAddress,
+      url: request.url,
+    });
+
     return NextResponse.json(
       {
         error: "Integration failed",
