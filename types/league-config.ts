@@ -3,6 +3,30 @@ export interface PlacementPoints {
   points: number;
 }
 
+export interface ScoringRule {
+  placement: number;  // 1-indexed (1 = winner)
+  points: number;     // non-negative integer
+}
+
+export interface ScoringSystemConfig {
+  rules: ScoringRule[];       // ordered ascending by placement
+  defaultPoints: number;      // points for any placement beyond the last defined rule
+}
+
+export const DEFAULT_SCORING_SYSTEM: ScoringSystemConfig = {
+  rules: [
+    { placement: 1, points: 10 },
+    { placement: 2, points: 7 },
+    { placement: 3, points: 6 },
+    { placement: 4, points: 5 },
+    { placement: 5, points: 4 },
+    { placement: 6, points: 3 },
+    { placement: 7, points: 2 },
+    { placement: 8, points: 1 },
+  ],
+  defaultPoints: 0,
+};
+
 export interface LeagueConfig {
   // Identity
   leagueName: string;
@@ -44,6 +68,7 @@ export interface LeagueConfig {
   participationPoints: number;
   knockoutPoints: number;
   bonusPointsEnabled: boolean;
+  scoringSystem?: ScoringSystemConfig;
 
   // Tiebreakers
   tiebreakerRule: 'most_knockouts' | 'most_wins' | 'most_recent_win';

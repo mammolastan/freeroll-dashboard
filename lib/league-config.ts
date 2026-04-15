@@ -14,6 +14,7 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
   try {
     const stored = JSON.parse(league.league_settings) as Partial<LeagueConfig>;
     // Deep merge gameDefaults so partial stored values don't wipe defaults
+    // Note: scoringSystem is not merged with defaults - if stored, use stored; otherwise undefined
     return {
       ...DEFAULT_LEAGUE_CONFIG,
       ...stored,
@@ -25,6 +26,7 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
         ...DEFAULT_LEAGUE_CONFIG.socialLinks,
         ...(stored.socialLinks ?? {}),
       },
+      scoringSystem: stored.scoringSystem,
     };
   } catch {
     console.error(`[getLeagueConfig] Failed to parse league_settings for league ${leagueId}`);
@@ -49,6 +51,8 @@ export async function saveLeagueConfig(
       ...current.socialLinks,
       ...(config.socialLinks ?? {}),
     },
+    // scoringSystem: if explicitly passed use it, otherwise keep current
+    scoringSystem: config.scoringSystem !== undefined ? config.scoringSystem : current.scoringSystem,
   };
 
   await prisma.leagues.update({

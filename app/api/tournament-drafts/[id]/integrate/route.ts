@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { getPointsForPlacement } from "@/lib/scoring";
+import { DEFAULT_SCORING_SYSTEM, ScoringSystemConfig, LeagueConfig } from "@/types/league-config";
 
 interface DraftTournament {
   id: number;
@@ -122,14 +124,6 @@ function validateTournamentForIntegration(players: DraftPlayer[]): {
   };
 }
 
-// Existing calculation functions
-function calculatePlacementPoints(placement: number): number {
-  if (placement === 1) return 10;
-  if (placement === 2) return 7;
-  if (placement >= 3 && placement <= 8) return 9 - placement;
-  return 0;
-}
-
 function calculatePlayerScore(placement: number, totalPlayers: number): number {
   return Math.log((totalPlayers + 1) / placement);
 }
@@ -158,6 +152,15 @@ export async function POST(
         }
 
         const draft = draftResult[0];
+
+        // Fetch scoring config for this league
+        const leagueRows = await tx.$queryRaw<Array<{ league_settings: string | null }>>`
+          SELECT league_settings FROM leagues WHERE id = ${draft.league_id} LIMIT 1
+        `;
+        const leagueSettings: LeagueConfig = leagueRows[0]?.league_settings
+          ? JSON.parse(leagueRows[0].league_settings)
+          : {};
+        const scoringSystem: ScoringSystemConfig = leagueSettings.scoringSystem ?? DEFAULT_SCORING_SYSTEM;
 
         // 2. Get all players for this draft
         const playersResult = await tx.$queryRaw<DraftPlayer[]>`
@@ -310,7 +313,7 @@ export async function POST(
           }
 
           // Calculate points and score
-          const placementPoints = calculatePlacementPoints(player.placement!);
+          const placementPoints = getPointsForPlacement(player.placement!, scoringSystem);
           const playerScore = calculatePlayerScore(
             player.placement!,
             playersWithPlacements.length
@@ -405,7 +408,7 @@ export async function POST(
 
         // Build detailed player data for audit logging
         const playerDetails = playersWithPlacements.map((p) => {
-          const placementPoints = calculatePlacementPoints(p.placement!);
+          const placementPoints = getPointsForPlacement(p.placement!, scoringSystem);
           const totalPoints = draft.start_points + placementPoints;
           return {
             playerUid: p.player_uid,

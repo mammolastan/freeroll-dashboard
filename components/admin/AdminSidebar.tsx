@@ -36,12 +36,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
     },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
     { href: `${base}/access`, label: "Access", icon: Shield, isDisabled: true },
-    {
-      href: `${base}/scoring`,
-      label: "Scoring",
-      icon: Trophy,
-      isDisabled: true,
-    },
+
     { href: `${base}/badges`, label: "Badges", icon: Star },
     {
       href: `${base}/game-defaults`,
@@ -50,7 +45,13 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
     },
     { href: `${base}/members`, label: "Members", icon: Users },
     ...(canManageRoles(role)
-      ? []
+      ? [
+          {
+            href: `${base}/scoring`,
+            label: "Scoring",
+            icon: Trophy,
+          },
+        ]
       : []),
   ];
 
