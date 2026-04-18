@@ -1,19 +1,18 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-
+import { LucideIcon } from 'lucide-react';
 
 interface NavLinkProps {
     href: string;
-    icon: ReactNode;
+    icon: LucideIcon;
     text: string;
 }
 
-
 // NavLink Component with active state handling
-const NavLink = ({ href, icon, text }: NavLinkProps) => {
+const NavLink = ({ href, icon: Icon, text }: NavLinkProps) => {
     const pathname = usePathname();
     const isActive = pathname === href;
 
@@ -25,7 +24,7 @@ const NavLink = ({ href, icon, text }: NavLinkProps) => {
                 : 'hover:text-blue-300'
                 }`}
         >
-            {icon}
+            <Icon size={20} />
             <span>{text}</span>
         </Link>
     );

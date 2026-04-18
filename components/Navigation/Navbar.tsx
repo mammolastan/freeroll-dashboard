@@ -8,31 +8,16 @@ import NavLink from "./NavLink";
 import Link from "next/link";
 import { useLeague } from "@/lib/LeagueContext";
 import {
-  Home,
-  Store,
-  CircleUserRound,
   Menu,
   X,
-  Trophy,
   ChevronDown,
   ChevronUp,
-  GalleryHorizontalEnd,
-  Award,
-  ClipboardCheck,
   User,
   LogOut,
   LogIn,
+  Trophy,
 } from "lucide-react";
-
-interface NavItem {
-  href: string;
-  icon: React.ReactNode;
-  text: string;
-  children?: Array<{
-    href: string;
-    text: string;
-  }>;
-}
+import { getNavItems, NavItem } from "@/lib/navConfig";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -99,34 +84,7 @@ const Navbar = () => {
   const toggleMenu = () => setIsOpen(!isOpen);
 
   // Nav links use prefix for league-scoped routes
-  const navLinks: NavItem[] = [
-    {
-      href: "#",
-      icon: <Trophy size={20} />,
-      text: "Rankings",
-      children: [
-        { href: `${prefix}/rankings/monthly`, text: "Monthly Rankings" },
-        { href: `${prefix}/rankings/quarterly`, text: "Quarterly Rankings" },
-      ],
-    },
-    {
-      href: `${prefix}/games`,
-      icon: <GalleryHorizontalEnd size={20} />,
-      text: "Recent Games",
-    },
-    {
-      href: `${prefix}/check-in`,
-      icon: <ClipboardCheck size={20} />,
-      text: "Active Games",
-    },
-    {
-      href: `${prefix}/players`,
-      icon: <CircleUserRound size={20} />,
-      text: "Players",
-    },
-    { href: `${prefix}/venues`, icon: <Store size={20} />, text: "Venues" },
-    { href: `${prefix}/badges`, icon: <Award size={20} />, text: "Badges" },
-  ];
+  const navLinks = getNavItems(prefix);
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -167,7 +125,7 @@ const Navbar = () => {
                       className="flex items-center space-x-2 hover:text-blue-300 transition-colors"
                       onClick={() => setIsRankingsOpen(!isRankingsOpen)}
                     >
-                      {link.icon}
+                      <link.icon size={20} />
                       <span>{link.text}</span>
                       {isRankingsOpen ? (
                         <ChevronUp size={16} />
@@ -308,7 +266,7 @@ const Navbar = () => {
                         className="w-full flex items-center justify-between px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700"
                       >
                         <div className="flex items-center space-x-2">
-                          {link.icon}
+                          <link.icon size={20} />
                           <span>{link.text}</span>
                         </div>
                         {isRankingsOpen ? (
@@ -342,7 +300,7 @@ const Navbar = () => {
                                                 }`}
                       onClick={() => setIsOpen(false)}
                     >
-                      {link.icon}
+                      <link.icon size={20} />
                       <span>{link.text}</span>
                     </Link>
                   )}
