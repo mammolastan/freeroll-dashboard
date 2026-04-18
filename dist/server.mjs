@@ -462,7 +462,7 @@ async function loadTimerStateFromDB(tournamentId) {
 // fetch-tournament-realtime-snapshot.ts, which could mix CJS/ESM and break
 // named ESM imports from server.mts.
 async function getLeagueConfigFromDb(leagueId) {
-    var _a, _b;
+    var _a, _b, _c;
     const league = await prisma.leagues.findUnique({
         where: { id: leagueId },
         select: { league_settings: true },
@@ -472,9 +472,9 @@ async function getLeagueConfigFromDb(leagueId) {
     }
     try {
         const stored = JSON.parse(league.league_settings);
-        return Object.assign(Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG), stored), { gameDefaults: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.gameDefaults), ((_a = stored.gameDefaults) !== null && _a !== void 0 ? _a : {})), socialLinks: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.socialLinks), ((_b = stored.socialLinks) !== null && _b !== void 0 ? _b : {})) });
+        return Object.assign(Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG), stored), { gameDefaults: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.gameDefaults), ((_a = stored.gameDefaults) !== null && _a !== void 0 ? _a : {})), socialLinks: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.socialLinks), ((_b = stored.socialLinks) !== null && _b !== void 0 ? _b : {})), pwa: Object.assign(Object.assign({}, DEFAULT_LEAGUE_CONFIG.pwa), ((_c = stored.pwa) !== null && _c !== void 0 ? _c : {})) });
     }
-    catch (_c) {
+    catch (_d) {
         console.error(`[Server] Failed to parse league_settings for league ${leagueId}`);
         return Object.assign({}, DEFAULT_LEAGUE_CONFIG);
     }
@@ -503,7 +503,8 @@ async function getTournamentData(tournamentDraftId) {
         td.start_points,
         td.director_name,
         td.league_id,
-        td.allow_chat
+        td.allow_chat,
+        td.allow_self_checkin
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
@@ -518,6 +519,10 @@ async function getTournamentData(tournamentDraftId) {
         const effectiveAllowChat = allowRaw === null || allowRaw === undefined
             ? leagueConfig.gameDefaults.allowChat
             : Boolean(allowRaw);
+        const allowSelfCheckinRaw = row.allow_self_checkin;
+        const effectiveAllowSelfCheckin = allowSelfCheckinRaw === null || allowSelfCheckinRaw === undefined
+            ? leagueConfig.gameDefaults.allowSelfCheckIn
+            : Boolean(allowSelfCheckinRaw);
         return {
             id: Number(row.id),
             title: row.title != null ? String(row.title) : "Tournament",
@@ -530,6 +535,7 @@ async function getTournamentData(tournamentDraftId) {
             td: row.director_name ? String(row.director_name) : null,
             timezone: leagueConfig.timezone,
             allow_chat: effectiveAllowChat,
+            allow_self_checkin: effectiveAllowSelfCheckin,
             cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
         };
     }
@@ -546,7 +552,7 @@ async function getCheckedInPlayers(tournamentDraftId) {
         COALESCE(tdp.player_nickname, p.nickname) as resolved_nickname,
         p.photo_url
       FROM tournament_draft_players tdp
-      LEFT JOIN players p ON tdp.player_uid = p.UID
+      LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
       WHERE tdp.tournament_draft_id = ${tournamentDraftId}
       ORDER BY tdp.created_at ASC
     `;

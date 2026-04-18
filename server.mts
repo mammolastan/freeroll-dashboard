@@ -602,6 +602,10 @@ async function getLeagueConfigFromDb(leagueId: number): Promise<LeagueConfig> {
         ...DEFAULT_LEAGUE_CONFIG.socialLinks,
         ...(stored.socialLinks ?? {}),
       },
+      pwa: {
+        ...DEFAULT_LEAGUE_CONFIG.pwa,
+        ...(stored.pwa ?? {}),
+      },
     };
   } catch {
     console.error(

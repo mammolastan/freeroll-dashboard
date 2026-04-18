@@ -48,5 +48,11 @@ export const DEFAULT_LEAGUE_CONFIG = {
     startPoints: 1,
     lateRegistrationWindowMinutes: 100,
   },
+  pwa: {
+    shortName: "",
+    themeColor: "#06b6d4",
+    backgroundColor: "#0f172a",
+    logoUrl: "",
+  },
   pushNotificationsEnabled: false,
 };
