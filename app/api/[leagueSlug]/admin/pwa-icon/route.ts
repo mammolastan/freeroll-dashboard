@@ -36,10 +36,11 @@ async function isLeagueAdmin(leagueSlug: string, userUid: string): Promise<boole
 
   if (!league) return false;
 
-  const adminRole = await prisma.league_admins.findFirst({
+  const adminRole = await prisma.league_roles.findFirst({
     where: {
       league_id: league.id,
       player_uid: userUid,
+      role: { in: ['admin', 'owner'] },
     },
   });
 

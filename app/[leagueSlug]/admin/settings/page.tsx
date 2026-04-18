@@ -1,7 +1,9 @@
-import { getLeagueIdBySlug } from '@/lib/league-utils';
-import { getLeagueConfig } from '@/lib/league-config';
-import { prisma } from '@/lib/prisma';
-import IdentitySettingsForm from '@/components/admin/IdentitySettingsForm';
+// app/[leagueSlug]/admin/settings/page.tsx
+
+import { getLeagueIdBySlug } from "@/lib/league-utils";
+import { getLeagueConfig } from "@/lib/league-config";
+import { prisma } from "@/lib/prisma";
+import IdentitySettingsForm from "@/components/admin/IdentitySettingsForm";
 
 interface PageProps {
   params: Promise<{ leagueSlug: string }>;
@@ -26,7 +28,7 @@ export default async function IdentitySettingsPage({ params }: PageProps) {
       <IdentitySettingsForm
         leagueSlug={leagueSlug}
         initialConfig={config}
-        initialLeagueName={league?.name ?? ''}
+        initialLeagueName={league?.name ?? ""}
       />
     </div>
   );
