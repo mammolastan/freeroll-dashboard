@@ -1,4 +1,12 @@
 const path = require("path");
+const withPWA = require("next-pwa")({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  // Exclude the dynamic manifest routes from SW precaching
+  exclude: [/manifest\.json/],
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -73,4 +81,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);

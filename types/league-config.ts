@@ -27,6 +27,13 @@ export const DEFAULT_SCORING_SYSTEM: ScoringSystemConfig = {
   defaultPoints: 0,
 };
 
+export interface PWAConfig {
+  shortName: string;        // Falls back to league.name if empty
+  themeColor: string;       // Default: OpenTabLeague cyan
+  backgroundColor: string;
+  logoUrl: string;          // Falls back to /icons/default-icon-512.png if empty
+}
+
 export interface LeagueConfig {
   // Identity
   leagueName: string;
@@ -38,6 +45,9 @@ export interface LeagueConfig {
     discord?: string;
     website?: string;
   };
+
+  // PWA
+  pwa: PWAConfig;
 
   // Access & Registration
   allowSelfRegistration: boolean;
@@ -98,6 +108,12 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   contactEmail: null,
   timezone: 'America/New_York',
   socialLinks: {},
+  pwa: {
+    shortName: '',
+    themeColor: '#06b6d4',
+    backgroundColor: '#0f172a',
+    logoUrl: '',
+  },
   allowSelfRegistration: false,
   requireEmailVerification: false,
   allowGuestCheckIn: false,

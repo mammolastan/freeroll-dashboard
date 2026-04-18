@@ -19,6 +19,10 @@
 /.next/
 /out/
 
+# PWA generated files
+public/sw.js
+public/workbox-*.js
+
 # production
 /build
 /dist
@@ -27,6 +31,7 @@
 public/uploads/*
 !public/uploads/avatars/.gitkeep
 !public/uploads/feed-photos/.gitkeep
+!public/uploads/pwa-icons/.gitkeep
 
 # misc
 .DS_Store

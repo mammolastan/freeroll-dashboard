@@ -3,7 +3,27 @@ import { LeagueProvider } from '@/lib/LeagueContext';
 import { prisma } from '@/lib/prisma';
 import { getLeagueConfig } from '@/lib/league-config';
 import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
+
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ leagueSlug: string }>;
+}): Promise<Viewport> {
+  const { leagueSlug } = await params;
+
+  const league = await prisma.leagues.findUnique({
+    where: { slug: leagueSlug },
+    select: { id: true },
+  });
+
+  const config = league ? await getLeagueConfig(league.id) : null;
+  const themeColor = config?.pwa?.themeColor ?? '#06b6d4';
+
+  return {
+    themeColor: themeColor,
+  };
+}
 
 export async function generateMetadata({
   params,
@@ -14,10 +34,14 @@ export async function generateMetadata({
 
   const league = await prisma.leagues.findUnique({
     where: { slug: leagueSlug },
-    select: { name: true },
+    select: { id: true, name: true },
   });
 
   const leagueName = league?.name ?? 'League';
+
+  // Get PWA config for icon
+  const config = league ? await getLeagueConfig(league.id) : null;
+  const logoUrl = config?.pwa?.logoUrl || '/icons/default-icon-512.png';
 
   return {
     title: {
@@ -25,6 +49,15 @@ export async function generateMetadata({
       template: `%s | ${leagueName}`,
     },
     description: `Dashboard for ${leagueName} poker tournament player statistics`,
+    manifest: `/${leagueSlug}/manifest.json`,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: leagueName,
+    },
+    icons: {
+      apple: logoUrl,
+    },
   };
 }
 

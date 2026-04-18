@@ -13,7 +13,7 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
 
   try {
     const stored = JSON.parse(league.league_settings) as Partial<LeagueConfig>;
-    // Deep merge gameDefaults so partial stored values don't wipe defaults
+    // Deep merge nested objects so partial stored values don't wipe defaults
     // Note: scoringSystem is not merged with defaults - if stored, use stored; otherwise undefined
     return {
       ...DEFAULT_LEAGUE_CONFIG,
@@ -25,6 +25,10 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
       socialLinks: {
         ...DEFAULT_LEAGUE_CONFIG.socialLinks,
         ...(stored.socialLinks ?? {}),
+      },
+      pwa: {
+        ...DEFAULT_LEAGUE_CONFIG.pwa,
+        ...(stored.pwa ?? {}),
       },
       scoringSystem: stored.scoringSystem,
     };
@@ -50,6 +54,10 @@ export async function saveLeagueConfig(
     socialLinks: {
       ...current.socialLinks,
       ...(config.socialLinks ?? {}),
+    },
+    pwa: {
+      ...current.pwa,
+      ...(config.pwa ?? {}),
     },
     // scoringSystem: if explicitly passed use it, otherwise keep current
     scoringSystem: config.scoringSystem !== undefined ? config.scoringSystem : current.scoringSystem,
