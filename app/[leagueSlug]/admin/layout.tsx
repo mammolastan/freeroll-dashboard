@@ -34,7 +34,7 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
         leagueSlug={leagueSlug}
         role={role as LeagueRole}
       />
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 p-6 pt-16 md:pt-6 overflow-y-auto">
         {children}
       </main>
     </div>
