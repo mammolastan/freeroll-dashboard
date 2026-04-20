@@ -2001,8 +2001,8 @@ export function FullAdminScreen({
 
           {/* Create Tournament Modal */}
           {showCreateModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <Card className="w-96">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4">
+              <Card className="w-full max-w-96 mx-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <CardHeader>
                   <CardTitle>Create New Tournament</CardTitle>
                 </CardHeader>
@@ -2406,8 +2406,8 @@ export function FullAdminScreen({
 
           {/* New Competition Period Modal */}
           {showNewPeriodModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-              <Card className="w-96">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[60] overflow-y-auto py-4">
+              <Card className="w-full max-w-96 mx-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <CardHeader>
                   <CardTitle className="text-lg">
                     Add Competition Period
@@ -2968,8 +2968,8 @@ export function FullAdminScreen({
 
         {/* Move Knockout Modal */}
         {moveKnockoutModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 my-auto shadow-xl max-h-[calc(100vh-2rem)] overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Move Knockout Position
               </h3>
