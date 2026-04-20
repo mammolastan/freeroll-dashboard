@@ -83,6 +83,7 @@ model TournamentDraft {
   period_ids              String?                 @db.VarChar(500)
   league_id               Int                     @default(1)
   venue_id                Int?
+  title                   String?                 @db.Text
   allow_chat              Boolean?
   allow_self_checkin      Boolean?
   TournamentAuditLog      TournamentAuditLog[]

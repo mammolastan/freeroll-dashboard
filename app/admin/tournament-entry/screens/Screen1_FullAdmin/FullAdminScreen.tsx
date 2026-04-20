@@ -48,6 +48,7 @@ interface TournamentDraft {
   tournament_date: string;
   tournament_time?: string;
   director_name: string;
+  title?: string | null;
   venue: string | null;
   venue_id: number | null;
   start_points: number;
@@ -161,6 +162,7 @@ export function FullAdminScreen({
     tournament_date: "",
     tournament_time: "",
     director_name: "",
+    title: "",
     venue_id: null as number | null,
     start_points: 0,
     period_ids: [] as number[],
@@ -344,7 +346,7 @@ export function FullAdminScreen({
   useEffect(() => {
     async function fetchLeagueConfig() {
       try {
-        const res = await fetch('/api/config');
+        const res = await fetch("/api/config");
         if (res.ok) {
           const data = await res.json();
           if (data.gameDefaults) {
@@ -354,7 +356,7 @@ export function FullAdminScreen({
             };
             setLeagueGameDefaults(defaults);
             // Update newTournament with league defaults
-            setNewTournament(prev => ({
+            setNewTournament((prev) => ({
               ...prev,
               allow_chat: defaults.allowChat,
               allow_self_checkin: defaults.allowSelfCheckIn,
@@ -362,7 +364,7 @@ export function FullAdminScreen({
           }
         }
       } catch (err) {
-        console.error('Failed to fetch league config:', err);
+        console.error("Failed to fetch league config:", err);
       }
     }
     fetchLeagueConfig();
@@ -505,6 +507,7 @@ export function FullAdminScreen({
         tournament_date: getTodayDateString(),
         tournament_time: "",
         director_name: "",
+        title: "",
         venue_id: null,
         start_points: 0,
         period_ids: [],
@@ -634,6 +637,7 @@ export function FullAdminScreen({
           field === "tournament_time" ? value : currentDraft.tournament_time,
         director_name:
           field === "director_name" ? value : currentDraft.director_name,
+        title: field === "title" ? value : currentDraft.title,
         venue_id: field === "venue_id" ? value : currentDraft.venue_id,
         start_points:
           field === "start_points" ? value : currentDraft.start_points,
@@ -2010,23 +2014,6 @@ export function FullAdminScreen({
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
-                        Date *
-                      </label>
-                      <input
-                        type="date"
-                        value={newTournament.tournament_date}
-                        onChange={(e) =>
-                          setNewTournament({
-                            ...newTournament,
-                            tournament_date: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border rounded text-black"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-1">
                         Time
                       </label>
                       <select
@@ -2296,6 +2283,41 @@ export function FullAdminScreen({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Title
+                        <span className="ml-1 text-xs text-gray-500 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newTournament.title}
+                        onChange={(e) =>
+                          setNewTournament({
+                            ...newTournament,
+                            title: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded text-black"
+                        placeholder="Custom display title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={newTournament.tournament_date}
+                        onChange={(e) =>
+                          setNewTournament({
+                            ...newTournament,
+                            tournament_date: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded text-black"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
                         Start Points
                       </label>
                       <input
@@ -2364,7 +2386,9 @@ export function FullAdminScreen({
                               </p>
                             </div>
                             <select
-                              value={newTournament.allow_self_checkin ? "on" : "off"}
+                              value={
+                                newTournament.allow_self_checkin ? "on" : "off"
+                              }
                               onChange={(e) => {
                                 setNewTournament({
                                   ...newTournament,
@@ -3032,7 +3056,7 @@ export function FullAdminScreen({
         )}
 
         {/* Tournament Metadata */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-6">
           {/* Date & Time - grouped on small screens */}
           <div className="grid grid-cols-2 lg:contents gap-4">
             <div>
@@ -3071,6 +3095,30 @@ export function FullAdminScreen({
             <div className="w-full px-3 py-2 border rounded text-black bg-gray-50">
               {currentDraft?.venue || "No venue set"}
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Game Title
+            </label>
+            <input
+              type="text"
+              value={
+                currentDraft?.title ||
+                `${currentDraft?.venue || "Tournament"} - ${
+                  currentDraft?.tournament_date
+                    ? new Date(currentDraft.tournament_date).toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        year: "numeric",
+                      })
+                    : ""
+                }`
+              }
+              onChange={(e) => updateTournamentField("title", e.target.value)}
+              className="w-full px-3 py-2 border rounded text-black"
+              placeholder="Custom game title"
+              disabled={currentDraft?.status === "integrated"}
+            />
           </div>
           {/* Director & Start Points - grouped on small screens */}
           <div className="grid grid-cols-2 lg:contents gap-4">
@@ -3125,10 +3173,7 @@ export function FullAdminScreen({
                     : "off"
                 }
                 onChange={(e) => {
-                  updateTournamentField(
-                    "allow_chat",
-                    e.target.value === "on",
-                  );
+                  updateTournamentField("allow_chat", e.target.value === "on");
                 }}
                 className="px-3 py-1.5 border rounded text-black text-sm"
                 disabled={currentDraft?.status === "integrated"}
@@ -3145,7 +3190,8 @@ export function FullAdminScreen({
               </div>
               <select
                 value={
-                  (currentDraft?.allow_self_checkin ?? leagueGameDefaults.allowSelfCheckIn)
+                  (currentDraft?.allow_self_checkin ??
+                  leagueGameDefaults.allowSelfCheckIn)
                     ? "on"
                     : "off"
                 }

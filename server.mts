@@ -628,11 +628,12 @@ async function getTournamentData(
     const tournamentResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT
         td.id,
+        td.title as custom_title,
         CONCAT(
           COALESCE(v.name, 'Tournament'),
           ' - ',
           DATE_FORMAT(td.tournament_date, '%m/%d/%Y')
-        ) as title,
+        ) as default_title,
         td.tournament_date,
         td.tournament_time,
         v.name as venue,
@@ -667,9 +668,14 @@ async function getTournamentData(
         ? leagueConfig.gameDefaults.allowSelfCheckIn
         : Boolean(allowSelfCheckinRaw);
 
+    // Use custom title if set, otherwise use default (Venue - Date)
+    const title = row.custom_title && String(row.custom_title).trim()
+      ? String(row.custom_title)
+      : row.default_title != null ? String(row.default_title) : "Tournament";
+
     return {
       id: Number(row.id),
-      title: row.title != null ? String(row.title) : "Tournament",
+      title,
       date: new Date(row.tournament_date as string | Date),
       time: normalizeTournamentTimeForServer(row.tournament_time),
       venue: row.venue != null ? String(row.venue) : null,
