@@ -8,6 +8,34 @@ import { RawQueryResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 
+const SEATS_PER_TABLE = 8;
+
+/**
+ * Auto-assign a table for a new player.
+ * Algorithm: Find the table with the fewest players that isn't full.
+ * If all tables are full (or no tables exist), return next table number.
+ */
+function autoAssignTable(tableCounts: Record<number, number>, maxTable: number): number {
+  // Find the table with the fewest players that isn't full
+  let bestTable = -1;
+  let bestCount = Infinity;
+
+  for (let t = 1; t <= maxTable; t++) {
+    const count = tableCounts[t] || 0;
+    if (count < SEATS_PER_TABLE && count < bestCount) {
+      bestCount = count;
+      bestTable = t;
+    }
+  }
+
+  // If all tables are full (or no tables exist), create a new one
+  if (bestTable === -1) {
+    return maxTable + 1;
+  }
+
+  return bestTable;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +47,8 @@ export async function GET(
     const players = await prisma.$queryRaw`
       SELECT
         tdp.*,
-        COALESCE(tdp.player_nickname, p.nickname) as player_nickname
+        COALESCE(tdp.player_nickname, p.nickname) as player_nickname,
+        p.photo_url
       FROM tournament_draft_players tdp
       LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
       WHERE tdp.tournament_draft_id = ${draftId}
@@ -62,12 +91,36 @@ export async function POST(
       );
     }
 
+    // Calculate table assignment for the new player
+    const activePlayersWithTables = await prisma.$queryRaw<{ t_assign: number }[]>`
+      SELECT t_assign FROM tournament_draft_players
+      WHERE tournament_draft_id = ${draftId}
+        AND (ko_position IS NULL OR ko_position = 0)
+        AND t_assign > 0
+    `;
+
+    // Build table counts
+    const tableCounts: Record<number, number> = {};
+    let maxTable = 0;
+    for (const p of activePlayersWithTables) {
+      const t = p.t_assign;
+      if (t > 0) {
+        tableCounts[t] = (tableCounts[t] || 0) + 1;
+        if (t > maxTable) maxTable = t;
+      }
+    }
+
+    // If no tables exist yet, start with table 1
+    if (maxTable === 0) maxTable = 1;
+
+    const assignedTable = autoAssignTable(tableCounts, maxTable);
+
     await prisma.$queryRaw`
       INSERT INTO tournament_draft_players
-      (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, added_by, checked_in_at)
+      (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, t_assign, added_by, checked_in_at)
           VALUES (${draftId}, ${player_name}, ${player_nickname}, ${player_uid}, ${
       is_new_player || false
-    }, ${validAddedBy}, UTC_TIMESTAMP())
+    }, ${assignedTable}, ${validAddedBy}, UTC_TIMESTAMP())
       `;
 
     const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`

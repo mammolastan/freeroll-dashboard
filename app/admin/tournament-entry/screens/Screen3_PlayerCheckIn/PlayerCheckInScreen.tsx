@@ -11,6 +11,7 @@ interface TournamentDraft {
   id: number;
   tournament_date: string;
   director_name: string;
+  title?: string | null;
   venue: string | null;
   venue_id: number | null;
   start_points: number;
@@ -96,7 +97,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange, curre
             Player Check-In
           </h1>
           <p className="text-2xl text-gray-400">
-            {currentDraft.venue} - {new Date(currentDraft.tournament_date).toLocaleDateString()}
+            {currentDraft.title || currentDraft.venue || 'Tournament'}
           </p>
           <div className="mt-4 text-xl text-purple-400">
             {players.length} Players Registered

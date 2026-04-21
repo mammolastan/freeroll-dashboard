@@ -18,6 +18,7 @@ export type AuditActionType =
     | 'REBUY_ADDED'
     | 'ADDON_ADDED'
     | 'ENTRY_FIELD_UPDATED'
+    | 'TABLE_ASSIGNED'
 
     // Timer Actions
     | 'TIMER_STARTED'

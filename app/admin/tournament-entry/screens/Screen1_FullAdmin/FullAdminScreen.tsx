@@ -2661,6 +2661,11 @@ export function FullAdminScreen({
             {/* Tournament Info Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between my-5 gap-3">
               <div>
+                {currentDraft?.title && (
+                  <h2 className="text-2xl font-bold text-cyan-700 mb-1">
+                    {currentDraft.title}
+                  </h2>
+                )}
                 <h2 className="text-xl font-bold text-gray-900">
                   {currentDraft?.venue} <br />{" "}
                   {formatGameDate(currentDraft?.tournament_date || "")}

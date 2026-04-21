@@ -9,6 +9,7 @@ import { GameTimerScreen } from "./screens/Screen2_GameTimer/GameTimerScreen";
 import { PlayerCheckInScreen } from "./screens/Screen3_PlayerCheckIn/PlayerCheckInScreen";
 import { PlayerControlScreen } from "./screens/Screen4_PlayerControl/PlayerControlScreen";
 import { TDMessagesScreen } from "./screens/Screen5_TDMessages/TDMessagesScreen";
+import { TableAssignmentScreen } from "./screens/Screen6_TableAssignment";
 import { socket } from "@/lib/socketClient";
 
 interface TournamentDraft {
@@ -16,6 +17,7 @@ interface TournamentDraft {
   tournament_date: string;
   tournament_time?: string;
   director_name: string;
+  title?: string | null;
   venue: string | null;
   venue_id: number | null;
   start_points: number;
@@ -39,6 +41,8 @@ interface Player {
   checked_in_at?: string;
   player_nickname?: string | null;
   knockedout_at?: string | null;
+  t_assign?: number;
+  photo_url?: string | null;
 }
 
 export default function TournamentEntryPage() {
@@ -180,6 +184,8 @@ export default function TournamentEntryPage() {
             ko_position: null,
             placement: null,
             knockedout_at: null,
+            t_assign: 0,
+            photo_url: null,
           };
         }
 
@@ -215,6 +221,8 @@ export default function TournamentEntryPage() {
           knockedout_at: player.knockedout_at
             ? String(player.knockedout_at)
             : null,
+          t_assign: player.t_assign ? Number(player.t_assign) : 0,
+          photo_url: player.photo_url ? String(player.photo_url) : null,
         };
       });
 
@@ -305,6 +313,16 @@ export default function TournamentEntryPage() {
       {currentScreen === 5 && (
         <TDMessagesScreen
           currentDraft={currentDraft}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
+        />
+      )}
+
+      {currentScreen === 6 && (
+        <TableAssignmentScreen
+          currentDraft={currentDraft}
+          players={players}
+          onDataChange={handleDataChange}
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
         />

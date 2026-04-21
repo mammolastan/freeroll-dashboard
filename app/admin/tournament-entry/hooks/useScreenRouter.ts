@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 
-export type ScreenNumber = 1 | 2 | 3 | 4 | 5;
+export type ScreenNumber = 1 | 2 | 3 | 4 | 5 | 6;
 
 export function useScreenRouter(initialScreen: ScreenNumber = 1) {
   const [currentScreen, setCurrentScreen] = useState<ScreenNumber>(initialScreen);
@@ -22,9 +22,9 @@ export function useScreenRouter(initialScreen: ScreenNumber = 1) {
         return;
       }
 
-      // Handle number keys 1-5
+      // Handle number keys 1-6
       const key = event.key;
-      if (['1', '2', '3', '4', '5'].includes(key)) {
+      if (['1', '2', '3', '4', '5', '6'].includes(key)) {
         const screenNumber = parseInt(key) as ScreenNumber;
         setCurrentScreen(screenNumber);
       }

@@ -25,6 +25,7 @@ interface TournamentDraft {
   id: number;
   tournament_date: string;
   director_name: string;
+  title?: string | null;
   venue: string | null;
   venue_id: number | null;
   start_points: number;
@@ -309,8 +310,7 @@ export function TDMessagesScreen({
           Feed Management
         </h1>
         <p className="text-lg text-gray-400">
-          {currentDraft.venue} -{" "}
-          {new Date(currentDraft.tournament_date).toLocaleDateString()}
+          {currentDraft.title || currentDraft.venue || 'Tournament'}
         </p>
       </div>
 

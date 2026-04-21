@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import { ClipboardList, Timer, UserCheck, X, MessageSquare } from 'lucide-react';
+import { ClipboardList, Timer, UserCheck, X, MessageSquare, LayoutGrid } from 'lucide-react';
 import { ScreenNumber } from '../hooks/useScreenRouter';
 
 interface ScreenTabsProps {
@@ -17,6 +17,7 @@ const SCREEN_LABELS: Record<ScreenNumber, string> = {
   3: 'Check-In',
   4: 'Control',
   5: 'Messages',
+  6: 'Tables',
 };
 
 const SCREEN_ICONS: Record<ScreenNumber, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = {
@@ -25,10 +26,11 @@ const SCREEN_ICONS: Record<ScreenNumber, React.ComponentType<{ size?: number; cl
   3: UserCheck,
   4: X,
   5: MessageSquare,
+  6: LayoutGrid,
 };
 
 export function ScreenTabs({ currentScreen, onScreenChange }: ScreenTabsProps) {
-  const screens: ScreenNumber[] = [1, 2, 3, 4, 5];
+  const screens: ScreenNumber[] = [1, 2, 3, 4, 5, 6];
 
   return (
     <>

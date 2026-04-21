@@ -107,6 +107,7 @@ model TournamentDraftPlayer {
   player_uid          String?                            @db.VarChar(255)
   status              tournament_draft_players_status?   @default(active)
   is_new_player       Boolean                            @default(false)
+  t_assign            Int                                @db.TinyInt
   hitman_name         String?                            @db.VarChar(255)
   hitman_uid          String?                            @db.VarChar(255)
   knockedout_at       DateTime?                          @db.DateTime(0)
