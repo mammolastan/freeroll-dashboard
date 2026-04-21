@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Users, Target, X, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Users, Target, X, UserPlus, Trophy } from 'lucide-react';
 import { ScreenTabs } from '../../components/ScreenTabs';
 import { ScreenNumber } from '../../hooks/useScreenRouter';
 import { TableMap } from './TableMap';
@@ -167,6 +167,58 @@ export function TableAssignmentScreen({
     [currentDraft, onDataChange]
   );
 
+  // Get knocked out players sorted by most recent knockout first
+  const knockedOutPlayers = propPlayers
+    .filter((p) => p.ko_position !== null && p.ko_position > 0)
+    .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
+
+  // Calculate placement based on ko_position
+  const calculatePlacement = (player: Player): number | null => {
+    if (player.ko_position === null) return null;
+    return propPlayers.length - player.ko_position + 1;
+  };
+
+  // Handle undo knockout
+  const handleUndoKnockout = useCallback(
+    async (player: Player) => {
+      if (!currentDraft || isSubmitting) return;
+
+      if (!confirm(`Undo knockout for ${player.player_name}?`)) return;
+
+      setIsSubmitting(true);
+      try {
+        const response = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/players/${player.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Screen': 'TableAssignment',
+            },
+            body: JSON.stringify({
+              player_name: player.player_name,
+              hitman_name: null,
+              ko_position: null,
+            }),
+          }
+        );
+
+        if (response.ok) {
+          onDataChange();
+        } else {
+          const errorData = await response.json();
+          alert(errorData.error || 'Failed to undo knockout');
+        }
+      } catch (error) {
+        console.error('Error undoing knockout:', error);
+        alert('Error undoing knockout. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentDraft, isSubmitting, onDataChange]
+  );
+
   if (!currentDraft) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-8">
@@ -235,6 +287,57 @@ export function TableAssignmentScreen({
         onKnockout={(player) => setKnockoutTarget(player as Player)}
         isDragging={dragging !== null}
       />
+
+      {/* Knocked Out Players Section */}
+      {knockedOutPlayers.length > 0 && (
+        <div className="border-t border-gray-700">
+          {/* Header */}
+          <div className="px-4 py-3 bg-gray-900/80 flex items-center gap-2 text-red-400">
+            <Trophy size={20} />
+            <span className="font-semibold">Knocked Out ({knockedOutPlayers.length})</span>
+          </div>
+
+          {/* Knocked Out List */}
+          <div className="max-h-64 overflow-y-auto bg-gray-900/60 px-4 py-2">
+            <div className="space-y-2">
+              {knockedOutPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex items-center justify-between p-3 bg-gray-800/60 border border-red-500/20 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-red-400 font-bold text-sm">
+                      #{player.ko_position}
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">
+                        {player.player_name}
+                      </div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1">
+                        {player.hitman_name && (
+                          <>
+                            <Target size={10} />
+                            <span>by {player.hitman_name}</span>
+                            <span className="mx-1">•</span>
+                          </>
+                        )}
+                        <span>Placed #{calculatePlacement(player)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUndoKnockout(player)}
+                    disabled={isSubmitting}
+                    className="px-2 py-1 text-xs bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 rounded border border-yellow-500/50 transition-all disabled:opacity-50"
+                  >
+                    Undo
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Player Slide-out Panel */}
       <div
