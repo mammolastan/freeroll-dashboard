@@ -129,14 +129,17 @@ export function TableAssignmentScreen({
     [currentDraft, knockoutTarget, isSubmitting, propPlayers, onDataChange]
   );
 
-  // Filter hitman options (other active players)
+  // Filter hitman options (other active players, searches both name and nickname)
   const hitmanOptions = activePlayers
     .filter((p) => knockoutTarget && p.id !== knockoutTarget.id)
-    .filter((p) =>
-      hitmanSearch
-        ? p.player_name.toLowerCase().includes(hitmanSearch.toLowerCase())
-        : true
-    );
+    .filter((p) => {
+      if (!hitmanSearch) return true;
+      const searchText = hitmanSearch.toLowerCase();
+      return (
+        p.player_name.toLowerCase().includes(searchText) ||
+        (p.player_nickname && p.player_nickname.toLowerCase().includes(searchText))
+      );
+    });
 
   // Handle adding a new player
   const handleAddPlayer = useCallback(
@@ -392,6 +395,9 @@ export function TableAssignmentScreen({
             <div className="mb-6 text-center">
               <div className="text-xl font-bold text-white mb-1">
                 {knockoutTarget.player_name}
+                {knockoutTarget.player_nickname && (
+                  <span className="text-cyan-400 ml-2">({knockoutTarget.player_nickname})</span>
+                )}
               </div>
               <div className="text-gray-400">
                 Currently at Table {knockoutTarget.t_assign || 'Unassigned'}
@@ -484,6 +490,9 @@ export function TableAssignmentScreen({
                       className="w-full px-3 py-2 text-left text-white hover:bg-gray-700"
                     >
                       {p.player_name}
+                      {p.player_nickname && (
+                        <span className="text-cyan-400 ml-2">({p.player_nickname})</span>
+                      )}
                     </button>
                   ))}
                 </div>

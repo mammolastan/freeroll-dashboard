@@ -84,13 +84,16 @@ export function PlayerControlScreen({
     );
   });
 
-  // Filter hitman options based on search text
+  // Filter hitman options based on search text (searches both name and nickname)
   const filteredHitmanOptions = allRemainingPlayers
     .filter((p) => selectedPlayer && p.id !== selectedPlayer.id)
     .filter((p) => {
       if (!hitmanSearchText.trim()) return true;
       const searchText = hitmanSearchText.toLowerCase();
-      return p.player_name.toLowerCase().includes(searchText);
+      return (
+        p.player_name.toLowerCase().includes(searchText) ||
+        (p.player_nickname && p.player_nickname.toLowerCase().includes(searchText))
+      );
     });
 
   const knockedOutPlayers = players
@@ -389,6 +392,9 @@ export function PlayerControlScreen({
                       }`}
                     >
                       {p.player_name}
+                      {p.player_nickname && (
+                        <span className="text-cyan-400 ml-2">({p.player_nickname})</span>
+                      )}
                     </button>
                   ))}
                 </div>

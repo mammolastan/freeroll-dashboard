@@ -42,7 +42,8 @@ export function PlayerSeat({
         onDragStart(player.id, player.t_assign || 0);
       }}
       onDragEnd={onDragEnd}
-      className="absolute flex flex-col items-center cursor-grab active:cursor-grabbing group"
+      onClick={() => onKnockout?.(player)}
+      className="absolute flex flex-col items-center cursor-pointer group"
       style={{
         left: position.x,
         top: position.y,
