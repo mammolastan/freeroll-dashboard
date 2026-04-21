@@ -281,25 +281,79 @@ export function TableAssignmentScreen({
         />
       )}
 
-      {/* Knockout Modal */}
+      {/* Player Action Modal (Knockout + Move Table) */}
       {knockoutTarget && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border-2 border-cyan-500 rounded-xl p-6 max-w-lg w-full">
-            <h2 className="text-2xl font-bold text-cyan-300 mb-4 text-center">
-              Record Knockout
-            </h2>
-
-            <div className="mb-4 text-center">
+          <div className="bg-gray-900 border-2 border-cyan-500 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Player Info Header */}
+            <div className="mb-6 text-center">
               <div className="text-xl font-bold text-white mb-1">
                 {knockoutTarget.player_name}
               </div>
               <div className="text-gray-400">
-                Placement: #{activePlayers.length}
+                Currently at Table {knockoutTarget.t_assign || 'Unassigned'}
               </div>
             </div>
 
+            {/* Move to Table Section */}
+            {tableCount > 1 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+                  <Users size={18} />
+                  Move to Table
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: tableCount }).map((_, index) => {
+                    const tableNum = index + 1;
+                    const isCurrentTable = tableNum === knockoutTarget.t_assign;
+                    const playersAtTable = playersByTable[tableNum]?.length || 0;
+                    const isFull = playersAtTable >= SEATS_PER_TABLE;
+
+                    return (
+                      <button
+                        key={tableNum}
+                        onClick={async () => {
+                          if (!isCurrentTable && !isFull) {
+                            await handleTableReassign(knockoutTarget.id, tableNum);
+                            setKnockoutTarget(null);
+                            setHitmanSearch('');
+                          }
+                        }}
+                        disabled={isCurrentTable || isFull}
+                        className={`
+                          px-4 py-3 rounded-lg font-bold text-lg min-w-[60px] transition-all
+                          ${isCurrentTable
+                            ? 'bg-cyan-600 text-white cursor-default'
+                            : isFull
+                              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                              : 'bg-gray-700 text-white hover:bg-cyan-600 hover:scale-105 active:scale-95'
+                          }
+                        `}
+                      >
+                        <div>{tableNum}</div>
+                        <div className={`text-xs font-normal ${isFull ? 'text-red-400' : 'text-gray-400'}`}>
+                          {playersAtTable}/{SEATS_PER_TABLE}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="border-t border-gray-700 my-4" />
+
+            {/* Knockout Section */}
             <div className="mb-4">
-              <label className="block text-gray-300 mb-2">
+              <h3 className="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
+                <Target size={18} />
+                Record Knockout
+              </h3>
+              <div className="text-sm text-gray-400 mb-2">
+                Placement: #{activePlayers.length}
+              </div>
+              <label className="block text-gray-300 mb-2 text-sm">
                 Who knocked them out? (Enter for &quot;unknown&quot;)
               </label>
               <input
@@ -315,12 +369,11 @@ export function TableAssignmentScreen({
                   }
                 }}
                 placeholder="Type to search or press Enter..."
-                className="w-full px-3 py-2 bg-gray-800 border border-cyan-500/50 rounded text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                autoFocus
+                className="w-full px-3 py-2 bg-gray-800 border border-red-500/50 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500"
               />
 
               {hitmanSearch && hitmanOptions.length > 0 && (
-                <div className="mt-2 max-h-40 overflow-y-auto bg-gray-800 border border-cyan-500/50 rounded">
+                <div className="mt-2 max-h-40 overflow-y-auto bg-gray-800 border border-red-500/50 rounded">
                   {hitmanOptions.slice(0, 8).map((p) => (
                     <button
                       key={p.id}
@@ -332,28 +385,28 @@ export function TableAssignmentScreen({
                   ))}
                 </div>
               )}
-            </div>
 
-            <div className="flex gap-3">
               <button
                 onClick={() => handleKnockout(hitmanSearch.trim() || 'unknown')}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full mt-3 px-4 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Target size={18} />
-                Confirm KO
-              </button>
-              <button
-                onClick={() => {
-                  setKnockoutTarget(null);
-                  setHitmanSearch('');
-                }}
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
-              >
-                <X size={18} />
-                Cancel
+                Confirm Knockout
               </button>
             </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setKnockoutTarget(null);
+                setHitmanSearch('');
+              }}
+              className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <X size={18} />
+              Cancel
+            </button>
           </div>
         </div>
       )}
