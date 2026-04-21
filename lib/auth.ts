@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
 
         const player = await prisma.players_v2.findFirst({
           where: { email: credentials.email.toLowerCase() },
+          include: { leagues: { select: { slug: true } } },
         });
 
         if (!player || !player.password_hash) {
@@ -47,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           image: player.photo_url,
           isAdmin: player.isAdmin,
           leagueId: player.league_id,
+          leagueSlug: player.leagues.slug,
         };
       },
     }),
@@ -70,6 +72,7 @@ export const authOptions: NextAuthOptions = {
         token.image = user.image;
         token.isAdmin = user.isAdmin ?? false;
         token.leagueId = user.leagueId ?? 1;
+        token.leagueSlug = user.leagueSlug ?? "freeroll";
       }
 
       if (trigger === "update" && session) {
@@ -87,6 +90,7 @@ export const authOptions: NextAuthOptions = {
         session.user.nickname = token.nickname as string | null;
         session.user.isAdmin = token.isAdmin as boolean;
         session.user.leagueId = token.leagueId as number;
+        session.user.leagueSlug = token.leagueSlug as string;
       }
       return session;
     },
