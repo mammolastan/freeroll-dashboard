@@ -534,8 +534,15 @@ export function PlayerControlScreen({
                         <div className="text-2xl font-bold text-red-400">
                           KO #{player.ko_position}
                         </div>
-                        <div className="text-xl font-bold text-white">
-                          {player.player_name}
+                        <div>
+                          <div className="text-xl font-bold text-white">
+                            {player.player_name}
+                          </div>
+                          {player.player_nickname && (
+                            <div className="text-lg text-cyan-400">
+                              &quot;{player.player_nickname}&quot;
+                            </div>
+                          )}
                         </div>
                       </div>
                       {player.hitman_name && (

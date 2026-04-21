@@ -301,7 +301,7 @@ export function TableAssignmentScreen({
           </div>
 
           {/* Knocked Out List */}
-          <div className="max-h-64 overflow-y-auto bg-gray-900/60 px-4 py-2">
+          <div className="bg-gray-900/60 px-4 py-2">
             <div className="space-y-2">
               {knockedOutPlayers.map((player) => (
                 <div
@@ -315,6 +315,9 @@ export function TableAssignmentScreen({
                     <div>
                       <div className="text-white font-medium">
                         {player.player_name}
+                        {player.player_nickname && (
+                          <span className="text-cyan-400 ml-1">({player.player_nickname})</span>
+                        )}
                       </div>
                       <div className="text-xs text-gray-400 flex items-center gap-1">
                         {player.hitman_name && (
