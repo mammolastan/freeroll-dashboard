@@ -479,6 +479,12 @@ export function TableAssignmentScreen({
                 }}
                 placeholder="Type to search or press Enter..."
                 className="w-full px-3 py-2 bg-gray-800 border border-red-500/50 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-form-type="other"
+                data-lpignore="true"
               />
 
               {hitmanSearch && hitmanOptions.length > 0 && (
