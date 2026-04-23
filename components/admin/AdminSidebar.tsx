@@ -17,6 +17,7 @@ import {
   ListOrdered,
   Menu,
   X,
+  Award,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -47,6 +48,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       label: "Game Defaults",
       icon: Gamepad2,
     },
+    { href: `${base}/tournaments`, label: "Tournaments", icon: Award },
     { href: `${base}/members`, label: "Members", icon: Users },
     ...(canManageRoles(role)
       ? [

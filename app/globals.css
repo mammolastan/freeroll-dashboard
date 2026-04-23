@@ -113,3 +113,9 @@ a.freeroll-link:active {
 .ProseMirror a:hover {
   color: rgb(103, 232, 249);
 }
+
+/* Make date picker icon visible on dark backgrounds */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
