@@ -24,30 +24,33 @@ export async function getLeagueIdBySlug(slug: string): Promise<number | null> {
 
 // Main function — use this in all API routes
 // Accepts both NextRequest and Request for flexibility
+// NOTE: Query params are checked FIRST to allow route caching.
+// Calling getServerSession() reads cookies, which forces the route to be dynamic.
 export async function getLeagueIdFromRequest(
   request: NextRequest | Request
 ): Promise<number> {
-  // 1. Authenticated session
-  const session = await getServerSession(authOptions);
-  if (session?.user?.leagueId) return session.user.leagueId;
-
   // Handle both NextRequest and plain Request
   const url = 'nextUrl' in request ? request.nextUrl : new URL(request.url);
   const params = url.searchParams;
 
-  // 2. ?league=slug
+  // 1. ?league=slug (check first to preserve route caching)
   const slugParam = params.get('league');
   if (slugParam) {
     const id = await getLeagueIdBySlug(slugParam);
     if (id) return id;
   }
 
-  // 3. ?league_id=N
+  // 2. ?league_id=N
   const idParam = params.get('league_id');
   if (idParam) {
     const parsed = parseInt(idParam);
     if (!isNaN(parsed)) return parsed;
   }
+
+  // 3. Authenticated session (only check if no query param provided)
+  // NOTE: This call reads cookies and makes the route dynamic
+  const session = await getServerSession(authOptions);
+  if (session?.user?.leagueId) return session.user.leagueId;
 
   // 4. DEFAULT_LEAGUE_SLUG env var
   const defaultSlug = process.env.DEFAULT_LEAGUE_SLUG;
