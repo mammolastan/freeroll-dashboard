@@ -56,7 +56,7 @@ export function PlayerCheckInCore({
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus the search input on mount
   useEffect(() => {
@@ -245,29 +245,25 @@ export function PlayerCheckInCore({
         <div className="space-y-6">
           <div className="relative dropdown-container">
             <Search className="absolute left-3 md:left-6 top-1/2 transform -translate-y-1/2 text-gray-400 z-10 pointer-events-none w-5 h-5 md:w-8 md:h-8" />
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
+              rows={1}
               value={searchQuery}
               onChange={(e) => handleSearchInput(e.target.value)}
               onFocus={() => {
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Escape") {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                } else if (e.key === "Escape") {
                   setSearchQuery("");
                   setShowDropdown(false);
                   e.currentTarget.blur();
                 }
               }}
               placeholder="Search for your name..."
-              className="w-full pl-10 md:pl-20 pr-3 md:pr-6 py-3 md:py-6 text-base md:text-2xl bg-gray-800/80 border-2 border-cyan-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 focus:border-cyan-500"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              data-form-type="other"
-              data-lpignore="true"
+              className="w-full pl-10 md:pl-20 pr-3 md:pr-6 py-3 md:py-6 text-base md:text-2xl bg-gray-800/80 border-2 border-cyan-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 focus:border-cyan-500 resize-none overflow-hidden"
             />
 
             {/* Dropdown with Search Results */}
@@ -383,25 +379,21 @@ export function PlayerCheckInCore({
               New Player Registration
             </h2>
 
-            <input
-              type="text"
+            <textarea
+              rows={1}
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Escape") {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                } else if (e.key === "Escape") {
                   setNewPlayerName("");
                   e.currentTarget.blur();
                 }
               }}
               placeholder="Enter your full name"
-              className="w-full px-3 md:px-6 py-3 md:py-6 text-base md:text-2xl bg-gray-900 border-2 border-purple-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 mb-4 md:mb-6"
+              className="w-full px-3 md:px-6 py-3 md:py-6 text-base md:text-2xl bg-gray-900 border-2 border-purple-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 mb-4 md:mb-6 resize-none overflow-hidden"
               autoFocus
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              data-form-type="other"
-              data-lpignore="true"
             />
 
             <div className="flex gap-2 md:gap-4">

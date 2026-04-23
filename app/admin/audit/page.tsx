@@ -82,12 +82,15 @@ export default function AuditLogSelectorPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Search */}
         <div className="mb-6">
-          <input
-            type="text"
+          <textarea
+            rows={1}
             placeholder="Search by venue or director..."
-            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none overflow-hidden"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
           />
         </div>
 

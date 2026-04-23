@@ -572,12 +572,15 @@ export function BlindScheduleEditModal({
                 >
                   Title
                 </label>
-                <input
+                <textarea
                   id="save-to-league-name"
-                  type="text"
+                  rows={1}
                   value={saveToLeagueTitle}
                   onChange={(e) => setSaveToLeagueTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none overflow-hidden"
                   placeholder="e.g. Tuesday turbo"
                   disabled={savingToLeague}
                   autoFocus

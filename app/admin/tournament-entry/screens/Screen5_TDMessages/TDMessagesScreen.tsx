@@ -477,12 +477,15 @@ export function TDMessagesScreen({
             {/* Caption Input */}
             {selectedPhoto && (
               <div className="mb-4">
-                <input
-                  type="text"
+                <textarea
+                  rows={1}
                   value={photoCaption}
                   onChange={(e) => setPhotoCaption(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
                   placeholder="Add a caption (optional)"
-                  className="w-full px-3 py-2 text-sm bg-gray-800 border-2 border-amber-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder-gray-500"
+                  className="w-full px-3 py-2 text-sm bg-gray-800 border-2 border-amber-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder-gray-500 resize-none overflow-hidden"
                   maxLength={500}
                 />
               </div>

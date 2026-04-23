@@ -67,8 +67,8 @@ export function PlayerControlScreen({
   const [hitmanSearchText, setHitmanSearchText] = useState("");
   const [highlightedHitmanIndex, setHighlightedHitmanIndex] =
     useState<number>(-1);
-  const filterInputRef = useRef<HTMLInputElement>(null);
-  const hitmanInputRef = useRef<HTMLInputElement>(null);
+  const filterInputRef = useRef<HTMLTextAreaElement>(null);
+  const hitmanInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Players are knocked out when they have a ko_position (not null)
   const allRemainingPlayers = players.filter((p) => p.ko_position === null);
@@ -363,17 +363,16 @@ export function PlayerControlScreen({
                 Who knocked them out? (Type to search, or press Enter for
                 &quot;unknown&quot;)
               </label>
-              <input
+              <textarea
                 ref={hitmanInputRef}
-                type="text"
+                rows={1}
                 value={hitmanSearchText}
                 onChange={(e) => {
                   setHitmanSearchText(e.target.value);
                   setHighlightedHitmanIndex(-1);
                 }}
                 placeholder="Hit Enter for 'unknown'..."
-                className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500"
-                autoComplete="off"
+                className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none overflow-hidden"
               />
               {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
                 <div className="mt-2 max-h-60 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
@@ -448,13 +447,13 @@ export function PlayerControlScreen({
 
           {/* Filter Input */}
           <div className="mb-3">
-            <input
+            <textarea
               ref={filterInputRef}
-              type="text"
+              rows={1}
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               placeholder="Filter players... (press 'x')"
-              className="w-full px-3 py-2 text-sm bg-gray-800/60 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500"
+              className="w-full px-3 py-2 text-sm bg-gray-800/60 border border-green-500/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 resize-none overflow-hidden"
             />
           </div>
 

@@ -30,7 +30,7 @@ interface PlayerRowProps {
     onHitmanSearchChange: (value: string) => void;
     onHitmanFocus: () => void;
     onHitmanBlur: () => void;
-    onHitmanKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onHitmanKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     onHitmanSelect: (hitmanName: string) => void;
     onCrosshairClick: () => void;
     onMoveKnockout: () => void;
@@ -137,15 +137,15 @@ export function PlayerRow({
                         </svg>
                     </button>
                 )}
-                <input
+                <textarea
                     id={`hitman-input-${player.id}`}
-                    type="text"
+                    rows={1}
                     value={hitmanSearchValue}
                     onChange={(e) => onHitmanSearchChange(e.target.value)}
                     onFocus={onHitmanFocus}
                     onBlur={onHitmanBlur}
                     onKeyDown={onHitmanKeyDown}
-                    className={`w-full px-2 py-1 border rounded text-black text-sm ${isIntegrated ? 'bg-gray-100' : ''
+                    className={`w-full px-2 py-1 border rounded text-black text-sm resize-none overflow-hidden ${isIntegrated ? 'bg-gray-100' : ''
                         }`}
                     placeholder="Enter hitman name or leave as 'unknown'"
                     disabled={isIntegrated}

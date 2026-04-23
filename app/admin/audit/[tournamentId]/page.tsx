@@ -483,14 +483,17 @@ export default function AuditLogViewerPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Search
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={1}
                 placeholder="Search players, actions..."
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none overflow-hidden"
                 value={filters.search || ""}
                 onChange={(e) =>
                   setFilters({ ...filters, search: e.target.value })
                 }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
               />
             </div>
 

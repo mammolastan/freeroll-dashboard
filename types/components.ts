@@ -168,7 +168,7 @@ export interface PlayerRowProps {
   onHitmanSearchChange: (value: string) => void;
   onHitmanFocus: () => void;
   onHitmanBlur: () => void;
-  onHitmanKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onHitmanKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onHitmanSelect: (hitmanName: string) => void;
   onCrosshairClick: () => void;
   onKOPositionChange: (koPosition: number | null) => void;

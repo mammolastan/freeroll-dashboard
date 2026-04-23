@@ -468,12 +468,13 @@ export function TableAssignmentScreen({
               <label className="block text-gray-300 mb-2 text-sm">
                 Who knocked them out? (Enter for &quot;unknown&quot;)
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={1}
                 value={hitmanSearch}
                 onChange={(e) => setHitmanSearch(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
                     handleKnockout(hitmanSearch.trim() || 'unknown');
                   } else if (e.key === 'Escape') {
                     setKnockoutTarget(null);
@@ -481,13 +482,7 @@ export function TableAssignmentScreen({
                   }
                 }}
                 placeholder="Type to search or press Enter..."
-                className="w-full px-3 py-2 bg-gray-800 border border-red-500/50 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                data-form-type="other"
-                data-lpignore="true"
+                className="w-full px-3 py-2 bg-gray-800 border border-red-500/50 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none overflow-hidden"
               />
 
               {hitmanSearch && hitmanOptions.length > 0 && (

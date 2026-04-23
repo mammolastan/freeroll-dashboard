@@ -1263,7 +1263,7 @@ export function FullAdminScreen({
 
   const handleHitmanKeyDown = (
     playerId: number,
-    e: React.KeyboardEvent<HTMLInputElement>,
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
     const candidates = getHitmanCandidates(
       playerId,
@@ -2268,8 +2268,8 @@ export function FullAdminScreen({
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Director
                       </label>
-                      <input
-                        type="text"
+                      <textarea
+                        rows={1}
                         value={newTournament.director_name}
                         onChange={(e) =>
                           setNewTournament({
@@ -2277,7 +2277,10 @@ export function FullAdminScreen({
                             director_name: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 border rounded text-black"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.preventDefault();
+                        }}
+                        className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="Tournament director"
                       />
                     </div>
@@ -2286,8 +2289,8 @@ export function FullAdminScreen({
                         Title
                         <span className="ml-1 text-xs text-gray-500 font-normal">(optional)</span>
                       </label>
-                      <input
-                        type="text"
+                      <textarea
+                        rows={1}
                         value={newTournament.title}
                         onChange={(e) =>
                           setNewTournament({
@@ -2295,7 +2298,10 @@ export function FullAdminScreen({
                             title: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 border rounded text-black"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.preventDefault();
+                        }}
+                        className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="Custom display title"
                       />
                     </div>
@@ -2461,13 +2467,16 @@ export function FullAdminScreen({
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Period Name *
                       </label>
-                      <input
-                        type="text"
+                      <textarea
+                        rows={1}
                         value={newPeriod.name}
                         onChange={(e) =>
                           setNewPeriod({ ...newPeriod, name: e.target.value })
                         }
-                        className="w-full px-3 py-2 border rounded text-black"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.preventDefault();
+                        }}
+                        className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="e.g., January 2026 or Q1 2026"
                       />
                     </div>
@@ -3105,8 +3114,8 @@ export function FullAdminScreen({
             <label className="block text-sm font-medium text-gray-900 mb-1">
               Game Title
             </label>
-            <input
-              type="text"
+            <textarea
+              rows={1}
               value={
                 currentDraft?.title ||
                 `${currentDraft?.venue || "Tournament"} - ${
@@ -3120,7 +3129,10 @@ export function FullAdminScreen({
                 }`
               }
               onChange={(e) => updateTournamentField("title", e.target.value)}
-              className="w-full px-3 py-2 border rounded text-black"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault();
+              }}
+              className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
               placeholder="Custom game title"
               disabled={currentDraft?.status === "integrated"}
             />
@@ -3131,13 +3143,16 @@ export function FullAdminScreen({
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Director
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={1}
                 value={currentDraft?.director_name || ""}
                 onChange={(e) =>
                   updateTournamentField("director_name", e.target.value)
                 }
-                className="w-full px-3 py-2 border rounded text-black"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+                className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                 placeholder="Director name"
                 disabled={currentDraft?.status === "integrated"}
               />
@@ -3452,8 +3467,8 @@ export function FullAdminScreen({
               Add Playerz
             </label>
             <div className="relative">
-              <input
-                type="text"
+              <textarea
+                rows={1}
                 value={newPlayerName}
                 onChange={(e) => setNewPlayerName(e.target.value)}
                 onFocus={() => {
@@ -3461,7 +3476,10 @@ export function FullAdminScreen({
                     setShowPlayerDropdown(true);
                   }
                 }}
-                className="w-full px-3 py-2 pr-8 border rounded text-black"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+                className="w-full px-3 py-2 pr-8 border rounded text-black resize-none overflow-hidden"
                 placeholder="Start typing player name..."
                 id="player-search-input"
               />
