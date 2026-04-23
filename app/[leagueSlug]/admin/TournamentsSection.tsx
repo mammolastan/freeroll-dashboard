@@ -75,7 +75,7 @@ export function TournamentsSection({ leagueSlug }: TournamentsSectionProps) {
 
   const fetchVenues = useCallback(async () => {
     try {
-      const res = await fetch(`/api/${leagueSlug}/venues?activeOnly=false`);
+      const res = await fetch(`/api/${leagueSlug}/venues?activeOnly=true`);
       if (res.ok) {
         const data = await res.json();
         setVenues(data.venues);
