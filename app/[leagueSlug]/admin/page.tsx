@@ -33,36 +33,49 @@ export default async function AdminDashboardPage({ params }: PageProps) {
         You are logged in as <span className="text-cyan-400">{role}</span>
       </p>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-            Timezone
-          </p>
-          <p className="text-white font-medium">{config.timezone}</p>
+      {/* Game Defaults Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-white mb-4">Game Defaults</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Chat
+            </p>
+            <p className="text-white font-medium">
+              {config.gameDefaults.allowChat ? "Enabled" : "Disabled"}
+            </p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Self Check-In
+            </p>
+            <p className="text-white font-medium">
+              {config.gameDefaults.allowSelfCheckIn ? "Enabled" : "Disabled"}
+            </p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 col-span-2">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Late Registration Window
+            </p>
+            <p className="text-white font-medium">
+              {config.gameDefaults.lateRegistrationWindowMinutes} minutes
+            </p>
+          </div>
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-            Self Check-In
-          </p>
-          <p className="text-white font-medium">
-            {config.gameDefaults.allowSelfCheckIn ? "Enabled" : "Disabled"}
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-            Badges
-          </p>
-          <p className="text-white font-medium">
-            {config.badgesEnabled ? "Enabled" : "Disabled"}
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-            Chat
-          </p>
-          <p className="text-white font-medium">
-            {config.gameDefaults.allowChat ? "Enabled" : "Disabled"}
-          </p>
+      </div>
+
+      {/* League Settings Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-white mb-4">League Settings</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Badges
+            </p>
+            <p className="text-white font-medium">
+              {config.badgesEnabled ? "Enabled" : "Disabled"}
+            </p>
+          </div>
         </div>
       </div>
 

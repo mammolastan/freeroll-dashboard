@@ -8,6 +8,7 @@ import {
   Award,
   Settings,
   Play,
+  Tv
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -74,6 +75,11 @@ export function getAdminNavItems(prefix: string = ""): NavItem[] {
       href: "/admin/tournament-entry",
       icon: Play,
       text: "Tournament Entry",
+    },
+    {
+      href: `${prefix}/tvscreen`,
+      icon: Tv,
+      text: "TV Display",
     },
     {
       href: `${prefix}/admin`,
