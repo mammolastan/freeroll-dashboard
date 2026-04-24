@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getLeagueConfig } from '@/lib/league-config';
 import { notFound } from 'next/navigation';
 import { Metadata, Viewport } from 'next';
+import { InstallPrompt } from '@/components/ui/InstallPrompt';
 
 export async function generateViewport({
   params,
@@ -87,6 +88,7 @@ export default async function LeagueLayout({
   return (
     <LeagueProvider slug={leagueSlug} timezone={config.timezone}>
       {children}
+      <InstallPrompt />
     </LeagueProvider>
   );
 }

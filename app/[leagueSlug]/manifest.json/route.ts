@@ -1,3 +1,5 @@
+// app/[leagueSlug]/manifest.json/route.ts
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getLeagueConfig } from '@/lib/league-config';
@@ -26,14 +28,18 @@ export async function GET(
   const themeColor = pwa.themeColor || '#06b6d4';
   const backgroundColor = pwa.backgroundColor || '#0f172a';
   const logoUrl = pwa.logoUrl || '/icons/default-icon-512.png';
+  // Static maskable icon with solid background for Android adaptive icons
+  const maskableLogoUrl = '/uploads/pwa-icons/freeroll-maskable.png';
 
   const manifest = {
+    id: `/${leagueSlug}/`,
     name: appName,
     short_name: shortName,
     description: `${appName} — Poker League`,
     start_url: `/${leagueSlug}`,
     scope: `/${leagueSlug}/`,
     display: 'standalone',
+    display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait',
     background_color: backgroundColor,
     theme_color: themeColor,
@@ -42,14 +48,16 @@ export async function GET(
         src: logoUrl,
         sizes: '192x192',
         type: 'image/png',
+        purpose: 'any',
       },
       {
         src: logoUrl,
         sizes: '512x512',
         type: 'image/png',
+        purpose: 'any',
       },
       {
-        src: logoUrl,
+        src: maskableLogoUrl,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
