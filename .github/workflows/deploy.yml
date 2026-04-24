@@ -49,9 +49,9 @@ jobs:
             echo "Installing dependencies..."
             npm install
             
-            # Build the application
+            # Build the application (increase heap size for low-memory servers)
             echo "Building Next.js application..."
-            npm run build
+            NODE_OPTIONS="--max-old-space-size=1536" npm run build
 
             # Build the Socket.IO server
             echo "Building Socket.IO server..."
