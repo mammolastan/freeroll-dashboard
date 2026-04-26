@@ -1,40 +1,7 @@
 // app/api/tournament-drafts/[id]/players/route.ts
 import { NextRequest, NextResponse } from "next/server";
-
-import { RealtimeAPI } from "@/lib/realtime";
-
 import { prisma } from "@/lib/prisma";
-import { RawQueryResult } from "@/types";
-import { createCheckInFeedItem } from "@/lib/feed/feedService";
-import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
-
-const SEATS_PER_TABLE = 8;
-
-/**
- * Auto-assign a table for a new player.
- * Algorithm: Find the table with the fewest players that isn't full.
- * If all tables are full (or no tables exist), return next table number.
- */
-function autoAssignTable(tableCounts: Record<number, number>, maxTable: number): number {
-  // Find the table with the fewest players that isn't full
-  let bestTable = -1;
-  let bestCount = Infinity;
-
-  for (let t = 1; t <= maxTable; t++) {
-    const count = tableCounts[t] || 0;
-    if (count < SEATS_PER_TABLE && count < bestCount) {
-      bestCount = count;
-      bestTable = t;
-    }
-  }
-
-  // If all tables are full (or no tables exist), create a new one
-  if (bestTable === -1) {
-    return maxTable + 1;
-  }
-
-  return bestTable;
-}
+import { addPlayerToTournament, AddedBy } from "@/lib/tournament/addPlayer";
 
 export async function GET(
   request: NextRequest,
@@ -76,117 +43,29 @@ export async function POST(
     const { player_name, player_nickname, player_uid, is_new_player, added_by } = body;
 
     // Validate added_by value, default to 'admin'
-    const validAddedBy = ['admin', 'self_checkin', 'kiosk'].includes(added_by) ? added_by : 'admin';
+    const validAddedBy: AddedBy = ['admin', 'self_checkin', 'kiosk'].includes(added_by)
+      ? added_by
+      : 'admin';
 
-    // Check for duplicate player in same tournament
-    const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id FROM tournament_draft_players
-      WHERE tournament_draft_id = ${draftId} AND player_name = ${player_name}
-    `;
+    const result = await addPlayerToTournament({
+      tournamentDraftId: draftId,
+      player_name,
+      player_nickname,
+      player_uid,
+      is_new_player: is_new_player || false,
+      added_by: validAddedBy,
+      request,
+    });
 
-    if (existingPlayer.length > 0) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Player already exists in this tournament" },
-        { status: 400 }
+        { error: result.error },
+        { status: result.errorType === "duplicate" ? 400 : 500 }
       );
     }
 
-    // Calculate table assignment for the new player
-    const activePlayersWithTables = await prisma.$queryRaw<{ t_assign: number }[]>`
-      SELECT t_assign FROM tournament_draft_players
-      WHERE tournament_draft_id = ${draftId}
-        AND (ko_position IS NULL OR ko_position = 0)
-        AND t_assign > 0
-    `;
-
-    // Build table counts
-    const tableCounts: Record<number, number> = {};
-    let maxTable = 0;
-    for (const p of activePlayersWithTables) {
-      const t = p.t_assign;
-      if (t > 0) {
-        tableCounts[t] = (tableCounts[t] || 0) + 1;
-        if (t > maxTable) maxTable = t;
-      }
-    }
-
-    // If no tables exist yet, start with table 1
-    if (maxTable === 0) maxTable = 1;
-
-    const assignedTable = autoAssignTable(tableCounts, maxTable);
-
-    await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players
-      (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, t_assign, added_by, checked_in_at)
-          VALUES (${draftId}, ${player_name}, ${player_nickname}, ${player_uid}, ${
-      is_new_player || false
-    }, ${assignedTable}, ${validAddedBy}, UTC_TIMESTAMP())
-      `;
-
-    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
-    `;
-
-    // Create feed item for check-in (use nickname if available)
-    try {
-      await createCheckInFeedItem(draftId, player_name, player_uid, player_nickname);
-    } catch (error) {
-      console.error("Failed to create check-in feed item:", error);
-      // Don't fail the add if feed item creation fails
-    }
-
-    // Emit Socket.IO event for real-time updates
-    if (Array.isArray(newPlayer) && newPlayer.length > 0) {
-      const playerId = newPlayer[0].id;
-      if (typeof playerId === 'number') {
-        await RealtimeAPI.playerAdded(draftId, playerId);
-      }
-    }
-
-    // Audit logging for player addition
-    if (Array.isArray(newPlayer) && newPlayer.length > 0) {
-      try {
-        const newPlayerId = newPlayer[0].id;
-        const playerId = typeof newPlayerId === 'number' ? newPlayerId : null;
-        const session = await getAuditSession();
-        const actor = getActorFromSession(session);
-        await logAuditEvent({
-          tournamentId: draftId,
-          actionType: 'PLAYER_ADDED',
-          actionCategory: validAddedBy === 'admin' ? 'ADMIN' : 'PLAYER',
-          actorId: null,
-          actorName: validAddedBy === 'admin' ? actor.actorName : null,
-          targetPlayerId: playerId,
-          targetPlayerName: player_name,
-          previousValue: null,
-          newValue: {
-            playerId: playerId,
-            playerName: player_name,
-            playerUid: player_uid || null,
-            isNewPlayer: is_new_player || false,
-            checkedIn: true,
-          },
-          metadata: validAddedBy === 'admin'
-            ? withActorMetadata(actor, {
-                addedBy: validAddedBy,
-                tournamentDraftEntryId: playerId,
-                playerNickname: player_nickname || null,
-                adminScreen: getAdminScreen(request),
-              })
-            : {
-                addedBy: validAddedBy,
-                tournamentDraftEntryId: playerId,
-                playerNickname: player_nickname || null,
-                adminScreen: getAdminScreen(request),
-              },
-          ipAddress: getClientIP(request),
-        });
-      } catch (auditError) {
-        console.error('Audit logging failed:', auditError);
-      }
-    }
-
-    return NextResponse.json(newPlayer);
+    // Return in array format to match previous behavior
+    return NextResponse.json([result.player]);
   } catch (error) {
     console.error("Error adding draft player:", error);
     return NextResponse.json(

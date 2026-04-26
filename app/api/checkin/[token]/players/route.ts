@@ -2,9 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult, PlayerSearchResult } from "@/types";
-import { createCheckInFeedItem } from "@/lib/feed/feedService";
-import { logAuditEvent, getClientIP, getAdminScreen } from "@/lib/auditlog";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { addPlayerToTournament } from "@/lib/tournament/addPlayer";
 
 // Get list of checked-in players for a tournament
 export async function GET(
@@ -31,7 +30,7 @@ export async function GET(
 
     // Get all checked-in players, sorted by most recent first
     const players = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT 
+      SELECT
         id,
         player_name,
         player_nickname,
@@ -41,7 +40,7 @@ export async function GET(
         checked_in_at,
         hitman_name,
         ko_position
-      FROM tournament_draft_players 
+      FROM tournament_draft_players
       WHERE tournament_draft_id = ${tournamentId}
       ORDER BY checked_in_at DESC
     `;
@@ -89,7 +88,7 @@ export async function POST(
       );
     }
 
-    const tournamentId = tournament[0].id;
+    const tournamentId = tournament[0].id as number;
 
     // Check if player already checked in
     const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
@@ -189,79 +188,34 @@ export async function POST(
       }
     }
 
-    // Add player to tournament
-    await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players
-      (tournament_draft_id, player_name, player_uid, player_nickname, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${cleanPlayerName}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
-    `;
+    // Add player to tournament using shared function
+    const result = await addPlayerToTournament({
+      tournamentDraftId: tournamentId,
+      player_name: cleanPlayerName,
+      player_nickname,
+      player_uid,
+      is_new_player,
+      added_by: "self_checkin",
+      request,
+      auditMetadata: {
+        forceNewPlayer: force_new_player || false,
+        token,
+      },
+    });
 
-    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
-    `;
-
-    // Create feed item for check-in (use nickname if available)
-    try {
-      await createCheckInFeedItem(Number(tournamentId), cleanPlayerName, player_uid, player_nickname);
-    } catch (error) {
-      console.error("Failed to create check-in feed item:", error);
-      // Don't fail the check-in if feed item creation fails
-    }
-
-    // Trigger real-time update for all connected clients
-    try {
-      await fetch(
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/trigger-player-update`,
+    if (!result.success) {
+      return NextResponse.json(
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tournamentDraftId: tournamentId }),
-        }
+          type: "error",
+          error: result.error,
+        },
+        { status: result.errorType === "duplicate" ? 200 : 500 }
       );
-    } catch (error) {
-      console.error("Failed to trigger real-time update:", error);
-      // Don't fail the check-in if real-time update fails
-    }
-
-    // Audit logging for self check-in
-    if (newPlayer.length > 0) {
-      try {
-        const newPlayerId = newPlayer[0].id;
-        await logAuditEvent({
-          tournamentId: Number(tournamentId),
-          actionType: 'PLAYER_CHECKED_IN',
-          actionCategory: 'PLAYER',
-          actorId: typeof newPlayerId === 'number' ? newPlayerId : null,
-          actorName: cleanPlayerName,
-          targetPlayerId: typeof newPlayerId === 'number' ? newPlayerId : null,
-          targetPlayerName: cleanPlayerName,
-          previousValue: null,
-          newValue: {
-            playerId: typeof newPlayerId === 'number' ? newPlayerId : null,
-            playerName: cleanPlayerName,
-            playerUid: player_uid,
-            playerNickname: player_nickname,
-            checkedIn: true,
-          },
-          metadata: {
-            addedBy: 'self_checkin',
-            isNewPlayer: is_new_player,
-            forceNewPlayer: force_new_player || false,
-            token: token,
-            adminScreen: getAdminScreen(request),
-          },
-          ipAddress: getClientIP(request),
-        });
-      } catch (auditError) {
-        console.error('Audit logging failed:', auditError);
-      }
     }
 
     return NextResponse.json({
       type: "success",
-      player: newPlayer[0],
+      player: result.player,
       message: is_new_player
         ? `Welcome! You've been added as a new player.`
         : `Welcome back, ${cleanPlayerName}!`,
@@ -298,7 +252,7 @@ export async function PUT(
       );
     }
 
-    const tournamentId = tournament[0].id;
+    const tournamentId = tournament[0].id as number;
 
     let player_name, player_uid, player_nickname, is_new_player;
 
@@ -333,95 +287,33 @@ export async function PUT(
       is_new_player = false;
     }
 
-    // Check if player already checked in
-    const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id FROM tournament_draft_players
-      WHERE tournament_draft_id = ${tournamentId} AND
-            (player_name = ${player_name} OR player_uid = ${player_uid})
-    `;
+    // Add player to tournament using shared function
+    const result = await addPlayerToTournament({
+      tournamentDraftId: tournamentId,
+      player_name,
+      player_nickname,
+      player_uid,
+      is_new_player,
+      added_by: "self_checkin",
+      request,
+      auditMetadata: {
+        selectedFromSuggestions: selected_player_uid !== "new_player",
+        selectedPlayerUid: selected_player_uid,
+        enteredName: entered_name,
+        token,
+      },
+    });
 
-    if (existingPlayer.length > 0) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: "This player has already checked in for this tournament" },
-        { status: 400 }
+        { error: result.error },
+        { status: result.errorType === "duplicate" ? 400 : 500 }
       );
-    }
-
-    // Add player to tournament
-    await prisma.$queryRaw`
-      INSERT INTO tournament_draft_players
-      (tournament_draft_id, player_name, player_uid, player_nickname, is_new_player, added_by, checked_in_at)
-      VALUES (${tournamentId}, ${player_name}, ${player_uid}, ${player_nickname}, ${is_new_player}, 'self_checkin', UTC_TIMESTAMP())
-    `;
-
-    const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_draft_players WHERE id = LAST_INSERT_ID()
-    `;
-
-    // Create feed item for check-in (use nickname if available)
-    try {
-      await createCheckInFeedItem(Number(tournamentId), player_name, player_uid, player_nickname);
-    } catch (error) {
-      console.error("Failed to create check-in feed item:", error);
-      // Don't fail the check-in if feed item creation fails
-    }
-
-    // Trigger real-time update for all connected clients
-    try {
-      await fetch(
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/trigger-player-update`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tournamentDraftId: tournamentId }),
-        }
-      );
-    } catch (error) {
-      console.error("Failed to trigger real-time update:", error);
-      // Don't fail the check-in if real-time update fails
-    }
-
-    // Audit logging for self check-in via suggestion selection
-    if (newPlayer.length > 0) {
-      try {
-        const newPlayerId = newPlayer[0].id;
-        await logAuditEvent({
-          tournamentId: Number(tournamentId),
-          actionType: 'PLAYER_CHECKED_IN',
-          actionCategory: 'PLAYER',
-          actorId: typeof newPlayerId === 'number' ? newPlayerId : null,
-          actorName: player_name,
-          targetPlayerId: typeof newPlayerId === 'number' ? newPlayerId : null,
-          targetPlayerName: player_name,
-          previousValue: null,
-          newValue: {
-            playerId: typeof newPlayerId === 'number' ? newPlayerId : null,
-            playerName: player_name,
-            playerUid: player_uid,
-            playerNickname: player_nickname,
-            checkedIn: true,
-          },
-          metadata: {
-            addedBy: 'self_checkin',
-            isNewPlayer: is_new_player,
-            selectedFromSuggestions: selected_player_uid !== 'new_player',
-            selectedPlayerUid: selected_player_uid,
-            enteredName: entered_name,
-            token: token,
-            adminScreen: getAdminScreen(request),
-          },
-          ipAddress: getClientIP(request),
-        });
-      } catch (auditError) {
-        console.error('Audit logging failed:', auditError);
-      }
     }
 
     return NextResponse.json({
       type: "success",
-      player: newPlayer[0],
+      player: result.player,
       message: is_new_player
         ? `Welcome! You've been added as a new player.`
         : `Welcome back, ${player_name}!`,
