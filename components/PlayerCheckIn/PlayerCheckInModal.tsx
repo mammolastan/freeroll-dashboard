@@ -25,13 +25,15 @@ interface PlayerCheckInModalProps {
   isOpen: boolean;
   onClose: () => void;
   checkInToken: string;
-  onSuccess?: () => void;
+  leagueSlug?: string | null;
+  onSuccess?: (playerName: string) => void;
 }
 
 export function PlayerCheckInModal({
   isOpen,
   onClose,
   checkInToken,
+  leagueSlug,
   onSuccess
 }: PlayerCheckInModalProps) {
   const { data: session, status } = useSession();
@@ -95,7 +97,7 @@ export function PlayerCheckInModal({
 
       // Close modal after brief delay to show success
       setTimeout(() => {
-        onSuccess?.();
+        onSuccess?.(displayName);
         onClose();
       }, 1500);
     } catch (error) {
@@ -145,8 +147,8 @@ export function PlayerCheckInModal({
     // Refresh will happen when modal reopens
   };
 
-  const handleSuccess = () => {
-    onSuccess?.();
+  const handleSuccess = (playerName: string) => {
+    onSuccess?.(playerName);
     // Close immediately - the delay is already handled in PlayerCheckInCore
     onClose();
   };
@@ -339,6 +341,7 @@ export function PlayerCheckInModal({
                 onCheckIn={handleCheckIn}
                 onSuccess={handleSuccess}
                 showRecentlyCheckedIn={true}
+                leagueSlug={leagueSlug}
               />
             </div>
           )}

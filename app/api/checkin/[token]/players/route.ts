@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult, PlayerSearchResult } from "@/types";
-import { getLeagueIdFromRequest } from "@/lib/league-utils";
 import { addPlayerToTournament } from "@/lib/tournament/addPlayer";
 
 // Get list of checked-in players for a tournament
@@ -75,9 +74,9 @@ export async function POST(
 
     const cleanPlayerName = player_name.trim();
 
-    // Get tournament by token
+    // Get tournament by token, including league_id for player search
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id FROM tournament_drafts
+      SELECT id, league_id FROM tournament_drafts
       WHERE check_in_token = ${token} AND status = 'in_progress'
     `;
 
@@ -89,6 +88,7 @@ export async function POST(
     }
 
     const tournamentId = tournament[0].id as number;
+    const tournamentLeagueId = tournament[0].league_id as number;
 
     // Check if player already checked in
     const existingPlayer = await prisma.$queryRaw<RawQueryResult[]>`
@@ -117,8 +117,7 @@ export async function POST(
       is_new_player = true;
     } else {
       // Search for existing player in main database by BOTH name AND nickname
-      // First get potential matches
-      const leagueId = await getLeagueIdFromRequest(request);
+      // Use the tournament's league_id to ensure we only search players from the correct league
       const likePattern = `%${cleanPlayerName}%`;
       const existingPlayers = await prisma.$queryRaw<PlayerSearchResult[]>`
         SELECT
@@ -126,7 +125,7 @@ export async function POST(
           p.uid,
           p.nickname
         FROM players_v2 p
-        WHERE p.league_id = ${leagueId}
+        WHERE p.league_id = ${tournamentLeagueId}
           AND (CONCAT(p.first_name, ' ', p.last_name) LIKE ${likePattern}
            OR (p.nickname IS NOT NULL AND p.nickname LIKE ${likePattern}))
         LIMIT 10

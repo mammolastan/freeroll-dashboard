@@ -4,10 +4,11 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
-import { QrCode, UserPlus } from "lucide-react";
+import { QrCode, UserPlus, Check } from "lucide-react";
 import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
 import { formatTime, formatCutoffTime } from "@/lib/utils";
 import { formatLeagueDate, getLeagueNow } from "@/lib/league-time";
@@ -110,15 +111,23 @@ function TournamentHeader({
 
 export default function GameViewPage() {
   const { token } = useParams();
+  const { data: session } = useSession();
   const { gameData, computedStats, loading, error, connectionStatus, reconnectAttempt, manualReconnect } = useRealtimeGameData(
     token as string,
   );
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [checkInToken, setCheckInToken] = useState<string | null>(null);
+  const [checkInLeagueSlug, setCheckInLeagueSlug] = useState<string | null>(null);
   const [gettingToken, setGettingToken] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [checkInUrl, setCheckInUrl] = useState<string>(`/gameview/${token}`);
   const [checkInDisabled, setCheckInDisabled] = useState(false);
+  const [checkInToast, setCheckInToast] = useState<string | null>(null);
+
+  // Check if the logged-in user is already checked in
+  const isUserCheckedIn = session?.user?.uid && gameData?.players
+    ? gameData.players.some(p => p.uid === session.user.uid)
+    : false;
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -146,6 +155,13 @@ export default function GameViewPage() {
     return () => clearInterval(interval);
   }, [gameData?.tournament]);
 
+  // Auto-clear check-in toast after 4 seconds
+  React.useEffect(() => {
+    if (!checkInToast) return;
+    const timer = setTimeout(() => setCheckInToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [checkInToast]);
+
   const handleCheckInClick = async () => {
     if (checkInToken) {
       setShowCheckInModal(true);
@@ -162,6 +178,7 @@ export default function GameViewPage() {
       if (response.ok) {
         const data = await response.json();
         setCheckInToken(data.token);
+        setCheckInLeagueSlug(data.league_slug || null);
         setShowCheckInModal(true);
       } else {
         console.error("Failed to get check-in token");
@@ -216,6 +233,16 @@ export default function GameViewPage() {
 
   return (
     <div className="min-h-screen bg-black py-8 relative">
+      {/* Check-in success toast */}
+      {checkInToast && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-green-600/95 text-white px-8 py-4 rounded-xl shadow-[0_0_30px_rgba(34,197,94,0.5)] border border-green-400/50 flex items-center gap-3 text-xl font-medium animate-in fade-in zoom-in-95 duration-300">
+            <span className="text-2xl">✅</span>
+            <span>{checkInToast} checked in</span>
+          </div>
+        </div>
+      )}
+
       {/* Disconnected overlay */}
       {(connectionStatus === 'disconnected' || connectionStatus === 'reconnecting') && (
         <div
@@ -229,22 +256,32 @@ export default function GameViewPage() {
         {/* Check In Button */}
         <div className="mb-6 flex justify-center gap-4">
           {gameData.tournament.allow_self_checkin ? (
-            <button
-              onClick={handleCheckInClick}
-              disabled={gettingToken || checkInDisabled}
-              className={`${
-                checkInDisabled
-                  ? "bg-gray-700 cursor-not-allowed border-gray-600"
-                  : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
-              } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
-            >
-              <UserPlus size={20} />
-              {checkInDisabled
-                ? "Check-In Closed"
-                : gettingToken
-                  ? "Getting Ready..."
-                  : "Check In"}
-            </button>
+            isUserCheckedIn ? (
+              <button
+                disabled
+                className="bg-green-600/80 border-green-500/50 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 border cursor-default"
+              >
+                <Check size={20} />
+                Checked In
+              </button>
+            ) : (
+              <button
+                onClick={handleCheckInClick}
+                disabled={gettingToken || checkInDisabled}
+                className={`${
+                  checkInDisabled
+                    ? "bg-gray-700 cursor-not-allowed border-gray-600"
+                    : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+                } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
+              >
+                <UserPlus size={20} />
+                {checkInDisabled
+                  ? "Check-In Closed"
+                  : gettingToken
+                    ? "Getting Ready..."
+                    : "Check In"}
+              </button>
+            )
           ) : (
             <button
               disabled
@@ -329,8 +366,10 @@ export default function GameViewPage() {
             isOpen={showCheckInModal}
             onClose={() => setShowCheckInModal(false)}
             checkInToken={checkInToken}
-            onSuccess={() => {
+            leagueSlug={checkInLeagueSlug}
+            onSuccess={(playerName) => {
               setShowCheckInModal(false);
+              setCheckInToast(playerName);
             }}
           />
         )}

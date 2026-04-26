@@ -34,8 +34,9 @@ interface PlayerCheckInCoreProps {
     is_new_player: boolean;
     player_nickname?: string | null;
   }) => Promise<void>;
-  onSuccess?: () => void;
+  onSuccess?: (playerName: string) => void;
   showRecentlyCheckedIn?: boolean;
+  leagueSlug?: string | null;
 }
 
 export function PlayerCheckInCore({
@@ -43,6 +44,7 @@ export function PlayerCheckInCore({
   onCheckIn,
   onSuccess,
   showRecentlyCheckedIn = true,
+  leagueSlug,
 }: PlayerCheckInCoreProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
@@ -96,8 +98,15 @@ export function PlayerCheckInCore({
 
     setIsSearching(true);
     try {
+      const searchParams = new URLSearchParams({
+        q: query,
+        name: 'true',
+      });
+      if (leagueSlug) {
+        searchParams.set('league', leagueSlug);
+      }
       const response = await fetch(
-        `/api/players/search?q=${encodeURIComponent(query)}&name=true`,
+        `/api/players/search?${searchParams.toString()}`,
         { signal: abortController.signal },
       );
       if (response.ok) {
@@ -186,7 +195,7 @@ export function PlayerCheckInCore({
       setSearchResults([]);
 
       // Call onSuccess after check-in completes
-      onSuccess?.();
+      onSuccess?.(welcomeName);
     } catch (error) {
       console.error("Error checking in player:", error);
       alert("Error checking in player. Please try again.");
@@ -211,12 +220,13 @@ export function PlayerCheckInCore({
       await onCheckIn(playerData);
 
       // Show success message
-      setSuccessMessage(`Welcome ${newPlayerName.trim()}!`);
+      const trimmedName = newPlayerName.trim();
+      setSuccessMessage(`Welcome ${trimmedName}!`);
       setNewPlayerName("");
       setShowNewPlayerForm(false);
 
       // Call onSuccess after check-in completes
-      onSuccess?.();
+      onSuccess?.(trimmedName);
     } catch (error) {
       console.error("Error checking in new player:", error);
       alert("Error checking in new player. Please try again.");

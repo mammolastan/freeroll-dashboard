@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import { Calendar, MapPin, Users, Trophy, Clock, ArrowRight } from 'lucide-react';
 import { formatTime, formatCutoffTime } from '@/lib/utils';
 import { formatLeagueDate } from '@/lib/league-time';
@@ -30,23 +30,28 @@ interface ActiveTournament {
 
 function CheckInPageContent() {
     const searchParams = useSearchParams();
+    const params = useParams();
     const [tournaments, setTournaments] = useState<ActiveTournament[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Get league slug from URL path (e.g., /phantom/check-in) or query params
+    const leagueSlugFromPath = params.leagueSlug as string | undefined;
+
     useEffect(() => {
         fetchActiveTournaments();
-    }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, leagueSlugFromPath]);
 
     const fetchActiveTournaments = async () => {
         try {
-            // Pass league parameter to API if present
-            const leagueSlug = searchParams.get('league');
+            // Pass league parameter to API - prioritize URL path, then query params
+            const leagueSlug = leagueSlugFromPath || searchParams.get('league');
             const leagueId = searchParams.get('league_id');
-            const params = new URLSearchParams();
-            if (leagueSlug) params.set('league', leagueSlug);
-            if (leagueId) params.set('league_id', leagueId);
-            const queryString = params.toString();
+            const queryParams = new URLSearchParams();
+            if (leagueSlug) queryParams.set('league', leagueSlug);
+            if (leagueId) queryParams.set('league_id', leagueId);
+            const queryString = queryParams.toString();
 
             const response = await fetch(`/api/tournaments/active${queryString ? `?${queryString}` : ''}`);
 

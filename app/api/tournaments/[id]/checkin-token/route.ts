@@ -14,10 +14,12 @@ export async function POST(
     const { id } = await params;
     const tournamentId = parseInt(id);
 
-    // Check if tournament exists and is in progress
+    // Check if tournament exists and is in progress, include league info
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, status, check_in_token FROM tournament_drafts 
-      WHERE id = ${tournamentId} AND status = 'in_progress'
+      SELECT td.id, td.status, td.check_in_token, l.slug as league_slug
+      FROM tournament_drafts td
+      LEFT JOIN leagues l ON td.league_id = l.id
+      WHERE td.id = ${tournamentId} AND td.status = 'in_progress'
     `;
 
     if (!(tournament).length) {
@@ -44,6 +46,7 @@ export async function POST(
         checkin_url: `${
           process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
         }/checkin/${token}`,
+        league_slug: tournamentData.league_slug,
       });
     }
 
@@ -52,6 +55,7 @@ export async function POST(
       checkin_url: `${
         process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
       }/checkin/${tournamentData.check_in_token}`,
+      league_slug: tournamentData.league_slug,
     });
   } catch (error) {
     console.error("Error generating check-in token:", error);
