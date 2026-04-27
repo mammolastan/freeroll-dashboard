@@ -1,3 +1,5 @@
+// components/admin/AdminSidebar.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -8,7 +10,6 @@ import {
   Settings,
   MapPin,
   Trophy,
-  Shield,
   Users,
   Gamepad2,
   LayoutDashboard,
@@ -30,25 +31,28 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const base = `/${leagueSlug}/admin`;
 
-  const navItems = [
+  const navItems: {
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    isDisabled?: boolean;
+  }[] = [
     { href: base, label: "Dashboard", icon: LayoutDashboard },
-    { href: `${base}/settings`, label: "Identity", icon: Settings },
-    { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
-    {
-      href: `${base}/blind-schedules`,
-      label: "Blind Schedules",
-      icon: ListOrdered,
-    },
+    { href: `${base}/tournaments`, label: "Tournaments", icon: Award },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
-    { href: `${base}/access`, label: "Access", icon: Shield, isDisabled: true },
-
-    { href: `${base}/badges`, label: "Badges", icon: Star },
+    { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
     {
       href: `${base}/game-defaults`,
       label: "Game Defaults",
       icon: Gamepad2,
     },
-    { href: `${base}/tournaments`, label: "Tournaments", icon: Award },
+    {
+      href: `${base}/blind-schedules`,
+      label: "Blind Schedules",
+      icon: ListOrdered,
+    },
+    { href: `${base}/badges`, label: "Badges", icon: Star },
+
     { href: `${base}/members`, label: "Members", icon: Users },
     ...(canManageRoles(role)
       ? [
@@ -57,6 +61,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
             label: "Scoring",
             icon: Trophy,
           },
+          { href: `${base}/settings`, label: "Identity", icon: Settings },
         ]
       : []),
   ];
@@ -73,7 +78,17 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-amber-600 hover:bg-amber-500 rounded-lg shadow-lg"
         aria-label="Toggle admin menu"
       >
-        {isOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
+        {isOpen ? (
+          <X
+            size={20}
+            className="text-white"
+          />
+        ) : (
+          <Menu
+            size={20}
+            className="text-white"
+          />
+        )}
       </button>
 
       {/* Overlay for mobile */}

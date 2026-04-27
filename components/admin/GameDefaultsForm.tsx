@@ -72,13 +72,13 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
             role="switch"
             aria-checked={form.allowChat}
             onClick={() => handleToggle('allowChat')}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-              form.allowChat ? 'bg-cyan-600' : 'bg-gray-600'
+            className={`relative shrink-0 w-10 h-6 rounded-full transition-colors outline-none focus:outline-none ${
+              form.allowChat ? 'bg-cyan-600' : 'bg-white/20'
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                form.allowChat ? 'translate-x-6' : 'translate-x-1'
+              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                form.allowChat ? 'translate-x-4' : 'translate-x-0'
               }`}
             />
           </button>
@@ -99,13 +99,13 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
             role="switch"
             aria-checked={form.allowSelfCheckIn}
             onClick={() => handleToggle('allowSelfCheckIn')}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-              form.allowSelfCheckIn ? 'bg-cyan-600' : 'bg-gray-600'
+            className={`relative shrink-0 w-10 h-6 rounded-full transition-colors outline-none focus:outline-none ${
+              form.allowSelfCheckIn ? 'bg-cyan-600' : 'bg-white/20'
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                form.allowSelfCheckIn ? 'translate-x-6' : 'translate-x-1'
+              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                form.allowSelfCheckIn ? 'translate-x-4' : 'translate-x-0'
               }`}
             />
           </button>

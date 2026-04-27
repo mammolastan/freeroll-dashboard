@@ -20,7 +20,7 @@ export default async function AdminDashboardPage({ params }: PageProps) {
   const config = await getLeagueConfig(leagueId!);
   const role = await getLeagueRole(session!.user.uid, leagueId!);
 
-  const [league, venues] = await Promise.all([
+  const [league, venues, seasons] = await Promise.all([
     prisma.leagues.findUnique({
       where: { id: leagueId! },
       select: { name: true, created: true },
@@ -29,6 +29,11 @@ export default async function AdminDashboardPage({ params }: PageProps) {
       where: { league_id: leagueId! },
       select: { id: true, name: true, is_active: true },
       orderBy: { name: "asc" },
+    }),
+    prisma.competition_periods.findMany({
+      where: { league_id: leagueId!, is_active: true },
+      select: { id: true, name: true, period_type: true },
+      orderBy: { display_order: "asc" },
     }),
   ]);
 
@@ -46,7 +51,17 @@ export default async function AdminDashboardPage({ params }: PageProps) {
 
       {/* Game Defaults Section */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Game Defaults</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-white mb-4">
+            Game Defaults
+          </h2>
+          <Link
+            href={`/${leagueSlug}/admin/game-defaults`}
+            className="text-xs text-cyan-400 hover:text-cyan-300"
+          >
+            Manage →
+          </Link>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 border border-white/10 rounded-xl p-5">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
@@ -108,9 +123,43 @@ export default async function AdminDashboardPage({ params }: PageProps) {
         </div>
       </div>
 
+      {/* Seasons Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-white">Seasons</h2>
+          <Link
+            href={`/${leagueSlug}/admin/seasons`}
+            className="text-xs text-cyan-400 hover:text-cyan-300"
+          >
+            Manage →
+          </Link>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="text-sm mb-3">
+            <span className="text-green-400">{seasons.length} active</span>
+          </div>
+          {seasons.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {seasons.map((season) => (
+                <span
+                  key={season.id}
+                  className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-white/70"
+                >
+                  {season.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-white/40 text-sm">No active seasons</p>
+          )}
+        </div>
+      </div>
+
       {/* League Settings Section */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">League Settings</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">
+          League Settings
+        </h2>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 border border-white/10 rounded-xl p-5">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
