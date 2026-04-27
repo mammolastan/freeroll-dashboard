@@ -97,6 +97,18 @@ export default async function AdminDashboardPage({ params }: PageProps) {
                   (gp) => gp.competition_periods.name,
                 );
                 const newPlayers = game.tournament_drafts?.players.length ?? 0;
+                // Anchor date to noon UTC to avoid timezone shift issues
+                const dateStr = game.date.toISOString().split("T")[0];
+                const anchoredDate = new Date(`${dateStr}T12:00:00Z`);
+                const dayOfWeek = new Intl.DateTimeFormat("en-US", {
+                  timeZone: config.timezone,
+                  weekday: "short",
+                }).format(anchoredDate).slice(0, 2);
+                const formattedDate = `${dayOfWeek} ${new Intl.DateTimeFormat("en-US", {
+                  timeZone: config.timezone,
+                  month: "numeric",
+                  day: "numeric",
+                }).format(anchoredDate)}`;
                 return (
                   <div
                     key={game.id}
@@ -109,10 +121,7 @@ export default async function AdminDashboardPage({ params }: PageProps) {
                       {seasonNames.length > 0 ? seasonNames.join(", ") : "—"}
                     </span>
                     <span className="text-white/50 tabular-nums">
-                      {new Date(game.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {formattedDate}
                     </span>
                     <span className="text-white/70 tabular-nums text-right w-8">
                       {game._count.appearances}
