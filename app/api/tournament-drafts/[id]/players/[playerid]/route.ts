@@ -5,6 +5,9 @@ import { broadcastKnockoutEvent } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistory } from "@/lib/actionLogUtils";
+import { generateActionDescription } from "@/lib/tdActions";
+import { BroadcastManager } from "@/lib/realtime";
 
 export async function PUT(
   request: NextRequest,
@@ -321,7 +324,102 @@ export async function PUT(
         console.error('Audit logging failed:', auditError);
       }
 
-      return NextResponse.json(updatedPlayer);
+      // TD Action Log for undo system
+      let actionDescription: string | null = null;
+      try {
+        const wasKO = currentPlayer && currentPlayer.ko_position !== null;
+        const isNowKO = updatedPlayer.ko_position !== null;
+        const game_uid = await getGameUidForDraft(draftId);
+
+        console.log('[ActionLog] KO detection:', {
+          wasKO,
+          isNowKO,
+          currentKoPosition: currentPlayer?.ko_position,
+          updatedKoPosition: updatedPlayer.ko_position,
+          game_uid,
+          willLogKO: !wasKO && isNowKO,
+        });
+
+        if (game_uid) {
+          // KO_ASSIGNED: New knockout was recorded
+          if (!wasKO && isNowKO) {
+            const sequence_num = await getNextSequenceNum(game_uid);
+            const payload = {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              player_name: targetPlayerName,
+              ko_position: updatedPlayer.ko_position,
+              hitman_name: updatedPlayer.hitman_name,
+              hitman_uid: updatedPlayer.hitman_uid,
+            };
+            const reverse_payload = {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              previous_ko_position: currentPlayer?.ko_position ?? null,
+              previous_hitman_name: currentPlayer?.hitman_name ?? null,
+              previous_hitman_uid: currentPlayer?.hitman_uid ?? null,
+              previous_knockedout_at: null,
+              previous_status: 'active',
+            };
+
+            actionDescription = generateActionDescription('KO_ASSIGNED', payload);
+
+            await writeActionLog({
+              game_uid,
+              sequence_num,
+              action_type: 'KO_ASSIGNED',
+              description: actionDescription,
+              actor_uid: actor.actorUid || 'unknown',
+              payload,
+              reverse_payload,
+            });
+
+            // Broadcast action log update
+            const actions = await getActionHistory(game_uid);
+            BroadcastManager.getInstance().broadcastActionLogUpdate(draftId, game_uid, actions);
+          }
+
+          // PLACEMENT_SET: Placement changed (not as part of knockout)
+          if (currentPlayer?.placement !== updatedPlayer.placement && !isNowKO && updatedPlayer.placement !== null) {
+            const sequence_num = await getNextSequenceNum(game_uid);
+            const payload = {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              player_name: targetPlayerName,
+              placement: updatedPlayer.placement,
+            };
+            const reverse_payload = {
+              tournament_draft_player_id: playerId,
+              previous_placement: currentPlayer?.placement ?? null,
+            };
+
+            actionDescription = generateActionDescription('PLACEMENT_SET', payload);
+
+            await writeActionLog({
+              game_uid,
+              sequence_num,
+              action_type: 'PLACEMENT_SET',
+              description: actionDescription,
+              actor_uid: actor.actorUid || 'unknown',
+              payload,
+              reverse_payload,
+            });
+
+            // Broadcast action log update
+            const actions = await getActionHistory(game_uid);
+            BroadcastManager.getInstance().broadcastActionLogUpdate(draftId, game_uid, actions);
+          }
+        }
+      } catch (actionLogError) {
+        console.error('TD Action logging failed:', actionLogError);
+        console.error('ActionLogError details:', {
+          message: actionLogError instanceof Error ? actionLogError.message : 'Unknown',
+          stack: actionLogError instanceof Error ? actionLogError.stack : undefined,
+        });
+        // Don't fail the request if action logging fails
+      }
+
+      return NextResponse.json({ ...updatedPlayer, actionDescription });
     } else {
       return NextResponse.json(
         { error: "Player not found or update failed" },
@@ -402,6 +500,59 @@ export async function DELETE(
           });
         } catch (auditError) {
           console.error('Audit logging failed:', auditError);
+        }
+
+        // TD Action Log for undo system
+        try {
+          const game_uid = await getGameUidForDraft(draftId);
+          if (game_uid) {
+            const sequence_num = await getNextSequenceNum(game_uid);
+            const payload = {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              player_name: String(deletedPlayer.player_name),
+            };
+            // Capture full snapshot for reverse_payload to allow re-insertion on undo
+            const reverse_payload = {
+              id: deletedPlayer.id,
+              tournament_draft_id: deletedPlayer.tournament_draft_id,
+              player_name: deletedPlayer.player_name,
+              player_uid: deletedPlayer.player_uid,
+              player_nickname: deletedPlayer.player_nickname,
+              is_new_player: deletedPlayer.is_new_player,
+              hitman_name: deletedPlayer.hitman_name,
+              hitman_uid: deletedPlayer.hitman_uid,
+              ko_position: deletedPlayer.ko_position,
+              placement: deletedPlayer.placement,
+              status: deletedPlayer.status,
+              knockedout_at: deletedPlayer.knockedout_at instanceof Date
+                ? deletedPlayer.knockedout_at.toISOString()
+                : deletedPlayer.knockedout_at,
+              added_by: deletedPlayer.added_by,
+              checked_in_at: deletedPlayer.checked_in_at instanceof Date
+                ? deletedPlayer.checked_in_at.toISOString()
+                : deletedPlayer.checked_in_at,
+              t_assign: deletedPlayer.t_assign,
+            };
+
+            const actionDescription = generateActionDescription('PLAYER_REMOVED', payload);
+
+            await writeActionLog({
+              game_uid,
+              sequence_num,
+              action_type: 'PLAYER_REMOVED',
+              description: actionDescription,
+              actor_uid: actor.actorUid || 'unknown',
+              payload,
+              reverse_payload,
+            });
+
+            // Broadcast action log update
+            const actions = await getActionHistory(game_uid);
+            BroadcastManager.getInstance().broadcastActionLogUpdate(draftId, game_uid, actions);
+          }
+        } catch (actionLogError) {
+          console.error('TD Action logging failed:', actionLogError);
         }
       }
 

@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
-import { RealtimeAPI } from "@/lib/realtime";
+import { RealtimeAPI, BroadcastManager } from "@/lib/realtime";
 import {
   logAuditEvent,
   getClientIP,
@@ -12,6 +12,8 @@ import {
   getActorFromSession,
   withActorMetadata,
 } from "@/lib/auditlog";
+import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistory } from "@/lib/actionLogUtils";
+import { generateActionDescription } from "@/lib/tdActions";
 
 const SEATS_PER_TABLE = 8;
 
@@ -222,6 +224,45 @@ export async function addPlayerToTournament(
       });
     } catch (auditError) {
       console.error("Audit logging failed:", auditError);
+    }
+
+    // TD Action Log for undo system
+    try {
+      const game_uid = await getGameUidForDraft(tournamentDraftId);
+      if (game_uid) {
+        const actionLogSession = await getAuditSession();
+        const actionLogActor = getActorFromSession(actionLogSession);
+        const sequence_num = await getNextSequenceNum(game_uid);
+        const payload = {
+          tournament_draft_id: tournamentDraftId,
+          player_uid: player_uid || null,
+          player_name,
+          player_nickname: player_nickname || null,
+          is_new_player: is_new_player || false,
+          added_by,
+        };
+        const reverse_payload = {
+          tournament_draft_player_id: playerId,
+        };
+
+        const actionDescription = generateActionDescription('PLAYER_ADDED', payload);
+
+        await writeActionLog({
+          game_uid,
+          sequence_num,
+          action_type: 'PLAYER_ADDED',
+          description: actionDescription,
+          actor_uid: added_by === 'admin' ? (actionLogActor.actorUid || 'unknown') : (player_uid || 'unknown'),
+          payload,
+          reverse_payload,
+        });
+
+        // Broadcast action log update
+        const actions = await getActionHistory(game_uid);
+        BroadcastManager.getInstance().broadcastActionLogUpdate(tournamentDraftId, game_uid, actions);
+      }
+    } catch (actionLogError) {
+      console.error('TD Action logging failed:', actionLogError);
     }
 
     return {

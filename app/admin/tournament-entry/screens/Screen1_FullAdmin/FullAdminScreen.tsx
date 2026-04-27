@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Download,
   QrCode,
+  History,
 } from "lucide-react";
 import { formatGameDate, formatTime } from "@/lib/utils";
 import { QRCodeModal } from "../../QRCodeModal";
@@ -42,6 +43,8 @@ import { getBlindScheduleDisplayName } from "@/lib/blind-schedule-label";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
+import { useTDActionHistory } from "@/hooks/useTDActionHistory";
+import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
 
 interface TournamentDraft {
   id: number;
@@ -61,6 +64,7 @@ interface TournamentDraft {
   period_ids?: string | null;
   allow_chat?: boolean | null;
   allow_self_checkin?: boolean | null;
+  game_uid?: string | null;
 }
 
 interface VenueOption {
@@ -147,6 +151,28 @@ export function FullAdminScreen({
   const [showLoadMore, setShowLoadMore] = useState(false);
   const [isReverting, setIsReverting] = useState(false);
   const { computedStats } = useRealtimeGameData(currentDraft?.id || 0);
+
+  // Action History state
+  const [showActionHistory, setShowActionHistory] = useState(false);
+  // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
+  const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
+  const {
+    actions: actionHistory,
+    canUndo,
+    triggerUndo,
+    isUndoing,
+  } = useTDActionHistory(actionLogGameUid, {
+    onUndoSuccess: (description) => {
+      setToast({ message: description, type: "success" });
+      // Clear local UI state that might be stale after undo
+      setHitmanSearchValues({});
+      setOptimisticUpdates({});
+      onDataChange(); // Refresh player data after undo
+    },
+    onUndoError: (reason) => {
+      setToast({ message: `Undo failed: ${reason}`, type: "warning" });
+    },
+  });
 
   // New tournament modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -241,6 +267,9 @@ export function FullAdminScreen({
   const [knockoutInitiated, setKnockoutInitiated] = useState<{
     [key: number]: boolean;
   }>({});
+
+  // Ref to track when a hitman was selected via dropdown (to skip blur processing)
+  const hitmanSelectedRef = useRef<{ [key: number]: boolean }>({});
 
   // Optimistic updates for immediate visual feedback
   const [optimisticUpdates, setOptimisticUpdates] = useState<{
@@ -1136,6 +1165,9 @@ export function FullAdminScreen({
 
   // Handle hitman selection
   const selectHitman = (playerId: number, hitmanName: string) => {
+    // Mark that a selection was made (to skip blur processing)
+    hitmanSelectedRef.current[playerId] = true;
+
     const finalHitmanName = hitmanName || "unknown";
     updatePlayer(playerId, "hitman_name", finalHitmanName);
     setHitmanSearchValues((prev) => ({ ...prev, [playerId]: finalHitmanName }));
@@ -1352,58 +1384,68 @@ export function FullAdminScreen({
 
   // hitman input blur handler:
   const handleHitmanBlur = (playerId: number) => {
-    // Hide dropdown when losing focus
-    setTimeout(() => {
-      setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
-    }, 150); // Small delay to allow dropdown clicks to register
-
+    // Capture values immediately before the timeout
     const currentValue = hitmanSearchValues[playerId] ?? "";
     const wasKnockoutInitiated = knockoutInitiated[playerId] ?? false;
 
-    // Clear the knockout initiated flag
+    // Clear the knockout initiated flag immediately
     setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
 
-    // Process the final value when user leaves the input
-    // Check if typing a prefix of "unknown" (at least 2 chars to avoid false positives)
-    if (
-      currentValue.length >= 2 &&
-      "unknown".startsWith(currentValue.toLowerCase())
-    ) {
-      // Treat as "unknown" - user is typing "un", "unk", "unknown", etc.
-      updatePlayer(playerId, "hitman_name", "unknown");
-      setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
-    } else if (currentValue === "") {
-      // If knockout was initiated via crosshair click, default to "unknown"
-      // Otherwise, clear the hitman
-      if (wasKnockoutInitiated) {
+    // Delay the entire blur processing to allow dropdown clicks/taps to register first
+    // This is especially important on mobile where tap events fire after blur
+    setTimeout(() => {
+      // Hide dropdown
+      setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
+
+      // Check if a hitman was selected via dropdown click/tap
+      // If so, skip blur processing entirely - the selection already handled it
+      if (hitmanSelectedRef.current[playerId]) {
+        hitmanSelectedRef.current[playerId] = false; // Reset for next time
+        return;
+      }
+
+      // Process the final value when user leaves the input
+      // Check if typing a prefix of "unknown" (at least 2 chars to avoid false positives)
+      if (
+        currentValue.length >= 2 &&
+        "unknown".startsWith(currentValue.toLowerCase())
+      ) {
+        // Treat as "unknown" - user is typing "un", "unk", "unknown", etc.
         updatePlayer(playerId, "hitman_name", "unknown");
         setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
-      } else {
-        updatePlayer(playerId, "hitman_name", null);
-      }
-    } else {
-      // Check if it matches an exact player name
-      const exactMatch = players.find(
-        (p) =>
-          p.id !== playerId &&
-          p.player_name.toLowerCase() === currentValue.toLowerCase(),
-      );
-
-      if (exactMatch) {
-        updatePlayer(playerId, "hitman_name", exactMatch.player_name);
-      } else {
-        // Get the filtered candidates (same list shown in dropdown)
-        const candidates = getHitmanCandidates(playerId, currentValue);
-        if (candidates.length > 0) {
-          // Select the first matching player (topmost in dropdown after "unknown")
-          selectHitman(playerId, candidates[0].player_name);
-        } else {
-          // No matches found - default to "unknown" instead of arbitrary text
+      } else if (currentValue === "") {
+        // If knockout was initiated via crosshair click, default to "unknown"
+        // Otherwise, clear the hitman
+        if (wasKnockoutInitiated) {
           updatePlayer(playerId, "hitman_name", "unknown");
           setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
+        } else {
+          updatePlayer(playerId, "hitman_name", null);
+        }
+      } else {
+        // Check if it matches an exact player name
+        const exactMatch = players.find(
+          (p) =>
+            p.id !== playerId &&
+            p.player_name.toLowerCase() === currentValue.toLowerCase(),
+        );
+
+        if (exactMatch) {
+          updatePlayer(playerId, "hitman_name", exactMatch.player_name);
+        } else {
+          // Get the filtered candidates (same list shown in dropdown)
+          const candidates = getHitmanCandidates(playerId, currentValue);
+          if (candidates.length > 0) {
+            // Select the first matching player (topmost in dropdown after "unknown")
+            selectHitman(playerId, candidates[0].player_name);
+          } else {
+            // No matches found - default to "unknown" instead of arbitrary text
+            updatePlayer(playerId, "hitman_name", "unknown");
+            setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
+          }
         }
       }
-    }
+    }, 200); // Increased delay to ensure mobile taps register before blur processing
   };
 
   // Export tournament
@@ -2665,6 +2707,7 @@ export function FullAdminScreen({
                   {generatingQR ? "Generating..." : "QR"}
                 </button>
               )}
+
             </div>
 
             {/* Tournament Info Header */}
@@ -3642,6 +3685,33 @@ export function FullAdminScreen({
           )}
         </div>
       </div>
+
+      {/* Floating Action History Button */}
+      {currentDraft?.status === "in_progress" && (
+        <button
+          onClick={() => setShowActionHistory(true)}
+          className="fixed bottom-0 right-0 z-40 flex flex-col items-center justify-center w-16 h-16 bg-gray-800 hover:bg-gray-700 text-white rounded-tl-xl shadow-lg transition-all border-t border-l border-gray-600"
+          title="View action history (Ctrl+Z to undo)"
+        >
+          <History className="h-5 w-5" />
+          {actionHistory.filter(a => a.status === 'applied').length > 0 && (
+            <span className="text-xs text-cyan-400 font-medium">
+              {actionHistory.filter(a => a.status === 'applied').length}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Action History Drawer */}
+      <ActionHistoryDrawer
+        isOpen={showActionHistory}
+        onClose={() => setShowActionHistory(false)}
+        actions={actionHistory}
+        canUndo={canUndo}
+        onUndo={triggerUndo}
+        isUndoing={isUndoing}
+        gameName={currentDraft?.title || currentDraft?.venue || "Tournament"}
+      />
     </div>
   );
 }

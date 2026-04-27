@@ -6,6 +6,9 @@ import { createKnockoutFeedItem } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { TournamentDraftPlayerUpdateInput } from "@/types";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistory } from "@/lib/actionLogUtils";
+import { generateActionDescription, TDActionType } from "@/lib/tdActions";
+import { BroadcastManager } from "@/lib/realtime";
 
 export async function PUT(
   request: NextRequest,
@@ -44,6 +47,15 @@ export async function PUT(
       previousValue: Record<string, unknown>;
       newValue: Record<string, unknown>;
       metadata?: Record<string, unknown> | null;
+    }> = [];
+
+    // Track TD action log entries for undo system
+    const actionLogEntries: Array<{
+      action_type: TDActionType;
+      playerId: number;
+      playerName: string;
+      payload: Record<string, unknown>;
+      reverse_payload: Record<string, unknown>;
     }> = [];
 
     const batchId = randomUUID();
@@ -143,6 +155,30 @@ export async function PUT(
             playerUid: currentPlayer.player_uid ?? null,
             hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
             koPosition: updateData.ko_position as number,
+          });
+
+          // Track TD action log entry for KO_ASSIGNED
+          actionLogEntries.push({
+            action_type: 'KO_ASSIGNED',
+            playerId,
+            playerName: currentPlayer.player_nickname || currentPlayer.player_name,
+            payload: {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              player_name: currentPlayer.player_nickname || currentPlayer.player_name,
+              ko_position: updateData.ko_position,
+              hitman_name: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
+              hitman_uid: dataToUpdate.hitman_uid ?? null,
+            },
+            reverse_payload: {
+              tournament_draft_id: draftId,
+              tournament_draft_player_id: playerId,
+              previous_ko_position: null,
+              previous_hitman_name: null,
+              previous_hitman_uid: null,
+              previous_knockedout_at: null,
+              previous_status: 'active',
+            },
           });
 
           // Track audit event for knockout
@@ -352,6 +388,37 @@ export async function PUT(
         });
       } catch (auditError) {
         console.error('Audit logging failed:', auditError);
+      }
+    }
+
+    // TD Action Log for undo system
+    if (actionLogEntries.length > 0) {
+      try {
+        const game_uid = await getGameUidForDraft(draftId);
+        if (game_uid) {
+          for (const entry of actionLogEntries) {
+            const sequence_num = await getNextSequenceNum(game_uid);
+            const actionDescription = generateActionDescription(entry.action_type, entry.payload);
+
+            await writeActionLog({
+              game_uid,
+              sequence_num,
+              action_type: entry.action_type,
+              description: actionDescription,
+              actor_uid: actor.actorUid || 'unknown',
+              payload: entry.payload,
+              reverse_payload: entry.reverse_payload,
+            });
+
+            console.log('[ActionLog] Logged action:', entry.action_type, 'for player:', entry.playerName);
+          }
+
+          // Broadcast action log update once after all entries are written
+          const actions = await getActionHistory(game_uid);
+          BroadcastManager.getInstance().broadcastActionLogUpdate(draftId, game_uid, actions);
+        }
+      } catch (actionLogError) {
+        console.error('TD Action logging failed:', actionLogError);
       }
     }
 

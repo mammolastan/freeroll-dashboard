@@ -3,9 +3,11 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Target, Users, Trophy, X } from "lucide-react";
+import { Target, Users, Trophy, X, History } from "lucide-react";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
+import { useTDActionHistory } from "@/hooks/useTDActionHistory";
+import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
 
 interface TournamentDraft {
   id: number;
@@ -20,6 +22,7 @@ interface TournamentDraft {
   updated_at: string;
   player_count: number;
   blind_schedule?: string;
+  game_uid?: string | null;
 }
 
 interface Player {
@@ -69,6 +72,32 @@ export function PlayerControlScreen({
     useState<number>(-1);
   const filterInputRef = useRef<HTMLTextAreaElement>(null);
   const hitmanInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Action History state
+  const [showActionHistory, setShowActionHistory] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "warning";
+  } | null>(null);
+
+  // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
+  const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
+  const {
+    actions: actionHistory,
+    canUndo,
+    triggerUndo,
+    isUndoing,
+  } = useTDActionHistory(actionLogGameUid, {
+    onUndoSuccess: (description) => {
+      setToast({ message: description, type: "success" });
+      onDataChange(); // Refresh player data after undo
+      setTimeout(() => setToast(null), 3000);
+    },
+    onUndoError: (reason) => {
+      setToast({ message: `Undo failed: ${reason}`, type: "warning" });
+      setTimeout(() => setToast(null), 3000);
+    },
+  });
 
   // Players are knocked out when they have a ko_position (not null)
   const allRemainingPlayers = players.filter((p) => p.ko_position === null);
@@ -331,6 +360,33 @@ export function PlayerControlScreen({
         onScreenChange={onScreenChange}
       />
 
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in">
+          <div
+            className={`p-4 rounded-lg shadow-lg border ${
+              toast.type === "success"
+                ? "bg-green-900/90 border-green-500"
+                : "bg-yellow-900/90 border-yellow-500"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className={`text-sm font-medium ${
+                toast.type === "success" ? "text-green-200" : "text-yellow-200"
+              }`}>
+                {toast.message}
+              </p>
+              <button
+                onClick={() => setToast(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-5xl font-bold text-cyan-300 mb-2 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]">
@@ -578,6 +634,31 @@ export function PlayerControlScreen({
           </div>
         </div>
       </div>
+
+      {/* Floating Action History Button */}
+      <button
+        onClick={() => setShowActionHistory(true)}
+        className="fixed bottom-0 right-0 z-40 flex flex-col items-center justify-center w-16 h-16 bg-gray-800 hover:bg-gray-700 text-white rounded-tl-xl shadow-lg transition-all border-t border-l border-cyan-500/50"
+        title="View action history (Ctrl+Z to undo)"
+      >
+        <History className="h-5 w-5" />
+        {actionHistory.filter(a => a.status === 'applied').length > 0 && (
+          <span className="text-xs text-cyan-400 font-medium">
+            {actionHistory.filter(a => a.status === 'applied').length}
+          </span>
+        )}
+      </button>
+
+      {/* Action History Drawer */}
+      <ActionHistoryDrawer
+        isOpen={showActionHistory}
+        onClose={() => setShowActionHistory(false)}
+        actions={actionHistory}
+        canUndo={canUndo}
+        onUndo={triggerUndo}
+        isUndoing={isUndoing}
+        gameName={currentDraft.title || currentDraft.venue || "Tournament"}
+      />
     </div>
   );
 }

@@ -141,4 +141,15 @@ export class BroadcastManager {
     }
   }
 
+  /**
+   * Broadcast TD action log updates for undo functionality
+   */
+  broadcastActionLogUpdate(tournamentId: number, game_uid: string, actions: unknown[]): void {
+    const event = this.createEvent('td:action_log_updated', tournamentId, {
+      game_uid,
+      actions,
+    });
+    this.broadcast(event);
+  }
+
 }
