@@ -7,6 +7,7 @@ import { getLeagueConfig } from "@/lib/league-config";
 import { getLeagueRole } from "@/lib/league-auth";
 import { prisma } from "@/lib/prisma";
 import { LeagueAdminsSection } from "./LeagueAdminsSection";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ leagueSlug: string }>;
@@ -19,10 +20,20 @@ export default async function AdminDashboardPage({ params }: PageProps) {
   const config = await getLeagueConfig(leagueId!);
   const role = await getLeagueRole(session!.user.uid, leagueId!);
 
-  const league = await prisma.leagues.findUnique({
-    where: { id: leagueId! },
-    select: { name: true, created: true },
-  });
+  const [league, venues] = await Promise.all([
+    prisma.leagues.findUnique({
+      where: { id: leagueId! },
+      select: { name: true, created: true },
+    }),
+    prisma.venues.findMany({
+      where: { league_id: leagueId! },
+      select: { id: true, name: true, is_active: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const activeVenues = venues.filter((v) => v.is_active);
+  const inactiveCount = venues.length - activeVenues.length;
 
   return (
     <div className="max-w-3xl">
@@ -61,6 +72,39 @@ export default async function AdminDashboardPage({ params }: PageProps) {
               {config.gameDefaults.lateRegistrationWindowMinutes} minutes
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Venues Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-white">Venues</h2>
+          <Link
+            href={`/${leagueSlug}/admin/venues`}
+            className="text-xs text-cyan-400 hover:text-cyan-300"
+          >
+            Manage →
+          </Link>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="flex gap-4 text-sm mb-3">
+            <span className="text-green-400">{activeVenues.length} active</span>
+            <span className="text-white/40">{inactiveCount} inactive</span>
+          </div>
+          {activeVenues.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {activeVenues.map((venue) => (
+                <span
+                  key={venue.id}
+                  className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-white/70"
+                >
+                  {venue.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-white/40 text-sm">No active venues</p>
+          )}
         </div>
       </div>
 
