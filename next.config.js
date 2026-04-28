@@ -32,6 +32,16 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Service worker should not be cached
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
+      {
         // Cache HTML pages for 1 day, but revalidate
         source: "/:path*",
         headers: [
