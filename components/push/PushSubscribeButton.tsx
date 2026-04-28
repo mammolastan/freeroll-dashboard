@@ -20,10 +20,19 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+// Get service worker registration with timeout to avoid hanging indefinitely
+async function getServiceWorkerRegistration(timeoutMs = 5000): Promise<ServiceWorkerRegistration> {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Service worker not ready')), timeoutMs)
+  );
+  return Promise.race([navigator.serviceWorker.ready, timeoutPromise]);
+}
+
 export default function PushSubscribeButton({ leagueId }: Props) {
   const [permStatus, setPermStatus] = useState<PermissionStatus>('unknown');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -38,11 +47,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   async function checkCurrentSubscription() {
     try {
-      // Add timeout - serviceWorker.ready can hang indefinitely if SW fails to activate
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('SW timeout')), 3000)
-      );
-      const reg = await Promise.race([navigator.serviceWorker.ready, timeoutPromise]);
+      const reg = await getServiceWorkerRegistration();
       const sub = await reg.pushManager.getSubscription();
       setIsSubscribed(!!sub);
     } catch {
@@ -52,13 +57,14 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   async function subscribe() {
     setLoading(true);
+    setError(null);
     try {
       const permission = await Notification.requestPermission();
       setPermStatus(permission as PermissionStatus);
 
       if (permission !== 'granted') return;
 
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getServiceWorkerRegistration();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
@@ -77,10 +83,12 @@ export default function PushSubscribeButton({ leagueId }: Props) {
       } else {
         // Roll back browser subscription if server failed to save
         await sub.unsubscribe();
+        setError('Failed to save subscription');
         console.error('[push] server failed to save subscription');
       }
     } catch (err) {
       console.error('[push] subscribe error:', err);
+      setError('Failed to enable notifications');
     } finally {
       setLoading(false);
     }
@@ -89,7 +97,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   async function unsubscribe() {
     setLoading(true);
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getServiceWorkerRegistration();
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await fetch('/api/push/subscribe', {
@@ -128,17 +136,22 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   }
 
   return (
-    <button
-      onClick={isSubscribed ? unsubscribe : subscribe}
-      disabled={loading}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        isSubscribed
-          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40'
-          : 'bg-cyan-600 text-white hover:bg-cyan-500'
-      }`}
-    >
-      <Bell size={16} />
-      {isSubscribed ? 'Notifications On' : 'Enable Notifications'}
-    </button>
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={isSubscribed ? unsubscribe : subscribe}
+        disabled={loading}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          isSubscribed
+            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40'
+            : 'bg-cyan-600 text-white hover:bg-cyan-500'
+        }`}
+      >
+        <Bell size={16} />
+        {isSubscribed ? 'Notifications On' : 'Enable Notifications'}
+      </button>
+      {error && (
+        <span className="text-xs text-red-400">{error}</span>
+      )}
+    </div>
   );
 }
