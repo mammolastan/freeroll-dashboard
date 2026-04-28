@@ -5,11 +5,13 @@ const withPWA = require("next-pwa")({
   register: true,
   skipWaiting: true,
   // Exclude files from SW precaching
-  exclude: [/manifest\.json/],
-  buildExcludes: [
-    // Exclude all server-side files (they're not publicly accessible)
+  exclude: [
+    /manifest\.json/,
+    // Exclude server-side files (not accessible in standalone mode)
     /\/_next\/server\//,
-    /\.map$/,
+    /middleware-build-manifest/,
+    /middleware-react-loadable-manifest/,
+    /next-font-manifest/,
   ],
 });
 
