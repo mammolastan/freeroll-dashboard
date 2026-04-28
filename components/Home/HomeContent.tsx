@@ -5,10 +5,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { getNavItems, getAdminNavItems, NavItem } from "@/lib/navConfig";
+import PushSubscribeButton from "@/components/push/PushSubscribeButton";
 
 interface HomeContentProps {
   prefix?: string;
   leagueName?: string;
+  leagueId?: number;
 }
 
 function NavButton({ item }: { item: NavItem; isAdmin?: boolean }) {
@@ -46,6 +48,7 @@ function AdminNavButton({ item }: { item: NavItem }) {
 export default function HomeContent({
   prefix = "",
   leagueName,
+  leagueId,
 }: HomeContentProps) {
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -89,7 +92,12 @@ export default function HomeContent({
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">{title}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="text-4xl font-bold">{title}</h1>
+        {session?.user && leagueId && (
+          <PushSubscribeButton leagueId={leagueId} />
+        )}
+      </div>
       {/* Admin Section - only visible to admins/owners */}
       {!isLoading && isAdmin && (
         <>

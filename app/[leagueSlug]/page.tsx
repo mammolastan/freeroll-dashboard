@@ -10,15 +10,15 @@ export default async function LeagueHomePage({
 }) {
   const { leagueSlug } = await params;
 
-  // Get league name for the title
+  // Get league name and id for the title and push notifications
   const league = await prisma.leagues.findUnique({
     where: { slug: leagueSlug },
-    select: { name: true },
+    select: { id: true, name: true },
   });
 
   if (!league) {
     notFound();
   }
 
-  return <HomeContent prefix={`/${leagueSlug}`} leagueName={league.name} />
+  return <HomeContent prefix={`/${leagueSlug}`} leagueName={league.name} leagueId={league.id} />
 }

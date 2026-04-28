@@ -7,6 +7,7 @@ import { getLeagueConfig } from "@/lib/league-config";
 import { getLeagueRole } from "@/lib/league-auth";
 import { prisma } from "@/lib/prisma";
 import { LeagueAdminsSection } from "./LeagueAdminsSection";
+import PushBroadcastPanel from "@/components/admin/PushBroadcastPanel";
 import Link from "next/link";
 
 interface PageProps {
@@ -263,6 +264,11 @@ export default async function AdminDashboardPage({ params }: PageProps) {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Push Notification Broadcast */}
+      <div className="mb-8">
+        <PushBroadcastPanel leagueSlug={leagueSlug} />
       </div>
 
       <LeagueAdminsSection
