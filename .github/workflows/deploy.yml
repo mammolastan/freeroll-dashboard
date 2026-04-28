@@ -40,6 +40,8 @@ jobs:
             # Clean only build artifacts and node_modules, preserve uploads
             echo "Cleaning build artifacts..."
             rm -rf .next/ dist/ node_modules/.cache/ 2>/dev/null || true
+            # Remove generated service worker files so they regenerate with latest config
+            rm -f public/sw.js public/workbox-*.js 2>/dev/null || true
 
             # Pull latest changes
             echo "Pulling latest changes..."
