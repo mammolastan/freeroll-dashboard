@@ -38,11 +38,15 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   async function checkCurrentSubscription() {
     try {
-      const reg = await navigator.serviceWorker.ready;
+      // Add timeout - serviceWorker.ready can hang indefinitely if SW fails to activate
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('SW timeout')), 3000)
+      );
+      const reg = await Promise.race([navigator.serviceWorker.ready, timeoutPromise]);
       const sub = await reg.pushManager.getSubscription();
       setIsSubscribed(!!sub);
     } catch {
-      // Service worker not ready yet
+      // Service worker not ready or timed out
     }
   }
 
