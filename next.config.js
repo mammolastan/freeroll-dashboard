@@ -6,6 +6,12 @@ const withPWA = require("next-pwa")({
   skipWaiting: true,
   // Exclude the dynamic manifest routes from SW precaching
   exclude: [/manifest\.json/],
+  buildExcludes: [
+    /middleware-build-manifest\.js$/,
+    /middleware-react-loadable-manifest\.js$/,
+    /next-font-manifest\.js$/,
+    /\.map$/,
+  ],
 });
 
 /** @type {import('next').NextConfig} */
