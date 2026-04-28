@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import Navbar from "@/components/Navigation/Navbar";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -44,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={cn(inter.className, "min-h-screen bg-background")}>
+        <ServiceWorkerRegister />
         <SessionProvider>
           <Navbar />
           {children}
