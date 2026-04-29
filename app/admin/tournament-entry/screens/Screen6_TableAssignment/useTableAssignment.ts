@@ -59,6 +59,12 @@ export function useTableAssignment(
     return grouped;
   }, [activePlayers, tableCount]);
 
+  // Get unassigned players (no table assignment)
+  const unassignedPlayers = useMemo(
+    () => activePlayers.filter((p) => !p.t_assign || p.t_assign === 0),
+    [activePlayers]
+  );
+
   // Handle drag start
   const handleDragStart = useCallback((playerId: number, fromTable: number) => {
     setDragging({ playerId, fromTable });
@@ -118,6 +124,41 @@ export function useTableAssignment(
     setAdditionalTables((prev) => Math.max(tableCount + 1, prev + 1));
   }, [tableCount]);
 
+  // Reset all table assignments
+  const resetAllAssignments = useCallback(async () => {
+    // Optimistic update - set all t_assign to 0
+    const previousPlayers = [...players];
+    setPlayers((prev) =>
+      prev.map((p) => ({ ...p, t_assign: 0 }))
+    );
+    setAdditionalTables(0);
+
+    try {
+      const res = await fetch(
+        `/api/tournament-drafts/${draftId}/players/reset-tables`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!res.ok) {
+        // Rollback on failure
+        setPlayers(previousPlayers);
+        console.error('Reset table assignments failed');
+        return false;
+      } else {
+        onDataChange();
+        return true;
+      }
+    } catch (error) {
+      // Rollback on error
+      setPlayers(previousPlayers);
+      console.error('Reset table assignments error:', error);
+      return false;
+    }
+  }, [draftId, players, onDataChange]);
+
   // Sync players when prop changes
   const syncPlayers = useCallback((newPlayers: Player[]) => {
     setPlayers(newPlayers);
@@ -126,6 +167,7 @@ export function useTableAssignment(
   return {
     players,
     activePlayers,
+    unassignedPlayers,
     tableCount,
     playersByTable,
     dragging,
@@ -133,6 +175,7 @@ export function useTableAssignment(
     handleDragEnd,
     handleTableReassign,
     addTable,
+    resetAllAssignments,
     syncPlayers,
     SEATS_PER_TABLE,
   };

@@ -3,7 +3,8 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Users, Target, X, UserPlus, Trophy } from 'lucide-react';
+import { Plus, Users, Target, X, UserPlus, Trophy, RotateCcw, User } from 'lucide-react';
+import Image from 'next/image';
 import { ScreenTabs } from '../../components/ScreenTabs';
 import { ScreenNumber } from '../../hooks/useScreenRouter';
 import { TableMap } from './TableMap';
@@ -37,6 +38,7 @@ interface Player {
   checked_in_at?: string;
   player_nickname?: string | null;
   t_assign?: number;
+  photo_url?: string | null;
 }
 
 interface TableAssignmentScreenProps {
@@ -61,6 +63,7 @@ export function TableAssignmentScreen({
 
   const {
     activePlayers,
+    unassignedPlayers,
     tableCount,
     playersByTable,
     dragging,
@@ -68,6 +71,7 @@ export function TableAssignmentScreen({
     handleDragEnd,
     handleTableReassign,
     addTable,
+    resetAllAssignments,
     syncPlayers,
     SEATS_PER_TABLE,
   } = useTableAssignment(
@@ -75,6 +79,19 @@ export function TableAssignmentScreen({
     propPlayers,
     onDataChange
   );
+
+  // Handle reset all table assignments
+  const handleResetAssignments = useCallback(async () => {
+    if (!confirm('Are you sure you want to remove all table assignments? This will move all players back to the available pool.')) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await resetAllAssignments();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [resetAllAssignments]);
 
   // Sync players when props change
   useEffect(() => {
@@ -277,8 +294,99 @@ export function TableAssignmentScreen({
             <UserPlus size={16} />
             Add Player
           </button>
+          <button
+            onClick={handleResetAssignments}
+            disabled={isSubmitting || activePlayers.every(p => !p.t_assign || p.t_assign === 0)}
+            className="flex items-center gap-1 px-3 py-1 rounded bg-red-600/30 text-red-300 hover:bg-red-600/50 transition-colors border border-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RotateCcw size={16} />
+            Reset
+          </button>
         </div>
       </div>
+
+      {/* Available Players Pool */}
+      {unassignedPlayers.length > 0 && (
+        <div className="mx-4 mb-4">
+          <div className="bg-gray-800/60 border border-cyan-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users size={18} className="text-cyan-400" />
+              <span className="text-cyan-300 font-semibold">
+                Available Players ({unassignedPlayers.length})
+              </span>
+              <span className="text-gray-400 text-sm ml-2">
+                Drag players to assign them to tables
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {unassignedPlayers.map((player) => {
+                const displayName = player.player_nickname || player.player_name;
+                const shortName = displayName.length > 10 ? displayName.slice(0, 9) + '...' : displayName;
+                const hasPhoto = player.photo_url && player.photo_url.trim() !== '';
+
+                return (
+                  <div
+                    key={player.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('playerId', String(player.id));
+                      e.dataTransfer.setData('fromTable', '0');
+                      e.dataTransfer.effectAllowed = 'move';
+                      handleDragStart(player.id, 0);
+                    }}
+                    onDragEnd={handleDragEnd}
+                    className="flex flex-col items-center cursor-grab active:cursor-grabbing group"
+                    title={`${player.player_name}${player.is_new_player ? ' (New)' : ''}`}
+                  >
+                    {/* Avatar circle */}
+                    <div className="relative">
+                      <div
+                        className={`
+                          w-12 h-12 rounded-full flex items-center justify-center overflow-hidden
+                          border-2 transition-all duration-200
+                          ${player.is_new_player
+                            ? 'border-yellow-400'
+                            : 'border-cyan-400'
+                          }
+                          ${!hasPhoto && (player.is_new_player ? 'bg-yellow-500/20' : 'bg-cyan-500/20')}
+                          group-hover:scale-110 group-hover:shadow-[0_0_12px_rgba(0,229,204,0.5)]
+                        `}
+                      >
+                        {hasPhoto ? (
+                          <Image
+                            src={player.photo_url!}
+                            alt={player.player_name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <User size={24} className={player.is_new_player ? 'text-yellow-300' : 'text-cyan-300'} />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Player name */}
+                    <div
+                      className={`
+                        mt-1 px-2 py-0.5 rounded text-xs font-medium text-center
+                        max-w-[80px] truncate
+                        ${player.is_new_player
+                          ? 'bg-yellow-500/30 text-yellow-200'
+                          : 'bg-gray-700/80 text-gray-200'
+                        }
+                      `}
+                    >
+                      {shortName}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table Map */}
       <TableMap
