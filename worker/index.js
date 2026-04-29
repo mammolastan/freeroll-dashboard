@@ -16,8 +16,7 @@ self.addEventListener("push", (event) => {
     body: data.body || "",
     icon: data.icon || "/icons/badge-96.png",
     badge: "/icons/badge-96.png",
-    data: { url: data.url || "/" },
-    // Use a stable tag so rapid-fire pushes don't stack up
+    data: { url: data.url || "/" },    
     tag: "otl-push",
     renotify: true,
   };
