@@ -40,10 +40,6 @@ export async function generateMetadata({
 
   const leagueName = league?.name ?? 'League';
 
-  // Get PWA config for icon
-  const config = league ? await getLeagueConfig(league.id) : null;
-  const logoUrl = config?.pwa?.logoUrl || '/icons/default-icon-512.png';
-
   return {
     title: {
       default: `${leagueName} Player Dashboard`,
@@ -55,9 +51,6 @@ export async function generateMetadata({
       capable: true,
       statusBarStyle: 'black-translucent',
       title: leagueName,
-    },
-    icons: {
-      apple: logoUrl,
     },
   };
 }

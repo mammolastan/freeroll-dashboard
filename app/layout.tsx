@@ -19,18 +19,18 @@ export const metadata = {
   icons: {
     icon: [
       {
-        url: "/images/Poker-Chip-Isloated-Blue.png",
-        sizes: "32x32",
+        url: "/icons/default-icon-512.png",
+        sizes: "512x512",
         type: "image/png",
       },
       {
-        url: "/images/Poker-Chip-Isloated-Blue.png",
-        sizes: "16x16",
+        url: "/icons/default-icon-512.png",
+        sizes: "32x32",
         type: "image/png",
       },
     ],
     apple: {
-      url: "/images/Poker-Chip-Isloated-Blue.png",
+      url: "/icons/default-icon-512.png",
       sizes: "180x180",
       type: "image/png",
     },
