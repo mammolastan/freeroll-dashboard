@@ -41,7 +41,6 @@ export async function GET(
     start_url: `/${leagueSlug}/`,
     scope: `/${leagueSlug}/`,
     display: 'standalone',
-    display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait',
     background_color: backgroundColor,
     theme_color: themeColor,
