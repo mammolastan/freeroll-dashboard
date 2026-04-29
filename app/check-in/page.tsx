@@ -130,7 +130,7 @@ function CheckInPageContent() {
                         {tournaments.map((tournament) => (
                             <Link
                                 key={tournament.id}
-                                href={`/gameview/${tournament.id}`}
+                                href={leagueSlugFromPath ? `/${leagueSlugFromPath}/gameview/${tournament.id}` : `/gameview/${tournament.id}`}
                                 className="block transition-transform hover:scale-105"
                             >
                                 <div className="h-full bg-gray-900/80 border border-cyan-500/30 rounded-lg hover:border-cyan-500/60 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all backdrop-blur-sm overflow-hidden">

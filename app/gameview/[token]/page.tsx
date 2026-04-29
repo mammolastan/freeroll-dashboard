@@ -110,7 +110,9 @@ function TournamentHeader({
 }
 
 export default function GameViewPage() {
-  const { token } = useParams();
+  const params = useParams();
+  const token = params.token as string;
+  const leagueSlug = params.leagueSlug as string | undefined;
   const { data: session } = useSession();
   const { gameData, computedStats, loading, error, connectionStatus, reconnectAttempt, manualReconnect } = useRealtimeGameData(
     token as string,
@@ -120,7 +122,7 @@ export default function GameViewPage() {
   const [checkInLeagueSlug, setCheckInLeagueSlug] = useState<string | null>(null);
   const [gettingToken, setGettingToken] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
-  const [checkInUrl, setCheckInUrl] = useState<string>(`/gameview/${token}`);
+  const [checkInUrl, setCheckInUrl] = useState<string>("");
   const [checkInDisabled, setCheckInDisabled] = useState(false);
   const [checkInToast, setCheckInToast] = useState<string | null>(null);
 
@@ -131,9 +133,10 @@ export default function GameViewPage() {
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      setCheckInUrl(`${window.location.origin}/gameview/${token}`);
+      const basePath = leagueSlug ? `/${leagueSlug}/gameview/${token}` : `/gameview/${token}`;
+      setCheckInUrl(`${window.location.origin}${basePath}`);
     }
-  }, [token]);
+  }, [token, leagueSlug]);
 
   // Check if past cutoff time and update periodically
   React.useEffect(() => {
