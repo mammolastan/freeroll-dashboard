@@ -14,9 +14,9 @@ self.addEventListener("push", (event) => {
 
   const options = {
     body: data.body || "",
-    icon: data.icon || "/icons/badge-96.png",
+    icon: data.icon || "/icons/default-icon-512.png",
     badge: "/icons/badge-96.png",
-    data: { url: data.url || "/" },    
+    data: { url: data.url || "/" },
     tag: "otl-push",
     renotify: true,
   };
