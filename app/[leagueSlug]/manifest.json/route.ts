@@ -63,19 +63,19 @@ export async function GET(
       {
         name: 'Quarterly Rankings',
         short_name: 'Quarterly rankings',
-        url: `quarterly`,
+        url: `rankings/quarterly`,
         icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Monthly Rankings',
         short_name: 'Monthly rankings',
-        url: `monthly`,
+        url: `rankings/monthly`,
         icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Active games',
         short_name: 'Active games',
-        url: `checkin`,
+        url: `check-in`,
         icons: [{ src: hexagonIconUrl, sizes: '256x256', type: 'image/png' }],
       },
     ],
