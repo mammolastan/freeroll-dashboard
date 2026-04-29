@@ -30,6 +30,7 @@ export async function GET(
   const logoUrl = pwa.logoUrl || '/icons/default-icon-512.png';
   // Static maskable icon with solid background for Android adaptive icons
   const maskableLogoUrl = '/uploads/pwa-icons/freeroll-maskable.png';
+  const trophyIconUrl = '/icons/trophy-1.png';
 
   const manifest = {
     id: `/${leagueSlug}/`,
@@ -62,19 +63,19 @@ export async function GET(
         name: 'Quarterly Rankings',
         short_name: 'Quarterly',
         url: `/${leagueSlug}/quarterly`,
-        icons: [{ src: '/icons/trophy-1.png', sizes: '256x256', type: 'image/png' }],
+        icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Monthly Rankings',
         short_name: 'Monthly',
         url: `/${leagueSlug}/monthly`,
-        icons: [{ src: '/icons/trophy-1.png', sizes: '256x256', type: 'image/png' }],
+        icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Active games',
         short_name: 'Active games',
         url: `/${leagueSlug}/checkin`,
-        icons: [{ src: '/icons/table-overhead.png', sizes: '259x259', type: 'image/png' }],
+        icons: [{ src: trophyIconUrl, sizes: '259x259', type: 'image/png' }],
       },
     ],
   };
