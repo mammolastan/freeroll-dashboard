@@ -36,7 +36,7 @@ export async function GET(
     name: appName,
     short_name: shortName,
     description: `${appName} — Poker League`,
-    start_url: `/${leagueSlug}`,
+    start_url: `/${leagueSlug}/`,
     scope: `/${leagueSlug}/`,
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],
@@ -44,12 +44,6 @@ export async function GET(
     background_color: backgroundColor,
     theme_color: themeColor,
     icons: [
-      {
-        src: logoUrl,
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any',
-      },
       {
         src: logoUrl,
         sizes: '512x512',
@@ -68,19 +62,19 @@ export async function GET(
         name: 'Quarterly Rankings',
         short_name: 'Quarterly',
         url: `/${leagueSlug}/quarterly`,
-        icons: [{ src: '/icons/trophy-1.png', sizes: '192x192', type: 'image/png' }],
+        icons: [{ src: '/icons/trophy-1.png', sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Monthly Rankings',
         short_name: 'Monthly',
         url: `/${leagueSlug}/monthly`,
-        icons: [{ src: '/icons/trophy-1.png', sizes: '192x192', type: 'image/png' }],
+        icons: [{ src: '/icons/trophy-1.png', sizes: '256x256', type: 'image/png' }],
       },
       {
         name: 'Active games',
         short_name: 'Active games',
         url: `/${leagueSlug}/checkin`,
-        icons: [{ src: '/icons/trophy-1.png', sizes: '192x192', type: 'image/png' }],
+        icons: [{ src: '/icons/table-overhead.png', sizes: '259x259', type: 'image/png' }],
       },
     ],
   };
