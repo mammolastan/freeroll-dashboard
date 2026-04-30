@@ -31,7 +31,7 @@ export async function GET(
   // Static maskable icon with solid background for Android adaptive icons
   const maskableLogoUrl = '/uploads/pwa-icons/freeroll-maskable.png';
   const trophyIconUrl = '/icons/trophy-1.png';
-  const hexagonIconUrl = '/icons/hexagon-table.png';
+  const hexagonIconUrl = '/icons/table-overhead.png';
 
   const manifest = {
     id: `/${leagueSlug}/`,
@@ -40,7 +40,8 @@ export async function GET(
     description: `${appName} — Poker League`,
     start_url: `/${leagueSlug}/`,
     scope: `/${leagueSlug}/`,
-    display: 'standalone',
+    display_override: ["standalone", "minimal-ui"],
+    display: 'fullscreen',
     orientation: 'portrait',
     background_color: backgroundColor,
     theme_color: themeColor,
