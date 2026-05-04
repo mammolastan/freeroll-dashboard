@@ -20,6 +20,7 @@ const nextConfig = {
   // Avoid picking a parent folder when ~/package-lock.json exists (monorepo-ish layout)
   outputFileTracingRoot: path.join(__dirname),
   output: "standalone", // Optimizes the output for production
+  trailingSlash: true, // Ensures all URLs have trailing slashes (helps with PWA scope matching)
   poweredByHeader: false,
   generateEtags: true,
   compress: true,
