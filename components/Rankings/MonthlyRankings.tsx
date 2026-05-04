@@ -137,7 +137,7 @@ export default function MonthlyRankings() {
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
 
-        // Filter to only include qualified players (top 3 at any venue)
+        // Filter to only include qualified players (top 4 at any venue)
         const uniquePlayers = Array.from(
           new Map(
             data.rankings
@@ -274,7 +274,7 @@ export default function MonthlyRankings() {
           Monthly tournament: $150 cash prize. First Friday of the month.
         </p>
         <p className="pb-4">
-          Players qualify for the monthly tournament by ranking in the top 3 at
+          Players qualify for the monthly tournament by ranking in the top 4 at
           any venue with games this month.
         </p>
         <p>

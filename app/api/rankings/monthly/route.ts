@@ -25,7 +25,7 @@ interface PlayerRanking {
 }
 
 function checkIfQualified(qualifyingVenues: VenueRanking[]): boolean {
-  return qualifyingVenues.some((venue) => venue.rank <= 3);
+  return qualifyingVenues.some((venue) => venue.rank <= 4);
 }
 
 export async function GET(request: Request) {
@@ -173,7 +173,7 @@ export async function GET(request: Request) {
             ORDER BY totalPoints DESC, avgScore DESC
           ) ranked_venue_players,
           (SELECT @vrank := 0) r
-          LIMIT 3
+          LIMIT 4
         `;
 
         return {
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
       // Check each venue for qualification status
       venueRankings.forEach((venue) => {
         const playerAtVenue = venue.rankings.find((r) => r.uid === player.uid);
-        if (playerAtVenue && playerAtVenue.rank <= 3) {
+        if (playerAtVenue && playerAtVenue.rank <= 4) {
           qualifyingVenues.push({
             venue: venue.venue,
             rank: playerAtVenue.rank,
