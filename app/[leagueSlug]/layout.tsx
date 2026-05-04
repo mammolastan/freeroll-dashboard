@@ -39,6 +39,8 @@ export async function generateMetadata({
   });
 
   const leagueName = league?.name ?? 'League';
+  const config = league ? await getLeagueConfig(league.id) : null;
+  const iconUrl = config?.pwa?.logoUrl || '/icons/default-icon-512.png';
 
   return {
     title: {
@@ -47,6 +49,13 @@ export async function generateMetadata({
     },
     description: `Dashboard for ${leagueName} poker tournament player statistics`,
     manifest: `/${leagueSlug}/manifest.json`,
+    icons: {
+      icon: [
+        { url: iconUrl, sizes: '512x512', type: 'image/png' },
+        { url: iconUrl, sizes: '32x32', type: 'image/png' },
+      ],
+      apple: { url: iconUrl, sizes: '180x180', type: 'image/png' },
+    },
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black-translucent',
