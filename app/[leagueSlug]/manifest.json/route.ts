@@ -38,7 +38,7 @@ export async function GET(
     name: appName,
     short_name: shortName,
     description: `${appName} — Poker League`,
-    start_url: `/${leagueSlug}/`,
+    start_url: `/${leagueSlug}`,
     scope: `/${leagueSlug}/`,
     display_override: ["standalone", "minimal-ui"],
     display: 'fullscreen',
