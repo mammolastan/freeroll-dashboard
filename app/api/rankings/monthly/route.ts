@@ -25,11 +25,7 @@ interface PlayerRanking {
 }
 
 function checkIfQualified(qualifyingVenues: VenueRanking[]): boolean {
-  return qualifyingVenues.some((venue) => venue.rank < 6);
-}
-
-function checkIfBubble(qualifyingVenues: VenueRanking[]): boolean {
-  return qualifyingVenues.some((venue) => venue.rank > 5);
+  return qualifyingVenues.some((venue) => venue.rank <= 3);
 }
 
 export async function GET(request: Request) {
@@ -177,7 +173,7 @@ export async function GET(request: Request) {
             ORDER BY totalPoints DESC, avgScore DESC
           ) ranked_venue_players,
           (SELECT @vrank := 0) r
-          LIMIT 7
+          LIMIT 3
         `;
 
         return {
@@ -199,14 +195,12 @@ export async function GET(request: Request) {
       // Check each venue for qualification status
       venueRankings.forEach((venue) => {
         const playerAtVenue = venue.rankings.find((r) => r.uid === player.uid);
-        if (playerAtVenue) {
-          if (playerAtVenue.rank <= 7) {
-            qualifyingVenues.push({
-              venue: venue.venue,
-              rank: playerAtVenue.rank,
-              points: Number(playerAtVenue.totalPoints),
-            });
-          }
+        if (playerAtVenue && playerAtVenue.rank <= 3) {
+          qualifyingVenues.push({
+            venue: venue.venue,
+            rank: playerAtVenue.rank,
+            points: Number(playerAtVenue.totalPoints),
+          });
         }
       });
 
@@ -217,7 +211,7 @@ export async function GET(request: Request) {
         qualifyingVenues,
         bubbleVenues,
         isQualified: checkIfQualified(qualifyingVenues),
-        isBubble: checkIfBubble(qualifyingVenues),
+        isBubble: false, // No longer using bubble classification
       };
     });
 

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { MonthlyPlayerCard } from "@/components/Rankings/MonthlyPlayerCard";
 import RotatingImageLoader from "../ui/RotatingImageLoader";
 import { useLeagueParam } from "@/lib/useLeagueParam";
@@ -62,12 +63,16 @@ export default function MonthlyRankings() {
   const [filterText, setFilterText] = useState("");
 
   // League param for multi-tenant support
-  const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+  const {
+    appendLeagueParam,
+    leagueSlug,
+    isReady: leagueParamReady,
+  } = useLeagueParam();
 
   // Competition periods state
   const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(() =>
-    getSelectedPeriodIdFromURL()
+    getSelectedPeriodIdFromURL(),
   );
   const [periodsLoading, setPeriodsLoading] = useState(true);
 
@@ -77,7 +82,9 @@ export default function MonthlyRankings() {
 
     async function fetchPeriods() {
       try {
-        const response = await fetch(appendLeagueParam("/api/competition-periods?period_type=monthly"));
+        const response = await fetch(
+          appendLeagueParam("/api/competition-periods?period_type=monthly"),
+        );
         if (!response.ok) throw new Error("Failed to fetch periods");
         const data = await response.json();
         setPeriods(data.periods || []);
@@ -111,7 +118,7 @@ export default function MonthlyRankings() {
   };
 
   // Get the selected period's name for display
-  const selectedPeriod = periods.find(p => p.id === selectedPeriodId);
+  const selectedPeriod = periods.find((p) => p.id === selectedPeriodId);
 
   // Fetch rankings when period changes
   useEffect(() => {
@@ -123,19 +130,18 @@ export default function MonthlyRankings() {
       setIsTransitioning(true);
       try {
         const response = await fetch(
-          appendLeagueParam(`/api/rankings/monthly?period_id=${selectedPeriodId}`),
+          appendLeagueParam(
+            `/api/rankings/monthly?period_id=${selectedPeriodId}`,
+          ),
         );
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
 
-        // Filter to only include qualified and bubble players
+        // Filter to only include qualified players (top 3 at any venue)
         const uniquePlayers = Array.from(
           new Map(
             data.rankings
-              .filter(
-                (player: PlayerRanking) =>
-                  player.isQualified || player.isBubble,
-              )
+              .filter((player: PlayerRanking) => player.isQualified)
               .map((player: PlayerRanking) => [player.uid, player]),
           ).values(),
         );
@@ -248,7 +254,8 @@ export default function MonthlyRankings() {
             </select>
           </div>
           <div className="text-xl text-white">
-            No processed games for {selectedPeriod?.name || rankingsData?.month} yet.
+            No processed games for {selectedPeriod?.name || rankingsData?.month}{" "}
+            yet.
           </div>
         </div>
       </>
@@ -256,15 +263,29 @@ export default function MonthlyRankings() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-1 py-8">
       {/* Header Section */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">
-          Monthly Tournament Qualifiers - {selectedPeriod?.name || rankingsData?.month}
+          Monthly Tournament Qualifiers -{" "}
+          {selectedPeriod?.name || rankingsData?.month}
         </h2>
         <p className="pb-4">
-          Players qualify for the monthly tournament by ranking in the top 5 for
-          any given venue. Bubble players are next in line.
+          Monthly tournament: $150 cash prize. First Friday of the month.
+        </p>
+        <p className="pb-4">
+          Players qualify for the monthly tournament by ranking in the top 3 at
+          any venue with games this month.
+        </p>
+        <p>
+          View full{" "}
+          <Link
+            href={leagueSlug ? `/${leagueSlug}/venues` : "/venues"}
+            className="text-blue-400 hover:text-blue-300 underline"
+          >
+            venue rankings
+          </Link>
+          .
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
