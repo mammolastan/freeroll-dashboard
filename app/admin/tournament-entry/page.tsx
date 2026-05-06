@@ -62,33 +62,6 @@ export default function TournamentEntryPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
 
-  // Audio state - persists across screen changes
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [oneMinuteAudio] = useState(() =>
-    typeof window !== "undefined"
-      ? new Audio("/audio/OneMinuteRemaining-RedAlert.mp3")
-      : null,
-  );
-  const [levelChangeAudio] = useState(() =>
-    typeof window !== "undefined"
-      ? new Audio("/audio/homepod_timer.mp3")
-      : null,
-  );
-
-  // Enable audio on first user interaction (required for mobile browsers)
-  const enableAudio = useCallback(() => {
-    if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
-      oneMinuteAudio.volume = 0.7;
-      levelChangeAudio.volume = 0.7;
-
-      // Preload audio files
-      oneMinuteAudio.load();
-      levelChangeAudio.load();
-
-      setAudioEnabled(true);
-    }
-  }, [audioEnabled, oneMinuteAudio, levelChangeAudio]);
-
   // Load tournament and player data
   const loadData = useCallback(async () => {
     try {
@@ -281,10 +254,6 @@ export default function TournamentEntryPage() {
         <GameTimerScreen
           currentDraft={currentDraft}
           players={players}
-          audioEnabled={audioEnabled}
-          oneMinuteAudio={oneMinuteAudio}
-          levelChangeAudio={levelChangeAudio}
-          enableAudio={enableAudio}
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
         />

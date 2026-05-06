@@ -39,10 +39,6 @@ interface Player {
 interface GameTimerScreenProps {
   currentDraft: TournamentDraft | null;
   players: Player[];
-  audioEnabled: boolean;
-  oneMinuteAudio: HTMLAudioElement | null;
-  levelChangeAudio: HTMLAudioElement | null;
-  enableAudio: () => void;
   currentScreen: ScreenNumber;
   onScreenChange: (screen: ScreenNumber) => void;
 }
@@ -50,10 +46,6 @@ interface GameTimerScreenProps {
 export function GameTimerScreen({
   currentDraft,
   players,
-  audioEnabled,
-  oneMinuteAudio,
-  levelChangeAudio,
-  enableAudio,
   currentScreen,
   onScreenChange
 }: GameTimerScreenProps) {
@@ -111,10 +103,6 @@ export function GameTimerScreen({
         <MinimalGameTimer
           tournamentId={currentDraft.id}
           playersRemaining={playersRemaining}
-          audioEnabled={audioEnabled}
-          oneMinuteAudio={oneMinuteAudio}
-          levelChangeAudio={levelChangeAudio}
-          enableAudio={enableAudio}
           blindScheduleName={blindScheduleName}
         />
       </div>

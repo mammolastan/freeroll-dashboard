@@ -17,6 +17,7 @@ import {
 import { socket } from "@/lib/socketClient";
 import "./GameTimer.css";
 import fitty from "fitty";
+import { useTimerAudio } from "@/hooks/useTimerAudio";
 
 interface BlindLevel {
   level: number;
@@ -61,18 +62,17 @@ export function GameTimer({
   const [lastLevel, setLastLevel] = useState<number | null>(null);
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] =
     useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [oneMinuteAudio] = useState(() =>
-    typeof window !== "undefined"
-      ? new Audio("/audio/OneMinuteRemaining-RedAlert.mp3")
-      : null,
-  );
-  const [levelChangeAudio] = useState(() =>
-    typeof window !== "undefined"
-      ? new Audio("/audio/homepod_timer.mp3")
-      : null,
-  );
+  const [audioReady, setAudioReady] = useState(false);
   const [isMinMode, setIsMinMode] = useState(false);
+
+  // Use the new Web Audio API hook
+  const { unlockAudio, playOneMinuteWarning, playLevelChangeSound } =
+    useTimerAudio("Tournament Timer", blindScheduleName);
+
+  const handleEnableAudio = useCallback(async () => {
+    await unlockAudio();
+    setAudioReady(true);
+  }, [unlockAudio]);
   const wakeLockRef = React.useRef<WakeLockSentinel | null>(null);
   const blindsLandscapeRef = React.useRef<HTMLDivElement>(null);
 
@@ -303,65 +303,6 @@ export function GameTimer({
     return () => clearInterval(interval);
   }, [timerState]);
 
-  // Enable audio on first user interaction (required for mobile browsers)
-  const enableAudio = () => {
-    if (!audioEnabled && oneMinuteAudio && levelChangeAudio) {
-      oneMinuteAudio.volume = 0.9;
-      levelChangeAudio.volume = 0.9;
-
-      // Preload audio files
-      oneMinuteAudio.load();
-      levelChangeAudio.load();
-
-      setAudioEnabled(true);
-      console.log("Audio enabled for mobile browsers");
-    }
-  };
-
-  // Vibration function
-  const vibrateDevice = (pattern: number | number[]) => {
-    if ("vibrate" in navigator) {
-      try {
-        navigator.vibrate(pattern);
-      } catch (error) {
-        console.log("Vibration not supported or failed:", error);
-      }
-    }
-  };
-
-  // Audio notification functions
-  const playOneMinuteWarning = useCallback(() => {
-    if (!audioEnabled || !oneMinuteAudio) return;
-
-    try {
-      oneMinuteAudio.currentTime = 0;
-      oneMinuteAudio.play().catch((error) => {
-        console.log("Audio playback failed:", error);
-      });
-      // Vibrate with a pattern: [vibrate, pause, vibrate, pause, vibrate]
-      //
-      vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
-    } catch (error) {
-      console.log("Audio not available: " + error);
-    }
-  }, [audioEnabled, oneMinuteAudio]);
-
-  const playLevelChangeSound = useCallback(() => {
-    if (!audioEnabled || !levelChangeAudio) return;
-
-    try {
-      levelChangeAudio.currentTime = 0;
-      levelChangeAudio.play().catch((error) => {
-        console.log("Audio playback failed:", error);
-      });
-      // Vibrate with a quick double pulse
-      // 150ms vibrate, 50ms pause, 450ms vibrate
-      vibrateDevice([50, 50, 50, 50, 1000, 100, 1000, 100, 1000]);
-    } catch (error) {
-      console.log("Audio not available" + error);
-    }
-  }, [audioEnabled, levelChangeAudio]);
-
   // Handle visibility changes - update lastLevel when page becomes visible
   // to prevent audio from playing when returning to a different level
   useEffect(() => {
@@ -386,11 +327,9 @@ export function GameTimer({
       return;
     }
 
-    // Check for level change - only play sound if page is visible
+    // Check for level change
     if (lastLevel !== null && lastLevel !== timerState.currentLevel) {
-      if (document.visibilityState === "visible") {
-        playLevelChangeSound();
-      }
+      playLevelChangeSound();
       setHasPlayedOneMinuteWarning(false); // Reset for new level
     }
     setLastLevel(timerState.currentLevel);
@@ -402,11 +341,9 @@ export function GameTimer({
       return;
     }
 
-    // Check for 1-minute warning - only play sound if page is visible
+    // Check for 1-minute warning
     if (displaySeconds === 60 && !hasPlayedOneMinuteWarning) {
-      if (document.visibilityState === "visible") {
-        playOneMinuteWarning();
-      }
+      playOneMinuteWarning();
       setHasPlayedOneMinuteWarning(true);
     }
 
@@ -428,7 +365,7 @@ export function GameTimer({
   };
 
   const handleStart = () => {
-    enableAudio(); // Enable audio on user interaction
+    handleEnableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit("timer:start", { tournamentId });
     }
@@ -441,7 +378,7 @@ export function GameTimer({
   };
 
   const handleResume = () => {
-    enableAudio(); // Enable audio on user interaction
+    handleEnableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit("timer:resume", { tournamentId });
     }
@@ -633,9 +570,9 @@ export function GameTimer({
             >
               📺 Min Mode
             </button>
-            {!audioEnabled && (
+            {!audioReady && (
               <button
-                onClick={enableAudio}
+                onClick={handleEnableAudio}
                 className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
                 title="Enable sound notifications"
               >

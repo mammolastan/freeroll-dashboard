@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Edit3, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
+import { useTimerAudio } from '@/hooks/useTimerAudio';
 
 interface BlindLevel {
   level: number;
@@ -29,10 +30,6 @@ interface TimerState {
 interface MinimalGameTimerProps {
   tournamentId: number;
   playersRemaining: number;
-  audioEnabled: boolean;
-  oneMinuteAudio: HTMLAudioElement | null;
-  levelChangeAudio: HTMLAudioElement | null;
-  enableAudio: () => void;
   /** Resolved schedule title (not DB id) */
   blindScheduleName?: string;
 }
@@ -40,10 +37,6 @@ interface MinimalGameTimerProps {
 export function MinimalGameTimer({
   tournamentId,
   playersRemaining,
-  audioEnabled,
-  oneMinuteAudio,
-  levelChangeAudio,
-  enableAudio,
   blindScheduleName,
 }: MinimalGameTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
@@ -53,8 +46,18 @@ export function MinimalGameTimer({
   const [editSeconds, setEditSeconds] = useState('');
   const [lastLevel, setLastLevel] = useState<number | null>(null);
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
   const minutesInputRef = useRef<HTMLInputElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Use the new Web Audio API hook
+  const { unlockAudio, playOneMinuteWarning, playLevelChangeSound } =
+    useTimerAudio('Tournament Timer', blindScheduleName);
+
+  const handleEnableAudio = useCallback(async () => {
+    await unlockAudio();
+    setAudioReady(true);
+  }, [unlockAudio]);
 
   // Wake Lock management - keep screen awake while on this screen
   useEffect(() => {
@@ -172,33 +175,6 @@ export function MinimalGameTimer({
     return () => clearInterval(interval);
   }, [timerState]);
 
-  // Audio notification functions
-  const playOneMinuteWarning = useCallback(() => {
-    if (!audioEnabled || !oneMinuteAudio) return;
-
-    try {
-      oneMinuteAudio.currentTime = 0;
-      oneMinuteAudio.play().catch(error => {
-        console.log('Audio playback failed:', error);
-      });
-    } catch {
-      console.log('Audio not available');
-    }
-  }, [audioEnabled, oneMinuteAudio]);
-
-  const playLevelChangeSound = useCallback(() => {
-    if (!audioEnabled || !levelChangeAudio) return;
-
-    try {
-      levelChangeAudio.currentTime = 0;
-      levelChangeAudio.play().catch(error => {
-        console.log('Audio playback failed:', error);
-      });
-    } catch {
-      console.log('Audio not available');
-    }
-  }, [audioEnabled, levelChangeAudio]);
-
   // Monitor level changes for audio notifications
   useEffect(() => {
     if (!timerState || !timerState.isRunning || timerState.isPaused) {
@@ -243,11 +219,11 @@ export function MinimalGameTimer({
   };
 
   const handleStart = useCallback(() => {
-    enableAudio(); // Enable audio on user interaction
+    handleEnableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit('timer:start', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
-  }, [tournamentId, enableAudio]);
+  }, [tournamentId, handleEnableAudio]);
 
   const handlePause = useCallback(() => {
     if (tournamentId) {
@@ -256,11 +232,11 @@ export function MinimalGameTimer({
   }, [tournamentId]);
 
   const handleResume = useCallback(() => {
-    enableAudio(); // Enable audio on user interaction
+    handleEnableAudio(); // Enable audio on user interaction
     if (tournamentId) {
       socket.emit('timer:resume', { tournamentId, actor: { id: null, name: 'Admin' } });
     }
-  }, [tournamentId, enableAudio]);
+  }, [tournamentId, handleEnableAudio]);
 
   // Spacebar to start/pause timer
   useEffect(() => {
@@ -361,9 +337,9 @@ export function MinimalGameTimer({
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-8">
       {/* Enable Sound Button */}
-      {!audioEnabled && (
+      {!audioReady && (
         <button
-          onClick={enableAudio}
+          onClick={handleEnableAudio}
           className="text-xs px-3 py-1 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 rounded-full transition-all border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)] whitespace-nowrap"
           title="Enable sound notifications"
         >
