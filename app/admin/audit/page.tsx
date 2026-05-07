@@ -1,3 +1,5 @@
+// app/admin/audit/page.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +13,7 @@ interface Tournament {
   status: string;
   director_name: string;
   player_count?: number;
+  audit_action_count?: number;
 }
 
 export default function AuditLogSelectorPage() {
@@ -118,6 +121,9 @@ export default function AuditLogSelectorPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">
+                    {tournament.audit_action_count ?? 0} actions
+                  </span>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(tournament.status)}`}>
                     {tournament.status.replace('_', ' ')}
                   </span>

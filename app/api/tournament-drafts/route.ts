@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       SELECT
         td.*,
         v.name as venue_name,
-        COUNT(tdp.id) as player_count
+        COUNT(tdp.id) as player_count,
+        (SELECT COUNT(*) FROM TournamentAuditLog tal WHERE tal.tournament_id = td.id) as audit_action_count
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
       id: Number(draft.id),
       start_points: Number(draft.start_points),
       player_count: Number(draft.player_count),
+      audit_action_count: Number(draft.audit_action_count ?? 0),
       venue_id: draft.venue_id ? Number(draft.venue_id) : null,
       venue: draft.venue_name || null,
       tournament_time: serializeTime(draft.tournament_time),
