@@ -10,6 +10,12 @@
   --stat3: hsl(40, 40%, 70%);
   --stat4: hsl(50, 50%, 80%);
   --stat5: hsl(040, 30%, 80%);
+
+  /* Theme colors - defaults to Classic Cyan */
+  --theme-primary: #06b6d4;
+  --theme-primary-hover: #0891b2;
+  --theme-surface: #1e293b;
+  --theme-surface-hover: #334155;
 }
 
 body {

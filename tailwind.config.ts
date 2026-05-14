@@ -13,6 +13,10 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        "theme-primary": "var(--theme-primary)",
+        "theme-primary-hover": "var(--theme-primary-hover)",
+        "theme-surface": "var(--theme-surface)",
+        "theme-surface-hover": "var(--theme-surface-hover)",
       },
       keyframes: {
         "pulse-ring": {

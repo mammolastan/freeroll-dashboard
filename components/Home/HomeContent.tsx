@@ -18,11 +18,11 @@ function NavButton({ item }: { item: NavItem; isAdmin?: boolean }) {
   return (
     <Link
       href={item.href}
-      className="flex flex-col items-center justify-center p-6 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-white"
+      className="flex flex-col items-center justify-center p-6 bg-theme-surface hover:bg-theme-surface-hover rounded-lg transition-colors text-white"
     >
       <Icon
         size={32}
-        className="mb-3 text-blue-400"
+        className="mb-3 text-theme-primary"
       />
       <span className="text-lg font-medium text-center">{item.text}</span>
     </Link>
@@ -121,11 +121,11 @@ export default function HomeContent({
               <Link
                 key={child.href}
                 href={child.href}
-                className="flex flex-col items-center justify-center p-6 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-white"
+                className="flex flex-col items-center justify-center p-6 bg-theme-surface hover:bg-theme-surface-hover rounded-lg transition-colors text-white"
               >
                 <Icon
                   size={32}
-                  className="mb-3 text-blue-400"
+                  className="mb-3 text-theme-primary"
                 />
                 <span className="text-lg font-medium text-center">
                   {child.text}

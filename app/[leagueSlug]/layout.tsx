@@ -5,6 +5,7 @@ import { getLeagueConfig } from '@/lib/league-config';
 import { notFound } from 'next/navigation';
 import { Metadata, Viewport } from 'next';
 import { InstallPrompt } from '@/components/ui/InstallPrompt';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 export async function generateViewport({
   params,
@@ -88,9 +89,11 @@ export default async function LeagueLayout({
   const config = await getLeagueConfig(league.id);
 
   return (
-    <LeagueProvider slug={leagueSlug} timezone={config.timezone}>
-      {children}
-      <InstallPrompt />
-    </LeagueProvider>
+    <ThemeProvider themeId={config.branding?.themeId ?? 'default'}>
+      <LeagueProvider slug={leagueSlug} timezone={config.timezone}>
+        {children}
+        <InstallPrompt />
+      </LeagueProvider>
+    </ThemeProvider>
   );
 }

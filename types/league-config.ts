@@ -49,6 +49,11 @@ export interface LeagueConfig {
   // PWA
   pwa: PWAConfig;
 
+  // Branding
+  branding?: {
+    themeId: string;
+  };
+
   // Access & Registration
   allowSelfRegistration: boolean;
   requireEmailVerification: boolean;
@@ -113,6 +118,9 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     themeColor: '#06b6d4',
     backgroundColor: '#0f172a',
     logoUrl: '',
+  },
+  branding: {
+    themeId: 'default',
   },
   allowSelfRegistration: false,
   requireEmailVerification: false,

@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Award,
+  Palette,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -62,6 +63,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
             icon: Trophy,
           },
           { href: `${base}/settings`, label: "Identity", icon: Settings },
+          { href: `${base}/branding`, label: "Branding", icon: Palette },
         ]
       : []),
   ];
