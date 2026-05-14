@@ -72,7 +72,7 @@ export function getNavItems(prefix: string = ""): NavItem[] {
 export function getAdminNavItems(prefix: string = ""): NavItem[] {
   return [
     {
-      href: "/admin/tournament-entry",
+      href: `${prefix}/admin/tournament-entry`,
       icon: Play,
       text: "Tournament Entry",
     },

@@ -9,7 +9,7 @@ import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
 import { QrCode, UserPlus, Check } from "lucide-react";
-import { QRCodeModal } from "@/app/admin/tournament-entry/QRCodeModal";
+import { QRCodeModal } from "@/app/[leagueSlug]/admin/(fullscreen)/tournament-entry/QRCodeModal";
 import { formatTime, formatCutoffTime } from "@/lib/utils";
 import { formatLeagueDate, getLeagueNow } from "@/lib/league-time";
 import { TournamentFeed } from "@/components/TournamentFeed";

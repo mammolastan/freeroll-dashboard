@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   AuditLogEntry,
@@ -189,6 +190,8 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string }> = {
 export default function AuditLogViewerPage() {
   const params = useParams();
   const tournamentId = params.tournamentId as string;
+  const { data: session } = useSession();
+  const leagueSlug = session?.user?.leagueSlug ?? "freeroll";
 
   // State
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
@@ -425,7 +428,7 @@ export default function AuditLogViewerPage() {
               <p className="mt-1 text-sm text-gray-500">{tournamentName}</p>
             </div>
             <Link
-              href={`/admin/tournament-entry?id=${tournamentId}`}
+              href={`/${leagueSlug}/admin/tournament-entry`}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
               &larr; Back to Tournament

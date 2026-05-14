@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getLeagueIdBySlug } from '@/lib/league-utils';
 import { getLeagueRole, canAccessAdmin, LeagueRole } from '@/lib/league-auth';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+
+// Routes that should render fullscreen (no sidebar)
+const FULLSCREEN_ROUTES = ['/admin/tournament-entry'];
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -26,6 +30,16 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   const role = await getLeagueRole(session.user.uid, leagueId);
   if (!canAccessAdmin(role)) {
     redirect(`/${leagueSlug}`);
+  }
+
+  // Check if this is a fullscreen route
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+  const isFullscreen = FULLSCREEN_ROUTES.some(route => pathname.includes(route));
+
+  // Fullscreen routes render without sidebar wrapper
+  if (isFullscreen) {
+    return <>{children}</>;
   }
 
   return (
