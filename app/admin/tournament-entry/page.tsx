@@ -119,8 +119,17 @@ export default function TournamentEntryPage() {
   useEffect(() => {
     if (!currentDraft) return;
 
+    const roomId = currentDraft.id.toString();
+
     // Join the tournament room
-    socket.emit("joinRoom", currentDraft.id.toString());
+    socket.emit("joinRoom", roomId);
+
+    // Re-join room on reconnect (handles mobile backgrounding, network drops, etc.)
+    const handleReconnect = () => {
+      console.log("[Socket] Reconnected - rejoining room:", roomId);
+      socket.emit("joinRoom", roomId);
+    };
+    socket.on("connect", handleReconnect);
 
     // Listen for player updates
     const handlePlayersUpdated = (eventOrPlayers: unknown) => {
@@ -207,9 +216,32 @@ export default function TournamentEntryPage() {
 
     // Cleanup when component unmounts or tournament changes
     return () => {
+      socket.off("connect", handleReconnect);
       socket.off("players:updated", handlePlayersUpdated);
       socket.off("updatePlayers", handlePlayersUpdated);
     };
+  }, [currentDraft]);
+
+  // Polling fallback: refresh player data every 30 seconds
+  // This ensures data stays in sync even if socket events are missed
+  useEffect(() => {
+    if (!currentDraft) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const playersResponse = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/players`,
+        );
+        if (playersResponse.ok) {
+          const playersData: Player[] = await playersResponse.json();
+          setPlayers(playersData);
+        }
+      } catch (error) {
+        console.error("Polling refresh failed:", error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(pollInterval);
   }, [currentDraft]);
 
   // Callback for screens to trigger data reload
@@ -254,6 +286,7 @@ export default function TournamentEntryPage() {
         <GameTimerScreen
           currentDraft={currentDraft}
           players={players}
+          onDataChange={handleDataChange}
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
         />

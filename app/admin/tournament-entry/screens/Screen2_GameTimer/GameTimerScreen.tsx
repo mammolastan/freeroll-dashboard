@@ -2,7 +2,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { MinimalGameTimer } from './MinimalGameTimer';
 import { getBlindScheduleDisplayName } from '@/lib/blind-schedule-label';
 import { ScreenTabs } from '../../components/ScreenTabs';
@@ -39,6 +40,7 @@ interface Player {
 interface GameTimerScreenProps {
   currentDraft: TournamentDraft | null;
   players: Player[];
+  onDataChange: () => void;
   currentScreen: ScreenNumber;
   onScreenChange: (screen: ScreenNumber) => void;
 }
@@ -46,12 +48,35 @@ interface GameTimerScreenProps {
 export function GameTimerScreen({
   currentDraft,
   players,
+  onDataChange: _onDataChange,
   currentScreen,
   onScreenChange
 }: GameTimerScreenProps) {
   const [blindScheduleRows, setBlindScheduleRows] = useState<
     { id: number; name: string }[]
   >([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Track fullscreen state changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Fullscreen toggle failed:', error);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/blind-schedules")
@@ -106,6 +131,15 @@ export function GameTimerScreen({
           blindScheduleName={blindScheduleName}
         />
       </div>
+
+      {/* Fullscreen Toggle Button */}
+      <button
+        onClick={toggleFullscreen}
+        className="fixed bottom-4 left-4 z-50 p-3 bg-gray-800/80 hover:bg-gray-700 text-white rounded-lg border border-cyan-500/30 transition-all"
+        title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+      >
+        {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+      </button>
     </div>
   );
 }
