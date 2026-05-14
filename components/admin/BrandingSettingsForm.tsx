@@ -113,36 +113,89 @@ export default function BrandingSettingsForm({ leagueSlug, initialThemeId }: Pro
       {/* Preview */}
       <div>
         <label className="block text-sm text-white/60 mb-3">Preview</label>
-        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-          <div className="flex gap-3">
-            {(() => {
-              const theme = THEME_PRESETS.find((t) => t.id === selectedThemeId) ?? THEME_PRESETS[0];
-              return (
-                <>
-                  <div
-                    className="flex flex-col items-center justify-center p-4 rounded-lg w-24 h-24"
-                    style={{ backgroundColor: theme.colors.surface }}
-                  >
+        <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-4">
+          {(() => {
+            const theme = THEME_PRESETS.find((t) => t.id === selectedThemeId) ?? THEME_PRESETS[0];
+            return (
+              <>
+                {/* Home tiles preview */}
+                <div>
+                  <p className="text-xs text-white/40 mb-2">Home Tiles</p>
+                  <div className="flex gap-3">
                     <div
-                      className="w-6 h-6 rounded mb-2"
-                      style={{ backgroundColor: theme.colors.primary }}
-                    />
-                    <span className="text-xs text-white/80">Tile</span>
-                  </div>
-                  <div
-                    className="flex flex-col items-center justify-center p-4 rounded-lg w-24 h-24"
-                    style={{ backgroundColor: theme.colors.surfaceHover }}
-                  >
+                      className="flex flex-col items-center justify-center p-4 rounded-lg w-24 h-24"
+                      style={{ backgroundColor: theme.colors.surface }}
+                    >
+                      <div
+                        className="w-6 h-6 rounded mb-2"
+                        style={{ backgroundColor: theme.colors.primary }}
+                      />
+                      <span className="text-xs text-white/80">Tile</span>
+                    </div>
                     <div
-                      className="w-6 h-6 rounded mb-2"
-                      style={{ backgroundColor: theme.colors.primaryHover }}
-                    />
-                    <span className="text-xs text-white/80">Hover</span>
+                      className="flex flex-col items-center justify-center p-4 rounded-lg w-24 h-24"
+                      style={{ backgroundColor: theme.colors.surfaceHover }}
+                    >
+                      <div
+                        className="w-6 h-6 rounded mb-2"
+                        style={{ backgroundColor: theme.colors.primaryHover }}
+                      />
+                      <span className="text-xs text-white/80">Hover</span>
+                    </div>
                   </div>
-                </>
-              );
-            })()}
-          </div>
+                </div>
+
+                {/* Ranking card colors preview */}
+                <div>
+                  <p className="text-xs text-white/40 mb-2">Ranking Card Stats</p>
+                  <div className="flex gap-1">
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-bold text-gray-800"
+                      style={{ backgroundColor: theme.colors.rankingBadge }}
+                      title="Ranking Badge"
+                    >
+                      #1
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-medium text-gray-700"
+                      style={{ backgroundColor: theme.colors.stat1 }}
+                      title="Stat 1 (Points)"
+                    >
+                      S1
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-medium text-gray-700"
+                      style={{ backgroundColor: theme.colors.stat2 }}
+                      title="Stat 2"
+                    >
+                      S2
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-medium text-gray-700"
+                      style={{ backgroundColor: theme.colors.stat3 }}
+                      title="Stat 3"
+                    >
+                      S3
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-medium text-gray-700"
+                      style={{ backgroundColor: theme.colors.stat4 }}
+                      title="Stat 4"
+                    >
+                      S4
+                    </div>
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center text-xs font-medium text-gray-700"
+                      style={{ backgroundColor: theme.colors.stat5 }}
+                      title="Stat 5"
+                    >
+                      S5
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 
