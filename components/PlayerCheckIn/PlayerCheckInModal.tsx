@@ -207,9 +207,15 @@ export function PlayerCheckInModal({
                       You&apos;re Already Checked In!
                     </div>
                   </div>
-                  <p className="text-gray-400 text-lg">
+                  <p className="text-gray-400 text-lg mb-6">
                     {session.user.nickname || session.user.name} is registered for this tournament.
                   </p>
+                  <button
+                    onClick={() => setShowGuestCheckIn(true)}
+                    className="text-cyan-400 hover:text-cyan-300 transition-colors underline text-lg"
+                  >
+                    Check in someone else
+                  </button>
                 </div>
               ) : (
                 // Quick check-in form
