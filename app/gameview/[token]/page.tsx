@@ -260,13 +260,24 @@ export default function GameViewPage() {
         <div className="mb-6 flex justify-center gap-4">
           {gameData.tournament.allow_self_checkin ? (
             isUserCheckedIn ? (
-              <button
-                disabled
-                className="bg-green-600/80 border-green-500/50 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 border cursor-default"
-              >
-                <Check size={20} />
-                Checked In
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  disabled
+                  className="bg-green-600/80 border-green-500/50 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 border cursor-default"
+                >
+                  <Check size={20} />
+                  Checked In
+                </button>
+                {!checkInDisabled && (
+                  <button
+                    onClick={handleCheckInClick}
+                    disabled={gettingToken}
+                    className="text-cyan-400 hover:text-cyan-300 text-sm underline underline-offset-2 transition-colors"
+                  >
+                    {gettingToken ? "Getting Ready..." : "Check in someone else"}
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={handleCheckInClick}
