@@ -30,7 +30,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const base = `/${leagueSlug}/admin`;
+  const base = `/l/${leagueSlug}/admin`;
 
   const navItems: {
     href: string;

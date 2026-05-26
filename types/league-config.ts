@@ -29,7 +29,7 @@ export const DEFAULT_SCORING_SYSTEM: ScoringSystemConfig = {
 
 export interface PWAConfig {
   shortName: string;        // Falls back to league.name if empty
-  themeColor: string;       // Default: OpenTabLeague cyan
+  themeColor: string;       // Default: OpenBarLeague cyan
   backgroundColor: string;
   logoUrl: string;          // Falls back to /icons/default-icon-512.png if empty
 }

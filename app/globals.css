@@ -31,7 +31,9 @@ body {
 a.freeroll-link {
   background: linear-gradient(0deg, darkred, darkred) no-repeat right bottom / 0
     var(--bg-h);
-  transition: background-size 350ms, color 350ms;
+  transition:
+    background-size 350ms,
+    color 350ms;
   --bg-h: 100%;
   color: black;
   text-decoration: underline;
@@ -128,4 +130,9 @@ a.freeroll-link:active {
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;
+}
+
+::selection {
+  background-color: #06b6d4; /* cyan-500 */
+  color: white;
 }

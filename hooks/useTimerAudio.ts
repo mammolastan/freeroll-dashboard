@@ -127,7 +127,7 @@ export function useTimerAudio(
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: timerLabel,
-      artist: 'OpenTabLeague',
+      artist: 'OpenBarLeague',
       album: blindScheduleName ?? 'Tournament Timer',
     });
 

@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const result = await broadcastToLeague(leagueId, {
     title: '📢 League Announcement',
     body: message.trim(),
-    url: `/${leagueSlug}`,
+    url: `/l/${leagueSlug}`,
   });
 
   return NextResponse.json(result);

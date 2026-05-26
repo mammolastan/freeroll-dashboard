@@ -8,7 +8,7 @@ import { formatLeagueDate } from '@/lib/league-time';
 import { PlayerSearch } from './PlayerSearch';
 import RotatingImageLoader from '../ui/RotatingImageLoader';
 import { useLeagueParam } from '@/lib/useLeagueParam';
-import { useLeagueTimezone } from '@/lib/LeagueContext';
+import { useLeagueTimezone, useLeaguePrefix } from '@/lib/LeagueContext';
 
 interface KnockoutGame {
     date: string;
@@ -62,6 +62,7 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
     // League param for multi-tenant support
     const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
     const timezone = useLeagueTimezone();
+    const leaguePrefix = useLeaguePrefix();
 
     useEffect(() => {
         if (!leagueParamReady) return;
@@ -196,11 +197,11 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
                                                                 {index + 1}
                                                             </div>
                                                             <Link
-                                                                href={`/players?uid=${encodeURIComponent(player.uid)}`}
+                                                                href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}`}
                                                                 className="freeroll-link"
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
-                                                                    window.location.href = `/players?uid=${encodeURIComponent(player.uid)}`;
+                                                                    window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}`;
                                                                 }}
                                                             >
                                                                 {player.nickname || player.name}
@@ -240,11 +241,11 @@ export function KnockoutStats({ playerUID, playerName }: KnockoutStatsProps) {
                                                                 {index + 1}
                                                             </div>
                                                             <Link
-                                                                href={`/players?uid=${encodeURIComponent(player.uid)}`}
+                                                                href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}`}
                                                                 className="freeroll-link"
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
-                                                                    window.location.href = `/players?uid=${encodeURIComponent(player.uid)}`;
+                                                                    window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}`;
                                                                 }}
                                                             >
                                                                 {player.nickname || player.name}

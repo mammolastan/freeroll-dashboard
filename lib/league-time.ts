@@ -1,5 +1,5 @@
 // lib/league-time.ts
-// Timezone-aware date utilities for OpenTabLeague.
+// Timezone-aware date utilities for OpenBarLeague.
 // All functions accept an IANA timezone string (e.g. 'America/New_York').
 // DST is handled automatically by the Intl API.
 

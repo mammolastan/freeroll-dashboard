@@ -41,16 +41,11 @@ export function useLeagueTimezone(): string {
   return useContext(LeagueContext).timezone;
 }
 
-// Reserved paths that are NOT league slugs
-const RESERVED_PATHS = [
-  'admin', 'login', 'register', 'profile', 'api', 'tvscreen',
-  '_next', 'rankings', 'venues', 'players', 'games', 'check-in',
-  'badges', 'unauthorized', 'activeTournament', 'gameview', 'knockouts'
-];
-
 /**
  * Hook to get the league URL prefix for building league-aware links.
  * Works both inside and outside LeagueProvider by also checking pathname.
+ *
+ * All league routes are under /l/[leagueSlug]/...
  *
  * Usage:
  *   const prefix = useLeaguePrefix();
@@ -60,14 +55,15 @@ export function useLeaguePrefix(): string {
   const { leagueSlug: contextSlug } = useLeague();
   const pathname = usePathname();
 
-  // Try context first
-  if (contextSlug) return `/${contextSlug}`;
+  // Try context first - always use /l/ prefix
+  if (contextSlug) return `/l/${contextSlug}`;
 
   // Fall back to extracting from pathname
   if (pathname) {
-    const firstSegment = pathname.split('/')[1];
-    if (firstSegment && !RESERVED_PATHS.includes(firstSegment)) {
-      return `/${firstSegment}`;
+    const segments = pathname.split('/');
+    // Check for /l/[leagueSlug] pattern
+    if (segments[1] === 'l' && segments[2]) {
+      return `/l/${segments[2]}`;
     }
   }
 

@@ -398,11 +398,11 @@ Math: log(total_players + 1 / Placement)`}
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-sm text-purple-700">{index + 1}.</span>
                                                             <Link
-                                                                href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                                href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
                                                                 className="freeroll-link"
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
-                                                                    window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                                    window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
                                                                 }}
                                                             >
                                                                 {player.nickname || player.name}
@@ -424,11 +424,11 @@ Math: log(total_players + 1 / Placement)`}
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm text-purple-700">{index + 1}.</span>
                                                         <a
-                                                            href={`/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                            href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
                                                             className="freeroll-link"
                                                             onClick={(e) => {
                                                                 e.preventDefault();
-                                                                window.location.href = `/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                                window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
                                                             }}
                                                         >
                                                             {player.name}
@@ -457,7 +457,7 @@ Math: log(total_players + 1 / Placement)`}
                                 {stats.venueStats.map(venue => (
                                     <div key={venue.venue} className="flex justify-between items-center">
                                         <Link
-                                            href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                                            href={`${leaguePrefix}/venues?venue=${encodeURIComponent(venue.venue)}`}
                                             className="freeroll-link"
                                         >
                                             {venue.venue}

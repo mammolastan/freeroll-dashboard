@@ -29,39 +29,30 @@ const Navbar = () => {
 
   // Get league slug from context OR extract from pathname
   // Context won't be available since Navbar is rendered in root layout (outside LeagueProvider)
-  // So we also check the pathname for league-prefixed routes
+  // So we also check the pathname for league-prefixed routes (under /l/[leagueSlug])
   const { leagueSlug: contextSlug } = useLeague();
 
-  // Reserved paths that are NOT league slugs
-  const RESERVED_PATHS = [
-    "admin",
-    "login",
-    "register",
-    "profile",
-    "api",
-    "tvscreen",
-    "_next",
-    "rankings",
-    "venues",
-    "players",
-    "games",
-    "check-in",
-    "badges",
-    "unauthorized",
-    "activeTournament",
-    "gameview",
-  ];
-
   // Extract league slug from pathname if not in context
+  // All league routes are now under /l/[leagueSlug]/...
   const getLeagueSlugFromPath = (): string | null => {
     if (!pathname) return null;
-    const firstSegment = pathname.split("/")[1];
-    if (!firstSegment || RESERVED_PATHS.includes(firstSegment)) return null;
-    return firstSegment;
+    const segments = pathname.split("/");
+    // Check for /l/[leagueSlug] pattern
+    if (segments[1] === "l" && segments[2]) {
+      return segments[2];
+    }
+    return null;
   };
 
   const leagueSlug = contextSlug ?? getLeagueSlugFromPath();
-  const prefix = leagueSlug ? `/${leagueSlug}` : "";
+  const prefix = leagueSlug ? `/l/${leagueSlug}` : "";
+  const isInLeague = Boolean(leagueSlug);
+
+  // Track if component has mounted to avoid hydration mismatch
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Fetch league name when slug is detected
   const [leagueName, setLeagueName] = useState<string | null>(null);
@@ -83,8 +74,8 @@ const Navbar = () => {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // Nav links use prefix for league-scoped routes
-  const navLinks = getNavItems(prefix);
+  // Nav links use prefix for league-scoped routes - only show when in a league
+  const navLinks = isInLeague ? getNavItems(prefix) : [];
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -95,7 +86,7 @@ const Navbar = () => {
   const handleSignOut = () => {
     setIsUserMenuOpen(false);
     setIsOpen(false);
-    signOut({ callbackUrl: "/" });
+    signOut({ callbackUrl: prefix || "/" });
   };
 
   return (
@@ -104,12 +95,19 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <Link
-            href={`${prefix}/`}
-            className="text-xl font-bold truncate"
+            href={isInLeague ? `${prefix}/` : "/"}
+            className="flex items-center gap-2 text-xl font-bold truncate"
           >
-            {leagueName
-              ? `${leagueName} Player Dashboard`
-              : "Freeroll Atlanta Player Dashboard"}
+            {!isInLeague && (
+              <img
+                src="/icons/default-icon-512.png"
+                alt=""
+                className="w-8 h-8"
+              />
+            )}
+            {isInLeague
+              ? (hasMounted && leagueName ? `${leagueName} Player Dashboard` : "Player Dashboard")
+              : "Open Bar League"}
           </Link>
 
           {/* Desktop Navigation */}
@@ -158,99 +156,103 @@ const Navbar = () => {
               </div>
             ))}
 
-            {/* Auth Section - Desktop */}
-            <div className="relative ml-4 pl-4 border-l border-slate-600">
-              {status === "loading" ? (
-                <div className="w-8 h-8 rounded-full bg-slate-600 animate-pulse" />
-              ) : session ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 hover:text-theme-primary transition-colors"
-                  >
-                    {session.user.image ? (
-                      <div
-                        className="w-8 h-8 rounded-full bg-slate-600 bg-cover bg-center flex-shrink-0"
-                        style={{
-                          backgroundImage: `url(${session.user.image})`,
-                        }}
-                        role="img"
-                        aria-label="Profile"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
-                        <User size={16} />
+            {/* Auth Section - Desktop (only show in league context) */}
+            {isInLeague && (
+              <div className="relative ml-4 pl-4 border-l border-slate-600">
+                {status === "loading" ? (
+                  <div className="w-8 h-8 rounded-full bg-slate-600 animate-pulse" />
+                ) : session ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      className="flex items-center space-x-2 hover:text-theme-primary transition-colors"
+                    >
+                      {session.user.image ? (
+                        <div
+                          className="w-8 h-8 rounded-full bg-slate-600 bg-cover bg-center flex-shrink-0"
+                          style={{
+                            backgroundImage: `url(${session.user.image})`,
+                          }}
+                          role="img"
+                          aria-label="Profile"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
+                          <User size={16} />
+                        </div>
+                      )}
+                      <span className="max-w-[100px] truncate">
+                        {session.user.nickname ||
+                          session.user.name?.split(" ")[0] ||
+                          "Account"}
+                      </span>
+                      <ChevronDown size={16} />
+                    </button>
+
+                    {/* User Dropdown */}
+                    {isUserMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-theme-surface-hover rounded-md shadow-lg z-50">
+                        <Link
+                          href={`${prefix}/profile`}
+                          className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <User size={16} />
+                          <span>My Profile</span>
+                        </Link>
+                        <Link
+                          href={`${prefix}/players?uid=${session.user.uid}`}
+                          className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Trophy size={16} />
+                          <span>My Stats</span>
+                        </Link>
+                        <hr className="border-slate-600 my-1" />
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600 w-full text-left text-red-400"
+                        >
+                          <LogOut size={16} />
+                          <span>Sign Out</span>
+                        </button>
                       </div>
                     )}
-                    <span className="max-w-[100px] truncate">
-                      {session.user.nickname ||
-                        session.user.name?.split(" ")[0] ||
-                        "Account"}
-                    </span>
-                    <ChevronDown size={16} />
-                  </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    <Link
+                      href={`${prefix}/login`}
+                      className="flex items-center space-x-1 hover:text-theme-primary transition-colors"
+                    >
+                      <LogIn size={18} />
+                      <span>Sign In</span>
+                    </Link>
+                    <Link
+                      href={`${prefix}/register`}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-md text-sm transition-colors"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-                  {/* User Dropdown */}
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-theme-surface-hover rounded-md shadow-lg z-50">
-                      <Link
-                        href="/profile"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <User size={16} />
-                        <span>My Profile</span>
-                      </Link>
-                      <Link
-                        href={`${prefix}/players?uid=${session.user.uid}`}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Trophy size={16} />
-                        <span>My Stats</span>
-                      </Link>
-                      <hr className="border-slate-600 my-1" />
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-slate-600 w-full text-left text-red-400"
-                      >
-                        <LogOut size={16} />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Link
-                    href="/login"
-                    className="flex items-center space-x-1 hover:text-theme-primary transition-colors"
-                  >
-                    <LogIn size={18} />
-                    <span>Sign In</span>
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-md text-sm transition-colors"
-                  >
-                    Register
-                  </Link>
-                </div>
-              )}
+          {/* Mobile Menu Button - only show when in a league (has nav items) */}
+          {isInLeague && (
+            <div className="md:hidden">
+              <button
+                onClick={toggleMenu}
+                className="p-2 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-white"
+                aria-expanded={isOpen}
+                aria-label="Toggle menu"
+              >
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
             </div>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button
-              onClick={toggleMenu}
-              className="p-2 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-white"
-              aria-expanded={isOpen}
-              aria-label="Toggle menu"
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Mobile Navigation */}
@@ -307,82 +309,84 @@ const Navbar = () => {
                 </div>
               ))}
 
-              {/* Auth Section - Mobile */}
-              <div className="pt-4 mt-4 border-t border-slate-600">
-                {status === "loading" ? (
-                  <div className="px-3 py-2">
-                    <div className="w-full h-10 bg-slate-700 rounded animate-pulse" />
-                  </div>
-                ) : session ? (
-                  <>
-                    <div className="px-3 py-2 flex items-center space-x-3">
-                      {session.user.image ? (
-                        <div
-                          className="w-10 h-10 rounded-full bg-slate-600 bg-cover bg-center flex-shrink-0"
-                          style={{
-                            backgroundImage: `url(${session.user.image})`,
-                          }}
-                          role="img"
-                          aria-label="Profile"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
-                          <User size={20} />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {session.user.nickname || session.user.name}
-                        </p>
-                        <p className="text-sm text-slate-400">
-                          {session.user.email}
-                        </p>
-                      </div>
+              {/* Auth Section - Mobile (only show in league context) */}
+              {isInLeague && (
+                <div className="pt-4 mt-4 border-t border-slate-600">
+                  {status === "loading" ? (
+                    <div className="px-3 py-2">
+                      <div className="w-full h-10 bg-slate-700 rounded animate-pulse" />
                     </div>
-                    <Link
-                      href="/profile"
-                      className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <User size={20} />
-                      <span>My Profile</span>
-                    </Link>
-                    <Link
-                      href={`${prefix}/players?uid=${session.user.uid}`}
-                      className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Trophy size={20} />
-                      <span>My Stats</span>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700 text-red-400"
-                    >
-                      <LogOut size={20} />
-                      <span>Sign Out</span>
-                    </button>
-                  </>
-                ) : (
-                  <div className="space-y-2">
-                    <Link
-                      href="/login"
-                      className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <LogIn size={20} />
-                      <span>Sign In</span>
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="flex items-center justify-center space-x-2 mx-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <span>Create Account</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                  ) : session ? (
+                    <>
+                      <div className="px-3 py-2 flex items-center space-x-3">
+                        {session.user.image ? (
+                          <div
+                            className="w-10 h-10 rounded-full bg-slate-600 bg-cover bg-center flex-shrink-0"
+                            style={{
+                              backgroundImage: `url(${session.user.image})`,
+                            }}
+                            role="img"
+                            aria-label="Profile"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
+                            <User size={20} />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium">
+                            {session.user.nickname || session.user.name}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {session.user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`${prefix}/profile`}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User size={20} />
+                        <span>My Profile</span>
+                      </Link>
+                      <Link
+                        href={`${prefix}/players?uid=${session.user.uid}`}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Trophy size={20} />
+                        <span>My Stats</span>
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700 text-red-400"
+                      >
+                        <LogOut size={20} />
+                        <span>Sign Out</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <Link
+                        href={`${prefix}/login`}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-700"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <LogIn size={20} />
+                        <span>Sign In</span>
+                      </Link>
+                      <Link
+                        href={`${prefix}/register`}
+                        className="flex items-center justify-center space-x-2 mx-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <span>Create Account</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

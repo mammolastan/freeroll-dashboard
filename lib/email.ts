@@ -44,10 +44,10 @@ export async function sendPasswordResetEmail(
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
-  const subject = `Reset Your Password - ${leagueName} on Open Tab League`;
+  const subject = `Reset Your Password - ${leagueName} on Open Bar League`;
 
   const text = `
-You requested a password reset for your your player account with ${leagueName} on Open Tab League.
+You requested a password reset for your your player account with ${leagueName} on Open Bar League.
 
 Click the link below to reset your password:
 ${resetUrl}
@@ -66,7 +66,7 @@ If you did not request this reset, you can safely ignore this email.
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Open Tab League</h1>
+    <h1 style="color: white; margin: 0; font-size: 24px;">Open Bar League</h1>
   </div>
 
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">

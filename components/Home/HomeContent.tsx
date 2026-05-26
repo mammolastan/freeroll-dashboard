@@ -61,8 +61,9 @@ export default function HomeContent({
   const navItems = getNavItems(prefix);
   const adminNavItems = getAdminNavItems(prefix);
 
-  // Extract league slug from prefix (e.g., "/freeroll-atl" -> "freeroll-atl")
-  const leagueSlug = prefix.replace(/^\//, "");
+  // Extract league slug from prefix (e.g., "/l/freeroll-atlanta" -> "freeroll-atlanta")
+  // The prefix is now in format "/l/[leagueSlug]"
+  const leagueSlug = prefix.startsWith("/l/") ? prefix.slice(3) : prefix.replace(/^\//, "");
 
   // Fetch the user's role for this league
   useEffect(() => {

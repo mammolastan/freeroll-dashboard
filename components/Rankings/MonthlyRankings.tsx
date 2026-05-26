@@ -280,7 +280,7 @@ export default function MonthlyRankings() {
         <p>
           View full{" "}
           <Link
-            href={leagueSlug ? `/${leagueSlug}/venues` : "/venues"}
+            href={leagueSlug ? `/l/${leagueSlug}/venues` : "/venues"}
             className="text-blue-400 hover:text-blue-300 underline"
           >
             venue rankings

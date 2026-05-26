@@ -33,7 +33,7 @@ self.addEventListener('push', (event) => {
           // Note: custom audio files cannot be played from the SW context.
           // The OS will use its default notification sound.
           return self.registration.showNotification(
-            data.title || '⏱ OpenTabLeague',
+            data.title || '⏱ OpenBarLeague',
             {
               body: data.body || '',
               icon: '/icons/default-icon-512.png',
@@ -59,7 +59,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'OpenTabLeague', options)
+    self.registration.showNotification(data.title || 'OpenBarLeague', options)
   );
 });
 
