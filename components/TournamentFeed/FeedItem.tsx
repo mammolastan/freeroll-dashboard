@@ -170,7 +170,7 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
 
               {/* Hitman Name */}
               <span className="text-sm font-medium text-cyan-400">
-                {hitmanDisplay || "Unknown"}
+                {hitmanDisplay || "Someone"}
               </span>
 
               {/* Action text */}
