@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { getNavItems, getAdminNavItems, NavItem } from "@/lib/navConfig";
 import PushSubscribeButton from "@/components/push/PushSubscribeButton";
+import { InstallAppButton } from "@/components/ui/InstallAppButton";
 
 interface HomeContentProps {
   prefix?: string;
@@ -142,6 +143,7 @@ export default function HomeContent({
             />
           );
         })}
+        <InstallAppButton variant="tile" />
       </div>
     </main>
   );
