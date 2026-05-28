@@ -253,6 +253,12 @@ async function updateTimer(tournamentId) {
                 }
                 stateChanged = true;
             }
+            else if (timer.timeRemaining === 0 && timer.currentLevel >= timer.blindLevels.length) {
+                // Final level reached - stop the timer
+                timer.isRunning = false;
+                console.log(`Tournament ${tournamentId} timer completed - reached final level ${timer.currentLevel}`);
+                stateChanged = true;
+            }
         }
     }
     // Save to database if significant state change occurred
@@ -615,6 +621,8 @@ app.prepare().then(async () => {
                 const elapsed = Math.floor((now - timer.lastUpdate) / 1000);
                 if (elapsed >= timer.timeRemaining) {
                     // Timer expired — delegate to existing updateTimer which handles level advance
+                    const previousLevel = timer.currentLevel;
+                    const wasRunning = timer.isRunning;
                     const updatedTimer = await updateTimer(tournamentId);
                     if (updatedTimer &&
                         typeof updatedTimer.timeRemaining === "number" &&
@@ -630,7 +638,13 @@ app.prepare().then(async () => {
                             serverTime: Date.now(),
                         };
                         io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                        console.log(`Timer level expired for tournament ${tournamentId}, advanced to level ${updatedTimer.currentLevel}`);
+                        // Only log if level actually changed or timer stopped
+                        if (updatedTimer.currentLevel !== previousLevel) {
+                            console.log(`Timer level expired for tournament ${tournamentId}, advanced to level ${updatedTimer.currentLevel}`);
+                        }
+                        else if (wasRunning && !updatedTimer.isRunning) {
+                            console.log(`Timer completed for tournament ${tournamentId} at level ${updatedTimer.currentLevel}`);
+                        }
                     }
                 }
                 // No broadcast on normal ticks — clients compute their own countdown

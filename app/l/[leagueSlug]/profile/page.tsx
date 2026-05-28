@@ -101,7 +101,7 @@ export default function ProfilePage({
 
         // Update the session so navbar/other components reflect change
         await updateSession({
-          name: session?.user?.name,
+          name: data.name,
           nickname: data.nickname,
           image: session?.user?.image,
         });
