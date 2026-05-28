@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useScreenRouter } from "./hooks/useScreenRouter";
+import { useSocketConnectionStatus } from "./hooks/useSocketConnectionStatus";
 import { FullAdminScreen } from "./screens/Screen1_FullAdmin/FullAdminScreen";
 import { GameTimerScreen } from "./screens/Screen2_GameTimer/GameTimerScreen";
 import { PlayerCheckInScreen } from "./screens/Screen3_PlayerCheckIn/PlayerCheckInScreen";
@@ -47,6 +48,7 @@ interface Player {
 
 export default function TournamentEntryPage() {
   const { currentScreen, setCurrentScreen } = useScreenRouter(1);
+  const { connectionStatus, reconnectAttempt, manualReconnect } = useSocketConnectionStatus();
 
   // Authentication is now handled by middleware - if we reach this page, user is an admin
 
@@ -269,6 +271,34 @@ export default function TournamentEntryPage() {
 
   return (
     <>
+      {/* Disconnected overlay */}
+      {(connectionStatus === 'disconnected' || connectionStatus === 'reconnecting') && (
+        <div
+          className="fixed inset-0 bg-yellow-500/20 z-40 pointer-events-none"
+          style={{ backdropFilter: 'saturate(0.8)' }}
+        />
+      )}
+
+      {/* Connection status indicator */}
+      {connectionStatus === 'connected' && (
+        <div className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400/50 animate-pulse">
+          Live
+        </div>
+      )}
+      {(connectionStatus === 'disconnected' || connectionStatus === 'reconnecting') && (
+        <button
+          onClick={manualReconnect}
+          className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(234,179,8,0.5)] border border-yellow-400/50 animate-pulse hover:from-yellow-400 hover:to-orange-400 cursor-pointer"
+        >
+          {reconnectAttempt > 0 ? `Reconnecting (${reconnectAttempt})... Tap to retry` : 'Reconnecting... Tap to retry'}
+        </button>
+      )}
+      {connectionStatus === 'connecting' && (
+        <div className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-blue-400/50 animate-pulse">
+          Connecting...
+        </div>
+      )}
+
       {currentScreen === 1 && (
         <FullAdminScreen
           currentView={currentView}
