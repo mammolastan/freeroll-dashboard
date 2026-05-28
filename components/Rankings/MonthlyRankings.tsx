@@ -352,6 +352,7 @@ export default function MonthlyRankings() {
           <MonthlyPlayerCard
             key={player.uid}
             player={player}
+            leagueSlug={leagueSlug || undefined}
           />
         ))}
       </div>

@@ -24,12 +24,15 @@ interface MonthlyPlayerData {
 interface MonthlyPlayerCardProps {
   player: MonthlyPlayerData;
   favoriteButton?: React.ReactNode;
+  leagueSlug?: string;
 }
 
 export function MonthlyPlayerCard({
   player,
   favoriteButton,
+  leagueSlug,
 }: MonthlyPlayerCardProps) {
+  const basePath = leagueSlug ? `/l/${leagueSlug}` : "";
   return (
     <div
       className={`m-0 bg-white hover:py-1 transition-all duration-500 overflow-hidden border-y-2 border-red-100`}
@@ -41,7 +44,7 @@ export function MonthlyPlayerCard({
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 flex-shrink min-w-0">
                 <Link
-                  href={`/players?uid=${encodeURIComponent(player.uid)}`}
+                  href={`${basePath}/players?uid=${encodeURIComponent(player.uid)}`}
                   className="freeroll-link text-lg font-medium truncate"
                 >
                   {player.nickname || player.name}
@@ -71,7 +74,7 @@ export function MonthlyPlayerCard({
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
                 >
                   <Link
-                    href={`/venues?venue=${encodeURIComponent(venue.venue)}`}
+                    href={`${basePath}/venues?venue=${encodeURIComponent(venue.venue)}`}
                     className="text-blue-600 hover:text-blue-800 font-medium"
                   >
                     {venue.venue}
