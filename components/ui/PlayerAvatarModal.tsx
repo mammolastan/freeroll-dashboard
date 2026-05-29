@@ -1,9 +1,12 @@
 // components/ui/PlayerAvatarModal.tsx
 
+"use client";
+
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import './PlayerAvatarModal.css';
 
 interface PlayerAvatarModalProps {
@@ -15,6 +18,16 @@ interface PlayerAvatarModalProps {
 }
 
 export function PlayerAvatarModal({ photoUrl, name, uid, isOpen, onClose }: PlayerAvatarModalProps) {
+    const params = useParams();
+    const leagueSlug = params?.leagueSlug as string | undefined;
+
+    // Build the player profile URL with league slug if available
+    const playerUrl = uid
+        ? leagueSlug
+            ? `/l/${leagueSlug}/players?uid=${encodeURIComponent(uid)}`
+            : `/players?uid=${encodeURIComponent(uid)}`
+        : null;
+
     // Handle escape key
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -73,8 +86,8 @@ export function PlayerAvatarModal({ photoUrl, name, uid, isOpen, onClose }: Play
                     <div className="glass-reflection" />
 
                     {/* Image container with sheen effect */}
-                    {uid ? (
-                        <Link href={`/players?uid=${encodeURIComponent(uid)}`} className="glass-image-container block">
+                    {playerUrl ? (
+                        <Link href={playerUrl} className="glass-image-container block">
                             <img
                                 src={photoUrl}
                                 alt={name}
@@ -102,9 +115,9 @@ export function PlayerAvatarModal({ photoUrl, name, uid, isOpen, onClose }: Play
 
                 {/* Name footer - styled to match the glass theme */}
                 <div className="mt-4 text-center">
-                    {uid ? (
+                    {playerUrl ? (
                         <Link
-                            href={`/players?uid=${encodeURIComponent(uid)}`}
+                            href={playerUrl}
                             className="text-xl font-semibold text-white drop-shadow-lg hover:text-cyan-300 transition-colors"
                         >
                             {name}

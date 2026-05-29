@@ -129,6 +129,7 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
           width={32}
           height={32}
           className="!h-12 !w-12"
+          unoptimized
         />
       );
     }
