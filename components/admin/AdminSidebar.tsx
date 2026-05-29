@@ -20,6 +20,7 @@ import {
   X,
   Award,
   Palette,
+  TrendingUp,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -39,6 +40,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
     isDisabled?: boolean;
   }[] = [
     { href: base, label: "Dashboard", icon: LayoutDashboard },
+    { href: `${base}/trends`, label: "Trends", icon: TrendingUp },
     { href: `${base}/tournaments`, label: "Tournaments", icon: Award },
     { href: `${base}/seasons`, label: "Seasons", icon: Calendar },
     { href: `${base}/venues`, label: "Venues", icon: MapPin },
@@ -117,7 +119,11 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map(({ href, label, icon: Icon, isDisabled }) => {
-            const active = pathname === href;
+            // Dashboard is exact match only, others use startsWith for nested routes
+            const active =
+              href === base
+                ? pathname === href
+                : pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={href}
