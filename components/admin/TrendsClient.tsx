@@ -70,7 +70,15 @@ const DAY_COLORS: Record<string, string> = {
   Saturday: "#3b82f6",
 };
 
-const DAY_ORDER = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_ORDER = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 function formatMonth(m: string) {
   const [y, mo] = m.split("-");
@@ -100,7 +108,9 @@ export default function TrendsClient({
   const venueChartData = Array.from(venueDataMap.values());
 
   // Pivot day data: one object per month with { month, [dayName]: avg_players, ... }
-  const dayList = DAY_ORDER.filter((d) => daysByMonth.some((r) => r.day_name === d));
+  const dayList = DAY_ORDER.filter((d) =>
+    daysByMonth.some((r) => r.day_name === d),
+  );
   const dayDataMap = new Map<string, Record<string, number | string>>();
 
   for (const row of daysByMonth) {
@@ -150,9 +160,15 @@ export default function TrendsClient({
           Average Players per Game
         </h2>
         {playersByMonth.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer
+            width="100%"
+            height={260}
+          >
             <LineChart data={playersByMonth}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.1)"
+              />
               <XAxis
                 dataKey="month"
                 tickFormatter={formatMonth}
@@ -202,9 +218,15 @@ export default function TrendsClient({
         </p>
         {venueChartData.length > 0 && venueList.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer
+              width="100%"
+              height={260}
+            >
               <LineChart data={venueChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.1)"
+                />
                 <XAxis
                   dataKey="month"
                   tickFormatter={formatMonth}
@@ -226,7 +248,8 @@ export default function TrendsClient({
                   labelFormatter={formatMonth}
                 />
                 {venueList.map((venue, index) => {
-                  const isSelected = showingAllVenues || selectedVenues.has(venue);
+                  const isSelected =
+                    showingAllVenues || selectedVenues.has(venue);
                   return (
                     <Line
                       key={venue}
@@ -236,7 +259,15 @@ export default function TrendsClient({
                       stroke={VENUE_COLORS[index % VENUE_COLORS.length]}
                       strokeWidth={isSelected ? 2 : 1}
                       strokeOpacity={isSelected ? 1 : 0.15}
-                      dot={isSelected ? { fill: VENUE_COLORS[index % VENUE_COLORS.length], strokeWidth: 0, r: 3 } : false}
+                      dot={
+                        isSelected
+                          ? {
+                              fill: VENUE_COLORS[index % VENUE_COLORS.length],
+                              strokeWidth: 0,
+                              r: 3,
+                            }
+                          : false
+                      }
                       activeDot={isSelected ? { r: 5 } : false}
                       connectNulls
                     />
@@ -247,20 +278,22 @@ export default function TrendsClient({
             {/* Custom clickable legend */}
             <div className="flex flex-wrap gap-3 justify-center pt-3">
               {venueList.map((venue, index) => {
-                const isSelected = showingAllVenues || selectedVenues.has(venue);
+                const isSelected =
+                  showingAllVenues || selectedVenues.has(venue);
                 return (
                   <button
                     key={venue}
                     onClick={() => handleVenueClick(venue)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all ${
-                      isSelected
-                        ? "opacity-100"
-                        : "opacity-40 hover:opacity-60"
+                      isSelected ? "opacity-100" : "opacity-40 hover:opacity-60"
                     } ${!showingAllVenues && selectedVenues.has(venue) ? "bg-white/10 ring-1 ring-white/20" : ""}`}
                   >
                     <span
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: VENUE_COLORS[index % VENUE_COLORS.length] }}
+                      style={{
+                        backgroundColor:
+                          VENUE_COLORS[index % VENUE_COLORS.length],
+                      }}
                     />
                     <span className="text-white/80">{venue}</span>
                   </button>
@@ -293,9 +326,15 @@ export default function TrendsClient({
         </p>
         {dayChartData.length > 0 && dayList.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer
+              width="100%"
+              height={260}
+            >
               <LineChart data={dayChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.1)"
+                />
                 <XAxis
                   dataKey="month"
                   tickFormatter={formatMonth}
@@ -327,7 +366,11 @@ export default function TrendsClient({
                       stroke={DAY_COLORS[day]}
                       strokeWidth={isSelected ? 2 : 1}
                       strokeOpacity={isSelected ? 1 : 0.15}
-                      dot={isSelected ? { fill: DAY_COLORS[day], strokeWidth: 0, r: 3 } : false}
+                      dot={
+                        isSelected
+                          ? { fill: DAY_COLORS[day], strokeWidth: 0, r: 3 }
+                          : false
+                      }
                       activeDot={isSelected ? { r: 5 } : false}
                       connectNulls
                     />
@@ -344,9 +387,7 @@ export default function TrendsClient({
                     key={day}
                     onClick={() => handleDayClick(day)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all ${
-                      isSelected
-                        ? "opacity-100"
-                        : "opacity-40 hover:opacity-60"
+                      isSelected ? "opacity-100" : "opacity-40 hover:opacity-60"
                     } ${!showingAllDays && selectedDays.has(day) ? "bg-white/10 ring-1 ring-white/20" : ""}`}
                   >
                     <span
@@ -380,12 +421,22 @@ export default function TrendsClient({
           New Players by Venue
         </h2>
         <p className="text-white/40 text-sm mb-4">
-          Where new players played their first game.
+          Where new players (within last year) played their first game.
         </p>
         {newPlayersByVenue.length > 0 ? (
-          <ResponsiveContainer width="100%" height={Math.max(260, newPlayersByVenue.length * 32)}>
-            <BarChart data={newPlayersByVenue} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={false} />
+          <ResponsiveContainer
+            width="100%"
+            height={Math.max(260, newPlayersByVenue.length * 32)}
+          >
+            <BarChart
+              data={newPlayersByVenue}
+              layout="vertical"
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.1)"
+                horizontal={false}
+              />
               <XAxis
                 type="number"
                 stroke="rgba(255,255,255,0.4)"
@@ -429,9 +480,15 @@ export default function TrendsClient({
           New Players per Month
         </h2>
         {newPlayersByMonth.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer
+            width="100%"
+            height={260}
+          >
             <BarChart data={newPlayersByMonth}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.1)"
+              />
               <XAxis
                 dataKey="month"
                 tickFormatter={formatMonth}
