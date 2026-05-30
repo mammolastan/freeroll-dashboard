@@ -33,7 +33,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const base = `/l/${leagueSlug}/admin`;
 
-  const navItems: {
+  const adminItems: {
     href: string;
     label: string;
     icon: typeof LayoutDashboard;
@@ -55,20 +55,20 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       icon: ListOrdered,
     },
     { href: `${base}/badges`, label: "Badges", icon: Star },
-
     { href: `${base}/members`, label: "Players", icon: Users },
-    ...(canManageRoles(role)
-      ? [
-          {
-            href: `${base}/scoring`,
-            label: "Scoring",
-            icon: Trophy,
-          },
-          { href: `${base}/settings`, label: "Identity", icon: Settings },
-          { href: `${base}/branding`, label: "Branding", icon: Palette },
-        ]
-      : []),
   ];
+
+  const ownerItems: typeof adminItems = canManageRoles(role)
+    ? [
+        {
+          href: `${base}/scoring`,
+          label: "Scoring",
+          icon: Trophy,
+        },
+        { href: `${base}/settings`, label: "Identity", icon: Settings },
+        { href: `${base}/branding`, label: "Branding", icon: Palette },
+      ]
+    : [];
 
   const handleLinkClick = () => {
     setIsOpen(false);
@@ -118,7 +118,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
           <p className="text-sm text-white/60 mt-1 capitalize">{role}</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map(({ href, label, icon: Icon, isDisabled }) => {
+          {adminItems.map(({ href, label, icon: Icon, isDisabled }) => {
             // Dashboard is exact match only, others use startsWith for nested routes
             const active =
               href === base
@@ -143,6 +143,33 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
               </Link>
             );
           })}
+          {ownerItems.length > 0 && (
+            <>
+              <hr className="border-amber-600/50 my-3" />
+              {ownerItems.map(({ href, label, icon: Icon, isDisabled }) => {
+                const active =
+                  pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={handleLinkClick}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+    ${
+      isDisabled
+        ? "line-through opacity-40 cursor-not-allowed"
+        : active
+          ? "bg-cyan-500/20 text-cyan-300"
+          : "text-white/60 hover:text-white hover:bg-white/5"
+    }`}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
       </aside>
     </>
