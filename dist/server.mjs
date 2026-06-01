@@ -7,12 +7,59 @@ import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import { resolveBlindSchedule } from "./lib/blindLevels.mjs";
 import { DEFAULT_LEAGUE_CONFIG as DEFAULT_LEAGUE_CONFIG_MJS } from "./types/league-config-defaults.mjs";
+import * as webpush from "web-push";
 const DEFAULT_LEAGUE_CONFIG = DEFAULT_LEAGUE_CONFIG_MJS;
 // Initialize Prisma Client
 const globalForPrisma = globalThis;
 const prisma = (_a = globalForPrisma.prisma) !== null && _a !== void 0 ? _a : new PrismaClient();
 if (process.env.NODE_ENV !== "production")
     globalForPrisma.prisma = prisma;
+// Configure web-push for push notifications
+if (process.env.VAPID_SUBJECT && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+}
+/**
+ * Send push notifications to all checked-in players in a tournament
+ * who have push subscriptions for the league.
+ */
+async function sendToTournamentPlayers(tournamentId, payload) {
+    const subs = await prisma.$queryRawUnsafe(`SELECT DISTINCT ps.id, ps.endpoint, ps.p256dh, ps.auth
+     FROM push_subscriptions ps
+     INNER JOIN tournament_draft_players tdp ON ps.player_uid = tdp.player_uid
+     INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
+     WHERE tdp.tournament_draft_id = ?
+       AND tdp.checked_in_at IS NOT NULL
+       AND ps.league_id = td.league_id`, tournamentId);
+    let sent = 0;
+    let failed = 0;
+    let removed = 0;
+    const staleIds = [];
+    for (const sub of subs) {
+        try {
+            await webpush.sendNotification({
+                endpoint: sub.endpoint,
+                keys: { p256dh: sub.p256dh, auth: sub.auth },
+            }, JSON.stringify(payload));
+            sent++;
+        }
+        catch (err) {
+            const error = err;
+            if (error.statusCode === 410 || error.statusCode === 404) {
+                staleIds.push(sub.id);
+                removed++;
+            }
+            else {
+                failed++;
+                console.error('[push] sendNotification error:', error.statusCode, error.message);
+            }
+        }
+    }
+    if (staleIds.length > 0) {
+        await prisma.$executeRawUnsafe(`DELETE FROM push_subscriptions WHERE id IN (${staleIds.map(() => '?').join(',')})`, ...staleIds);
+    }
+    console.log(`[push] tournament ${tournamentId}: sent=${sent} failed=${failed} removed=${removed}`);
+    return { sent, failed, removed };
+}
 async function logSocketAuditEvent(params) {
     var _a, _b, _c;
     try {
@@ -744,8 +791,20 @@ app.prepare().then(async () => {
             });
             // Timer event handlers
             socket.on("timer:start", async ({ tournamentId, actor }) => {
-                var _a, _b;
+                var _a, _b, _c;
                 console.log(`Timer start requested for tournament ${tournamentId}`);
+                // Check if this is the initial start (game_started === false)
+                const tournamentInfo = await prisma.tournamentDraft.findUnique({
+                    where: { id: tournamentId },
+                    select: {
+                        game_started: true,
+                        title: true,
+                        venue: true,
+                        check_in_token: true,
+                        leagues: { select: { slug: true } },
+                    },
+                });
+                const isInitialStart = tournamentInfo && !tournamentInfo.game_started;
                 // Capture state before starting for audit log
                 const previousState = timerStates.get(tournamentId);
                 const previousValue = previousState ? {
@@ -780,13 +839,34 @@ app.prepare().then(async () => {
                 if (timerState.currentLevel === 1 && timerState.blindLevels[0]) {
                     await postBlindLevelChangeFeedItem(tournamentId, 1, timerState.blindLevels[0]);
                 }
+                // Handle initial start: mark game_started and send push notifications
+                if (isInitialStart && tournamentInfo) {
+                    // Mark game as started
+                    await prisma.tournamentDraft.update({
+                        where: { id: tournamentId },
+                        data: { game_started: true },
+                    });
+                    console.log(`Game marked as started for tournament ${tournamentId}`);
+                    // Send push notifications to checked-in players
+                    const venueName = tournamentInfo.title || tournamentInfo.venue || 'the venue';
+                    const leagueSlug = (_a = tournamentInfo.leagues) === null || _a === void 0 ? void 0 : _a.slug;
+                    const token = tournamentInfo.check_in_token;
+                    if (leagueSlug && token) {
+                        // Fire and forget - don't block timer
+                        sendToTournamentPlayers(tournamentId, {
+                            title: 'Tournament Starting!',
+                            body: `Shuffle up and deal! The tournament at ${venueName} is now underway.`,
+                            url: `/l/${leagueSlug}/gameview/${token}`,
+                        }).catch((err) => console.error('[push] Timer start notification failed:', err));
+                    }
+                }
                 // Audit log: TIMER_STARTED
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_STARTED',
                     actionCategory: 'ADMIN',
-                    actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                    actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                    actorId: (_b = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _b !== void 0 ? _b : null,
+                    actorName: (_c = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _c !== void 0 ? _c : 'Admin',
                     previousValue,
                     newValue: {
                         isRunning: true,
@@ -795,7 +875,7 @@ app.prepare().then(async () => {
                         timeRemaining: timerState.timeRemaining,
                     },
                     metadata: {
-                        firstStart: timerState.currentLevel === 1,
+                        firstStart: isInitialStart,
                     },
                     ipAddress: socket.data.clientIP,
                 });
