@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
         td.tournament_date,
         td.tournament_time,
         td.director_name,
+        td.title as game_title,
         v.name AS venue,
         v.cutoff_time AS venue_cutoff_time,
         td.start_points,

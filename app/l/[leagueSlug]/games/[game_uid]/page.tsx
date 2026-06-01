@@ -22,13 +22,20 @@ interface Player {
     photo_url: string | null
 }
 
+interface CompetitionPeriod {
+    name: string
+    period_type: string
+}
+
 interface GameDetails {
     players: Player[]
     venue: string
+    game_title?: string | null
     date: string
     totalPlayers: number
     totalKnockouts: number
     averagePoints: number
+    periods?: CompetitionPeriod[]
 }
 
 // Simpler date formatting function that preserves UTC
@@ -96,10 +103,24 @@ export default function GamePage({ params }: { params: Promise<{ game_uid: strin
             </Link>
 
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">{gameDetails.venue}</h1>
-                <p className="text-gray-600">
-                    {formatGameDate(gameDetails.date)}
-                </p>
+                <h1 className="text-3xl font-bold mb-2">{gameDetails.game_title || gameDetails.venue}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-gray-600">
+                        {formatGameDate(gameDetails.date)}
+                    </span>
+                    {gameDetails.periods?.map((period) => (
+                        <span
+                            key={period.name}
+                            className={`text-xs px-2 py-0.5 rounded ${
+                                period.period_type === "monthly"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-green-100 text-green-800"
+                            }`}
+                        >
+                            {period.name}
+                        </span>
+                    ))}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

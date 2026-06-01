@@ -15,6 +15,7 @@ interface ActiveTournament {
     tournament_time?: string;
     director_name: string;
     venue: string;
+    game_title?: string | null;
     start_points: number;
     status: string;
     blind_schedule: string;
@@ -139,7 +140,7 @@ function CheckInPageContent() {
                                     {/* Header */}
                                     <div className="border-b border-cyan-500/20 p-6 pb-4">
                                         <div className="text-xl font-semibold text-cyan-300 flex items-center justify-between">
-                                            <span className="truncate">{tournament.venue}</span>
+                                            <span className="truncate">{tournament.game_title || tournament.venue}</span>
                                             <ArrowRight className="h-5 w-5 flex-shrink-0 ml-2" />
                                         </div>
                                     </div>

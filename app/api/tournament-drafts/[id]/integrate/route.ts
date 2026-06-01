@@ -225,30 +225,18 @@ export async function POST(
           }
         });
 
-        // 7b. Create game_periods records
+        // 7b. Create game_periods records using admin-selected periods from the draft
         let periodIds: number[] = [];
 
-        // Check if period_ids were specified in the draft
         if (draft.period_ids) {
           try {
             periodIds = JSON.parse(draft.period_ids);
           } catch {
-            console.warn('Failed to parse period_ids from draft, falling back to auto-assignment');
+            console.warn('Failed to parse period_ids from draft');
           }
         }
 
-        // If no period_ids specified, auto-assign based on date range
-        if (periodIds.length === 0) {
-          const matchingPeriods = await tx.$queryRaw<{ id: number }[]>`
-            SELECT id FROM competition_periods
-            WHERE league_id = ${draft.league_id}
-            AND is_active = 1
-            AND ${new Date(draft.tournament_date)} BETWEEN start_date AND end_date
-          `;
-          periodIds = matchingPeriods.map(p => p.id);
-        }
-
-        // Insert game_periods records
+        // Only insert periods that were explicitly selected by admin
         for (const periodId of periodIds) {
           await tx.$executeRaw`
             INSERT INTO game_periods (game_id, period_id, assigned_by)

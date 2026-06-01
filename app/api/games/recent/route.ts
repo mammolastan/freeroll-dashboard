@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         game_uid: string;
         game_date: Date;
         venue: string;
+        game_title: string | null;
         totalPlayers: bigint;
       }>
     >`
@@ -22,13 +23,15 @@ export async function GET(request: NextRequest) {
         g.uid as game_uid,
         g.date as game_date,
         v.name as venue,
+        td.title as game_title,
         COUNT(a.player_id) as totalPlayers
       FROM games g
       JOIN venues v ON v.id = g.venue_id
+      LEFT JOIN tournament_drafts td ON td.id = g.tournament_draft_id
       LEFT JOIN appearances a ON a.game_id = g.id
       WHERE g.date IS NOT NULL
       AND g.league_id = ${leagueId}
-      GROUP BY g.id, g.uid, g.date, v.name
+      GROUP BY g.id, g.uid, g.date, v.name, td.title
       ORDER BY g.date DESC
       LIMIT 15
     `;
@@ -77,9 +80,21 @@ export async function GET(request: NextRequest) {
           photo_url: player.photo_url,
         }));
 
+        // Get competition periods for this game
+        const periods = await prisma.$queryRaw<
+          Array<{ name: string; period_type: string }>
+        >`
+          SELECT cp.name, cp.period_type
+          FROM game_periods gp
+          JOIN competition_periods cp ON cp.id = gp.period_id
+          WHERE gp.game_id = (SELECT id FROM games WHERE uid = ${game.game_uid})
+          ORDER BY cp.display_order ASC
+        `;
+
         return {
           game_uid: game.game_uid,
           venue: game.venue || "Unknown Venue",
+          game_title: game.game_title || null,
           date: game.game_date.toISOString(),
           totalPlayers: Number(game.totalPlayers),
           topThree,
@@ -87,6 +102,7 @@ export async function GET(request: NextRequest) {
             (sum, player) => sum + (Number(player.knockouts) || 0),
             0
           ),
+          periods,
         };
       })
     );

@@ -36,13 +36,24 @@ export default function LandingPage() {
                     <h3 className="text-xl font-semibold text-white group-hover:text-cyan-400 transition-colors">
                       Freeroll Atlanta
                     </h3>
-                    <p className="text-slate-400">
-                      View player stats, rankings, and tournaments
-                    </p>
+                    <p className="text-slate-400">Atlanta, GA</p>
                   </div>
                 </div>
               </Link>
             </div>
+          </div>
+
+          {/* What is it Section */}
+          <div className="mt-16 text-center">
+            <h2 className="text-2xl font-semibold text-white mb-4">
+              What is it?
+            </h2>
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              Most poker tourney tools are too complex. Open Bar League is built
+              for simplicity, designed for owners who need less busywork, TDs
+              who need a dead-simple game console, and players who actually want
+              to stay engaged with live scoring, rankings, and more.
+            </p>
           </div>
         </div>
       </section>

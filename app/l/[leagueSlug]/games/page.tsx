@@ -19,13 +19,20 @@ interface TopPlayer {
   photo_url: string | null;
 }
 
+interface CompetitionPeriod {
+  name: string;
+  period_type: string;
+}
+
 interface Game {
   venue: string;
+  game_title?: string | null;
   date: string;
   totalPlayers: number;
   topThree: TopPlayer[];
   totalKnockouts: number;
   game_uid: string;
+  periods?: CompetitionPeriod[];
 }
 
 //Helper function to format the timestamp
@@ -96,11 +103,25 @@ export default function GamesPage() {
           >
             <CardHeader className="bg-blue-50">
               <CardTitle className="text-xl font-semibold text-blue-900">
-                {game.venue}
+                {game.game_title || game.venue}
               </CardTitle>
-              <p className="text-sm text-gray-600">
-                {formatLeagueDate(game.date, timezone)}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {formatLeagueDate(game.date, timezone)}
+                </span>
+                {game.periods?.map((period) => (
+                  <span
+                    key={period.name}
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      period.period_type === "monthly"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {period.name}
+                  </span>
+                ))}
+              </div>
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-4">
