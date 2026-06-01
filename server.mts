@@ -59,7 +59,7 @@ async function sendToTournamentPlayers(
   >(
     `SELECT DISTINCT ps.id, ps.endpoint, ps.p256dh, ps.auth
      FROM push_subscriptions ps
-     INNER JOIN tournament_draft_players tdp ON ps.player_uid = tdp.player_uid
+     INNER JOIN tournament_draft_players tdp ON ps.player_uid COLLATE utf8mb4_unicode_520_ci = tdp.player_uid
      INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
      WHERE tdp.tournament_draft_id = ?
        AND tdp.checked_in_at IS NOT NULL
@@ -1013,7 +1013,7 @@ app.prepare().then(async () => {
             title: true,
             venue: true,
             check_in_token: true,
-            leagues: { select: { slug: true } },
+            leagues: { select: { slug: true, league_settings: true } },
           },
         });
 
@@ -1074,11 +1074,29 @@ app.prepare().then(async () => {
           const token = tournamentInfo.check_in_token;
 
           if (leagueSlug && token) {
+            // Determine icon URL from league settings
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
+            let iconUrl = `${baseUrl}/icons/default-icon-512.png`; // default fallback
+            try {
+              const leagueSettings = tournamentInfo.leagues?.league_settings;
+              if (leagueSettings) {
+                const config = JSON.parse(leagueSettings as string);
+                if (config?.pwa?.logoUrl) {
+                  // Make relative URLs absolute
+                  const logoPath = config.pwa.logoUrl;
+                  iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+                }
+              }
+            } catch (e) {
+              console.error('[push] Failed to parse league settings for icon:', e);
+            }
+
             // Fire and forget - don't block timer
             sendToTournamentPlayers(tournamentId, {
               title: 'Tournament Starting!',
               body: `Shuffle up and deal! The tournament at ${venueName} is now underway.`,
               url: `/l/${leagueSlug}/gameview/${token}`,
+              icon: iconUrl,
             }).catch((err) => console.error('[push] Timer start notification failed:', err));
           }
         }

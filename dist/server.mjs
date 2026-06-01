@@ -7,7 +7,7 @@ import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import { resolveBlindSchedule } from "./lib/blindLevels.mjs";
 import { DEFAULT_LEAGUE_CONFIG as DEFAULT_LEAGUE_CONFIG_MJS } from "./types/league-config-defaults.mjs";
-import * as webpush from "web-push";
+import webpush from "web-push";
 const DEFAULT_LEAGUE_CONFIG = DEFAULT_LEAGUE_CONFIG_MJS;
 // Initialize Prisma Client
 const globalForPrisma = globalThis;
@@ -25,7 +25,7 @@ if (process.env.VAPID_SUBJECT && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && pro
 async function sendToTournamentPlayers(tournamentId, payload) {
     const subs = await prisma.$queryRawUnsafe(`SELECT DISTINCT ps.id, ps.endpoint, ps.p256dh, ps.auth
      FROM push_subscriptions ps
-     INNER JOIN tournament_draft_players tdp ON ps.player_uid = tdp.player_uid
+     INNER JOIN tournament_draft_players tdp ON ps.player_uid COLLATE utf8mb4_unicode_520_ci = tdp.player_uid
      INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
      WHERE tdp.tournament_draft_id = ?
        AND tdp.checked_in_at IS NOT NULL
@@ -791,7 +791,7 @@ app.prepare().then(async () => {
             });
             // Timer event handlers
             socket.on("timer:start", async ({ tournamentId, actor }) => {
-                var _a, _b, _c;
+                var _a, _b, _c, _d, _e;
                 console.log(`Timer start requested for tournament ${tournamentId}`);
                 // Check if this is the initial start (game_started === false)
                 const tournamentInfo = await prisma.tournamentDraft.findUnique({
@@ -801,7 +801,7 @@ app.prepare().then(async () => {
                         title: true,
                         venue: true,
                         check_in_token: true,
-                        leagues: { select: { slug: true } },
+                        leagues: { select: { slug: true, league_settings: true } },
                     },
                 });
                 const isInitialStart = tournamentInfo && !tournamentInfo.game_started;
@@ -852,11 +852,29 @@ app.prepare().then(async () => {
                     const leagueSlug = (_a = tournamentInfo.leagues) === null || _a === void 0 ? void 0 : _a.slug;
                     const token = tournamentInfo.check_in_token;
                     if (leagueSlug && token) {
+                        // Determine icon URL from league settings
+                        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
+                        let iconUrl = `${baseUrl}/icons/default-icon-512.png`; // default fallback
+                        try {
+                            const leagueSettings = (_b = tournamentInfo.leagues) === null || _b === void 0 ? void 0 : _b.league_settings;
+                            if (leagueSettings) {
+                                const config = JSON.parse(leagueSettings);
+                                if ((_c = config === null || config === void 0 ? void 0 : config.pwa) === null || _c === void 0 ? void 0 : _c.logoUrl) {
+                                    // Make relative URLs absolute
+                                    const logoPath = config.pwa.logoUrl;
+                                    iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+                                }
+                            }
+                        }
+                        catch (e) {
+                            console.error('[push] Failed to parse league settings for icon:', e);
+                        }
                         // Fire and forget - don't block timer
                         sendToTournamentPlayers(tournamentId, {
                             title: 'Tournament Starting!',
                             body: `Shuffle up and deal! The tournament at ${venueName} is now underway.`,
                             url: `/l/${leagueSlug}/gameview/${token}`,
+                            icon: iconUrl,
                         }).catch((err) => console.error('[push] Timer start notification failed:', err));
                     }
                 }
@@ -865,8 +883,8 @@ app.prepare().then(async () => {
                     tournamentId,
                     actionType: 'TIMER_STARTED',
                     actionCategory: 'ADMIN',
-                    actorId: (_b = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _b !== void 0 ? _b : null,
-                    actorName: (_c = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _c !== void 0 ? _c : 'Admin',
+                    actorId: (_d = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _d !== void 0 ? _d : null,
+                    actorName: (_e = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _e !== void 0 ? _e : 'Admin',
                     previousValue,
                     newValue: {
                         isRunning: true,
