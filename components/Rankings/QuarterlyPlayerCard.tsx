@@ -30,6 +30,7 @@ interface QuarterlyPlayer {
 
 interface QuarterlyPlayerCardProps {
   player: QuarterlyPlayer;
+  leagueSlug: string | null;
   isFavorite?: boolean;
   onToggleFavorite?: (uid: string) => void;
   onOpenReview?: (uid: string, name: string) => void;
@@ -37,6 +38,7 @@ interface QuarterlyPlayerCardProps {
 
 export function QuarterlyPlayerCard({
   player,
+  leagueSlug,
   isFavorite,
   onToggleFavorite,
   onOpenReview,
@@ -123,7 +125,7 @@ export function QuarterlyPlayerCard({
       <div className="infoContainer">
         <div className="name">
           <Link
-            href={`/players?uid=${encodeURIComponent(player.uid)}`}
+            href={leagueSlug ? `/l/${leagueSlug}/players?uid=${encodeURIComponent(player.uid)}` : `/players?uid=${encodeURIComponent(player.uid)}`}
             className="freeroll-link"
           >
             <p

@@ -99,7 +99,7 @@ export default function QuarterlyRankings() {
   const [reviewTarget, setReviewTarget] = useState<{ uid: string; name: string } | null>(null);
 
   // League param for multi-tenant support
-  const { appendLeagueParam, getLeagueConfigUrl, isReady: leagueParamReady } = useLeagueParam();
+  const { leagueSlug, appendLeagueParam, getLeagueConfigUrl, isReady: leagueParamReady } = useLeagueParam();
 
   // Competition periods state
   const [periods, setPeriods] = useState<CompetitionPeriod[]>([]);
@@ -538,6 +538,7 @@ export default function QuarterlyRankings() {
                 )}
                 <QuarterlyPlayerCard
                   player={player}
+                  leagueSlug={leagueSlug}
                   isFavorite={isFavorite(player.uid)}
                   onToggleFavorite={toggleFavorite}
                   onOpenReview={FEATURES.PLAYER_REVIEWS ? (uid, name) => setReviewTarget({ uid, name }) : undefined}
