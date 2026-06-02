@@ -14,6 +14,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=1536'
+
+      - name: Build Socket.IO server
+        run: npm run build:server
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -23,45 +40,37 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to server
+      - name: Deploy artifacts to server
+        run: |
+          rsync -avz --delete \
+            .next/ \
+            root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/.next/
+
+          rsync -avz --delete \
+            dist/ \
+            root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/dist/
+
+          rsync -avz \
+            public/ \
+            root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/public/
+
+          rsync -avz \
+            package.json \
+            package-lock.json \
+            ecosystem.config.js \
+            root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/
+
+      - name: Install production dependencies and restart
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             set -e
-            
-            echo "Starting deployment..."
-            
-            # Navigate to project directory
             cd /var/www/freeroll-dashboard
 
-            # Reset tracked files to clean state (discards local changes to committed files)
-            echo "Resetting tracked files to clean state..."
-            git reset --hard HEAD
+            echo "Installing production dependencies..."
+            npm install --omit=dev
 
-            # Clean only build artifacts and node_modules, preserve uploads
-            echo "Cleaning build artifacts..."
-            rm -rf .next/ dist/ node_modules/.cache/ 2>/dev/null || true
-            # Remove generated service worker files so they regenerate with latest config
-            rm -f public/sw.js public/workbox-*.js 2>/dev/null || true
-
-            # Pull latest changes
-            echo "Pulling latest changes..."
-            git pull origin main
-            
-            # Install dependencies
-            echo "Installing dependencies..."
-            npm install
-            
-            # Build the application (increase heap size for low-memory servers)
-            echo "Building Next.js application..."
-            NODE_OPTIONS="--max-old-space-size=1536" npm run build
-
-            # Build the Socket.IO server
-            echo "Building Socket.IO server..."
-            npm run build:server
-            
-            # Restart the application with PM2
             echo "Restarting application..."
             pm2 startOrRestart ecosystem.config.js --env production && pm2 save
-            
+
             echo "Deployment completed successfully!"
           EOF
