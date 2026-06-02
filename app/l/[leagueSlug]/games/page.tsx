@@ -105,6 +105,9 @@ export default function GamesPage() {
               <CardTitle className="text-xl font-semibold text-blue-900">
                 {game.game_title || game.venue}
               </CardTitle>
+              {game.game_title && (
+                <p className="text-sm text-gray-600 -mt-1">{game.venue}</p>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-gray-600">
                   {formatLeagueDate(game.date, timezone)}
