@@ -1,11 +1,18 @@
 import * as webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+let vapidInitialized = false;
+
+function ensureVapidInitialized() {
+  if (!vapidInitialized) {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT!,
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+      process.env.VAPID_PRIVATE_KEY!
+    );
+    vapidInitialized = true;
+  }
+}
 
 export interface PushPayload {
   title: string;
@@ -28,6 +35,8 @@ export async function broadcastToLeague(
   leagueId: number,
   payload: PushPayload
 ): Promise<BroadcastResult> {
+  ensureVapidInitialized();
+
   const subs = await prisma.$queryRawUnsafe<
     { id: number; endpoint: string; p256dh: string; auth: string }[]
   >(
