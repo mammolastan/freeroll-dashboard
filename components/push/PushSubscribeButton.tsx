@@ -59,12 +59,33 @@ export default function PushSubscribeButton({ leagueId }: Props) {
     setLoading(true);
     setError(null);
     try {
+      // Check if running as standalone PWA (required for iOS)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+        || (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+      if (!isStandalone) {
+        setError('Open this app from your Home Screen to enable notifications');
+        return;
+      }
+
       const permission = await Notification.requestPermission();
       setPermStatus(permission as PermissionStatus);
 
-      if (permission !== 'granted') return;
+      if (permission !== 'granted') {
+        if (permission === 'denied') {
+          setError('Permission denied - check Settings > Notifications');
+        }
+        return;
+      }
 
-      const reg = await getServiceWorkerRegistration();
+      let reg: ServiceWorkerRegistration;
+      try {
+        reg = await getServiceWorkerRegistration();
+      } catch {
+        setError('Service worker not ready - try refreshing the app');
+        return;
+      }
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
@@ -88,7 +109,8 @@ export default function PushSubscribeButton({ leagueId }: Props) {
       }
     } catch (err) {
       console.error('[push] subscribe error:', err);
-      setError('Failed to enable notifications');
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed: ${message}`);
     } finally {
       setLoading(false);
     }
