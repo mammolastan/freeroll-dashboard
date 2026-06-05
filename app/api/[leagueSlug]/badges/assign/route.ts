@@ -75,23 +75,31 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // Parse the earned_at date or use current time
     const earnedAtDate = earnedAt ? new Date(earnedAt) : new Date();
 
-    // Check if player already has this badge (non-expired)
-    const existingBadge = await prisma.playerBadge.findFirst({
-      where: {
-        player_uid: playerUid,
-        badge_id: badgeId,
-        OR: [
-          { expiration: null },
-          { expiration: { gte: new Date() } },
-        ],
-      },
-    });
+    // Badges that can be assigned multiple times (stackable)
+    const STACKABLE_BADGE_IDS = [
+      "6a03f9eb-0849-11f0-ac35-5254008c1d2e", // Quarterly Tournament Champ
+      "98581378-1a61-11f0-ac35-5254008c1d2e", // Top 'o the League
+    ];
 
-    if (existingBadge) {
-      return NextResponse.json(
-        { error: "Player already has this badge" },
-        { status: 409 }
-      );
+    // Check if player already has this badge (non-expired) - skip for stackable badges
+    if (!STACKABLE_BADGE_IDS.includes(badgeId)) {
+      const existingBadge = await prisma.playerBadge.findFirst({
+        where: {
+          player_uid: playerUid,
+          badge_id: badgeId,
+          OR: [
+            { expiration: null },
+            { expiration: { gte: new Date() } },
+          ],
+        },
+      });
+
+      if (existingBadge) {
+        return NextResponse.json(
+          { error: "Player already has this badge" },
+          { status: 409 }
+        );
+      }
     }
 
     // Create the player badge
