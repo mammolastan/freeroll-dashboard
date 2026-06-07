@@ -1,6 +1,7 @@
 // components/Marketing/LandingPage.tsx
 import Link from "next/link";
 import FeaturesSection from "./FeaturesSection";
+import VideosSection from "./VideosSection";
 
 export default function LandingPage() {
   return (
@@ -59,6 +60,8 @@ export default function LandingPage() {
       </section>
 
       <FeaturesSection />
+
+      <VideosSection />
 
       {/* Footer */}
       <footer className="py-8 px-4 text-center text-slate-500">

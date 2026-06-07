@@ -16,6 +16,7 @@ const RESERVED_PATHS = [
   "knockouts",
   "favicon.ico",
   "icons",
+  "images",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -42,6 +43,6 @@ export const config = {
     "/l/:leagueSlug/admin/:path*",
     // Catch potential old league URLs (anything that's not a reserved path)
     // This regex excludes paths starting with reserved segments
-    "/((?!l|admin|login|register|profile|api|_next|unauthorized|forgot-password|reset-password|knockouts|favicon.ico|icons).*)",
+    "/((?!l|admin|login|register|profile|api|_next|unauthorized|forgot-password|reset-password|knockouts|favicon.ico|icons|images).*)",
   ],
 };
