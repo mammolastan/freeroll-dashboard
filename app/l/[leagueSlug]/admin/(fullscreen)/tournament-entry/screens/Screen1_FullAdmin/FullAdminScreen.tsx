@@ -2927,6 +2927,7 @@ export function FullAdminScreen({
 
             {/* Status Banner */}
             {currentDraft && (
+              <>
               <div
                 className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
                   currentDraft.status === "integrated"
@@ -3035,6 +3036,19 @@ export function FullAdminScreen({
                   </button>
                 </div>
               </div>
+              {showIntegrationPreview &&
+                players.length > 0 &&
+                currentDraft &&
+                currentDraft.status !== "integrated" && (
+                  <TournamentValidationStatus
+                    players={players}
+                    isIntegrated={false}
+                    isIntegrating={isIntegrating}
+                    onIntegrate={integrateToMainSystem}
+                    onAutoCalculateKOPositions={autoCalculateKOPositions}
+                  />
+                )}
+              </>
             )}
           </div>
         )}
@@ -3315,19 +3329,6 @@ export function FullAdminScreen({
             </div>
           </div>
         )}
-
-        {showIntegrationPreview &&
-          players.length > 0 &&
-          currentDraft &&
-          currentDraft.status !== "integrated" && (
-            <TournamentValidationStatus
-              players={players}
-              isIntegrated={false}
-              isIntegrating={isIntegrating}
-              onIntegrate={integrateToMainSystem}
-              onAutoCalculateKOPositions={autoCalculateKOPositions}
-            />
-          )}
 
         {/* Blind Schedule Selector & Game Timer */}
         {currentDraft && (
