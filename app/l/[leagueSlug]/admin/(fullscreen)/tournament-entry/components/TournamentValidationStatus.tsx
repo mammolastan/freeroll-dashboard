@@ -3,7 +3,7 @@
 "use client";
 
 import React from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Skull, AlertTriangle } from "lucide-react";
 import {
   validateTournamentForIntegration,
   previewPlacements,
@@ -17,6 +17,8 @@ interface TournamentValidationStatusProps {
   isIntegrating: boolean;
   onIntegrate: () => void;
   onAutoCalculateKOPositions: () => void;
+  pendingClaimsCount?: number;
+  onOpenClaimsDrawer?: () => void;
 }
 
 export function TournamentValidationStatus({
@@ -25,6 +27,8 @@ export function TournamentValidationStatus({
   isIntegrating,
   onIntegrate,
   onAutoCalculateKOPositions,
+  pendingClaimsCount = 0,
+  onOpenClaimsDrawer,
 }: TournamentValidationStatusProps) {
   const validation = validateTournamentForIntegration(players);
   const placementPreview = validation.canIntegrate
@@ -78,14 +82,42 @@ export function TournamentValidationStatus({
         )}
 
         {validation.canIntegrate && (
-          <button
-            onClick={onIntegrate}
-            disabled={isIntegrating || isIntegrated}
-            className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
-          >
-            <Trophy className="h-4 w-4" />
-            {isIntegrating ? "Integrating..." : "Integrate Tournament"}
-          </button>
+          <>
+            {/* Pending claims warning */}
+            {pendingClaimsCount > 0 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-yellow-800 font-medium">
+                      {pendingClaimsCount} pending hitman claim{pendingClaimsCount !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      Review hitman claims before integrating to ensure knockout credit is assigned correctly.
+                    </p>
+                    {onOpenClaimsDrawer && (
+                      <button
+                        onClick={onOpenClaimsDrawer}
+                        className="mt-2 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg font-medium flex items-center gap-1.5"
+                      >
+                        <Skull className="h-4 w-4" />
+                        Review Claims
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onIntegrate}
+              disabled={isIntegrating || isIntegrated}
+              className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center gap-2"
+            >
+              <Trophy className="h-4 w-4" />
+              {isIntegrating ? "Integrating..." : "Integrate Tournament"}
+            </button>
+          </>
         )}
 
         {!validation.canIntegrate && (

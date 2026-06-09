@@ -20,6 +20,11 @@ interface FeedItemProps {
   reactionBalance?: SuitCounts | null;
   canReact?: boolean;
   tournamentId?: number;
+  // Hitman claim props
+  canClaimHitman?: boolean;
+  userUid?: string | null;
+  userName?: string | null;
+  onClaimHitman?: (knockoutPlayerId: number, eliminatedPlayerName: string) => void;
 }
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -91,7 +96,14 @@ function KnockoutAvatar({
 }
 
 // Knockout Item - VS Card Style
-function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
+function KnockoutItem({
+  item,
+  totalPlayers,
+  startPoints = 0,
+  canClaimHitman = false,
+  userUid,
+  onClaimHitman,
+}: FeedItemProps) {
   function getOrdinalSuffix(n: number): string {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -116,12 +128,101 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
   const isBubble = placement === 9;
   const isFirstBlood = item.ko_position === 1;
 
-  // Determine the left icon based on knockout type
+  // Hitman claim state
+  // "unknown" doesn't count as having a hitman - it means TD didn't know who knocked them out
+  const hasHitman = !!item.hitman_uid || (!!item.hitman_name && item.hitman_name !== "unknown");
+  const claimStatus = item.hitman_claim_status || 'none';
+  const isPending = claimStatus === 'pending';
+  const isApproved = claimStatus === 'approved';
+
+  // Can this user claim this knockout?
+  // User can claim if:
+  // 1. canClaimHitman is true (user is logged in and in tournament, or is admin)
+  // 2. No hitman assigned yet
+  // 3. No pending or approved claim (rejected claims CAN be re-claimed)
+  // 4. User is not the eliminated player
+  const isUserTheVictim = userUid && item.eliminated_player_uid === userUid;
+  const canUserClaim = canClaimHitman && !hasHitman && !isPending && !isApproved && !isUserTheVictim;
+
+  const handleSkullClick = () => {
+    if (canUserClaim && onClaimHitman && item.knockout_player_id) {
+      onClaimHitman(item.knockout_player_id, item.eliminated_player_name || "Unknown");
+    }
+  };
+
+  // Determine the left icon based on knockout type and claim state
   const LeftIcon = () => {
+    // First Blood icon
     if (isFirstBlood) {
+      // Pending claim - add orange badge
+      if (isPending) {
+        return (
+          <div className="relative">
+            <span className="text-red-500 text-3xl animate-pulse">🩸</span>
+            <span className="absolute -bottom-1 -right-1 text-[8px] bg-orange-500 text-white px-1 rounded font-bold">
+              ?
+            </span>
+          </div>
+        );
+      }
+      // Clickable for claiming
+      if (canUserClaim) {
+        return (
+          <button
+            onClick={handleSkullClick}
+            className="group/icon focus:outline-none"
+            title="Claim this knockout"
+          >
+            <span className="text-red-500 text-3xl cursor-pointer hover:scale-110 transition-all group-hover/icon:drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">
+              🩸
+            </span>
+          </button>
+        );
+      }
+      // Default (not claimable)
       return <span className="text-red-500 text-3xl">🩸</span>;
     }
+
+    // Bubble icon
     if (isBubble) {
+      // Pending claim - add orange badge
+      if (isPending) {
+        return (
+          <div className="relative">
+            <Image
+              src="/images/sad-bubble.png"
+              alt="Bubble"
+              width={32}
+              height={32}
+              className="!h-12 !w-12 animate-pulse"
+              unoptimized
+            />
+            <span className="absolute -bottom-1 -right-1 text-[8px] bg-orange-500 text-white px-1 rounded font-bold">
+              ?
+            </span>
+          </div>
+        );
+      }
+      // Clickable for claiming
+      if (canUserClaim) {
+        return (
+          <button
+            onClick={handleSkullClick}
+            className="group/icon focus:outline-none"
+            title="Claim this knockout"
+          >
+            <Image
+              src="/images/sad-bubble.png"
+              alt="Bubble"
+              width={32}
+              height={32}
+              className="!h-12 !w-12 cursor-pointer hover:scale-110 transition-all group-hover/icon:drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]"
+              unoptimized
+            />
+          </button>
+        );
+      }
+      // Default (not claimable)
       return (
         <Image
           src="/images/sad-bubble.png"
@@ -133,6 +234,34 @@ function KnockoutItem({ item, totalPlayers, startPoints = 0 }: FeedItemProps) {
         />
       );
     }
+
+    // Regular knockout - Skull icon
+    // Pending claim - orange pulsing skull with ? badge
+    if (isPending) {
+      return (
+        <div className="relative">
+          <Skull className="h-8 w-8 text-orange-400 animate-pulse" />
+          <span className="absolute -bottom-1 -right-1 text-[8px] bg-orange-500 text-white px-1 rounded font-bold">
+            ?
+          </span>
+        </div>
+      );
+    }
+
+    // Unclaimed and user can claim - clickable skull
+    if (canUserClaim) {
+      return (
+        <button
+          onClick={handleSkullClick}
+          className="group/skull focus:outline-none"
+          title="Claim this knockout"
+        >
+          <Skull className="h-8 w-8 text-red-400/80 cursor-pointer hover:text-red-300 hover:scale-110 transition-all group-hover/skull:drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]" />
+        </button>
+      );
+    }
+
+    // Default skull (has hitman or user can't claim)
     return <Skull className="h-8 w-8 text-red-400/80" />;
   };
 
@@ -572,6 +701,10 @@ export function FeedItem({
   reactionBalance,
   canReact,
   tournamentId,
+  canClaimHitman,
+  userUid,
+  userName,
+  onClaimHitman,
 }: FeedItemProps) {
   switch (item.item_type) {
     case "knockout":
@@ -584,6 +717,10 @@ export function FeedItem({
           reactionBalance={reactionBalance}
           canReact={canReact}
           tournamentId={tournamentId}
+          canClaimHitman={canClaimHitman}
+          userUid={userUid}
+          userName={userName}
+          onClaimHitman={onClaimHitman}
         />
       );
     case "message":

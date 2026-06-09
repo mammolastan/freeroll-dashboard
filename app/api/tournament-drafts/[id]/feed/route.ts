@@ -29,6 +29,11 @@ interface FeedItem {
     totals: SuitCounts;
     mine?: SuitCounts;
   };
+  // Hitman claim fields (for knockouts)
+  hitman_claim_status?: 'none' | 'pending' | 'approved' | 'rejected' | null;
+  hitman_claim_uid?: string | null;
+  hitman_claim_name?: string | null;
+  knockout_player_id?: number;
 }
 
 interface FeedResponse {
@@ -109,7 +114,10 @@ export async function GET(
     COALESCE(hitman.player_uid, hitman_by_name.uid) as hitman_uid,
     ko.knockedout_at,
     eliminated_player.photo_url as eliminated_player_photo_url,
-    COALESCE(hitman_player.photo_url, hitman_by_name.photo_url) as hitman_photo_url
+    COALESCE(hitman_player.photo_url, hitman_by_name.photo_url) as hitman_photo_url,
+    ko.hitman_claim_status,
+    ko.hitman_claim_uid,
+    ko.hitman_claim_name
   FROM tournament_draft_players ko
   LEFT JOIN tournament_draft_players hitman
     ON hitman.tournament_draft_id = ko.tournament_draft_id
@@ -154,6 +162,11 @@ export async function GET(
       created_at: player.knockedout_at instanceof Date
         ? player.knockedout_at.toISOString()
         : String(player.knockedout_at),
+      // Hitman claim fields
+      hitman_claim_status: player.hitman_claim_status ? String(player.hitman_claim_status) as FeedItem['hitman_claim_status'] : 'none',
+      hitman_claim_uid: player.hitman_claim_uid ? String(player.hitman_claim_uid) : null,
+      hitman_claim_name: player.hitman_claim_name ? String(player.hitman_claim_name) : null,
+      knockout_player_id: Number(player.player_id),
     }));
 
     // Fetch other feed items with pagination (check-ins, system - NOT knockouts)

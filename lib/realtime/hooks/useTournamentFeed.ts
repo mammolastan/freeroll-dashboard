@@ -29,6 +29,12 @@ export interface FeedItem {
     totals: SuitCounts;
     mine?: SuitCounts;
   };
+  // Hitman claim fields (for knockouts)
+  hitman_claim_status?: 'none' | 'pending' | 'approved' | 'rejected' | null;
+  hitman_claim_uid?: string | null;
+  hitman_claim_name?: string | null;
+  // Player ID for claim submission (for knockouts, extracted from synthetic "ko-123" id)
+  knockout_player_id?: number;
 }
 
 interface FeedResponse {
@@ -389,6 +395,55 @@ export function useTournamentFeed(
 
     return () => {
       socket.off('feed:reaction_update', handleReactionUpdate);
+    };
+  }, [tournamentIdNum]);
+
+  // Listen for hitman claim updates via Socket.IO
+  useEffect(() => {
+    if (!tournamentIdNum || isNaN(tournamentIdNum)) return;
+
+    const handleHitmanClaimUpdate = (payload: {
+      tournament_id: number;
+      knockout_player_id: number;
+      claim_status: 'pending' | 'approved' | 'rejected';
+      claimer_uid: string;
+      claimer_name: string;
+      reviewed_by?: string;
+    }) => {
+      if (payload.tournament_id === tournamentIdNum) {
+        setItems(prevItems =>
+          prevItems.map(item => {
+            // Match knockout items by their knockout_player_id
+            if (item.item_type === 'knockout' && item.knockout_player_id === payload.knockout_player_id) {
+              // If approved, copy claim to hitman fields
+              if (payload.claim_status === 'approved') {
+                return {
+                  ...item,
+                  hitman_uid: payload.claimer_uid,
+                  hitman_name: payload.claimer_name,
+                  hitman_claim_status: 'approved',
+                  hitman_claim_uid: payload.claimer_uid,
+                  hitman_claim_name: payload.claimer_name,
+                };
+              }
+              // Otherwise just update claim status
+              return {
+                ...item,
+                hitman_claim_status: payload.claim_status,
+                hitman_claim_uid: payload.claimer_uid,
+                hitman_claim_name: payload.claimer_name,
+              };
+            }
+            return item;
+          })
+        );
+      }
+    };
+
+    socket.on('hitman:claim_update', handleHitmanClaimUpdate);
+
+    return () => {
+      socket.off('hitman:claim_update', handleHitmanClaimUpdate);
     };
   }, [tournamentIdNum]);
 

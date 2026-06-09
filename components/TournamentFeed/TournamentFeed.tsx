@@ -10,10 +10,12 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { useSession } from "next-auth/react";
 import { useTournamentFeed } from "@/lib/realtime/hooks/useTournamentFeed";
 import { FeedItem } from "./FeedItem";
 import { FeedInput } from "./FeedInput";
 import { ReactionBalance } from "./ReactionBalance";
+import { HitmanClaimModal } from "./HitmanClaimModal";
 import { ReactionType } from "@/types";
 import {
   MessageSquare,
@@ -175,6 +177,7 @@ export function TournamentFeed({
   players,
   allowChat = true,
 }: TournamentFeedProps) {
+  const { data: session } = useSession();
   const {
     items,
     loading,
@@ -201,6 +204,63 @@ export function TournamentFeed({
   const [activeTab, setActiveTab] = useState<FeedTab>("all");
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
+
+  // Hitman claim state
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [claimTarget, setClaimTarget] = useState<{
+    knockoutPlayerId: number;
+    eliminatedPlayerName: string;
+  } | null>(null);
+
+  // Check if user can claim hitman (logged in and is in tournament, or is admin)
+  const canClaimHitman = useMemo(() => {
+    const userUid = session?.user?.uid;
+    if (!userUid) return false;
+    if (!players) return false;
+    const isInTournament = players.some((p) => p.uid === userUid);
+    // Allow admins to claim for testing/on behalf of players
+    const isAdmin = userUid.includes('admin');
+    return isInTournament || isAdmin;
+  }, [session, players]);
+
+  const userName = useMemo(() => {
+    if (!session?.user) return null;
+    // Find the player in this tournament to get their name/nickname
+    const userPlayer = players?.find((p) => p.uid === session.user.uid);
+    if (userPlayer) {
+      return userPlayer.nickname || userPlayer.name;
+    }
+    return session.user.nickname || session.user.name || null;
+  }, [session, players]);
+
+  const handleClaimHitman = useCallback(
+    (knockoutPlayerId: number, eliminatedPlayerName: string) => {
+      setClaimTarget({ knockoutPlayerId, eliminatedPlayerName });
+      setClaimModalOpen(true);
+    },
+    [],
+  );
+
+  const submitHitmanClaim = useCallback(async () => {
+    if (!claimTarget) return;
+
+    const response = await fetch(
+      `/api/tournament-drafts/${tournamentId}/hitman-claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ knockout_player_id: claimTarget.knockoutPlayerId }),
+      },
+    );
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to submit claim");
+    }
+
+    // Refresh the feed to show updated claim status
+    await refresh();
+  }, [claimTarget, tournamentId, refresh]);
 
   // Reset to "all" tab if chat is disabled and user was on chat tab
   useEffect(() => {
@@ -728,6 +788,10 @@ export function TournamentFeed({
                     reactionBalance={reactionBalance}
                     canReact={canPost}
                     tournamentId={tournamentId}
+                    canClaimHitman={canClaimHitman}
+                    userUid={session?.user?.uid}
+                    userName={userName}
+                    onClaimHitman={handleClaimHitman}
                   />
                 ))}
               </div>
@@ -805,6 +869,10 @@ export function TournamentFeed({
                   reactionBalance={reactionBalance}
                   canReact={canPost}
                   tournamentId={tournamentId}
+                  canClaimHitman={canClaimHitman}
+                  userUid={session?.user?.uid}
+                  userName={userName}
+                  onClaimHitman={handleClaimHitman}
                 />
               ))}
             </div>
@@ -921,6 +989,10 @@ export function TournamentFeed({
                     reactionBalance={reactionBalance}
                     canReact={canPost}
                     tournamentId={tournamentId}
+                    canClaimHitman={canClaimHitman}
+                    userUid={session?.user?.uid}
+                    userName={userName}
+                    onClaimHitman={handleClaimHitman}
                   />
                 ))}
               </div>
@@ -985,6 +1057,10 @@ export function TournamentFeed({
                     reactionBalance={reactionBalance}
                     canReact={canPost}
                     tournamentId={tournamentId}
+                    canClaimHitman={canClaimHitman}
+                    userUid={session?.user?.uid}
+                    userName={userName}
+                    onClaimHitman={handleClaimHitman}
                   />
                 ))}
               </div>
@@ -1058,6 +1134,10 @@ export function TournamentFeed({
                           reactionBalance={reactionBalance}
                           canReact={canPost}
                           tournamentId={tournamentId}
+                          canClaimHitman={canClaimHitman}
+                          userUid={session?.user?.uid}
+                          userName={userName}
+                          onClaimHitman={handleClaimHitman}
                         />
                       </div>
                     );
@@ -1075,6 +1155,20 @@ export function TournamentFeed({
           </div>
         )}
       </div>
+
+      {/* Hitman Claim Modal */}
+      {claimTarget && (
+        <HitmanClaimModal
+          isOpen={claimModalOpen}
+          onClose={() => {
+            setClaimModalOpen(false);
+            setClaimTarget(null);
+          }}
+          eliminatedPlayerName={claimTarget.eliminatedPlayerName}
+          claimerName={userName || "You"}
+          onConfirm={submitHitmanClaim}
+        />
+      )}
     </div>
   );
 }

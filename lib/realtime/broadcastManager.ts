@@ -152,4 +152,37 @@ export class BroadcastManager {
     this.broadcast(event);
   }
 
+  /**
+   * Broadcast hitman claim updates (new claim, approved, rejected)
+   */
+  broadcastHitmanClaimUpdate(
+    tournamentId: number,
+    data: {
+      knockout_player_id: number;
+      claim_status: 'pending' | 'approved' | 'rejected';
+      claimer_uid: string;
+      claimer_name: string;
+      reviewed_by?: string;
+    }
+  ): void {
+    try {
+      if (!global.socketIoInstance) {
+        console.error("Socket.IO instance not available for broadcasting hitman claim");
+        return;
+      }
+
+      const room = tournamentId.toString();
+      const payload = {
+        tournament_id: tournamentId,
+        ...data,
+      };
+
+      console.log(`[BROADCAST] hitman:claim_update to room ${room}:`, payload);
+
+      global.socketIoInstance.to(room).emit('hitman:claim_update', payload);
+    } catch (error) {
+      console.error("Error broadcasting hitman claim update:", error);
+    }
+  }
+
 }

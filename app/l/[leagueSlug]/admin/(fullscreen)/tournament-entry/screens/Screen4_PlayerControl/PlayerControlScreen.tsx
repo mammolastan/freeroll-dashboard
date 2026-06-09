@@ -8,6 +8,7 @@ import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
+import { HitmanClaimsDrawer, HitmanClaimsButton } from "@/components/td/HitmanClaimsDrawer";
 
 interface TournamentDraft {
   id: number;
@@ -79,6 +80,34 @@ export function PlayerControlScreen({
     message: string;
     type: "success" | "warning";
   } | null>(null);
+
+  // Hitman Claims state
+  const [showHitmanClaims, setShowHitmanClaims] = useState(false);
+  const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
+
+  // Fetch pending claims count periodically
+  useEffect(() => {
+    if (!currentDraft) return;
+
+    const fetchClaimsCount = async () => {
+      try {
+        const response = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/hitman-claims`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setPendingClaimsCount(data.claims?.length || 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch claims count:", err);
+      }
+    };
+
+    fetchClaimsCount();
+    const interval = setInterval(fetchClaimsCount, 15000); // Refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [currentDraft]);
 
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
   const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
@@ -658,6 +687,24 @@ export function PlayerControlScreen({
         onUndo={triggerUndo}
         isUndoing={isUndoing}
         gameName={currentDraft.title || currentDraft.venue || "Tournament"}
+      />
+
+      {/* Hitman Claims Floating Button */}
+      <HitmanClaimsButton
+        pendingCount={pendingClaimsCount}
+        onClick={() => setShowHitmanClaims(true)}
+      />
+
+      {/* Hitman Claims Drawer */}
+      <HitmanClaimsDrawer
+        isOpen={showHitmanClaims}
+        onClose={() => setShowHitmanClaims(false)}
+        tournamentId={currentDraft.id}
+        onClaimsUpdated={() => {
+          // Refresh claims count and player data
+          setPendingClaimsCount((prev) => Math.max(0, prev - 1));
+          onDataChange();
+        }}
       />
     </div>
   );

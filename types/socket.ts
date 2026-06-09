@@ -157,6 +157,18 @@ export interface ReactionUpdatePayload {
 }
 
 /**
+ * Hitman claim update payload for real-time claim updates
+ */
+export interface HitmanClaimUpdatePayload {
+  tournament_id: number;
+  knockout_player_id: number;
+  claim_status: 'pending' | 'approved' | 'rejected';
+  claimer_uid: string;
+  claimer_name: string;
+  reviewed_by?: string;
+}
+
+/**
  * Feed item payload for real-time feed updates
  */
 export interface FeedItemPayload {
@@ -220,6 +232,9 @@ export interface ServerToClientEvents {
   // Feed events
   'feed:new_item': (payload: FeedItemPayload) => void;
   'feed:reaction_update': (payload: ReactionUpdatePayload) => void;
+
+  // Hitman claim events
+  'hitman:claim_update': (payload: HitmanClaimUpdatePayload) => void;
 
   // Timer events
   'timer:updated': (payload: TimerUpdatePayload) => void;

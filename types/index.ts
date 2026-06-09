@@ -115,6 +115,7 @@ export type {
   SuitCounts,
   ReactionType,
   ReactionUpdatePayload,
+  HitmanClaimUpdatePayload,
 } from './socket';
 
 export { SocketRooms } from './socket';
