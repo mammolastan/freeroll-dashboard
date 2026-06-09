@@ -99,7 +99,7 @@ export async function PUT(
         `;
       }
     } else if (isUndoKnockout) {
-      // Undoing knockout - reset status and clear knockout fields
+      // Undoing knockout - reset status and clear knockout fields AND hitman claim fields
       updateResult = await prisma.$executeRaw`
         UPDATE tournament_draft_players
         SET
@@ -110,6 +110,12 @@ export async function PUT(
           placement = ${placement || null},
           status = 'active',
           knockedout_at = NULL,
+          hitman_claim_uid = NULL,
+          hitman_claim_name = NULL,
+          hitman_claim_status = 'none',
+          hitman_claimed_at = NULL,
+          hitman_claim_reviewed_at = NULL,
+          hitman_claim_reviewed_by = NULL,
           updated_at = NOW()
         WHERE id = ${playerId}
       `;
