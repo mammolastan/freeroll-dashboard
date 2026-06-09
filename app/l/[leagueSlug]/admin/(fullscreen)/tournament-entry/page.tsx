@@ -281,20 +281,20 @@ export default function TournamentEntryPage() {
 
       {/* Connection status indicator */}
       {connectionStatus === 'connected' && (
-        <div className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400/50 animate-pulse">
+        <div className="fixed bottom-4 left-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400/50 animate-pulse">
           Live
         </div>
       )}
       {(connectionStatus === 'disconnected' || connectionStatus === 'reconnecting') && (
         <button
           onClick={manualReconnect}
-          className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(234,179,8,0.5)] border border-yellow-400/50 animate-pulse hover:from-yellow-400 hover:to-orange-400 cursor-pointer"
+          className="fixed bottom-4 left-4 z-50 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(234,179,8,0.5)] border border-yellow-400/50 animate-pulse hover:from-yellow-400 hover:to-orange-400 cursor-pointer"
         >
           {reconnectAttempt > 0 ? `Reconnecting (${reconnectAttempt})... Tap to retry` : 'Reconnecting... Tap to retry'}
         </button>
       )}
       {connectionStatus === 'connecting' && (
-        <div className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-blue-400/50 animate-pulse">
+        <div className="fixed bottom-4 left-4 z-50 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-blue-400/50 animate-pulse">
           Connecting...
         </div>
       )}

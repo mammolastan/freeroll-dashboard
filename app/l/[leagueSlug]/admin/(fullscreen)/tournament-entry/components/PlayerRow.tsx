@@ -73,7 +73,7 @@ export function PlayerRow({
 
     return (
         <div
-            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${player.hitman_name && calculatedKoPosition !== null
+            className={`grid grid-cols-1 md:grid-cols-[3fr,1fr,2fr,1fr,1fr] gap-2 p-3 border-b ${calculatedKoPosition !== null
                     ? 'bg-red-50 border-red-100'
                     : 'bg-white'
                 }`}
@@ -108,13 +108,13 @@ export function PlayerRow({
                 {!isIntegrated && (
                     <button
                         onClick={onCrosshairClick}
-                        className={`ml-2 p-1 rounded-full transition-colors ${player.hitman_name && calculatedKoPosition !== null
+                        className={`ml-2 p-1 rounded-full transition-colors ${calculatedKoPosition !== null
                                 ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
                                 : 'text-red-600 hover:text-red-800 hover:bg-red-50'
                             }`}
                         title={
-                            player.hitman_name && calculatedKoPosition !== null
-                                ? `Clear knockout data for ${player.player_name} (Hitman: ${player.hitman_name}, KO#: ${calculatedKoPosition})`
+                            calculatedKoPosition !== null
+                                ? `Clear knockout data for ${player.player_name}${player.hitman_name ? ` (Hitman: ${player.hitman_name})` : ''}, KO#: ${calculatedKoPosition}`
                                 : `Knockout ${player.player_name}`
                         }
                     >
