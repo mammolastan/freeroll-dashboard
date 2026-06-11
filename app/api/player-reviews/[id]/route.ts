@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getLeagueRole, canAccessAdmin } from '@/lib/league-auth';
 
 export async function DELETE(
   req: NextRequest,
@@ -31,9 +32,13 @@ export async function DELETE(
     }
 
     const isOwner = rows[0].reviewer_uid === user.uid;
-    const isAdmin = user.isAdmin === true;
 
-    if (!isOwner && !isAdmin) {
+    // Check if user has admin role in their league
+    const leagueId = user.leagueId;
+    const role = await getLeagueRole(user.uid, leagueId);
+    const hasAdminAccess = canAccessAdmin(role);
+
+    if (!isOwner && !hasAdminAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

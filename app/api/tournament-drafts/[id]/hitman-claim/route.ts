@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 export async function POST(
   request: NextRequest,
@@ -43,9 +44,9 @@ export async function POST(
       );
     }
 
-    // Verify tournament exists and is in progress
+    // Verify tournament exists and is in progress, get league_id for role check
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, status FROM tournament_drafts WHERE id = ${tournamentId}
+      SELECT id, status, league_id FROM tournament_drafts WHERE id = ${tournamentId}
     `;
 
     if (!tournament.length) {
@@ -72,9 +73,11 @@ export async function POST(
     `;
 
     // Allow admins to claim on behalf of players (for testing or assistance)
-    const isAdmin = session.user.uid?.includes('admin') || false;
+    const leagueId = Number(tournament[0].league_id);
+    const role = await getLeagueRole(session.user.uid, leagueId);
+    const hasAdminAccess = canAccessAdmin(role);
 
-    if (!claimerPlayer.length && !isAdmin) {
+    if (!claimerPlayer.length && !hasAdminAccess) {
       return NextResponse.json(
         { error: "You must be a player in this tournament to submit claims" },
         { status: 403 }

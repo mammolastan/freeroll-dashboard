@@ -204,7 +204,7 @@ export async function GET(
     favoriteHand: p.favorite_hand,
     favoritePro: p.favorite_pro,
     isAdmin: Boolean(
-      p.league_role === "owner" || p.league_role === "admin" || p.isAdmin
+      p.league_role === "owner" || p.league_role === "admin"
     ),
     isClaimed: !!p.email,
     hasPhoto: !!p.photo_url,
@@ -279,7 +279,6 @@ export async function POST(
           email: email?.trim() || null,
           favorite_hand: favoriteHand?.trim() || null,
           favorite_pro: favoritePro?.trim() || null,
-          isAdmin: Boolean(isAdmin),
         },
       });
 

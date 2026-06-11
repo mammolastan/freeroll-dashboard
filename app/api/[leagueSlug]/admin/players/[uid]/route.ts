@@ -91,7 +91,7 @@ export async function GET(
       favoriteHand: p.favorite_hand,
       favoritePro: p.favorite_pro,
       isAdmin: Boolean(
-        p.league_role === "owner" || p.league_role === "admin" || p.isAdmin
+        p.league_role === "owner" || p.league_role === "admin"
       ),
       isClaimed: !!p.email,
       hasPhoto: !!p.photo_url,
@@ -176,10 +176,10 @@ export async function PUT(
           ...(favoritePro !== undefined && {
             favorite_pro: favoritePro?.trim() || null,
           }),
-          ...(isAdmin !== undefined && { isAdmin: Boolean(isAdmin) }),
         },
       });
 
+      // Manage league_roles based on isAdmin flag
       if (isAdmin !== undefined) {
         if (Boolean(isAdmin)) {
           const existingRole = await tx.league_roles.findUnique({
@@ -210,6 +210,13 @@ export async function PUT(
       return updated;
     });
 
+    // Check current role status for response
+    const currentRole = await prisma.league_roles.findUnique({
+      where: {
+        unique_member: { league_id: leagueId, player_uid: uid },
+      },
+    });
+
     return NextResponse.json({
       player: {
         id: player.id,
@@ -220,7 +227,7 @@ export async function PUT(
         email: player.email,
         favoriteHand: player.favorite_hand,
         favoritePro: player.favorite_pro,
-        isAdmin: player.isAdmin,
+        isAdmin: Boolean(currentRole?.role === "owner" || currentRole?.role === "admin"),
         isClaimed: !!player.email,
         hasPhoto: !!player.photo_url,
       },

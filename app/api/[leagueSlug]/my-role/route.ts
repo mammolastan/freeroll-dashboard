@@ -27,6 +27,5 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
   return NextResponse.json({
     role,
-    isGlobalAdmin: session.user.isAdmin ?? false,
   });
 }

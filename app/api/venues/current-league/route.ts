@@ -6,14 +6,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.isAdmin) {
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const leagueId = session.user.leagueId;
+  const role = await getLeagueRole(session.user.uid, leagueId);
+  if (!canAccessAdmin(role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const activeOnly = req.nextUrl.searchParams.get("activeOnly") === "true";
 
   type VenueRow = {
