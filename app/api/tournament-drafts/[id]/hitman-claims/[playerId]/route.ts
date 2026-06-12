@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
+import { PlayerEvents } from "@/lib/realtime/events/playerEvents";
 
 export async function PUT(
   request: NextRequest,
@@ -117,6 +118,9 @@ export async function PUT(
         claimer_name: String(targetPlayer.hitman_claim_name),
         reviewed_by: reviewerName,
       });
+
+      // Also broadcast players:updated so TV screens and other clients see the hitman change
+      await PlayerEvents.handlePlayerUpdated(tournamentId, knockoutPlayerId);
     } catch (broadcastError) {
       console.error("Failed to broadcast hitman claim update:", broadcastError);
     }
