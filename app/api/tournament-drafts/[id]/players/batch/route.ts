@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { emitPlayerJoined } from "@/lib/socketServer";
-import { createKnockoutFeedItem } from "@/lib/feed/feedService";
+import { broadcastKnockoutEvent } from "@/lib/feed/feedService";
 import { prisma } from "@/lib/prisma";
 import { TournamentDraftPlayerUpdateInput } from "@/types";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
@@ -10,6 +10,7 @@ import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistor
 import { generateActionDescription, TDActionType } from "@/lib/tdActions";
 import { BroadcastManager } from "@/lib/realtime";
 import { requireDraftAdmin } from "@/lib/auth-utils";
+import { recalculateKoPositions } from "@/lib/tournament/koUtils";
 
 export async function PUT(
   request: NextRequest,
@@ -39,10 +40,12 @@ export async function PUT(
 
     // Track knockouts for feed items (player name, hitman, ko_position)
     const knockoutsToPost: Array<{
+      playerId: number;
       playerName: string;
       playerUid: string | null;
       hitmanName: string | null;
       koPosition: number;
+      knockedoutAt: string;
     }> = [];
 
     // Track audit events to log after transaction completes
@@ -157,10 +160,12 @@ export async function PUT(
 
         if (isKnockout) {
           knockoutsToPost.push({
+            playerId,
             playerName: currentPlayer.player_nickname || currentPlayer.player_name,
             playerUid: currentPlayer.player_uid ?? null,
             hitmanName: updateData.hitman_name ?? currentPlayer.hitman_name ?? null,
             koPosition: updateData.ko_position as number,
+            knockedoutAt: (dataToUpdate.knockedout_at as Date).toISOString(),
           });
 
           // Track TD action log entry for KO_ASSIGNED
@@ -308,26 +313,7 @@ export async function PUT(
       // If any knockouts or undo knockouts occurred, recalculate all ko_positions
       const anyKnockoutChanges = playersToUpdate.some(p => 'ko_position' in p);
       if (anyKnockoutChanges) {
-        // Recalculate ko_positions for all knocked out players based on knockedout_at order
-        const knockedOutPlayers = await tx.tournamentDraftPlayer.findMany({
-          where: {
-            tournament_draft_id: draftId,
-            knockedout_at: { not: null }
-          },
-          orderBy: [
-            { knockedout_at: 'asc' },
-            { id: 'asc' }
-          ],
-          select: { id: true }
-        });
-
-        // Update each player's ko_position based on their order
-        for (let i = 0; i < knockedOutPlayers.length; i++) {
-          await tx.tournamentDraftPlayer.update({
-            where: { id: knockedOutPlayers[i].id },
-            data: { ko_position: i + 1 }
-          });
-        }
+        await recalculateKoPositions(draftId, tx);
       }
 
       return updatedPlayers;
@@ -340,7 +326,7 @@ export async function PUT(
       emitPlayerJoined(draftId, { batchUpdate: true, updatedPlayers: results });
     }
 
-    // Create feed items for any knockouts that occurred
+    // Broadcast feed items for any knockouts that occurred
     // Do this AFTER the transaction completes successfully
     for (const knockout of knockoutsToPost) {
       try {
@@ -361,16 +347,17 @@ export async function PUT(
           }
         }
 
-        await createKnockoutFeedItem(
+        broadcastKnockoutEvent(
           draftId,
+          knockout.playerId,
           knockout.playerName,
           hitmanDisplayName,
           knockout.koPosition,
-          knockout.playerUid
+          knockout.knockedoutAt
         );
       } catch (feedError) {
-        // Log but don't fail the request if feed creation fails
-        console.error("Failed to create knockout feed item:", feedError);
+        // Log but don't fail the request if broadcast fails
+        console.error("Failed to broadcast knockout event:", feedError);
       }
     }
 

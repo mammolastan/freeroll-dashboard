@@ -5,6 +5,7 @@ import { RawQueryResult } from "@/types";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { requireDraftAdmin } from "@/lib/auth-utils";
+import { recalculateKoPositions } from "@/lib/tournament/koUtils";
 
 export async function PUT(
   request: NextRequest,
@@ -151,25 +152,8 @@ export async function PUT(
       WHERE id = ${playerId} AND tournament_draft_id = ${draftId}
     `;
 
-    // Now recalculate ko_positions for all knocked out players
-    const updatedKnockedOutPlayers = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, knockedout_at
-      FROM tournament_draft_players
-      WHERE tournament_draft_id = ${draftId}
-        AND knockedout_at IS NOT NULL
-      ORDER BY knockedout_at ASC, id ASC
-    `;
-
-    // Update each player's ko_position based on their new order
-    for (let i = 0; i < updatedKnockedOutPlayers.length; i++) {
-      const player = updatedKnockedOutPlayers[i];
-      const newKoPosition = i + 1;
-      await prisma.$executeRaw`
-        UPDATE tournament_draft_players
-        SET ko_position = ${newKoPosition}
-        WHERE id = ${player.id}
-      `;
-    }
+    // Recalculate ko_positions for all knocked out players
+    await recalculateKoPositions(draftId, prisma);
 
     // Fetch and emit the updated player data
     const updatedPlayerResult = await prisma.$queryRaw<RawQueryResult[]>`

@@ -11,6 +11,7 @@ import { TDActionType, TDActionLogEntry } from "@/lib/tdActions";
 import { BroadcastManager } from "@/lib/realtime";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { recalculateKoPositions } from "@/lib/tournament/koUtils";
 
 /**
  * POST /api/td/action-log/[game_uid]/undo
@@ -184,26 +185,7 @@ export async function POST(
 
           if (playerResult.length > 0) {
             const draftId = playerResult[0].tournament_draft_id;
-
-            // Get all knocked out players ordered by knockedout_at
-            const knockedOutPlayers = await tx.$queryRaw<{ id: number }[]>`
-              SELECT id
-              FROM tournament_draft_players
-              WHERE tournament_draft_id = ${draftId}
-                AND knockedout_at IS NOT NULL
-              ORDER BY knockedout_at ASC, id ASC
-            `;
-
-            // Update each player's ko_position based on their order
-            for (let i = 0; i < knockedOutPlayers.length; i++) {
-              const p = knockedOutPlayers[i];
-              const newKoPosition = i + 1;
-              await tx.$executeRaw`
-                UPDATE tournament_draft_players
-                SET ko_position = ${newKoPosition}
-                WHERE id = ${p.id}
-              `;
-            }
+            await recalculateKoPositions(draftId, tx);
           }
           break;
         }
