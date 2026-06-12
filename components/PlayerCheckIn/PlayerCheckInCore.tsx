@@ -54,6 +54,7 @@ export function PlayerCheckInCore({
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -78,6 +79,23 @@ export function PlayerCheckInCore({
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  // Reset highlighted index when search results change
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [searchResults]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && dropdownRef.current) {
+      const highlightedElement = dropdownRef.current.querySelector(
+        `[data-index="${highlightedIndex}"]`
+      );
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }, [highlightedIndex]);
 
   // Search for existing players
   const searchPlayers = async (query: string) => {
@@ -264,11 +282,33 @@ export function PlayerCheckInCore({
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "ArrowDown") {
                   e.preventDefault();
+                  if (showDropdown && searchResults.length > 0) {
+                    setHighlightedIndex((prev) =>
+                      prev < searchResults.length - 1 ? prev + 1 : prev
+                    );
+                  }
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  if (showDropdown && searchResults.length > 0) {
+                    setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                  }
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (showDropdown && highlightedIndex >= 0 && highlightedIndex < searchResults.length) {
+                    const selectedResult = searchResults[highlightedIndex];
+                    const alreadyCheckedIn = players.some(
+                      (p) => p.player_uid === selectedResult.UID
+                    );
+                    if (!alreadyCheckedIn && !isSubmitting) {
+                      handleCheckIn(selectedResult);
+                    }
+                  }
                 } else if (e.key === "Escape") {
                   setSearchQuery("");
                   setShowDropdown(false);
+                  setHighlightedIndex(-1);
                   e.currentTarget.blur();
                 }
               }}
@@ -282,19 +322,24 @@ export function PlayerCheckInCore({
                 ref={dropdownRef}
                 className="absolute z-50 w-full mt-2 bg-gray-800 border-2 border-cyan-500/50 rounded-xl shadow-2xl max-h-[300px] md:max-h-[400px] overflow-y-auto"
               >
-                {searchResults.map((result) => {
+                {searchResults.map((result, index) => {
                   const alreadyCheckedIn = players.some(
                     (p) => p.player_uid === result.UID,
                   );
+                  const isHighlighted = index === highlightedIndex;
 
                   return (
                     <button
                       key={result.UID}
+                      data-index={index}
                       onClick={() => !alreadyCheckedIn && handleCheckIn(result)}
                       disabled={alreadyCheckedIn || isSubmitting}
+                      onMouseEnter={() => setHighlightedIndex(index)}
                       className={`w-full p-3 md:p-6 text-left transition-all border-b-2 border-gray-700/50 last:border-b-0 ${
                         alreadyCheckedIn
                           ? "bg-red-900/40 cursor-not-allowed opacity-60"
+                          : isHighlighted
+                          ? "bg-cyan-600/40 cursor-pointer"
                           : "hover:bg-gray-700/80 cursor-pointer"
                       }`}
                     >
