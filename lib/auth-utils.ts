@@ -5,6 +5,17 @@ import { getLeagueRole, canAccessAdmin } from "./league-auth";
 import { prisma } from "./prisma";
 
 /**
+ * Get the league_id for a tournament draft.
+ * Shared helper for both API routes and Socket.IO authorization.
+ */
+export async function getLeagueIdForDraft(draftId: number): Promise<number | null> {
+  const draft = await prisma.$queryRaw<{ league_id: number }[]>`
+    SELECT league_id FROM tournament_drafts WHERE id = ${draftId}
+  `;
+  return draft.length ? Number(draft[0].league_id) : null;
+}
+
+/**
  * Get the current session and check if the user is an admin for their league.
  * For use in API routes.
  *
@@ -85,11 +96,9 @@ export async function requireDraftAdmin(draftId: number) {
   }
 
   // Fetch draft to get its league_id - derive from DB, not from request
-  const draft = await prisma.$queryRaw<{ id: bigint; league_id: number }[]>`
-    SELECT id, league_id FROM tournament_drafts WHERE id = ${draftId}
-  `;
+  const leagueId = await getLeagueIdForDraft(draftId);
 
-  if (!draft.length) {
+  if (!leagueId) {
     return {
       error: NextResponse.json(
         { error: "Tournament draft not found" },
@@ -98,7 +107,6 @@ export async function requireDraftAdmin(draftId: number) {
     };
   }
 
-  const leagueId = Number(draft[0].league_id);
   const role = await getLeagueRole(session.user.uid, leagueId);
 
   if (!canAccessAdmin(role)) {

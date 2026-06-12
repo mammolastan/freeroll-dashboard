@@ -20,6 +20,7 @@ const getSocketUrl = () => {
 };
 
 export const socket = io(getSocketUrl(), {
+  withCredentials: true, // Send cookies (including NextAuth session) with connection
   reconnection: true,
   reconnectionAttempts: Infinity, // Keep trying forever
   reconnectionDelay: 1000, // Start with 1 second
