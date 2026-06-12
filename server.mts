@@ -801,7 +801,8 @@ async function getTournamentData(
         td.director_name,
         td.league_id,
         td.allow_chat,
-        td.allow_self_checkin
+        td.allow_self_checkin,
+        td.game_started
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
@@ -846,6 +847,7 @@ async function getTournamentData(
       allow_chat: effectiveAllowChat,
       allow_self_checkin: effectiveAllowSelfCheckin,
       cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
+      game_started: Boolean(row.game_started),
     };
   } catch (error) {
     console.error("Error fetching tournament data:", error);

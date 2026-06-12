@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import { PrismaClient } from "@prisma/client";
+import { decode } from "next-auth/jwt";
 import { resolveBlindSchedule } from "./lib/blindLevels.mjs";
 import { DEFAULT_LEAGUE_CONFIG as DEFAULT_LEAGUE_CONFIG_MJS } from "./types/league-config-defaults.mjs";
 import webpush from "web-push";
@@ -511,6 +512,60 @@ async function loadTimerStateFromDB(tournamentId) {
         return null;
     }
 }
+// ==========================================
+// Socket.IO Authorization Helpers
+// ==========================================
+/**
+ * Get the league_id for a tournament draft.
+ * Mirrors getLeagueIdForDraft in lib/auth-utils.ts for Socket.IO context.
+ */
+async function getLeagueIdForDraft(draftId) {
+    const draft = await prisma.$queryRaw `
+    SELECT league_id FROM tournament_drafts WHERE id = ${draftId}
+  `;
+    return draft.length ? Number(draft[0].league_id) : null;
+}
+/**
+ * Get a user's role in a league.
+ * Mirrors getLeagueRole in lib/league-auth.ts for Socket.IO context.
+ */
+async function getLeagueRole(playerUid, leagueId) {
+    const row = await prisma.league_roles.findUnique({
+        where: {
+            unique_member: { league_id: leagueId, player_uid: playerUid },
+        },
+        select: { role: true },
+    });
+    if (!row)
+        return null;
+    return row.role;
+}
+/**
+ * Check if a role has admin access.
+ * Mirrors canAccessAdmin in lib/league-auth.ts.
+ */
+function canAccessAdmin(role) {
+    return role === 'owner' || role === 'admin';
+}
+/**
+ * Check if socket user has admin access for a specific tournament.
+ * Returns the verified user info if authorized, null otherwise.
+ */
+async function checkTournamentAdmin(socket, tournamentId) {
+    const user = socket.data.user;
+    if (!user)
+        return null;
+    const leagueId = await getLeagueIdForDraft(tournamentId);
+    if (!leagueId)
+        return null;
+    const role = await getLeagueRole(user.uid, leagueId);
+    if (!canAccessAdmin(role))
+        return null;
+    return { user, role };
+}
+// ==========================================
+// League Config Helper
+// ==========================================
 // Loaded inline so `npm run dev:socket` (tsx) does not import
 // fetch-tournament-realtime-snapshot.ts, which could mix CJS/ESM and break
 // named ESM imports from server.mts.
@@ -558,7 +613,8 @@ async function getTournamentData(tournamentDraftId) {
         td.director_name,
         td.league_id,
         td.allow_chat,
-        td.allow_self_checkin
+        td.allow_self_checkin,
+        td.game_started
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentDraftId}
@@ -595,6 +651,7 @@ async function getTournamentData(tournamentDraftId) {
             allow_chat: effectiveAllowChat,
             allow_self_checkin: effectiveAllowSelfCheckin,
             cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
+            game_started: Boolean(row.game_started),
         };
     }
     catch (error) {
@@ -653,7 +710,68 @@ const handle = app.getRequestHandler();
 app.prepare().then(async () => {
     try {
         const httpServer = createServer(handle);
-        const io = new Server(httpServer);
+        const io = new Server(httpServer, {
+            cors: {
+                origin: true, // Allow same origin
+                credentials: true, // Allow cookies
+            },
+        });
+        // ==========================================
+        // Socket.IO Authentication Middleware
+        // ==========================================
+        io.use(async (socket, next) => {
+            try {
+                // Extract NextAuth session token from cookies
+                const cookieHeader = socket.handshake.headers.cookie;
+                if (!cookieHeader) {
+                    // No cookies - anonymous user, allowed to connect
+                    socket.data.user = null;
+                    return next();
+                }
+                // Parse cookies to find the session token
+                const cookies = Object.fromEntries(cookieHeader.split(';').map(c => {
+                    const [key, ...val] = c.trim().split('=');
+                    return [key, val.join('=')];
+                }));
+                // NextAuth uses different cookie names in dev vs prod
+                const tokenCookie = cookies['next-auth.session-token'] ||
+                    cookies['__Secure-next-auth.session-token'];
+                if (!tokenCookie) {
+                    // No session token - anonymous user
+                    socket.data.user = null;
+                    return next();
+                }
+                // Decode the JWT
+                const secret = process.env.NEXTAUTH_SECRET;
+                if (!secret) {
+                    console.error('NEXTAUTH_SECRET not set - cannot verify session');
+                    socket.data.user = null;
+                    return next();
+                }
+                const decoded = await decode({
+                    token: tokenCookie,
+                    secret,
+                });
+                if (decoded && decoded.uid && typeof decoded.uid === 'string') {
+                    socket.data.user = {
+                        uid: decoded.uid,
+                        name: decoded.name || 'Unknown',
+                        leagueId: decoded.leagueId || 1,
+                    };
+                    console.log(`Socket ${socket.id} authenticated as ${socket.data.user.name} (${socket.data.user.uid})`);
+                }
+                else {
+                    socket.data.user = null;
+                }
+                next();
+            }
+            catch (error) {
+                console.error('Socket auth error:', error);
+                // Don't reject connection - just mark as unauthenticated
+                socket.data.user = null;
+                next();
+            }
+        });
         // Make Socket.IO instance available globally for API routes
         global.socketIoInstance = io;
         // Recover active timers from database on startup
@@ -790,9 +908,16 @@ app.prepare().then(async () => {
                 socket.to(room).emit("message", { sender, message });
             });
             // Timer event handlers
-            socket.on("timer:start", async ({ tournamentId, actor }) => {
-                var _a, _b, _c, _d, _e;
-                console.log(`Timer start requested for tournament ${tournamentId}`);
+            socket.on("timer:start", async ({ tournamentId }) => {
+                var _a, _b, _c;
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:start attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
+                console.log(`Timer start requested for tournament ${tournamentId} by ${auth.user.name}`);
                 // Check if this is the initial start (game_started === false)
                 const tournamentInfo = await prisma.tournamentDraft.findUnique({
                     where: { id: tournamentId },
@@ -878,13 +1003,13 @@ app.prepare().then(async () => {
                         }).catch((err) => console.error('[push] Timer start notification failed:', err));
                     }
                 }
-                // Audit log: TIMER_STARTED
+                // Audit log: TIMER_STARTED (using server-verified identity)
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_STARTED',
                     actionCategory: 'ADMIN',
-                    actorId: (_d = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _d !== void 0 ? _d : null,
-                    actorName: (_e = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _e !== void 0 ? _e : 'Admin',
+                    actorId: null, // UID stored in actorName for now
+                    actorName: auth.user.name,
                     previousValue,
                     newValue: {
                         isRunning: true,
@@ -894,12 +1019,19 @@ app.prepare().then(async () => {
                     },
                     metadata: {
                         firstStart: isInitialStart,
+                        actorUid: auth.user.uid,
                     },
                     ipAddress: socket.data.clientIP,
                 });
             });
-            socket.on("timer:pause", async ({ tournamentId, actor }) => {
-                var _a, _b;
+            socket.on("timer:pause", async ({ tournamentId }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:pause attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 // Capture state before pausing for audit log
                 const previousState = timerStates.get(tournamentId);
                 const previousValue = previousState ? {
@@ -924,14 +1056,14 @@ app.prepare().then(async () => {
                     serverTime: Date.now(),
                 };
                 io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                console.log(`Timer paused for tournament ${tournamentId}`);
-                // Audit log: TIMER_PAUSED
+                console.log(`Timer paused for tournament ${tournamentId} by ${auth.user.name}`);
+                // Audit log: TIMER_PAUSED (using server-verified identity)
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_PAUSED',
                     actionCategory: 'ADMIN',
-                    actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                    actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                    actorId: null,
+                    actorName: auth.user.name,
                     previousValue,
                     newValue: {
                         isRunning: timerState.isRunning,
@@ -941,12 +1073,19 @@ app.prepare().then(async () => {
                     },
                     metadata: {
                         pausedAtLevel: timerState.currentLevel,
+                        actorUid: auth.user.uid,
                     },
                     ipAddress: socket.data.clientIP,
                 });
             });
-            socket.on("timer:resume", async ({ tournamentId, actor }) => {
-                var _a, _b;
+            socket.on("timer:resume", async ({ tournamentId }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:resume attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 // Capture state before resuming for audit log
                 const previousState = timerStates.get(tournamentId);
                 const previousValue = previousState ? {
@@ -971,14 +1110,14 @@ app.prepare().then(async () => {
                     serverTime: Date.now(),
                 };
                 io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                console.log(`Timer resumed for tournament ${tournamentId}`);
-                // Audit log: TIMER_RESUMED
+                console.log(`Timer resumed for tournament ${tournamentId} by ${auth.user.name}`);
+                // Audit log: TIMER_RESUMED (using server-verified identity)
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_RESUMED',
                     actionCategory: 'ADMIN',
-                    actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                    actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                    actorId: null,
+                    actorName: auth.user.name,
                     previousValue,
                     newValue: {
                         isRunning: true,
@@ -988,12 +1127,19 @@ app.prepare().then(async () => {
                     },
                     metadata: {
                         resumedFromPause: true,
+                        actorUid: auth.user.uid,
                     },
                     ipAddress: socket.data.clientIP,
                 });
             });
-            socket.on("timer:reset", async ({ tournamentId, actor }) => {
-                var _a, _b;
+            socket.on("timer:reset", async ({ tournamentId }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:reset attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 // Capture state before resetting for audit log
                 const previousState = timerStates.get(tournamentId);
                 const previousValue = previousState ? {
@@ -1018,14 +1164,14 @@ app.prepare().then(async () => {
                     serverTime: Date.now(),
                 };
                 io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                console.log(`Timer reset for tournament ${tournamentId}`);
-                // Audit log: TIMER_RESET
+                console.log(`Timer reset for tournament ${tournamentId} by ${auth.user.name}`);
+                // Audit log: TIMER_RESET (using server-verified identity)
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_RESET',
                     actionCategory: 'ADMIN',
-                    actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                    actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                    actorId: null,
+                    actorName: auth.user.name,
                     previousValue,
                     newValue: {
                         isRunning: false,
@@ -1035,6 +1181,7 @@ app.prepare().then(async () => {
                     },
                     metadata: {
                         resetToLevel: 1,
+                        actorUid: auth.user.uid,
                     },
                     ipAddress: socket.data.clientIP,
                 });
@@ -1062,8 +1209,15 @@ app.prepare().then(async () => {
                 };
                 socket.emit("timer:sync", timerPayload);
             });
-            socket.on("timer:nextLevel", async ({ tournamentId, actor }) => {
-                var _a, _b, _c;
+            socket.on("timer:nextLevel", async ({ tournamentId }) => {
+                var _a;
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:nextLevel attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 const timer = await getOrCreateTimerState(tournamentId);
                 if (!timer) {
                     console.error(`Cannot advance timer - tournament ${tournamentId} not found`);
@@ -1091,14 +1245,14 @@ app.prepare().then(async () => {
                         serverTime: Date.now(),
                     };
                     io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                    console.log(`Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId}`);
-                    // Audit log: BLIND_LEVEL_CHANGED
+                    console.log(`Timer advanced to level ${timer.currentLevel} for tournament ${tournamentId} by ${auth.user.name}`);
+                    // Audit log: BLIND_LEVEL_CHANGED (using server-verified identity)
                     await logSocketAuditEvent({
                         tournamentId,
                         actionType: 'BLIND_LEVEL_CHANGED',
                         actionCategory: 'ADMIN',
-                        actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                        actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                        actorId: null,
+                        actorName: auth.user.name,
                         previousValue: {
                             blindLevel: previousLevel,
                             timeRemaining: previousTimeRemaining,
@@ -1110,14 +1264,22 @@ app.prepare().then(async () => {
                         metadata: {
                             direction: 'next',
                             manualChange: true,
-                            isBreak: (_c = nextLevel === null || nextLevel === void 0 ? void 0 : nextLevel.isbreak) !== null && _c !== void 0 ? _c : false,
+                            isBreak: (_a = nextLevel === null || nextLevel === void 0 ? void 0 : nextLevel.isbreak) !== null && _a !== void 0 ? _a : false,
+                            actorUid: auth.user.uid,
                         },
                         ipAddress: socket.data.clientIP,
                     });
                 }
             });
-            socket.on("timer:prevLevel", async ({ tournamentId, actor }) => {
-                var _a, _b, _c;
+            socket.on("timer:prevLevel", async ({ tournamentId }) => {
+                var _a;
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:prevLevel attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 const timer = await getOrCreateTimerState(tournamentId);
                 if (!timer) {
                     console.error(`Cannot go to previous level - tournament ${tournamentId} not found`);
@@ -1145,14 +1307,14 @@ app.prepare().then(async () => {
                         serverTime: Date.now(),
                     };
                     io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                    console.log(`Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId}`);
-                    // Audit log: BLIND_LEVEL_CHANGED
+                    console.log(`Timer moved back to level ${timer.currentLevel} for tournament ${tournamentId} by ${auth.user.name}`);
+                    // Audit log: BLIND_LEVEL_CHANGED (using server-verified identity)
                     await logSocketAuditEvent({
                         tournamentId,
                         actionType: 'BLIND_LEVEL_CHANGED',
                         actionCategory: 'ADMIN',
-                        actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                        actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                        actorId: null,
+                        actorName: auth.user.name,
                         previousValue: {
                             blindLevel: previousLevel,
                             timeRemaining: previousTimeRemaining,
@@ -1164,14 +1326,21 @@ app.prepare().then(async () => {
                         metadata: {
                             direction: 'previous',
                             manualChange: true,
-                            isBreak: (_c = prevLevel === null || prevLevel === void 0 ? void 0 : prevLevel.isbreak) !== null && _c !== void 0 ? _c : false,
+                            isBreak: (_a = prevLevel === null || prevLevel === void 0 ? void 0 : prevLevel.isbreak) !== null && _a !== void 0 ? _a : false,
+                            actorUid: auth.user.uid,
                         },
                         ipAddress: socket.data.clientIP,
                     });
                 }
             });
-            socket.on("timer:setTime", async ({ tournamentId, timeInSeconds, actor }) => {
-                var _a, _b;
+            socket.on("timer:setTime", async ({ tournamentId, timeInSeconds }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:setTime attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 const timer = await getOrCreateTimerState(tournamentId);
                 if (!timer) {
                     console.error(`Cannot set time - tournament ${tournamentId} not found`);
@@ -1193,14 +1362,14 @@ app.prepare().then(async () => {
                     serverTime: Date.now(),
                 };
                 io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                console.log(`Timer set to ${timeInSeconds} seconds for tournament ${tournamentId}`);
-                // Audit log: TIMER_TIME_SET
+                console.log(`Timer set to ${timeInSeconds} seconds for tournament ${tournamentId} by ${auth.user.name}`);
+                // Audit log: TIMER_TIME_SET (using server-verified identity)
                 await logSocketAuditEvent({
                     tournamentId,
                     actionType: 'TIMER_TIME_SET',
                     actionCategory: 'ADMIN',
-                    actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                    actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                    actorId: null,
+                    actorName: auth.user.name,
                     previousValue: {
                         timeRemaining: previousTimeRemaining,
                     },
@@ -1210,12 +1379,19 @@ app.prepare().then(async () => {
                     metadata: {
                         blindLevel: timer.currentLevel,
                         manualTimeAdjustment: true,
+                        actorUid: auth.user.uid,
                     },
                     ipAddress: socket.data.clientIP,
                 });
             });
-            socket.on("timer:setSchedule", async ({ tournamentId, scheduleId, actor }) => {
-                var _a, _b;
+            socket.on("timer:setSchedule", async ({ tournamentId, scheduleId }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:setSchedule attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 if (!timerStates.has(tournamentId)) {
                     return; // Timer not initialized yet
                 }
@@ -1247,14 +1423,14 @@ app.prepare().then(async () => {
                         serverTime: Date.now(),
                     };
                     io.to(tournamentId.toString()).emit("timer:update", timerPayload);
-                    console.log(`Timer schedule changed to ${scheduleId} for tournament ${tournamentId}`);
-                    // Audit log: BLIND_SCHEDULE_CHANGED
+                    console.log(`Timer schedule changed to ${scheduleId} for tournament ${tournamentId} by ${auth.user.name}`);
+                    // Audit log: BLIND_SCHEDULE_CHANGED (using server-verified identity)
                     await logSocketAuditEvent({
                         tournamentId,
                         actionType: 'BLIND_SCHEDULE_CHANGED',
                         actionCategory: 'ADMIN',
-                        actorId: (_a = actor === null || actor === void 0 ? void 0 : actor.id) !== null && _a !== void 0 ? _a : null,
-                        actorName: (_b = actor === null || actor === void 0 ? void 0 : actor.name) !== null && _b !== void 0 ? _b : 'Admin',
+                        actorId: null,
+                        actorName: auth.user.name,
                         previousValue: {
                             levelCount: previousLevelCount,
                         },
@@ -1262,7 +1438,9 @@ app.prepare().then(async () => {
                             scheduleId: scheduleId,
                             levelCount: newBlindLevels.length,
                         },
-                        metadata: null,
+                        metadata: {
+                            actorUid: auth.user.uid,
+                        },
                         ipAddress: socket.data.clientIP,
                     });
                 }
@@ -1273,12 +1451,19 @@ app.prepare().then(async () => {
             });
             // Update blind levels without resetting timer position (for mid-tournament edits)
             socket.on("timer:updateLevels", async ({ tournamentId, levels }) => {
+                // Verify admin authorization
+                const auth = await checkTournamentAdmin(socket, tournamentId);
+                if (!auth) {
+                    console.log(`Unauthorized timer:updateLevels attempt for tournament ${tournamentId}`);
+                    socket.emit("timer:error", { message: "Admin access required" });
+                    return;
+                }
                 const timer = await getOrCreateTimerState(tournamentId);
                 if (!timer) {
                     console.error(`Cannot update levels - tournament ${tournamentId} not found`);
                     return;
                 }
-                console.log(`Updating blind levels for tournament ${tournamentId} (keeping level ${timer.currentLevel}, time ${timer.timeRemaining}s)`);
+                console.log(`Updating blind levels for tournament ${tournamentId} by ${auth.user.name} (keeping level ${timer.currentLevel}, time ${timer.timeRemaining}s)`);
                 // Update the blind levels while preserving current level and time
                 timer.blindLevels = levels;
                 // Save state change to database
