@@ -19,6 +19,7 @@ interface TournamentDraftRow {
   league_id: number;
   allow_chat: boolean | null | number;
   allow_self_checkin: boolean | null | number;
+  game_started: boolean | number;
 }
 
 function normalizeTournamentTime(raw: unknown): string | null {
@@ -48,7 +49,8 @@ export async function fetchTournamentRealtimeSnapshot(
       td.director_name,
       td.league_id,
       td.allow_chat,
-      td.allow_self_checkin
+      td.allow_self_checkin,
+      td.game_started
     FROM tournament_drafts td
     LEFT JOIN venues v ON td.venue_id = v.id
     WHERE td.id = ${tournamentId}
@@ -93,5 +95,6 @@ export async function fetchTournamentRealtimeSnapshot(
     allow_chat: effectiveAllowChat,
     allow_self_checkin: effectiveAllowSelfCheckin,
     cutoffMinutes,
+    game_started: Boolean(row.game_started),
   };
 }

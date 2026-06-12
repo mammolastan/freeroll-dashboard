@@ -173,7 +173,20 @@ export default function TVScreenPage() {
       {/* Timer Row: Timer (75%) + Stats (25%) */}
       <div className="tvscreen-timer-row">
         <div className="tvscreen-timer-wrapper">
-          <TVScreenTimer tournamentId={parseInt(token as string)} />
+          {gameData.tournament.game_started ? (
+            <TVScreenTimer tournamentId={parseInt(token as string)} />
+          ) : (
+            <div className="tvscreen-timer">
+              <div className="tvscreen-timer-prestart">
+                <div className="tvscreen-timer-prestart-message">
+                  Poker starts soon
+                </div>
+                <div className="tvscreen-timer-prestart-submessage">
+                  Check-in with TD or in app
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="tvscreen-stats-wrapper">

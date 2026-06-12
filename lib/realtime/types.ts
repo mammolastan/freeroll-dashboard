@@ -35,6 +35,7 @@ export interface Tournament {
   allow_chat: boolean; // whether players can send chat messages in the feed
   allow_self_checkin: boolean; // whether players can self check-in from gameview
   cutoffMinutes: number; // resolved cutoff (venue override ?? league default)
+  game_started: boolean; // whether the tournament has started
 }
 
 export interface GameViewData {

@@ -206,6 +206,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
           allow_chat: true,
           allow_self_checkin: true,
           cutoffMinutes: 100,
+          game_started: false,
         },
         players
       }));
@@ -233,6 +234,10 @@ export function useRealtimeGameData(tournamentId: string | number) {
               incoming.timezone !== undefined
                 ? incoming.timezone
                 : prev.tournament.timezone,
+            game_started:
+              incoming.game_started !== undefined
+                ? incoming.game_started
+                : prev.tournament.game_started,
           },
         };
       });
