@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { createTDMessageFeedItem } from "@/lib/feed/feedService";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 // POST - Post a TD message to the tournament feed (admin only)
 export async function POST(
@@ -19,6 +20,10 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(tournamentId);
+    if (auth.error) return auth.error;
 
     // Parse request body
     const body = await request.json();

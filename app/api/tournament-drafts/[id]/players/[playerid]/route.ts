@@ -8,6 +8,7 @@ import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFr
 import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistory } from "@/lib/actionLogUtils";
 import { generateActionDescription } from "@/lib/tdActions";
 import { BroadcastManager } from "@/lib/realtime";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -18,6 +19,11 @@ export async function PUT(
     const body = await request.json();
     const playerId = parseInt(playerid);
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const { player_name, hitman_name, ko_position, placement } = body;
 
     console.log("Updating player:", playerId, "with data:", {
@@ -453,6 +459,10 @@ export async function DELETE(
     const { id, playerid } = await params;
     const playerId = parseInt(playerid);
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
 
     // Fetch player data before deletion for audit logging
     const entryToDelete = await prisma.$queryRaw<RawQueryResult[]>`

@@ -7,15 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 import { PlayerEvents } from "@/lib/realtime/events/playerEvents";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; playerId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const reviewerName = session?.user?.name || session?.user?.nickname || "TD";
-
     const { id, playerId } = await params;
     const tournamentId = parseInt(id);
     const knockoutPlayerId = parseInt(playerId);
@@ -26,6 +24,13 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(tournamentId);
+    if (auth.error) return auth.error;
+
+    const session = await getServerSession(authOptions);
+    const reviewerName = session?.user?.name || session?.user?.nickname || "TD";
 
     // Parse request body
     const body = await request.json();

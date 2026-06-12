@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {RawQueryResult } from "@/types"
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { requireLeagueAdmin } from "@/lib/auth-utils";
 
 // Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
 function serializeTime(time: unknown): string | null {
@@ -88,6 +89,10 @@ export async function POST(request: NextRequest) {
       allow_self_checkin,
     } = body;
     const leagueId = await getLeagueIdFromRequest(request);
+
+    // Verify user is admin for this league
+    const auth = await requireLeagueAdmin(leagueId);
+    if (auth.error) return auth.error;
 
     const scheduleId =
       typeof blind_schedule === "string" &&

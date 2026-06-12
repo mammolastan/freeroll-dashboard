@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RealtimeAPI } from "@/lib/realtime";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 /**
  * POST /api/tournament-drafts/[id]/players/reset-tables
@@ -15,6 +16,10 @@ export async function POST(
   try {
     const { id } = await params;
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
 
     // Verify the tournament exists
     const tournament = await prisma.tournamentDraft.findUnique({

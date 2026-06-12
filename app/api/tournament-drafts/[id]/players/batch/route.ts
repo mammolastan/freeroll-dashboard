@@ -9,6 +9,7 @@ import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFr
 import { getNextSequenceNum, writeActionLog, getGameUidForDraft, getActionHistory } from "@/lib/actionLogUtils";
 import { generateActionDescription, TDActionType } from "@/lib/tdActions";
 import { BroadcastManager } from "@/lib/realtime";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -18,6 +19,11 @@ export async function PUT(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const { players: playersToUpdate } = body;
 
     if (!Array.isArray(playersToUpdate) || playersToUpdate.length === 0) {

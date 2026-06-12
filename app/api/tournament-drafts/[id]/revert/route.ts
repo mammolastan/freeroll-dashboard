@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 interface DraftTournament {
   id: number;
@@ -20,6 +21,10 @@ export async function POST(
   const { id } = await params;
   const draftId = parseInt(id);
   const ipAddress = getClientIP(request);
+
+  // Verify user is admin for this draft's league
+  const auth = await requireDraftAdmin(draftId);
+  if (auth.error) return auth.error;
 
   try {
 

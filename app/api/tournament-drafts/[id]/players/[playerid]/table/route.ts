@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RealtimeAPI } from "@/lib/realtime";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 /**
  * PATCH /api/tournament-drafts/[id]/players/[playerid]/table
@@ -16,6 +17,11 @@ export async function PATCH(
     const { id, playerid } = await params;
     const draftId = parseInt(id);
     const playerId = parseInt(playerid);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const body = await request.json();
     const { t_assign } = body;
 

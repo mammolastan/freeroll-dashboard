@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 // Helper to serialize time from MySQL TIME column (returns Date object) to "HH:MM" string
 function serializeTime(time: unknown): string | null {
@@ -90,7 +91,11 @@ export async function PUT(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const leagueId = await getLeagueIdFromRequest(request);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const {
       tournament_date,
       tournament_time,
@@ -102,10 +107,10 @@ export async function PUT(
       allow_self_checkin,
     } = body;
 
-    // Get current state before updating for audit comparison (also verifies league ownership)
+    // Get current state before updating for audit comparison
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT tournament_date, tournament_time, director_name, title, venue_id, start_points, allow_chat, allow_self_checkin
-      FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
+      FROM tournament_drafts WHERE id = ${draftId}
     `;
 
     if (!currentDraftResult.length) {
@@ -239,7 +244,11 @@ export async function PATCH(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
-    const leagueId = await getLeagueIdFromRequest(request);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const { blind_schedule, custom_blind_levels, period_ids } = body;
 
     // Validate blind_schedule value if provided - must be a numeric string (DB ID)
@@ -250,9 +259,9 @@ export async function PATCH(
       );
     }
 
-    // Get current state before updating (also verifies league ownership)
+    // Get current state before updating
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT blind_schedule, custom_blind_levels, period_ids FROM tournament_drafts WHERE id = ${draftId} AND league_id = ${leagueId}
+      SELECT blind_schedule, custom_blind_levels, period_ids FROM tournament_drafts WHERE id = ${draftId}
     `;
 
     if (!currentDraftResult.length) {
@@ -403,7 +412,6 @@ export async function DELETE(
   try {
     const { id } = await params;
     const tournamentId = parseInt(id);
-    const leagueId = await getLeagueIdFromRequest(request);
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
@@ -412,9 +420,13 @@ export async function DELETE(
       );
     }
 
-    // Get full tournament state before deletion for audit logging (also verifies league ownership)
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(tournamentId);
+    if (auth.error) return auth.error;
+
+    // Get full tournament state before deletion for audit logging
     const existingTournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT * FROM tournament_drafts WHERE id = ${tournamentId} AND league_id = ${leagueId}
+      SELECT * FROM tournament_drafts WHERE id = ${tournamentId}
     `;
 
     if ((existingTournament).length === 0) {

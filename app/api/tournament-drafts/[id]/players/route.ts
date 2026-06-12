@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addPlayerToTournament, AddedBy } from "@/lib/tournament/addPlayer";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
@@ -40,6 +41,11 @@ export async function POST(
     const body = await request.json();
     const { id } = await params;
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const { player_name, player_nickname, player_uid, is_new_player, added_by } = body;
 
     // Validate added_by value, default to 'admin'

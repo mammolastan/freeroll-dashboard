@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { emitPlayerJoined } from "@/lib/socketServer";
 import { logAuditEvent, getClientIP, getAdminScreen, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -14,6 +15,11 @@ export async function PUT(
     const body = await request.json();
     const playerId = parseInt(playerid);
     const draftId = parseInt(id);
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(draftId);
+    if (auth.error) return auth.error;
+
     const { afterPlayerId } = body; // null = move to first, otherwise the player id to move after
 
     // Get the player's current state for audit logging

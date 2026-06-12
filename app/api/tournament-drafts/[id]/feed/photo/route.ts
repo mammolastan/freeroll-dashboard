@@ -10,6 +10,7 @@ import { existsSync } from "fs";
 import path from "path";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "feed-photos");
 
@@ -47,6 +48,10 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Verify user is admin for this draft's league
+    const auth = await requireDraftAdmin(tournamentId);
+    if (auth.error) return auth.error;
 
     // Verify tournament exists and is in progress
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`

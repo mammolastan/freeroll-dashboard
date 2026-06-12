@@ -8,6 +8,7 @@ import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withA
 import { logError } from "@/lib/error-logger";
 import { getPointsForPlacement } from "@/lib/scoring";
 import { DEFAULT_SCORING_SYSTEM, ScoringSystemConfig, LeagueConfig } from "@/types/league-config";
+import { requireDraftAdmin } from "@/lib/auth-utils";
 
 interface DraftTournament {
   id: number;
@@ -136,6 +137,10 @@ export async function POST(
   const { id } = await params;
   const draftId = parseInt(id);
   const ipAddress = getClientIP(request);
+
+  // Verify user is admin for this draft's league
+  const auth = await requireDraftAdmin(draftId);
+  if (auth.error) return auth.error;
 
   try {
     const result = await prisma.$transaction(
