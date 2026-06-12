@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { X, ArrowRightLeft } from 'lucide-react';
+import { toOrdinal } from '@/lib/formatUtils';
 
 interface Player {
     id: number;
@@ -27,6 +28,7 @@ interface PlayerRowProps {
     hitmanHighlightedIndex: number;
     hitmanCandidates: Player[];
     calculatedKoPosition: number | null;
+    totalPlayers: number;
     onHitmanSearchChange: (value: string) => void;
     onHitmanFocus: () => void;
     onHitmanBlur: () => void;
@@ -46,6 +48,7 @@ export function PlayerRow({
     hitmanHighlightedIndex,
     hitmanCandidates,
     calculatedKoPosition,
+    totalPlayers,
     onHitmanSearchChange,
     onHitmanFocus,
     onHitmanBlur,
@@ -184,7 +187,10 @@ export function PlayerRow({
                 {calculatedKoPosition !== null ? (
                     <>
                         <span className="px-2 py-1 text-black text-sm font-medium">
-                            #{calculatedKoPosition}
+                            #{calculatedKoPosition}{' '}
+                            <span className="text-gray-500 font-normal">
+                                ({toOrdinal(totalPlayers - calculatedKoPosition + 1)})
+                            </span>
                         </span>
                         {!isIntegrated && (
                             <button

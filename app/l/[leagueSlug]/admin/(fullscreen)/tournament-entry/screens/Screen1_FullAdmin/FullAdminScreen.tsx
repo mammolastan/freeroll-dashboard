@@ -46,6 +46,7 @@ import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
 import { HitmanClaimsDrawer, HitmanClaimsButton } from "@/components/td/HitmanClaimsDrawer";
+import MoveKnockoutModal from "../../components/MoveKnockoutModal";
 
 interface TournamentDraft {
   id: number;
@@ -3094,67 +3095,14 @@ export function FullAdminScreen({
 
         {/* Move Knockout Modal */}
         {moveKnockoutModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 my-auto shadow-xl max-h-[calc(100vh-2rem)] overflow-y-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Move Knockout Position
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Select the player after which{" "}
-                <span className="font-medium">
-                  {moveKnockoutModal.playerName}
-                </span>{" "}
-                should be knocked out:
-              </p>
-              <div className="max-h-64 overflow-y-auto border rounded mb-4">
-                {/* List all knocked out players except the one being moved */}
-                {players
-                  .filter(
-                    (p) =>
-                      p.knockedout_at && p.id !== moveKnockoutModal.playerId,
-                  )
-                  .sort((a, b) => {
-                    const timeA = new Date(a.knockedout_at!).getTime();
-                    const timeB = new Date(b.knockedout_at!).getTime();
-                    if (timeA !== timeB) return timeB - timeA;
-                    return a.id - b.id;
-                  })
-                  .map((p, index) => {
-                    const position = koPositionsMap.get(p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() =>
-                          handleMoveKnockout(moveKnockoutModal.playerId, p.id)
-                        }
-                        className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
-                      >
-                        <span className="font-medium">
-                          {index === 0 ? "Latest KO" : `#${position} KO`}
-                        </span>{" "}
-                        - {p.player_name}
-                        {p.player_nickname && ` (${p.player_nickname})`}
-                      </button>
-                    );
-                  })}
-                {/* Option to be first knockout */}
-                <button
-                  onClick={() =>
-                    handleMoveKnockout(moveKnockoutModal.playerId, null)
-                  }
-                  className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b text-gray-900"
-                >
-                  <span className="font-medium">Be the first knockout</span>
-                </button>
-              </div>
-              <button
-                onClick={() => setMoveKnockoutModal(null)}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+          <MoveKnockoutModal
+            playerId={moveKnockoutModal.playerId}
+            playerName={moveKnockoutModal.playerName}
+            knockedOutPlayers={players.filter((p) => p.knockedout_at)}
+            totalPlayers={players.length}
+            onMove={handleMoveKnockout}
+            onClose={() => setMoveKnockoutModal(null)}
+          />
         )}
 
         {/* Tournament Metadata */}
@@ -3687,6 +3635,7 @@ export function FullAdminScreen({
                     hitmanSearchValues[player.id] || "",
                   )}
                   calculatedKoPosition={koPositionsMap.get(player.id) ?? null}
+                  totalPlayers={players.length}
                   onHitmanSearchChange={(value) =>
                     handleHitmanSearchChange(player.id, value)
                   }
