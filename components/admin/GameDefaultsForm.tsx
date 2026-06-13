@@ -13,6 +13,7 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
     allowChat: initialConfig.gameDefaults.allowChat,
     allowSelfCheckIn: initialConfig.gameDefaults.allowSelfCheckIn,
     lateRegistrationWindowMinutes: initialConfig.gameDefaults.lateRegistrationWindowMinutes,
+    defaultTDMessage: initialConfig.gameDefaults.defaultTDMessage || '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -28,6 +29,11 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
     setSaved(false);
   }
 
+  function handleTextChange(field: 'defaultTDMessage', value: string) {
+    setForm(prev => ({ ...prev, [field]: value }));
+    setSaved(false);
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -38,6 +44,7 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
           allowChat: form.allowChat,
           allowSelfCheckIn: form.allowSelfCheckIn,
           lateRegistrationWindowMinutes: form.lateRegistrationWindowMinutes,
+          defaultTDMessage: form.defaultTDMessage,
         },
       };
 
@@ -134,6 +141,25 @@ export default function GameDefaultsForm({ leagueSlug, initialConfig }: Props) {
             />
             <span className="text-white/60 text-sm">minutes</span>
           </div>
+        </div>
+      </div>
+
+      {/* Default TD Message */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div>
+          <h3 className="text-white font-medium">Default TD Message</h3>
+          <p className="text-white/40 text-sm mt-1 mb-4">
+            Displayed on the TV screen when there are no TD messages.
+            Supports markdown formatting.
+          </p>
+          <textarea
+            value={form.defaultTDMessage}
+            onChange={(e) => handleTextChange('defaultTDMessage', e.target.value)}
+            placeholder="Welcome to tonight's tournament! Good luck everyone..."
+            rows={4}
+            className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-lg text-white placeholder-white/30
+                       focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-y"
+          />
         </div>
       </div>
 

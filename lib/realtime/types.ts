@@ -36,6 +36,7 @@ export interface Tournament {
   allow_self_checkin: boolean; // whether players can self check-in from gameview
   cutoffMinutes: number; // resolved cutoff (venue override ?? league default)
   game_started: boolean; // whether the tournament has started
+  defaultTDMessage: string; // markdown - fallback shown when no TD messages exist
 }
 
 export interface GameViewData {

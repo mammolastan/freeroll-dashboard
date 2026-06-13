@@ -101,6 +101,7 @@ export interface LeagueConfig {
     blindSchedule: string;
     startPoints: number;
     lateRegistrationWindowMinutes: number;
+    defaultTDMessage: string; // Markdown - shown on TV screen when no TD messages exist
   };
 
   // Notifications
@@ -160,6 +161,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     blindSchedule: 'standard',
     startPoints: 1,
     lateRegistrationWindowMinutes: 100,
+    defaultTDMessage: '',
   },
   pushNotificationsEnabled: false,
 };

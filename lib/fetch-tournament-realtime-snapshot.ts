@@ -96,5 +96,6 @@ export async function fetchTournamentRealtimeSnapshot(
     allow_self_checkin: effectiveAllowSelfCheckin,
     cutoffMinutes,
     game_started: Boolean(row.game_started),
+    defaultTDMessage: leagueConfig.gameDefaults.defaultTDMessage || '',
   };
 }
