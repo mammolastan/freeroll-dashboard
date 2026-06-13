@@ -4,6 +4,25 @@ import { NextRequest, NextResponse } from "next/server";
 // This is a simple way to trigger Socket.IO events from API routes
 // by making HTTP requests that the server can handle
 export async function POST(request: NextRequest) {
+  // Validate internal API secret
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  const providedSecret = request.headers.get("x-internal-secret");
+
+  if (!internalSecret) {
+    console.error("[SOCKET-TRIGGER] INTERNAL_API_SECRET not configured");
+    return NextResponse.json(
+      { error: "Internal API not configured" },
+      { status: 500 }
+    );
+  }
+
+  if (providedSecret !== internalSecret) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { event, data } = body;

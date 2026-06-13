@@ -1,6 +1,9 @@
 // app/api/competition-periods/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,6 +11,11 @@ interface RouteParams {
 
 // PATCH - Update a competition period
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const periodId = parseInt(id);
@@ -17,6 +25,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         { error: "Invalid period ID" },
         { status: 400 }
       );
+    }
+
+    // Fetch period to verify it exists and get league_id for auth check
+    const existingPeriod = await prisma.competition_periods.findUnique({
+      where: { id: periodId },
+      select: { league_id: true },
+    });
+    if (!existingPeriod) {
+      return NextResponse.json(
+        { error: "Competition period not found" },
+        { status: 404 }
+      );
+    }
+
+    const role = await getLeagueRole(session.user.uid, existingPeriod.league_id);
+    if (!canAccessAdmin(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -84,6 +109,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE - Delete a competition period
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const periodId = parseInt(id);
@@ -93,6 +123,23 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         { error: "Invalid period ID" },
         { status: 400 }
       );
+    }
+
+    // Fetch period to verify it exists and get league_id for auth check
+    const existingPeriod = await prisma.competition_periods.findUnique({
+      where: { id: periodId },
+      select: { league_id: true },
+    });
+    if (!existingPeriod) {
+      return NextResponse.json(
+        { error: "Competition period not found" },
+        { status: 404 }
+      );
+    }
+
+    const role = await getLeagueRole(session.user.uid, existingPeriod.league_id);
+    if (!canAccessAdmin(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await prisma.competition_periods.delete({

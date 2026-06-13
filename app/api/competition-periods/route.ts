@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 export const revalidate = 3600; // 1 hour cache
 
@@ -63,8 +66,18 @@ export async function GET(request: Request) {
 
 // POST - Create a new competition period
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const leagueIdNum = await getLeagueIdFromRequest(request);
+
+    const role = await getLeagueRole(session.user.uid, leagueIdNum);
+    if (!canAccessAdmin(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const body = await request.json();
     const { name, period_type, start_date, end_date, is_active = true } = body;

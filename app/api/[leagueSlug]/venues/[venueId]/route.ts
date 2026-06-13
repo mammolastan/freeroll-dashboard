@@ -2,16 +2,29 @@
 import { prisma } from "@/lib/prisma";
 import { getLeagueIdBySlug } from "@/lib/league-utils";
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 // PUT /api/[leagueSlug]/venues/[venueId]
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ leagueSlug: string; venueId: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { leagueSlug, venueId } = await params;
   const leagueId = await getLeagueIdBySlug(leagueSlug);
   if (!leagueId) {
     return NextResponse.json({ error: "League not found" }, { status: 404 });
+  }
+
+  const role = await getLeagueRole(session.user.uid, leagueId);
+  if (!canAccessAdmin(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const id = parseInt(venueId);
@@ -77,10 +90,20 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ leagueSlug: string; venueId: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { leagueSlug, venueId } = await params;
   const leagueId = await getLeagueIdBySlug(leagueSlug);
   if (!leagueId) {
     return NextResponse.json({ error: "League not found" }, { status: 404 });
+  }
+
+  const role = await getLeagueRole(session.user.uid, leagueId);
+  if (!canAccessAdmin(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const id = parseInt(venueId);

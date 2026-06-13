@@ -3,20 +3,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
-import { RawQueryResult } from "@/types"
+import { RawQueryResult } from "@/types";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
 
 // Generate or get existing check-in token
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const tournamentId = parseInt(id);
 
     // Check if tournament exists and is in progress, include league info
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT td.id, td.status, td.check_in_token, l.slug as league_slug
+      SELECT td.id, td.status, td.check_in_token, td.league_id, l.slug as league_slug
       FROM tournament_drafts td
       LEFT JOIN leagues l ON td.league_id = l.id
       WHERE td.id = ${tournamentId} AND td.status = 'in_progress'
@@ -30,6 +38,12 @@ export async function POST(
     }
 
     const tournamentData = (tournament)[0];
+
+    // Verify user has admin access to this league
+    const role = await getLeagueRole(session.user.uid, tournamentData.league_id as number);
+    if (!canAccessAdmin(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     // Generate token if doesn't exist
     if (!tournamentData.check_in_token) {

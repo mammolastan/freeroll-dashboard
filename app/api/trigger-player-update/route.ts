@@ -66,6 +66,25 @@ async function getCheckedInPlayers(tournamentDraftId: number) {
 }
 
 export async function POST(request: NextRequest) {
+  // Validate internal API secret
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  const providedSecret = request.headers.get("x-internal-secret");
+
+  if (!internalSecret) {
+    console.error("[TRIGGER] INTERNAL_API_SECRET not configured");
+    return NextResponse.json(
+      { error: "Internal API not configured" },
+      { status: 500 }
+    );
+  }
+
+  if (providedSecret !== internalSecret) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { tournamentDraftId } = body;

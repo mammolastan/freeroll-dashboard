@@ -30,9 +30,16 @@ export function emitPlayerJoined(tournamentDraftId: number, newPlayer: PlayerUpd
 
     // Make a simple HTTP request to the server to trigger an update
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const internalSecret = process.env.INTERNAL_API_SECRET;
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (internalSecret) {
+      headers["x-internal-secret"] = internalSecret;
+    }
+
     fetch(`${baseUrl}/api/trigger-player-update`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ tournamentDraftId }),
     }).catch((err) => {
       console.error("Failed to trigger player update:", err);
