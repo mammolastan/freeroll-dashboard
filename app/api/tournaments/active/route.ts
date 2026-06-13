@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         td.created_at,
         td.updated_at,
         COUNT(tdp.id) as total_players,
-        COUNT(CASE WHEN tdp.ko_position IS NULL THEN 1 END) as players_remaining
+        COUNT(CASE WHEN tdp.id IS NOT NULL AND tdp.ko_position IS NULL THEN 1 END) as players_remaining
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
