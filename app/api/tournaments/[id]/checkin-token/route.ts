@@ -13,18 +13,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.uid) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
     const { id } = await params;
     const tournamentId = parseInt(id);
 
-    // Check if tournament exists and is in progress, include league info
+    // Check if tournament exists and is in progress, include league info and self check-in flag
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT td.id, td.status, td.check_in_token, td.league_id, l.slug as league_slug
+      SELECT td.id, td.status, td.check_in_token, td.league_id, td.allow_self_checkin, l.slug as league_slug
       FROM tournament_drafts td
       LEFT JOIN leagues l ON td.league_id = l.id
       WHERE td.id = ${tournamentId} AND td.status = 'in_progress'
@@ -39,10 +34,17 @@ export async function POST(
 
     const tournamentData = (tournament)[0];
 
-    // Verify user has admin access to this league
-    const role = await getLeagueRole(session.user.uid, tournamentData.league_id as number);
-    if (!canAccessAdmin(role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // If self check-in is enabled, anyone can get the token (logged in or not)
+    // If self check-in is disabled, require admin access
+    if (!tournamentData.allow_self_checkin) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.uid) {
+        return NextResponse.json({ error: "Self check-in is not enabled for this tournament" }, { status: 403 });
+      }
+      const role = await getLeagueRole(session.user.uid, tournamentData.league_id as number);
+      if (!canAccessAdmin(role)) {
+        return NextResponse.json({ error: "Self check-in is not enabled for this tournament" }, { status: 403 });
+      }
     }
 
     // Generate token if doesn't exist

@@ -184,12 +184,19 @@ export default function GameViewPage() {
         setCheckInLeagueSlug(data.league_slug || null);
         setShowCheckInModal(true);
       } else {
-        console.error("Failed to get check-in token");
-        // Could add error handling here
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 403) {
+          alert(errorData.error || "Self check-in is not enabled for this tournament.");
+        } else if (response.status === 404) {
+          alert("Tournament not found or check-in is not available.");
+        } else {
+          alert("Failed to start check-in. Please try again.");
+        }
+        console.error("Failed to get check-in token:", errorData);
       }
     } catch (error) {
       console.error("Error getting check-in token:", error);
-      // Could add error handling here
+      alert("Failed to connect. Please check your internet connection and try again.");
     } finally {
       setGettingToken(false);
     }
