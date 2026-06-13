@@ -848,6 +848,7 @@ async function getTournamentData(
       allow_self_checkin: effectiveAllowSelfCheckin,
       cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
       game_started: Boolean(row.game_started),
+      defaultTDMessage: leagueConfig.gameDefaults.defaultTDMessage || '',
     };
   } catch (error) {
     console.error("Error fetching tournament data:", error);

@@ -652,6 +652,7 @@ async function getTournamentData(tournamentDraftId) {
             allow_self_checkin: effectiveAllowSelfCheckin,
             cutoffMinutes: leagueConfig.gameDefaults.lateRegistrationWindowMinutes,
             game_started: Boolean(row.game_started),
+            defaultTDMessage: leagueConfig.gameDefaults.defaultTDMessage || '',
         };
     }
     catch (error) {
