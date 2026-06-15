@@ -249,7 +249,26 @@ const Navbar = () => {
                 aria-expanded={isOpen}
                 aria-label="Toggle menu"
               >
-                {isOpen ? <X size={24} /> : <Menu size={24} />}
+                {isOpen ? (
+                  <X size={24} />
+                ) : session?.user ? (
+                  session.user.image ? (
+                    <div
+                      className="w-8 h-8 rounded-full bg-slate-600 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${session.user.image})`,
+                      }}
+                      role="img"
+                      aria-label="Profile"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
+                      <User size={16} />
+                    </div>
+                  )
+                ) : (
+                  <Menu size={24} />
+                )}
               </button>
             </div>
           )}
