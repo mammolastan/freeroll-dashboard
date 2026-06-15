@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { TVScreenTimer } from "./TVScreenTimer";
-import { TournamentFeed } from "@/components/TournamentFeed";
+import { TVFeed } from "./TVFeed";
 import { formatTime, formatCutoffTime } from "@/lib/utils";
 import { formatLeagueDate } from "@/lib/league-time";
 import "./tvscreen.css";
@@ -211,13 +211,11 @@ export default function TVScreenPage() {
         </div>
       </div>
 
-      {/* Feed - Takes at least 50% of vertical space */}
+      {/* Feed - Takes remaining space */}
       <div className="tvscreen-feed-wrapper">
-        <TournamentFeed
+        <TVFeed
           tournamentId={parseInt(token as string)}
           maxHeight="100%"
-          showInput={false}
-          isAdmin={false}
           totalPlayers={gameData.players.length}
           startPoints={gameData.tournament.start_points}
           players={gameData.players}

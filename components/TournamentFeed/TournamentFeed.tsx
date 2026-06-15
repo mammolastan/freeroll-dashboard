@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { Player } from "@/lib/realtime/types";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
-import ReactMarkdown from "react-markdown";
 
 type FeedTab = "all" | "td" | "chat" | "players" | "eliminated" | "allPlayers";
 
@@ -48,8 +47,6 @@ interface TournamentFeedProps {
   players?: Player[];
   /** Whether chat is allowed for this tournament (default: true) */
   allowChat?: boolean;
-  /** Default TD message (markdown) shown when no TD messages exist */
-  defaultTDMessage?: string;
 }
 
 function PlayersGrid({
@@ -179,7 +176,6 @@ export function TournamentFeed({
   startPoints = 0,
   players,
   allowChat = true,
-  defaultTDMessage = '',
 }: TournamentFeedProps) {
   const { data: session } = useSession();
   const {
@@ -769,26 +765,13 @@ export function TournamentFeed({
               </span>
             </div>
             {!loading && !error && filteredItems.length === 0 && (
-              defaultTDMessage ? (
-                <div className="p-4">
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Megaphone className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
-                      <div className="text-amber-200/90 prose prose-invert prose-amber prose-sm max-w-none prose-headings:text-amber-200 prose-headings:font-bold prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:my-1">
-                        <ReactMarkdown>{defaultTDMessage}</ReactMarkdown>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <Megaphone className="h-10 w-10 text-gray-600 mb-3" />
-                  <p className="text-gray-500 text-sm">No TD messages yet</p>
-                  <p className="text-gray-600 text-xs mt-1">
-                    Messages from the Tournament Director will appear here
-                  </p>
-                </div>
-              )
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <Megaphone className="h-10 w-10 text-gray-600 mb-3" />
+                <p className="text-gray-500 text-sm">No TD messages yet</p>
+                <p className="text-gray-600 text-xs mt-1">
+                  Messages from the Tournament Director will appear here
+                </p>
+              </div>
             )}
             {!loading && !error && filteredItems.length > 0 && (
               <div className="divide-y divide-gray-800/50">
@@ -1052,23 +1035,10 @@ export function TournamentFeed({
 
             {/* Empty State */}
             {!loading && !error && tdMessages.length === 0 && (
-              defaultTDMessage ? (
-                <div className="p-4">
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Megaphone className="h-5 w-5 text-amber-400 mt-1 flex-shrink-0" />
-                      <div className="text-amber-200/90 prose prose-invert prose-amber max-w-none prose-headings:text-amber-200 prose-headings:font-bold prose-headings:my-1 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-base prose-p:my-1 prose-strong:text-amber-100">
-                        <ReactMarkdown>{defaultTDMessage}</ReactMarkdown>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                  <Megaphone className="h-8 w-8 text-gray-600 mb-2" />
-                  <p className="text-gray-500 text-xs">No TD messages yet</p>
-                </div>
-              )
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <Megaphone className="h-8 w-8 text-gray-600 mb-2" />
+                <p className="text-gray-500 text-xs">No TD messages yet</p>
+              </div>
             )}
 
             {/* TD Feed Items */}
