@@ -248,7 +248,7 @@ function KnockoutItem({
       );
     }
 
-    // Unclaimed and user can claim - clickable skull
+    // Unclaimed and user can claim - clickable hollow skull
     if (canUserClaim) {
       return (
         <button
@@ -261,7 +261,12 @@ function KnockoutItem({
       );
     }
 
-    // Default skull (has hitman or user can't claim)
+    // Claimed skull (has hitman) - solid appearance with glow effect
+    if (hasHitman) {
+      return <Skull className="h-8 w-8 text-yellow-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" />;
+    }
+
+    // Unclaimed but user can't claim (not logged in, or is the victim) - hollow skull
     return <Skull className="h-8 w-8 text-red-400/80" />;
   };
 
