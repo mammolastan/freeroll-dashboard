@@ -2,16 +2,59 @@ const path = require("path");
 const withPWA = require("next-pwa")({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  register: true,
+  register: false, // We register manually in ServiceWorkerRegister.tsx
   skipWaiting: true,
-  // Exclude files from SW precaching
-  exclude: [
-    /manifest\.json/,
-    // Exclude server-side files (not accessible in standalone mode)
-    /\/_next\/server\//,
-    /middleware-build-manifest/,
-    /middleware-react-loadable-manifest/,
-    /next-font-manifest/,
+  // Disable precaching - SW activates instantly, assets cached on-demand via runtimeCaching
+  buildExcludes: [/.*/], // Exclude everything from precache
+  // Runtime caching still works - assets get cached as they're fetched
+  runtimeCaching: [
+    {
+      // Cache JS/CSS with stale-while-revalidate
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "next-static",
+        expiration: { maxEntries: 64, maxAgeSeconds: 86400 },
+      },
+    },
+    {
+      // Cache images
+      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "images",
+        expiration: { maxEntries: 64, maxAgeSeconds: 86400 },
+      },
+    },
+    {
+      // Cache fonts
+      urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "fonts",
+        expiration: { maxEntries: 16, maxAgeSeconds: 31536000 },
+      },
+    },
+    {
+      // Network-first for API calls
+      urlPattern: /\/api\/.*/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "apis",
+        networkTimeoutSeconds: 10,
+        expiration: { maxEntries: 16, maxAgeSeconds: 86400 },
+      },
+    },
+    {
+      // Network-first for pages
+      urlPattern: ({ url }) => url.origin === self.location.origin,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "pages",
+        networkTimeoutSeconds: 10,
+        expiration: { maxEntries: 32, maxAgeSeconds: 86400 },
+      },
+    },
   ],
 });
 

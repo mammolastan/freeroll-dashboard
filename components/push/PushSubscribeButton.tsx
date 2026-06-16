@@ -32,6 +32,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   const [permStatus, setPermStatus] = useState<PermissionStatus>('unknown');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [swReady, setSwReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,7 +43,18 @@ export default function PushSubscribeButton({ leagueId }: Props) {
     }
 
     setPermStatus(Notification.permission as PermissionStatus);
-    checkCurrentSubscription().finally(() => setLoading(false));
+
+    // Wait for service worker to be ready before enabling the button
+    getServiceWorkerRegistration(15000) // 15s timeout for first-time installs
+      .then(() => {
+        setSwReady(true);
+        return checkCurrentSubscription();
+      })
+      .catch(() => {
+        // SW not ready yet - keep swReady false
+        setSwReady(false);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   async function checkCurrentSubscription() {
@@ -144,6 +156,15 @@ export default function PushSubscribeButton({ leagueId }: Props) {
       <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
         <Bell size={16} />
         Checking...
+      </div>
+    );
+  }
+
+  if (!swReady) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
+        <Bell size={16} className="animate-pulse" />
+        Initializing...
       </div>
     );
   }
