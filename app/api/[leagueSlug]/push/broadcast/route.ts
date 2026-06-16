@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getLeagueIdBySlug } from '@/lib/league-utils';
 import { getLeagueRole, canAccessAdmin } from '@/lib/league-auth';
-import { broadcastToLeague } from '@/lib/push/sendPush';
+import { broadcastToLeague, sendToSubscriber } from '@/lib/push/sendPush';
 import { prisma } from '@/lib/prisma';
 
 interface RouteContext {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   const body = await req.json();
-  const { message } = body;
+  const { message, subscriberId } = body;
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return NextResponse.json({ error: 'message is required' }, { status: 400 });
@@ -58,12 +58,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     console.error('[push] Failed to parse league settings for icon:', e);
   }
 
-  const result = await broadcastToLeague(leagueId, {
+  const payload = {
     title: '📢 League Announcement',
     body: message.trim(),
     url: `/l/${leagueSlug}`,
     icon: iconUrl,
-  });
+  };
+
+  // If subscriberId provided, send only to that subscriber; otherwise broadcast to all
+  const result = subscriberId
+    ? await sendToSubscriber(subscriberId, payload)
+    : await broadcastToLeague(leagueId, payload);
 
   return NextResponse.json(result);
 }

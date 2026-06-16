@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Send, Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Send, Bell, ChevronDown } from 'lucide-react';
 
 interface Props {
   leagueSlug: string;
@@ -15,6 +15,12 @@ interface BroadcastResult {
   removed: number;
 }
 
+interface Subscriber {
+  id: number;
+  playerUid: string;
+  name: string;
+}
+
 const MAX_LENGTH = 200;
 
 export default function PushBroadcastPanel({ leagueSlug }: Props) {
@@ -22,6 +28,26 @@ export default function PushBroadcastPanel({ leagueSlug }: Props) {
   const [status, setStatus] = useState<SendStatus>('idle');
   const [result, setResult] = useState<BroadcastResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [selectedSubscriberId, setSelectedSubscriberId] = useState<number | null>(null);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(true);
+
+  useEffect(() => {
+    async function fetchSubscribers() {
+      try {
+        const res = await fetch(`/api/${leagueSlug}/push/subscribers`);
+        if (res.ok) {
+          const data = await res.json();
+          setSubscribers(data);
+        }
+      } catch (err) {
+        console.error('[PushBroadcastPanel] Failed to fetch subscribers:', err);
+      } finally {
+        setLoadingSubscribers(false);
+      }
+    }
+    fetchSubscribers();
+  }, [leagueSlug]);
 
   async function handleSend() {
     if (!message.trim() || status === 'sending') return;
@@ -34,7 +60,7 @@ export default function PushBroadcastPanel({ leagueSlug }: Props) {
       const res = await fetch(`/api/${leagueSlug}/push/broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, subscriberId: selectedSubscriberId }),
       });
 
       const data = await res.json();
@@ -68,6 +94,27 @@ export default function PushBroadcastPanel({ leagueSlug }: Props) {
       <p className="text-white/40 text-sm mb-5">
         Send a message to all players who have enabled notifications for this league.
       </p>
+
+      {/* Target selector */}
+      <div className="mb-4">
+        <label className="block text-white/60 text-xs mb-1.5">Send to</label>
+        <div className="relative">
+          <select
+            value={selectedSubscriberId ?? ''}
+            onChange={(e) => setSelectedSubscriberId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full appearance-none bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 pr-10 text-white text-sm focus:outline-none focus:border-cyan-500/50 transition-colors cursor-pointer"
+            disabled={loadingSubscribers}
+          >
+            <option value="">All subscribers ({subscribers.length})</option>
+            {subscribers.map((sub) => (
+              <option key={sub.id} value={sub.id}>
+                {sub.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" size={16} />
+        </div>
+      </div>
 
       {/* Textarea */}
       <textarea
