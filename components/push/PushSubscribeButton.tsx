@@ -9,6 +9,9 @@ interface Props {
 
 type PermissionStatus = 'unknown' | 'granted' | 'denied' | 'unsupported';
 
+// Capture env var at module load time to ensure proper inlining
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -98,11 +101,14 @@ export default function PushSubscribeButton({ leagueId }: Props) {
         return;
       }
 
+      if (!VAPID_PUBLIC_KEY) {
+        setError('Push notifications not configured');
+        return;
+      }
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-        ),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
       const res = await fetch('/api/push/subscribe', {
