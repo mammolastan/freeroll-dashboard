@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getLeagueIdBySlug } from '@/lib/league-utils';
 import { getLeagueRole, canAccessAdmin } from '@/lib/league-auth';
 import { broadcastToLeague } from '@/lib/push/sendPush';
+import { prisma } from '@/lib/prisma';
 
 interface RouteContext {
   params: Promise<{ leagueSlug: string }>;
@@ -38,10 +39,30 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: 'Message too long (max 200 characters)' }, { status: 400 });
   }
 
+  // Fetch league settings for icon
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
+  let iconUrl = `${baseUrl}/icons/default-icon-512.png`;
+  try {
+    const league = await prisma.leagues.findUnique({
+      where: { id: leagueId },
+      select: { settings: true },
+    });
+    if (league?.settings) {
+      const config = JSON.parse(league.settings as string);
+      if (config?.pwa?.logoUrl) {
+        const logoPath = config.pwa.logoUrl;
+        iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+      }
+    }
+  } catch (e) {
+    console.error('[push] Failed to parse league settings for icon:', e);
+  }
+
   const result = await broadcastToLeague(leagueId, {
     title: '📢 League Announcement',
     body: message.trim(),
     url: `/l/${leagueSlug}`,
+    icon: iconUrl,
   });
 
   return NextResponse.json(result);
