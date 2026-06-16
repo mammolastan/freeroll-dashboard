@@ -27,6 +27,9 @@ jobs:
         run: npm run build
         env:
           NODE_OPTIONS: '--max-old-space-size=1536'
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+          NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_FEATURE_PLAYER_REVIEWS: ${{ secrets.NEXT_PUBLIC_FEATURE_PLAYER_REVIEWS }}
 
       - name: Build Socket.IO server
         run: npm run build:server
