@@ -145,3 +145,55 @@ export async function sendToCheckedInPlayers(
   console.log(`[push] sendToCheckedInPlayers tournamentId=${tournamentId}: sent=${sent} failed=${failed} removed=${removed}`);
   return { sent, failed, removed };
 }
+
+/**
+ * Send a push notification to a single subscriber by ID.
+ * Automatically removes the subscription if expired (410/404).
+ */
+export async function sendToSubscriber(
+  subscriberId: number,
+  payload: PushPayload
+): Promise<BroadcastResult> {
+  ensureVapidInitialized();
+
+  const subs = await prisma.$queryRawUnsafe<
+    { id: number; endpoint: string; p256dh: string; auth: string }[]
+  >(
+    'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE id = ?',
+    subscriberId
+  );
+
+  if (subs.length === 0) {
+    return { sent: 0, failed: 0, removed: 0 };
+  }
+
+  const sub = subs[0];
+  let sent = 0;
+  let failed = 0;
+  let removed = 0;
+
+  try {
+    await webpush.sendNotification(
+      {
+        endpoint: sub.endpoint,
+        keys: { p256dh: sub.p256dh, auth: sub.auth },
+      },
+      JSON.stringify(payload)
+    );
+    sent++;
+  } catch (err: any) {
+    if (err.statusCode === 410 || err.statusCode === 404) {
+      await prisma.$executeRawUnsafe(
+        'DELETE FROM push_subscriptions WHERE id = ?',
+        sub.id
+      );
+      removed++;
+    } else {
+      failed++;
+      console.error('[push] sendNotification error:', err.statusCode, err.message);
+    }
+  }
+
+  console.log(`[push] sendToSubscriber id=${subscriberId}: sent=${sent} failed=${failed} removed=${removed}`);
+  return { sent, failed, removed };
+}
