@@ -51,13 +51,19 @@ export default function PlayersPage() {
         const urlRange = urlParams.get('range');
 
         // Set range from URL or localStorage
-        if (urlRange) {
+        // Migrate old "Q1-2025" format to null (let DateRangeSelector pick the default)
+        const isOldFormat = (range: string) => /^Q\d-\d{4}$/.test(range);
+
+        if (urlRange && !isOldFormat(urlRange)) {
             setInitialRange(urlRange);
             localStorage.setItem('selectedRange', urlRange);
         } else {
             const savedRange = localStorage.getItem('selectedRange');
-            if (savedRange) {
+            if (savedRange && !isOldFormat(savedRange)) {
                 setInitialRange(savedRange);
+            } else if (savedRange && isOldFormat(savedRange)) {
+                // Clear old format from localStorage
+                localStorage.removeItem('selectedRange');
             }
         }
 

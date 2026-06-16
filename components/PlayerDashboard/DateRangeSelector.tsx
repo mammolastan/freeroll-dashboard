@@ -51,6 +51,28 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
         fetchPeriods();
     }, [leagueParamReady, appendLeagueParam]);
 
+    // Sync selection when periods load and current selectedRange doesn't match any option
+    useEffect(() => {
+        if (loading || periods.length === 0) return;
+
+        const ranges = generateDateRanges();
+        const currentRangeExists = ranges.some(r => r.value === selectedRange);
+
+        if (!currentRangeExists) {
+            // Default to first quarterly period, or "all-time" if none
+            const defaultQuarterly = ranges.find(r =>
+                r.value.startsWith('period-') &&
+                periods.find(p => `period-${p.id}` === r.value)?.period_type === 'quarterly'
+            );
+            const defaultRange = defaultQuarterly || ranges[0];
+
+            if (defaultRange) {
+                onRangeChange(defaultRange.startDate, defaultRange.endDate, defaultRange.value);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, periods]); // Intentionally omit selectedRange/onRangeChange to only run once after periods load
+
     const createDate = (year: number, month: number, day: number) => {
         return new Date(year, month, day);
     };
