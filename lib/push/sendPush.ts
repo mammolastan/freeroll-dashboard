@@ -81,3 +81,67 @@ export async function broadcastToLeague(
   console.log(`[push] broadcast leagueId=${leagueId}: sent=${sent} failed=${failed} removed=${removed}`);
   return { sent, failed, removed };
 }
+
+/**
+ * Send a push notification to players who are checked into a specific tournament
+ * and have push notifications enabled for that league.
+ * Automatically removes expired (410/404) subscriptions.
+ */
+export async function sendToCheckedInPlayers(
+  tournamentId: number,
+  payload: PushPayload
+): Promise<BroadcastResult> {
+  ensureVapidInitialized();
+
+  // Get push subscriptions for players checked into this tournament
+  // Join tournament_draft_players -> push_subscriptions via player_uid
+  // Also need to match league_id from the tournament
+  const subs = await prisma.$queryRawUnsafe<
+    { id: number; endpoint: string; p256dh: string; auth: string }[]
+  >(
+    `SELECT DISTINCT ps.id, ps.endpoint, ps.p256dh, ps.auth
+     FROM push_subscriptions ps
+     INNER JOIN tournament_draft_players tdp ON ps.player_uid COLLATE utf8mb4_unicode_520_ci = tdp.player_uid
+     INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
+     WHERE tdp.tournament_draft_id = ?
+       AND tdp.checked_in_at IS NOT NULL
+       AND ps.league_id = td.league_id`,
+    tournamentId
+  );
+
+  let sent = 0;
+  let failed = 0;
+  let removed = 0;
+  const staleIds: number[] = [];
+
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth },
+        },
+        JSON.stringify(payload)
+      );
+      sent++;
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        staleIds.push(sub.id);
+        removed++;
+      } else {
+        failed++;
+        console.error('[push] sendNotification error:', err.statusCode, err.message);
+      }
+    }
+  }
+
+  if (staleIds.length > 0) {
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM push_subscriptions WHERE id IN (${staleIds.map(() => '?').join(',')})`,
+      ...staleIds
+    );
+  }
+
+  console.log(`[push] sendToCheckedInPlayers tournamentId=${tournamentId}: sent=${sent} failed=${failed} removed=${removed}`);
+  return { sent, failed, removed };
+}
