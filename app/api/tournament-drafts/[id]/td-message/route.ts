@@ -56,9 +56,10 @@ export async function POST(
 
     // Verify tournament exists and is in progress, get info for push notification
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT td.id, td.status, td.check_in_token, l.slug as league_slug, l.league_settings
+      SELECT td.id, td.status, td.check_in_token, l.slug as league_slug, l.league_settings, v.image_sm as venue_image
       FROM tournament_drafts td
       LEFT JOIN leagues l ON td.league_id = l.id
+      LEFT JOIN venues v ON td.venue_id = v.id
       WHERE td.id = ${tournamentId}
     `;
 
@@ -91,20 +92,28 @@ export async function POST(
     const checkInToken = tournament[0].check_in_token as string | null;
 
     if (leagueSlug && checkInToken) {
-      // Determine icon URL from league settings
+      // Determine icon URL: prefer venue image, fall back to league icon
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
       let iconUrl = `${baseUrl}/icons/default-icon-512.png`;
-      try {
-        const leagueSettings = tournament[0].league_settings as string | null;
-        if (leagueSettings) {
-          const config = JSON.parse(leagueSettings);
-          if (config?.pwa?.logoUrl) {
-            const logoPath = config.pwa.logoUrl;
-            iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+
+      // First, check if venue has an image
+      const venueImage = tournament[0].venue_image as string | null;
+      if (venueImage) {
+        iconUrl = `${baseUrl}/images/venues/${venueImage}`;
+      } else {
+        // Fall back to league icon from settings
+        try {
+          const leagueSettings = tournament[0].league_settings as string | null;
+          if (leagueSettings) {
+            const config = JSON.parse(leagueSettings);
+            if (config?.pwa?.logoUrl) {
+              const logoPath = config.pwa.logoUrl;
+              iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+            }
           }
+        } catch (e) {
+          console.error('[push] Failed to parse league settings for icon:', e);
         }
-      } catch (e) {
-        console.error('[push] Failed to parse league settings for icon:', e);
       }
 
       // Truncate message for notification body if needed

@@ -86,7 +86,7 @@ model TournamentDraft {
   title                   String?                 @db.Text
   allow_chat              Boolean?
   allow_self_checkin      Boolean?
-  game_started            Boolean                 @default(false)
+  game_started            Boolean
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
@@ -102,30 +102,30 @@ model TournamentDraft {
 }
 
 model TournamentDraftPlayer {
-  id                       Int                                      @id @default(autoincrement())
+  id                       Int                                    @id @default(autoincrement())
   tournament_draft_id      Int
-  player_name              String                                   @db.VarChar(255)
-  player_uid               String?                                  @db.VarChar(255)
-  status                   tournament_draft_players_status?         @default(active)
-  is_new_player            Boolean                                  @default(false)
-  t_assign                 Int                                      @db.TinyInt
-  hitman_name              String?                                  @db.VarChar(255)
-  hitman_uid               String?                                  @db.VarChar(255)
-  knockedout_at            DateTime?                                @db.DateTime(0)
+  player_name              String                                 @db.VarChar(255)
+  player_uid               String?                                @db.VarChar(255)
+  status                   tournament_draft_players_status?       @default(active)
+  is_new_player            Boolean                                @default(false)
+  t_assign                 Int                                    @db.TinyInt
+  hitman_name              String?                                @db.VarChar(255)
+  hitman_uid               String?                                @db.VarChar(255)
+  knockedout_at            DateTime?                              @db.DateTime(0)
   ko_position              Int?
   placement                Int?
-  created_at               DateTime                                 @default(now()) @db.Timestamp(0)
-  updated_at               DateTime                                 @default(now()) @updatedAt @db.Timestamp(0)
-  added_by                 tournament_draft_players_added_by?       @default(admin)
-  checked_in_at            DateTime?                                @db.Timestamp(0)
-  player_nickname          String?                                  @db.VarChar(255)
-  hitman_claim_uid         String?                                  @db.VarChar(255)
-  hitman_claim_name        String?                                  @db.VarChar(255)
-  hitman_claim_status      tournament_draft_players_claim_status    @default(none)
-  hitman_claimed_at        DateTime?                                @db.Timestamp(0)
-  hitman_claim_reviewed_at DateTime?                                @db.Timestamp(0)
-  hitman_claim_reviewed_by String?                                  @db.VarChar(255)
-  tournament_draft         TournamentDraft                          @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_draft_players_ibfk_1")
+  created_at               DateTime                               @default(now()) @db.Timestamp(0)
+  updated_at               DateTime                               @default(now()) @updatedAt @db.Timestamp(0)
+  added_by                 tournament_draft_players_added_by?     @default(admin)
+  checked_in_at            DateTime?                              @db.Timestamp(0)
+  player_nickname          String?                                @db.VarChar(255)
+  hitman_claim_uid         String?                                @db.VarChar(255)
+  hitman_claim_name        String?                                @db.VarChar(255)
+  hitman_claim_status      tournament_draft_players_claim_status? @default(none)
+  hitman_claimed_at        DateTime?                              @db.Timestamp(0)
+  hitman_claim_reviewed_at DateTime?                              @db.Timestamp(0)
+  hitman_claim_reviewed_by String?                                @db.VarChar(255)
+  tournament_draft         TournamentDraft                        @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_draft_players_ibfk_1")
 
   @@unique([tournament_draft_id, player_name], map: "unique_player_per_tournament")
   @@unique([tournament_draft_id, placement], map: "unique_placement_per_tournament")
@@ -331,6 +331,7 @@ model venues {
   notes       String?  @db.Text
   is_active   Boolean  @default(true)
   cutoff_time Int?
+  image_sm    String?  @db.Text
   created     DateTime @default(now()) @db.Timestamp(0)
   modified    DateTime @default(now()) @db.Timestamp(0)
   games       games[]
