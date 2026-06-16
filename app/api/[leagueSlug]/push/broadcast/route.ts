@@ -45,10 +45,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const league = await prisma.leagues.findUnique({
       where: { id: leagueId },
-      select: { settings: true },
+      select: { league_settings: true },
     });
-    if (league?.settings) {
-      const config = JSON.parse(league.settings as string);
+    if (league?.league_settings) {
+      const config = JSON.parse(league.league_settings as string);
       if (config?.pwa?.logoUrl) {
         const logoPath = config.pwa.logoUrl;
         iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;

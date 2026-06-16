@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       p.last_name,
       p.nickname
     FROM push_subscriptions ps
-    LEFT JOIN players_v2 p ON ps.player_uid = p.uid
+    LEFT JOIN players_v2 p ON ps.player_uid COLLATE utf8mb4_unicode_520_ci = p.uid
     WHERE ps.league_id = ${leagueId}
     ORDER BY p.first_name ASC, p.last_name ASC
   `;
