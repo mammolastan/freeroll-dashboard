@@ -23,8 +23,36 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Get service worker registration with timeout to avoid hanging indefinitely
-async function getServiceWorkerRegistration(timeoutMs = 5000): Promise<ServiceWorkerRegistration> {
+// Get service worker registration, registering it first if needed
+async function getServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
+  // Check for existing registration
+  let reg = await navigator.serviceWorker.getRegistration('/');
+
+  if (!reg) {
+    console.log('[push] No SW registration found, registering now');
+    reg = await navigator.serviceWorker.register('/sw.js');
+  }
+
+  // If there's a waiting worker, tell it to activate immediately
+  if (reg.waiting) {
+    console.log('[push] SW in waiting state, requesting skip');
+    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+
+  // If there's an installing worker, wait for it to finish
+  if (reg.installing) {
+    console.log('[push] SW installing, waiting for activation');
+    await new Promise<void>((resolve) => {
+      reg!.installing!.addEventListener('statechange', function handler() {
+        if (this.state === 'activated') {
+          this.removeEventListener('statechange', handler);
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Now wait for the SW to be controlling the page
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error('Service worker not ready')), timeoutMs)
   );
@@ -40,6 +68,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   useEffect(() => {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.log('[push] Push notifications not supported in this browser');
       setPermStatus('unsupported');
       setLoading(false);
       return;
@@ -48,13 +77,15 @@ export default function PushSubscribeButton({ leagueId }: Props) {
     setPermStatus(Notification.permission as PermissionStatus);
 
     // Wait for service worker to be ready before enabling the button
-    getServiceWorkerRegistration(15000) // 15s timeout for first-time installs
-      .then(() => {
+    getServiceWorkerRegistration(10000)
+      .then((reg) => {
+        console.log('[push] Service worker ready:', reg.scope);
         setSwReady(true);
         return checkCurrentSubscription();
       })
-      .catch(() => {
+      .catch((err) => {
         // SW not ready yet - keep swReady false
+        console.error('[push] Service worker initialization failed:', err);
         setSwReady(false);
       })
       .finally(() => setLoading(false));

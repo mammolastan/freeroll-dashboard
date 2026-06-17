@@ -2,6 +2,27 @@
 // Custom service worker additions for Web Push.
 // next-pwa merges this file into the generated public/sw.js at build time.
 
+// Ensure immediate activation - critical for iOS PWA mode
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker');
+  // Skip waiting to activate immediately
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker');
+  // Claim all clients immediately so navigator.serviceWorker.ready resolves
+  event.waitUntil(self.clients.claim());
+});
+
+// Handle skip waiting request from client
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    console.log('[SW] Received SKIP_WAITING message');
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
