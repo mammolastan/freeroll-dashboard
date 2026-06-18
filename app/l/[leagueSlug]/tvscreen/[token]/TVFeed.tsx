@@ -161,13 +161,13 @@ export function TVFeed({
       {/* Right Column - Chat */}
       {allowChat && (
         <div className="tvfeed-column tvfeed-column--right">
-          <div className="tvfeed-column-header tvfeed-column-header--purple">
-            <MessageCircle className="tvfeed-header-icon" />
-            <span>Chat</span>
-            {chatItems.length > 0 && (
+          {chatItems.length > 0 && (
+            <div className="tvfeed-column-header tvfeed-column-header--purple">
+              <MessageCircle className="tvfeed-header-icon" />
+              <span>Chat</span>
               <span className="tvfeed-header-badge">{chatItems.length}</span>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="tvfeed-column-content">
             {loading && (
@@ -177,9 +177,12 @@ export function TVFeed({
             )}
 
             {!loading && !error && chatItems.length === 0 && (
-              <div className="tvfeed-empty">
-                <MessageCircle className="tvfeed-empty-icon" />
-                <p>No chat messages yet</p>
+              <div className="tvfeed-image-container">
+                <img
+                  src="/images/freeroll-atlanta/Freeroll-Atlanta.jpg"
+                  alt="Freeroll Atlanta"
+                  className="tvfeed-promo-image"
+                />
               </div>
             )}
 
