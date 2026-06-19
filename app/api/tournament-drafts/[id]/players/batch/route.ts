@@ -12,7 +12,8 @@ import { BroadcastManager } from "@/lib/realtime";
 import { requireDraftAdmin } from "@/lib/auth-utils";
 import { recalculateKoPositions } from "@/lib/tournament/koUtils";
 
-export async function PUT(
+// Shared handler for both PUT and POST (POST needed for sendBeacon on unmount)
+async function handleBatchUpdate(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -437,4 +438,20 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+// PUT handler (standard usage)
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleBatchUpdate(request, context);
+}
+
+// POST handler (for sendBeacon on component unmount)
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleBatchUpdate(request, context);
 }

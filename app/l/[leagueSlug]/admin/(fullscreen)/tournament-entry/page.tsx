@@ -246,6 +246,30 @@ export default function TournamentEntryPage() {
     return () => clearInterval(pollInterval);
   }, [currentDraft]);
 
+  // Refresh data when switching screens
+  // This catches any pending non-KO updates that were saved via sendBeacon on unmount
+  // KOs save immediately, so socket handles those in real-time
+  useEffect(() => {
+    if (!currentDraft) return;
+
+    // Single refresh after a short delay to catch any sendBeacon updates
+    const timeoutId = setTimeout(async () => {
+      try {
+        const playersResponse = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/players`,
+        );
+        if (playersResponse.ok) {
+          const playersData: Player[] = await playersResponse.json();
+          setPlayers(playersData);
+        }
+      } catch (error) {
+        console.error("Screen change refresh failed:", error);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentScreen, currentDraft]);
+
   // Callback for screens to trigger data reload
   const handleDataChange = useCallback(() => {
     setDataVersion((prev) => prev + 1);

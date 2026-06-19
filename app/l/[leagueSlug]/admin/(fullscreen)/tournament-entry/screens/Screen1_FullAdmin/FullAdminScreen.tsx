@@ -47,6 +47,11 @@ import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
 import { HitmanClaimsDrawer, HitmanClaimsButton } from "@/components/td/HitmanClaimsDrawer";
 import MoveKnockoutModal from "../../components/MoveKnockoutModal";
+import { useAutoRefresh } from "./hooks/useAutoRefresh";
+import { useOptimisticUpdates } from "./hooks/useOptimisticUpdates";
+import { useSortedPlayerList } from "./hooks/useSortedPlayerList";
+import { usePeriodManager } from "./hooks/usePeriodManager";
+import { useHitmanManager } from "./hooks/useHitmanManager";
 
 interface TournamentDraft {
   id: number;
@@ -184,6 +189,9 @@ export function FullAdminScreen({
 
     return () => clearInterval(interval);
   }, [currentDraft]);
+  // Refs for functions that are defined later but needed in early hooks
+  const clearHitmanSearchValuesRef = useRef<() => void>(() => {});
+
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
   const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
   const {
@@ -195,8 +203,8 @@ export function FullAdminScreen({
     onUndoSuccess: (description) => {
       setToast({ message: description, type: "success" });
       // Clear local UI state that might be stale after undo
-      setHitmanSearchValues({});
-      setOptimisticUpdates({});
+      clearHitmanSearchValuesRef.current();
+      clearOptimisticUpdates();
       onDataChange(); // Refresh player data after undo
     },
     onUndoError: (reason) => {
@@ -226,32 +234,6 @@ export function FullAdminScreen({
     allow_self_checkin: true, // Will be set from league defaults on load
   });
 
-  // Competition periods state
-  interface CompetitionPeriod {
-    id: number;
-    name: string;
-    period_type: string;
-    start_date: string;
-    end_date: string;
-  }
-  const [availablePeriods, setAvailablePeriods] = useState<CompetitionPeriod[]>(
-    [],
-  );
-  const [periodsLoading, setPeriodsLoading] = useState(false);
-  const [editingPeriods, setEditingPeriods] = useState(false);
-  const [draftPeriodIds, setDraftPeriodIds] = useState<number[]>([]);
-  const [savingPeriods, setSavingPeriods] = useState(false);
-
-  // New period modal state
-  const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
-  const [newPeriod, setNewPeriod] = useState({
-    name: "",
-    period_type: "monthly" as "monthly" | "quarterly",
-    start_date: "",
-    end_date: "",
-  });
-  const [savingNewPeriod, setSavingNewPeriod] = useState(false);
-
   // Player management (using props from parent)
   const [newPlayerName, setNewPlayerName] = useState("");
   const [playerSearchResults, setPlayerSearchResults] = useState<
@@ -260,98 +242,13 @@ export function FullAdminScreen({
   const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isIntegrating, setIsIntegrating] = useState(false);
-  const [sortBy, setSortBy] = useState<
-    "name" | "ko_position" | "insertion" | "checked_in_at"
-  >(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("adminSortBy");
-      if (
-        saved &&
-        ["name", "ko_position", "insertion", "checked_in_at"].includes(saved)
-      ) {
-        return saved as "name" | "ko_position" | "insertion" | "checked_in_at";
-      }
-    }
-    return "insertion";
-  });
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("adminSortOrder");
-      if (saved && ["asc", "desc"].includes(saved)) {
-        return saved as "asc" | "desc";
-      }
-    }
-    return "asc";
-  }); // desc means newest first for insertion
-
-  const [hitmanSearchValues, setHitmanSearchValues] = useState<{
-    [key: number]: string;
-  }>({});
-  const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [hitmanHighlightedIndex, setHitmanHighlightedIndex] = useState<
-    Record<number, number>
-  >({});
-  // Track when knockout was initiated via crosshair click (to default to "unknown" on blur)
-  const [knockoutInitiated, setKnockoutInitiated] = useState<{
-    [key: number]: boolean;
-  }>({});
-
-  // Ref to track when a hitman was selected via dropdown (to skip blur processing)
-  const hitmanSelectedRef = useRef<{ [key: number]: boolean }>({});
 
   // Optimistic updates for immediate visual feedback
-  const [optimisticUpdates, setOptimisticUpdates] = useState<{
-    [playerId: number]: Partial<Player>;
-  }>({});
-
-  // Merge players prop with optimistic updates for display
-  const displayPlayers = useMemo(() => {
-    return players.map((player) => {
-      const optimistic = optimisticUpdates[player.id];
-      if (optimistic) {
-        return { ...player, ...optimistic };
-      }
-      return player;
-    });
-  }, [players, optimisticUpdates]);
-
-  // Clear optimistic updates when real data arrives from server
-  useEffect(() => {
-    // When players prop changes, clear any optimistic updates that are now reflected in real data
-    setOptimisticUpdates((prev) => {
-      const newUpdates = { ...prev };
-      let hasChanges = false;
-      for (const playerId of Object.keys(newUpdates)) {
-        const id = parseInt(playerId);
-        const realPlayer = players.find((p) => p.id === id);
-        const optimistic = newUpdates[id];
-        if (realPlayer && optimistic) {
-          // For knockouts: only clear if real data has BOTH hitman_name AND knockedout_at
-          // This prevents flicker during intermediate states while parent reloads data
-          if (
-            optimistic.hitman_name &&
-            realPlayer.hitman_name === optimistic.hitman_name &&
-            realPlayer.knockedout_at // Must have knockedout_at set by server
-          ) {
-            delete newUpdates[id];
-            hasChanges = true;
-          }
-          // For un-knockouts: only clear if real data has cleared both fields
-          if (
-            optimistic.hitman_name === null &&
-            realPlayer.hitman_name === null &&
-            !realPlayer.knockedout_at // Must have knockedout_at cleared by server
-          ) {
-            delete newUpdates[id];
-            hasChanges = true;
-          }
-        }
-      }
-      return hasChanges ? newUpdates : prev;
-    });
-  }, [players]);
+  const {
+    displayPlayers,
+    setOptimisticUpdate,
+    clearOptimisticUpdates,
+  } = useOptimisticUpdates({ players });
 
   // Blind schedule edit modal
   const [showBlindEditModal, setShowBlindEditModal] = useState(false);
@@ -376,14 +273,22 @@ export function FullAdminScreen({
   const loadPlayersRef = useRef<(id: number) => Promise<void>>(async () => {});
   const onDataChangeRef = useRef<() => void>(() => {});
 
+  // Auto-refresh hook for smart polling
+  const { temporarilyDisableAutoRefresh } = useAutoRefresh({
+    enabled: Boolean(currentDraft && currentDraft.status === "in_progress"),
+    intervalMs: 15000,
+    onRefresh: useCallback(async () => {
+      if (currentDraft) {
+        await loadPlayersRef.current(currentDraft.id);
+      }
+    }, [currentDraft]),
+  });
+
   // Move knockout modal state
   const [moveKnockoutModal, setMoveKnockoutModal] = useState<{
     playerId: number;
     playerName: string;
   } | null>(null);
-
-  const [skipNextAutoRefresh, setSkipNextAutoRefresh] = useState(false);
-  const skipAutoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Venue management
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -400,6 +305,15 @@ export function FullAdminScreen({
     () => calculateKoPositions(displayPlayers),
     [displayPlayers],
   );
+
+  // Sorted player list hook
+  const {
+    sortBy,
+    sortOrder,
+    sortedPlayers,
+    handleSort,
+    resetToDefaultSort,
+  } = useSortedPlayerList({ players: displayPlayers, koPositionsMap });
 
   // Fetch league game defaults on mount
   useEffect(() => {
@@ -445,6 +359,44 @@ export function FullAdminScreen({
     [onDraftChange],
   );
 
+  // Competition periods manager
+  const periodManager = usePeriodManager({
+    leagueId,
+    currentDraftId: currentDraft?.id ?? null,
+    currentDraftPeriodIds: currentDraft?.period_ids ?? null,
+    currentView,
+    showCreateModal,
+    tournamentDate: newTournament.tournament_date,
+    onNewTournamentPeriodIdsChange: useCallback((periodIds: number[]) => {
+      setNewTournament((prev) => ({
+        ...prev,
+        period_ids: [...prev.period_ids, ...periodIds],
+      }));
+    }, []),
+    onDraftUpdated: useCallback((draft: unknown) => {
+      updateCurrentDraft(draft as TournamentDraft);
+    }, [updateCurrentDraft]),
+  });
+
+  const {
+    availablePeriods,
+    periodsLoading,
+    editingPeriods,
+    setEditingPeriods,
+    draftPeriodIds,
+    setDraftPeriodIds,
+    savingPeriods,
+    showNewPeriodModal,
+    setShowNewPeriodModal,
+    newPeriod,
+    setNewPeriod,
+    savingNewPeriod,
+    savePeriods,
+    createNewPeriod,
+    prefillCurrentMonth,
+    prefillCurrentQuarter,
+  } = periodManager;
+
   // Socket.IO connection for real-time updates
   useEffect(() => {
     if (currentDraft) {
@@ -483,14 +435,6 @@ export function FullAdminScreen({
       socket.off("timer:sync", handleTimerSync);
     };
   }, [currentDraft]);
-
-  // Save sort preferences to localStorage whenever they change
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("adminSortBy", sortBy);
-      localStorage.setItem("adminSortOrder", sortOrder);
-    }
-  }, [sortBy, sortOrder]);
 
   const loadBlindSchedules = useCallback(() => {
     fetch("/api/blind-schedules")
@@ -734,70 +678,6 @@ export function FullAdminScreen({
     return isoDate.split("T")[0];
   };
 
-  const getFilteredAndSortedPlayers = () => {
-    const filteredPlayers = displayPlayers;
-
-    // Apply sorting
-    return filteredPlayers.sort((a, b) => {
-      if (sortBy === "name") {
-        // Add safety checks for undefined player_name
-        const nameA = (a.player_name || "").toLowerCase();
-        const nameB = (b.player_name || "").toLowerCase();
-        return sortOrder === "asc"
-          ? nameA.localeCompare(nameB)
-          : nameB.localeCompare(nameA);
-      }
-
-      if (sortBy === "ko_position") {
-        // Use calculated ko_position from knockedout_at order
-        const koA = koPositionsMap.get(a.id) ?? null;
-        const koB = koPositionsMap.get(b.id) ?? null;
-
-        if (koA === null && koB === null) return 0;
-        if (koA === null) return sortOrder === "desc" ? -1 : 1;
-        if (koB === null) return sortOrder === "desc" ? 1 : -1;
-
-        return sortOrder === "asc" ? koA - koB : koB - koA;
-      }
-
-      if (sortBy === "checked_in_at") {
-        if (!a.checked_in_at && !b.checked_in_at) return 0;
-        if (!a.checked_in_at) return sortOrder === "asc" ? 1 : -1;
-        if (!b.checked_in_at) return sortOrder === "asc" ? -1 : 1;
-        const dateA = new Date(a.checked_in_at).getTime();
-        const dateB = new Date(b.checked_in_at).getTime();
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      }
-
-      if (sortBy === "insertion") {
-        return sortOrder === "asc" ? a.id - b.id : b.id - a.id;
-      }
-
-      return 0;
-    });
-  };
-
-  // Handle column header click for sorting
-  const handleSort = (column: "name" | "ko_position" | "checked_in_at") => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("asc");
-    }
-  };
-
-  const resetToDefaultSort = () => {
-    if (sortBy === "insertion") {
-      // If already in insertion mode, toggle the order
-      setSortOrder(sortOrder === "desc" ? "asc" : "desc");
-    } else {
-      // If not in insertion mode, go to insertion mode with newest first
-      setSortBy("insertion");
-      setSortOrder("desc"); // desc means newest first
-    }
-  };
-
   const clearTournamentState = () => {
     // Clear tournament data
     updateCurrentDraft(null);
@@ -810,9 +690,7 @@ export function FullAdminScreen({
     setIsSearching(false);
 
     // Clear hitman search states
-    setHitmanSearchValues({});
-    setHitmanDropdownVisible({});
-    setHitmanHighlightedIndex({});
+    clearHitmanSearchValuesRef.current();
 
     // Clear integration/UI states
     setShowIntegrationPreview(false);
@@ -954,21 +832,83 @@ export function FullAdminScreen({
 
         // OPTIMISTIC UPDATE: Immediately update local state for instant visual feedback
         if (field === "hitman_name") {
-          setOptimisticUpdates((prev) => ({
-            ...prev,
-            [playerId]: {
-              ...prev[playerId],
-              hitman_name: value as string | null,
-              // Set a temporary knockedout_at for visual styling (will be replaced by real server value)
-              knockedout_at: value ? new Date().toISOString() : null,
-              // Include ko_position if we're auto-assigning it
-              ...(fieldsToUpdate.ko_position !== undefined
-                ? { ko_position: fieldsToUpdate.ko_position as number | null }
-                : {}),
-            },
-          }));
+          setOptimisticUpdate(playerId, {
+            hitman_name: value as string | null,
+            // Set a temporary knockedout_at for visual styling (will be replaced by real server value)
+            knockedout_at: value ? new Date().toISOString() : null,
+            // Include ko_position if we're auto-assigning it
+            ...(fieldsToUpdate.ko_position !== undefined
+              ? { ko_position: fieldsToUpdate.ko_position as number | null }
+              : {}),
+          });
         }
 
+        // KNOCKOUTS & KNOCKOUT CLEARS: Save immediately (no debouncing) for reliable cross-screen updates
+        // A knockout is when we're setting hitman_name AND auto-assigning ko_position
+        const isKnockout = field === "hitman_name" && value && fieldsToUpdate.ko_position !== undefined;
+        // A knockout clear is when we're setting ko_position to null
+        const isKnockoutClear = field === "ko_position" && value === null;
+
+        if (isKnockout || isKnockoutClear) {
+          // For knockout clears, also clear hitman_name and add optimistic update
+          if (isKnockoutClear) {
+            fieldsToUpdate.hitman_name = null;
+            setOptimisticUpdate(playerId, {
+              hitman_name: null,
+              ko_position: null,
+              knockedout_at: null,
+            });
+            // Clear any pending updates for this player since we're saving immediately
+            delete pendingUpdatesRef.current[playerId];
+          }
+
+          // Save immediately - don't use debounce
+          try {
+            const response = await fetch(
+              `/api/tournament-drafts/${currentDraft?.id}/players/batch`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Admin-Screen": "FullAdmin",
+                },
+                body: JSON.stringify({
+                  players: [{ id: playerId, ...fieldsToUpdate }],
+                }),
+              },
+            );
+
+            if (!response.ok) {
+              let errorMessage = isKnockoutClear ? "Failed to clear knockout" : "Failed to save knockout";
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.userMessage || errorData.error || errorMessage;
+              } catch {
+                errorMessage = "Server error - Unable to save.";
+              }
+              alert(`⚠️ Error\n\n${errorMessage}`);
+              if (currentDraft) {
+                await loadPlayersRef.current(currentDraft.id);
+              }
+              onDataChangeRef.current();
+              return;
+            }
+
+            // Success - socket will broadcast the update to other screens
+            await response.json();
+            temporarilyDisableAutoRefresh();
+          } catch (error) {
+            console.error("Knockout save error:", error);
+            alert(`⚠️ Network Error\n\nUnable to save. Please check your connection.`);
+            if (currentDraft) {
+              await loadPlayersRef.current(currentDraft.id);
+            }
+            onDataChangeRef.current();
+          }
+          return; // Don't add to pending updates - already saved
+        }
+
+        // NON-KNOCKOUT UPDATES: Use debounced batching for efficiency
         // Store only changed fields, merging with any existing pending updates
         pendingUpdatesRef.current[playerId] = {
           ...pendingUpdatesRef.current[playerId],
@@ -1064,20 +1004,82 @@ export function FullAdminScreen({
     [players, currentDraft],
   );
 
-  // cleanup on component unmount
+  // Hitman manager hook
+  const {
+    hitmanSearchValues,
+    hitmanDropdownVisible,
+    hitmanHighlightedIndex,
+    getHitmanCandidates,
+    selectHitman,
+    clearPlayerKnockout,
+    handleCrosshairClick,
+    handleHitmanSearchChange,
+    handleHitmanFocus,
+    handleHitmanBlur,
+    handleHitmanKeyDown,
+    clearHitmanSearchValues,
+  } = useHitmanManager({
+    players,
+    displayPlayers,
+    updatePlayer,
+    temporarilyDisableAutoRefresh,
+  });
+
+  // Update ref for undo functionality
+  clearHitmanSearchValuesRef.current = clearHitmanSearchValues;
+
+  // Keep a ref to currentDraft for cleanup (closures in cleanup effects can be stale)
+  const currentDraftRef = useRef(currentDraft);
+  currentDraftRef.current = currentDraft;
+
+  // cleanup on component unmount - flush pending updates instead of discarding
   useEffect(() => {
     return () => {
-      // Clear pending timeout on unmount
+      // Clear pending timeout
       if (globalUpdateTimeoutRef.current) {
         clearTimeout(globalUpdateTimeoutRef.current);
+        globalUpdateTimeoutRef.current = null;
       }
-      globalUpdateTimeoutRef.current = null;
-      pendingUpdatesRef.current = {};
 
-      // Clear auto-refresh skip timeout
-      if (skipAutoRefreshTimeoutRef.current) {
-        clearTimeout(skipAutoRefreshTimeoutRef.current);
+      // Flush any pending updates before unmount (fire-and-forget)
+      const pendingUpdates = pendingUpdatesRef.current;
+      const draftId = currentDraftRef.current?.id;
+
+      if (draftId && Object.keys(pendingUpdates).length > 0) {
+        const updateArray = Object.entries(pendingUpdates).map(
+          ([playerIdStr, updatedData]) => ({
+            id: parseInt(playerIdStr),
+            ...(updatedData as Record<string, unknown>),
+          })
+        );
+
+        // Use sendBeacon for reliable delivery during unmount
+        // Falls back to fetch if sendBeacon unavailable or fails
+        const payload = JSON.stringify({ players: updateArray });
+        const url = `/api/tournament-drafts/${draftId}/players/batch`;
+
+        const sent = navigator.sendBeacon?.(
+          url,
+          new Blob([payload], { type: "application/json" })
+        );
+
+        if (!sent) {
+          // Fallback: fire-and-forget fetch (less reliable but better than nothing)
+          fetch(url, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Admin-Screen": "FullAdmin",
+            },
+            body: payload,
+            keepalive: true, // Allows request to outlive the page
+          }).catch(() => {
+            // Silently ignore errors on unmount
+          });
+        }
       }
+
+      pendingUpdatesRef.current = {};
     };
   }, []);
 
@@ -1163,125 +1165,6 @@ export function FullAdminScreen({
     }
   };
 
-  // Filter players for hitman selection - returns active (not knocked out) players
-  const getHitmanCandidates = (currentPlayerId: number, searchTerm: string) => {
-    // Get all active players (not knocked out), excluding the current player
-    // Use displayPlayers for optimistic updates (so newly knocked out players are excluded immediately)
-    let candidates = displayPlayers
-      .filter((p) => p.id !== currentPlayerId) // Exclude the current player
-      .filter((p) => !p.knockedout_at); // Only active players (not knocked out)
-
-    // If there's a search term, filter by name/nickname match
-    if (searchTerm && searchTerm.length > 0) {
-      const lowerSearch = searchTerm.toLowerCase();
-      candidates = candidates.filter(
-        (p) =>
-          (p.player_name &&
-            p.player_name.toLowerCase().includes(lowerSearch)) ||
-          (p.player_nickname &&
-            p.player_nickname.toLowerCase().includes(lowerSearch)),
-      );
-    }
-
-    // Sort by nickname (if available) or player_name
-    candidates.sort((a, b) => {
-      const nameA = (a.player_nickname || a.player_name || "").toLowerCase();
-      const nameB = (b.player_nickname || b.player_name || "").toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    return candidates.slice(0, 15); // Limit to 15 results
-  };
-
-  // Handle hitman selection
-  const selectHitman = (playerId: number, hitmanName: string) => {
-    // Mark that a selection was made (to skip blur processing)
-    hitmanSelectedRef.current[playerId] = true;
-
-    const finalHitmanName = hitmanName || "unknown";
-    updatePlayer(playerId, "hitman_name", finalHitmanName);
-    setHitmanSearchValues((prev) => ({ ...prev, [playerId]: finalHitmanName }));
-    setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
-    setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
-  };
-
-  // Handle hitman search input changes
-  const handleHitmanSearchChange = (playerId: number, value: string) => {
-    setHitmanSearchValues((prev) => ({ ...prev, [playerId]: value }));
-    setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: true })); // Always show dropdown while typing
-    setHitmanHighlightedIndex((prev) => ({ ...prev, [playerId]: -1 }));
-
-    // Only auto-update for exact player name matches during typing
-    // Let the blur handler deal with "unknown" and other values
-    const exactMatch = players.find(
-      (p) =>
-        p.id !== playerId &&
-        p.player_name?.toLowerCase() === value.toLowerCase(),
-    );
-
-    if (exactMatch) {
-      updatePlayer(playerId, "hitman_name", exactMatch.player_name);
-    }
-  };
-
-  const handleCrosshairClick = (playerId: number) => {
-    const player = players.find((p) => p.id === playerId);
-    if (!player) return;
-
-    // If player is already knocked out (has knockedout_at), clear knockout
-    if (player.knockedout_at) {
-      clearPlayerKnockout(playerId);
-    } else {
-      // If player is NOT knocked out, clear the search value and focus the hitman input
-      // The dropdown will show all active players when focused
-      setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "" }));
-      setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: true }));
-      // Mark that knockout was initiated via crosshair (so blur defaults to "unknown")
-      setKnockoutInitiated((prev) => ({ ...prev, [playerId]: true }));
-
-      setTimeout(() => {
-        const hitmanInput = document.getElementById(
-          `hitman-input-${playerId}`,
-        ) as HTMLInputElement;
-        if (hitmanInput) {
-          hitmanInput.focus();
-        }
-      }, 50);
-    }
-  };
-
-  const clearPlayerKnockout = async (playerId: number) => {
-    try {
-      const player = players.find((p) => p.id === playerId);
-      if (!player) {
-        console.error("Player not found:", playerId);
-        return;
-      }
-
-      // Disable auto-refresh temporarily
-      temporarilyDisableAutoRefresh();
-
-      // Clear ALL related UI state for this player IMMEDIATELY
-      setHitmanSearchValues((prev) => ({
-        ...prev,
-        [playerId]: "",
-      }));
-
-      setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
-      setHitmanHighlightedIndex((prev) => ({ ...prev, [playerId]: -1 }));
-      setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
-
-      // THEN use the debounced updatePlayer function for both fields
-      await updatePlayer(playerId, "hitman_name", null);
-      await updatePlayer(playerId, "ko_position", null);
-    } catch (error) {
-      console.error("Error clearing player knockout data:", error);
-      alert(
-        `Error clearing knockout data: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  };
-
   // Handle moving a knockout to a new position
   const handleMoveKnockout = async (
     playerId: number,
@@ -1321,161 +1204,6 @@ export function FullAdminScreen({
         `Error moving knockout: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
-  };
-
-  const handleHitmanKeyDown = (
-    playerId: number,
-    e: React.KeyboardEvent<HTMLTextAreaElement>,
-  ) => {
-    const candidates = getHitmanCandidates(
-      playerId,
-      hitmanSearchValues[playerId] || "",
-    );
-
-    // Create full options list with "unknown" always at the beginning (matching PlayerRow)
-    const allOptions = [
-      {
-        id: -1,
-        player_name: "unknown",
-        player_uid: null,
-        is_new_player: false,
-        hitman_name: null,
-        ko_position: null,
-        placement: null,
-      },
-      ...candidates,
-    ];
-
-    const currentHighlight = hitmanHighlightedIndex[playerId] ?? -1;
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        if (hitmanDropdownVisible[playerId] && allOptions.length > 0) {
-          const nextIndex =
-            currentHighlight < allOptions.length - 1 ? currentHighlight + 1 : 0;
-          setHitmanHighlightedIndex((prev) => ({
-            ...prev,
-            [playerId]: nextIndex,
-          }));
-        }
-        break;
-
-      case "ArrowUp":
-        e.preventDefault();
-        if (hitmanDropdownVisible[playerId] && allOptions.length > 0) {
-          const prevIndex =
-            currentHighlight > 0 ? currentHighlight - 1 : allOptions.length - 1;
-          setHitmanHighlightedIndex((prev) => ({
-            ...prev,
-            [playerId]: prevIndex,
-          }));
-        }
-        break;
-
-      case "Enter":
-        e.preventDefault();
-        if (
-          hitmanDropdownVisible[playerId] &&
-          allOptions.length > 0 &&
-          currentHighlight >= 0
-        ) {
-          // Select the highlighted option
-          const selectedOption = allOptions[currentHighlight];
-          selectHitman(playerId, selectedOption.player_name);
-        } else {
-          // No dropdown or no selection, just blur to trigger existing logic
-          const hitmanInput = document.getElementById(
-            `hitman-input-${playerId}`,
-          ) as HTMLInputElement;
-          if (hitmanInput) {
-            hitmanInput.blur();
-          }
-        }
-        break;
-
-      case "Escape":
-        e.preventDefault();
-        setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
-        setHitmanHighlightedIndex((prev) => ({ ...prev, [playerId]: -1 }));
-        break;
-    }
-  };
-
-  // Hitman input focus handler:
-  const handleHitmanFocus = (playerId: number) => {
-    const player = players.find((p) => p.id === playerId);
-    if (!player) return;
-
-    // Just open the dropdown with all active players - no auto-populating "unknown"
-    setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: true }));
-    setHitmanHighlightedIndex((prev) => ({ ...prev, [playerId]: -1 }));
-  };
-
-  // hitman input blur handler:
-  const handleHitmanBlur = (playerId: number) => {
-    // Capture values immediately before the timeout
-    const currentValue = hitmanSearchValues[playerId] ?? "";
-    const wasKnockoutInitiated = knockoutInitiated[playerId] ?? false;
-
-    // Clear the knockout initiated flag immediately
-    setKnockoutInitiated((prev) => ({ ...prev, [playerId]: false }));
-
-    // Delay the entire blur processing to allow dropdown clicks/taps to register first
-    // This is especially important on mobile where tap events fire after blur
-    setTimeout(() => {
-      // Hide dropdown
-      setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
-
-      // Check if a hitman was selected via dropdown click/tap
-      // If so, skip blur processing entirely - the selection already handled it
-      if (hitmanSelectedRef.current[playerId]) {
-        hitmanSelectedRef.current[playerId] = false; // Reset for next time
-        return;
-      }
-
-      // Process the final value when user leaves the input
-      // Check if typing a prefix of "unknown" (at least 2 chars to avoid false positives)
-      if (
-        currentValue.length >= 2 &&
-        "unknown".startsWith(currentValue.toLowerCase())
-      ) {
-        // Treat as "unknown" - user is typing "un", "unk", "unknown", etc.
-        updatePlayer(playerId, "hitman_name", "unknown");
-        setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
-      } else if (currentValue === "") {
-        // If knockout was initiated via crosshair click, default to "unknown"
-        // Otherwise, clear the hitman
-        if (wasKnockoutInitiated) {
-          updatePlayer(playerId, "hitman_name", "unknown");
-          setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
-        } else {
-          updatePlayer(playerId, "hitman_name", null);
-        }
-      } else {
-        // Check if it matches an exact player name
-        const exactMatch = players.find(
-          (p) =>
-            p.id !== playerId &&
-            p.player_name.toLowerCase() === currentValue.toLowerCase(),
-        );
-
-        if (exactMatch) {
-          updatePlayer(playerId, "hitman_name", exactMatch.player_name);
-        } else {
-          // Get the filtered candidates (same list shown in dropdown)
-          const candidates = getHitmanCandidates(playerId, currentValue);
-          if (candidates.length > 0) {
-            // Select the first matching player (topmost in dropdown after "unknown")
-            selectHitman(playerId, candidates[0].player_name);
-          } else {
-            // No matches found - default to "unknown" instead of arbitrary text
-            updatePlayer(playerId, "hitman_name", "unknown");
-            setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "unknown" }));
-          }
-        }
-      }
-    }, 200); // Increased delay to ensure mobile taps register before blur processing
   };
 
   // Export tournament
@@ -1563,6 +1291,21 @@ export function FullAdminScreen({
     onDataChangeRef.current = onDataChange;
   });
 
+  // Refresh player data when entering entry view with a draft
+  // This ensures we get fresh data after navigating back from another screen
+  // (especially important when sendBeacon saved data during unmount)
+  // Small delay avoids race condition with parent's initial data load
+  useEffect(() => {
+    if (currentDraft && currentView === "entry") {
+      const timeoutId = setTimeout(() => {
+        onDataChange();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+    // Using currentDraft?.id instead of currentDraft to avoid re-running when draft object changes but ID stays same
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDraft?.id, currentView, onDataChange]);
+
   //render player indicators
   const renderPlayerIndicator = (player: Player) => {
     if (player.added_by === "self_checkin") {
@@ -1645,158 +1388,6 @@ export function FullAdminScreen({
     }
   };
 
-  // Save period changes for the current draft
-  const savePeriods = async () => {
-    if (!currentDraft) return;
-
-    setSavingPeriods(true);
-    try {
-      const response = await fetch(
-        `/api/tournament-drafts/${currentDraft.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ period_ids: draftPeriodIds }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update periods");
-      }
-
-      const updatedDraft = await response.json();
-      updateCurrentDraft(updatedDraft);
-      setEditingPeriods(false);
-    } catch (error) {
-      console.error("Error saving periods:", error);
-      alert("Failed to save period changes");
-    } finally {
-      setSavingPeriods(false);
-    }
-  };
-
-  // Helper to get current month date range
-  const getCurrentMonthRange = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0); // Last day of month
-
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-
-    return {
-      name: `${monthNames[month]} ${year}`,
-      start_date: startDate.toISOString().split("T")[0],
-      end_date: endDate.toISOString().split("T")[0],
-    };
-  };
-
-  // Helper to get current quarter date range
-  const getCurrentQuarterRange = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const quarter = Math.floor(now.getMonth() / 3);
-    const startMonth = quarter * 3;
-    const startDate = new Date(year, startMonth, 1);
-    const endDate = new Date(year, startMonth + 3, 0); // Last day of quarter
-
-    return {
-      name: `Q${quarter + 1} ${year}`,
-      start_date: startDate.toISOString().split("T")[0],
-      end_date: endDate.toISOString().split("T")[0],
-    };
-  };
-
-  // Pre-populate new period with current month
-  const prefillCurrentMonth = () => {
-    const monthRange = getCurrentMonthRange();
-    setNewPeriod({
-      name: monthRange.name,
-      period_type: "monthly",
-      start_date: monthRange.start_date,
-      end_date: monthRange.end_date,
-    });
-  };
-
-  // Pre-populate new period with current quarter
-  const prefillCurrentQuarter = () => {
-    const quarterRange = getCurrentQuarterRange();
-    setNewPeriod({
-      name: quarterRange.name,
-      period_type: "quarterly",
-      start_date: quarterRange.start_date,
-      end_date: quarterRange.end_date,
-    });
-  };
-
-  // Create a new competition period
-  const createNewPeriod = async () => {
-    if (!newPeriod.name || !newPeriod.start_date || !newPeriod.end_date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    setSavingNewPeriod(true);
-    try {
-      const response = await fetch("/api/competition-periods", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          league_id: leagueId,
-          name: newPeriod.name,
-          period_type: newPeriod.period_type,
-          start_date: newPeriod.start_date,
-          end_date: newPeriod.end_date,
-          is_active: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create period");
-      }
-
-      const createdPeriod = await response.json();
-
-      // Add to available periods and auto-select it
-      setAvailablePeriods((prev) => [createdPeriod, ...prev]);
-      setNewTournament((prev) => ({
-        ...prev,
-        period_ids: [...prev.period_ids, createdPeriod.id],
-      }));
-
-      // Reset and close modal
-      setNewPeriod({
-        name: "",
-        period_type: "monthly",
-        start_date: "",
-        end_date: "",
-      });
-      setShowNewPeriodModal(false);
-    } catch (error) {
-      console.error("Error creating period:", error);
-      alert(
-        `Failed to create period: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setSavingNewPeriod(false);
-    }
-  };
-
   // Load tournaments and venues on mount
   useEffect(() => {
     loadTournaments();
@@ -1817,132 +1408,6 @@ export function FullAdminScreen({
       }));
     }
   }, [showCreateModal]);
-
-  // Fetch competition periods and auto-select matching ones when date changes
-  useEffect(() => {
-    const fetchPeriods = async () => {
-      if (!newTournament.tournament_date) {
-        setAvailablePeriods([]);
-        return;
-      }
-
-      setPeriodsLoading(true);
-      try {
-        const response = await fetch(
-          `/api/competition-periods?league_id=${leagueId}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch periods");
-
-        const data = await response.json();
-        setAvailablePeriods(data.periods || []);
-
-        // Auto-select periods that match the tournament date
-        const tournamentDate = new Date(newTournament.tournament_date);
-        const matchingPeriodIds = (data.periods || [])
-          .filter((period: CompetitionPeriod) => {
-            const startDate = new Date(period.start_date);
-            const endDate = new Date(period.end_date);
-            return tournamentDate >= startDate && tournamentDate <= endDate;
-          })
-          .map((period: CompetitionPeriod) => period.id);
-
-        setNewTournament((prev) => ({
-          ...prev,
-          period_ids: matchingPeriodIds,
-        }));
-      } catch (error) {
-        console.error("Error fetching competition periods:", error);
-        setAvailablePeriods([]);
-      } finally {
-        setPeriodsLoading(false);
-      }
-    };
-
-    if (showCreateModal && newTournament.tournament_date) {
-      fetchPeriods();
-    }
-  }, [showCreateModal, newTournament.tournament_date]);
-
-  // Load periods when viewing a tournament draft (entry view)
-  useEffect(() => {
-    const loadPeriodsForDraft = async () => {
-      if (!currentDraft || currentView !== "entry") {
-        return;
-      }
-
-      setPeriodsLoading(true);
-      try {
-        const response = await fetch(
-          `/api/competition-periods?league_id=${leagueId}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch periods");
-
-        const data = await response.json();
-        setAvailablePeriods(data.periods || []);
-
-        // Parse existing period_ids from the draft
-        if (currentDraft.period_ids) {
-          try {
-            const ids = JSON.parse(currentDraft.period_ids);
-            setDraftPeriodIds(Array.isArray(ids) ? ids : []);
-          } catch {
-            setDraftPeriodIds([]);
-          }
-        } else {
-          setDraftPeriodIds([]);
-        }
-      } catch (error) {
-        console.error("Error loading periods for draft:", error);
-        setAvailablePeriods([]);
-      } finally {
-        setPeriodsLoading(false);
-      }
-    };
-
-    loadPeriodsForDraft();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDraft?.id, currentDraft?.period_ids, currentView]);
-
-  // smart polling functionality
-  useEffect(() => {
-    if (!currentDraft || currentDraft.status !== "in_progress") return;
-
-    // Refresh when tab becomes active
-    const handleVisibilityChange = async () => {
-      if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
-        await loadPlayersRef.current(currentDraft.id);
-      }
-    };
-
-    // Poll every 15 seconds when tab is active
-    const interval = setInterval(async () => {
-      if (!document.hidden && currentDraft && !skipNextAutoRefresh) {
-        await loadPlayersRef.current(currentDraft.id);
-      }
-    }, 15000);
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [currentDraft, skipNextAutoRefresh]);
-
-  // Helper function to temporarily disable auto-refresh after updates
-  const temporarilyDisableAutoRefresh = () => {
-    setSkipNextAutoRefresh(true);
-
-    // Clear any existing timeout
-    if (skipAutoRefreshTimeoutRef.current) {
-      clearTimeout(skipAutoRefreshTimeoutRef.current);
-    }
-
-    // Re-enable auto-refresh after 5 seconds (enough time for updates to complete)
-    skipAutoRefreshTimeoutRef.current = setTimeout(() => {
-      setSkipNextAutoRefresh(false);
-    }, 5000);
-  };
 
   // Welcome Screen
   if (currentView === "welcome") {
@@ -3557,7 +3022,7 @@ export function FullAdminScreen({
                     : "Click to sort by insertion order (newest first)"
                 }
               >
-                Players ({getFilteredAndSortedPlayers().length})
+                Players ({sortedPlayers.length})
               </h3>
               {sortBy === "insertion" && (
                 <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
@@ -3570,7 +3035,7 @@ export function FullAdminScreen({
             </div>
           </div>
 
-          {getFilteredAndSortedPlayers().length === 0 ? (
+          {sortedPlayers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No players added yet. Start typing a name above to add players.
             </div>
@@ -3616,7 +3081,7 @@ export function FullAdminScreen({
               </div>
 
               {/* Player Rows */}
-              {getFilteredAndSortedPlayers().map((player) => (
+              {sortedPlayers.map((player) => (
                 <PlayerRow
                   key={player.id}
                   player={player}
