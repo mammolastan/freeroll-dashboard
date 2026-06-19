@@ -359,15 +359,17 @@ export async function POST(
           }
         }
 
-        // Update draft status to integrated and stop any running timer
+        // Update draft status to integrated and reset timer/game state
         await tx.$queryRaw`
         UPDATE tournament_drafts
         SET status = 'integrated',
             game_uid = ${gameUID},
+            game_started = 0,
             timer_is_running = false,
             timer_is_paused = false,
+            timer_current_level = 1,
             timer_remaining_seconds = NULL,
-            timer_last_updated = CURRENT_TIMESTAMP,
+            timer_last_updated = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
