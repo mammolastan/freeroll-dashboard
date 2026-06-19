@@ -13,7 +13,6 @@ import {
   Swords,
 } from "lucide-react";
 import RotatingImageLoader from "../ui/RotatingImageLoader";
-import { useFavorites, FavoritesFilter } from "./FavoritesComponents";
 import { BadgeData } from "../ui/Badge";
 import { QualificationBarrier } from "./QualificationBarrier";
 import { useLeagueParam } from "@/lib/useLeagueParam";
@@ -84,8 +83,6 @@ export default function QuarterlyRankings() {
   const [badgesLoading, setBadgesLoading] = useState(false);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const [filterText, setFilterText] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     field: SortField;
@@ -286,13 +283,6 @@ export default function QuarterlyRankings() {
       );
     }
 
-    // Apply favorites filter
-    if (showFavoritesOnly) {
-      filteredRankings = filteredRankings.filter((player) =>
-        isFavorite(player.uid),
-      );
-    }
-
     // Apply sort
     return [...filteredRankings].sort((a, b) => {
       let valueA = a[sortConfig.field];
@@ -441,12 +431,6 @@ export default function QuarterlyRankings() {
               ))}
             </select>
           </div>
-
-          <FavoritesFilter
-            showFavoritesOnly={showFavoritesOnly}
-            onToggle={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            favoritesCount={favorites.length}
-          />
         </div>
 
         {/* Search filter */}
@@ -522,7 +506,7 @@ export default function QuarterlyRankings() {
           {sortedAndFilteredRankings.map((player, index) => {
             const uniqueKey = `${player.uid}-${selectedPeriodId}-${index}`;
             const isQualificationBarrier =
-              player.ranking === 41 && !showFavoritesOnly && !filterText;
+              player.ranking === 41 && !filterText;
 
             return (
               <React.Fragment key={uniqueKey}>
@@ -539,8 +523,6 @@ export default function QuarterlyRankings() {
                 <QuarterlyPlayerCard
                   player={player}
                   leagueSlug={leagueSlug}
-                  isFavorite={isFavorite(player.uid)}
-                  onToggleFavorite={toggleFavorite}
                   onOpenReview={FEATURES.PLAYER_REVIEWS ? (uid, name) => setReviewTarget({ uid, name }) : undefined}
                 />
               </React.Fragment>

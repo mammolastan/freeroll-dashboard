@@ -50,30 +50,11 @@
   backdrop-filter: blur(5px);
 }
 
-.ranking:hover {
-  box-shadow: 0 2px 8px #ffff00;
-  transform: scale(1.1);
-}
-
 .rank {
   margin: 0;
   font-weight: bold;
   color: #333;
   font-size: 14px;
-}
-
-.ranking.favorited {
-  background-color: #ff0 !important;
-  box-shadow: 0 2px 8px #ff0000;
-  transform: scale(1.1);
-  z-index: 10;
-}
-
-.favorite {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  display: none;
 }
 
 .profilePicture {

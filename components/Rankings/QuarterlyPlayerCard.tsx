@@ -31,16 +31,12 @@ interface QuarterlyPlayer {
 interface QuarterlyPlayerCardProps {
   player: QuarterlyPlayer;
   leagueSlug: string | null;
-  isFavorite?: boolean;
-  onToggleFavorite?: (uid: string) => void;
   onOpenReview?: (uid: string, name: string) => void;
 }
 
 export function QuarterlyPlayerCard({
   player,
   leagueSlug,
-  isFavorite,
-  onToggleFavorite,
   onOpenReview,
 }: QuarterlyPlayerCardProps) {
   const displayName = player.nickname || player.name;
@@ -78,36 +74,12 @@ export function QuarterlyPlayerCard({
     },
   ];
 
-  const handleRankingClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onToggleFavorite) {
-      onToggleFavorite(player.uid);
-    }
-  };
-
   return (
     <div
       className={`playerCardContainer ${player.isQualified ? "qualified" : ""}`}
     >
-      {/* Ranking Badge -  clickable for 'favorites' toggle */}
-      <div
-        className={`ranking ${isFavorite ? "favorited" : ""}`}
-        onClick={handleRankingClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-            if (onToggleFavorite) {
-              onToggleFavorite(player.uid);
-            }
-          }
-        }}
-        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-      >
+      {/* Ranking Badge */}
+      <div className="ranking">
         <p className="rank">{player.ranking}</p>
       </div>
 
