@@ -37,10 +37,13 @@ export async function GET(request: NextRequest) {
       SELECT
         td.*,
         v.name as venue_name,
+        bs.levels as blind_levels_json,
         COUNT(tdp.id) as player_count,
+        SUM(CASE WHEN tdp.placement IS NULL AND tdp.knockedout_at IS NULL THEN 1 ELSE 0 END) as remaining_players,
         (SELECT COUNT(*) FROM TournamentAuditLog tal WHERE tal.tournament_id = td.id) as audit_action_count
       FROM tournament_drafts td
       LEFT JOIN venues v ON td.venue_id = v.id
+      LEFT JOIN blind_schedules bs ON td.blind_schedule = bs.id
       LEFT JOIN tournament_draft_players tdp ON td.id = tdp.tournament_draft_id
       WHERE td.league_id = ${leagueId}
       GROUP BY td.id
@@ -53,6 +56,7 @@ export async function GET(request: NextRequest) {
       id: Number(draft.id),
       start_points: Number(draft.start_points),
       player_count: Number(draft.player_count),
+      remaining_players: Number(draft.remaining_players ?? 0),
       audit_action_count: Number(draft.audit_action_count ?? 0),
       venue_id: draft.venue_id ? Number(draft.venue_id) : null,
       venue: draft.venue_name || null,

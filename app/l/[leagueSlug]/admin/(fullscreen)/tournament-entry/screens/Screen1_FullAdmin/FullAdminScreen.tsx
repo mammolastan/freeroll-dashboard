@@ -25,6 +25,9 @@ import {
   Download,
   QrCode,
   History,
+  Play,
+  Pause,
+  Clock,
 } from "lucide-react";
 import { formatGameDate, formatTime } from "@/lib/utils";
 import { QRCodeModal } from "../../QRCodeModal";
@@ -45,7 +48,10 @@ import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
-import { HitmanClaimsDrawer, HitmanClaimsButton } from "@/components/td/HitmanClaimsDrawer";
+import {
+  HitmanClaimsDrawer,
+  HitmanClaimsButton,
+} from "@/components/td/HitmanClaimsDrawer";
 import MoveKnockoutModal from "../../components/MoveKnockoutModal";
 import { useAutoRefresh } from "./hooks/useAutoRefresh";
 import { useOptimisticUpdates } from "./hooks/useOptimisticUpdates";
@@ -66,12 +72,21 @@ interface TournamentDraft {
   created_at: string;
   updated_at: string;
   player_count: number;
+  remaining_players?: number;
   blind_schedule?: string;
   custom_blind_levels?: string | null;
   period_ids?: string | null;
   allow_chat?: boolean | null;
   allow_self_checkin?: boolean | null;
   game_uid?: string | null;
+  // Timer fields
+  timer_current_level?: number | null;
+  timer_remaining_seconds?: number | null;
+  timer_is_running?: boolean | null;
+  timer_is_paused?: boolean | null;
+  timer_last_updated?: string | null;
+  // Blind levels JSON from blind_schedules table
+  blind_levels_json?: string | null;
 }
 
 interface VenueOption {
@@ -166,6 +181,62 @@ export function FullAdminScreen({
   const [showHitmanClaims, setShowHitmanClaims] = useState(false);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
 
+  // Poll for tournament data every 30 seconds when there are in_progress tournaments
+  // (Timer state in DB only updates every ~30 seconds from Socket.IO server)
+  useEffect(() => {
+    const hasInProgressTournament = tournaments.some(t => t.status === "in_progress");
+    if (!hasInProgressTournament) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch("/api/tournament-drafts");
+        if (response.ok) {
+          setTournaments(await response.json());
+        }
+      } catch (error) {
+        console.error("Error polling tournaments:", error);
+      }
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournaments.length]);
+
+  // Format seconds as MM:SS
+  const formatTimerDisplay = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Get current blind level info from JSON
+  const getCurrentBlinds = (tournament: TournamentDraft): { smallBlind: number; bigBlind: number } | null => {
+    if (!tournament.blind_levels_json || !tournament.timer_current_level) return null;
+    try {
+      const levels = JSON.parse(tournament.blind_levels_json) as Array<{ level: number; smallBlind: number; bigBlind: number; isbreak?: boolean }>;
+      const currentLevel = levels.find(l => l.level === tournament.timer_current_level);
+      if (currentLevel && !currentLevel.isbreak) {
+        return { smallBlind: currentLevel.smallBlind, bigBlind: currentLevel.bigBlind };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Handle timer pause/resume from card
+  const handleCardTimerToggle = (tournamentId: number, isPaused: boolean) => {
+    if (isPaused) {
+      socket.emit("timer:resume", { tournamentId });
+    } else {
+      socket.emit("timer:pause", { tournamentId });
+    }
+    // Refresh tournaments after a short delay to get updated state
+    setTimeout(() => {
+      loadTournaments();
+    }, 500);
+  };
+
   // Fetch pending claims count periodically
   useEffect(() => {
     if (!currentDraft) return;
@@ -173,7 +244,7 @@ export function FullAdminScreen({
     const fetchClaimsCount = async () => {
       try {
         const response = await fetch(
-          `/api/tournament-drafts/${currentDraft.id}/hitman-claims`
+          `/api/tournament-drafts/${currentDraft.id}/hitman-claims`,
         );
         if (response.ok) {
           const data = await response.json();
@@ -193,7 +264,9 @@ export function FullAdminScreen({
   const clearHitmanSearchValuesRef = useRef<() => void>(() => {});
 
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
-  const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
+  const actionLogGameUid =
+    currentDraft?.game_uid ||
+    (currentDraft ? `draft-${currentDraft.id}` : null);
   const {
     actions: actionHistory,
     canUndo,
@@ -244,11 +317,8 @@ export function FullAdminScreen({
   const [isIntegrating, setIsIntegrating] = useState(false);
 
   // Optimistic updates for immediate visual feedback
-  const {
-    displayPlayers,
-    setOptimisticUpdate,
-    clearOptimisticUpdates,
-  } = useOptimisticUpdates({ players });
+  const { displayPlayers, setOptimisticUpdate, clearOptimisticUpdates } =
+    useOptimisticUpdates({ players });
 
   // Blind schedule edit modal
   const [showBlindEditModal, setShowBlindEditModal] = useState(false);
@@ -307,13 +377,8 @@ export function FullAdminScreen({
   );
 
   // Sorted player list hook
-  const {
-    sortBy,
-    sortOrder,
-    sortedPlayers,
-    handleSort,
-    resetToDefaultSort,
-  } = useSortedPlayerList({ players: displayPlayers, koPositionsMap });
+  const { sortBy, sortOrder, sortedPlayers, handleSort, resetToDefaultSort } =
+    useSortedPlayerList({ players: displayPlayers, koPositionsMap });
 
   // Fetch league game defaults on mount
   useEffect(() => {
@@ -373,9 +438,12 @@ export function FullAdminScreen({
         period_ids: [...prev.period_ids, ...periodIds],
       }));
     }, []),
-    onDraftUpdated: useCallback((draft: unknown) => {
-      updateCurrentDraft(draft as TournamentDraft);
-    }, [updateCurrentDraft]),
+    onDraftUpdated: useCallback(
+      (draft: unknown) => {
+        updateCurrentDraft(draft as TournamentDraft);
+      },
+      [updateCurrentDraft],
+    ),
   });
 
   const {
@@ -845,7 +913,10 @@ export function FullAdminScreen({
 
         // KNOCKOUTS & KNOCKOUT CLEARS: Save immediately (no debouncing) for reliable cross-screen updates
         // A knockout is when we're setting hitman_name AND auto-assigning ko_position
-        const isKnockout = field === "hitman_name" && value && fieldsToUpdate.ko_position !== undefined;
+        const isKnockout =
+          field === "hitman_name" &&
+          value &&
+          fieldsToUpdate.ko_position !== undefined;
         // A knockout clear is when we're setting ko_position to null
         const isKnockoutClear = field === "ko_position" && value === null;
 
@@ -879,10 +950,13 @@ export function FullAdminScreen({
             );
 
             if (!response.ok) {
-              let errorMessage = isKnockoutClear ? "Failed to clear knockout" : "Failed to save knockout";
+              let errorMessage = isKnockoutClear
+                ? "Failed to clear knockout"
+                : "Failed to save knockout";
               try {
                 const errorData = await response.json();
-                errorMessage = errorData.userMessage || errorData.error || errorMessage;
+                errorMessage =
+                  errorData.userMessage || errorData.error || errorMessage;
               } catch {
                 errorMessage = "Server error - Unable to save.";
               }
@@ -899,7 +973,9 @@ export function FullAdminScreen({
             temporarilyDisableAutoRefresh();
           } catch (error) {
             console.error("Knockout save error:", error);
-            alert(`⚠️ Network Error\n\nUnable to save. Please check your connection.`);
+            alert(
+              `⚠️ Network Error\n\nUnable to save. Please check your connection.`,
+            );
             if (currentDraft) {
               await loadPlayersRef.current(currentDraft.id);
             }
@@ -1050,7 +1126,7 @@ export function FullAdminScreen({
           ([playerIdStr, updatedData]) => ({
             id: parseInt(playerIdStr),
             ...(updatedData as Record<string, unknown>),
-          })
+          }),
         );
 
         // Use sendBeacon for reliable delivery during unmount
@@ -1060,7 +1136,7 @@ export function FullAdminScreen({
 
         const sent = navigator.sendBeacon?.(
           url,
-          new Blob([payload], { type: "application/json" })
+          new Blob([payload], { type: "application/json" }),
         );
 
         if (!sent) {
@@ -1461,6 +1537,11 @@ export function FullAdminScreen({
                           onClick={() => selectTournament(tournament)}
                         >
                           <div className="flex flex-col">
+                            {tournament.title && (
+                              <div className="text-base font-bold text-blue-700 mb-1">
+                                {tournament.title}
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                               <Calendar className="w-4 h-4 text-blue-600" />
                               {formatGameDate(tournament.tournament_date || "")}
@@ -1479,7 +1560,10 @@ export function FullAdminScreen({
                           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Users className="w-4 h-4" />
-                              {tournament.player_count} players
+                              {tournament.status === "in_progress" &&
+                              tournament.remaining_players !== undefined
+                                ? `${tournament.remaining_players}/${tournament.player_count}`
+                                : `${tournament.player_count} players`}
                             </div>
                             <div className="flex items-center gap-1">
                               <User className="w-4 h-4" />
@@ -1488,7 +1572,51 @@ export function FullAdminScreen({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 self-start sm:self-center">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                          {/* Timer display for in_progress tournaments */}
+                          {tournament.status === "in_progress" && tournament.timer_remaining_seconds != null && (() => {
+                            const remainingTime = tournament.timer_remaining_seconds;
+                            const isRunning = tournament.timer_is_running && !tournament.timer_is_paused;
+                            const currentBlinds = getCurrentBlinds(tournament);
+                            const timeColor = remainingTime < 60
+                              ? "text-red-600"
+                              : remainingTime < 300
+                                ? "text-yellow-600"
+                                : "text-green-600";
+                            return (
+                              <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-1.5 w-full sm:w-auto">
+                                <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
+                                <span className={`font-mono font-bold text-lg ${timeColor}`}>
+                                  {formatTimerDisplay(remainingTime)}
+                                </span>
+                                {tournament.timer_current_level && (
+                                  <span className="text-xs text-gray-400">
+                                    L{tournament.timer_current_level}
+                                  </span>
+                                )}
+                                {currentBlinds && (
+                                  <span className="text-xs text-cyan-300 font-mono">
+                                    {currentBlinds.smallBlind}/{currentBlinds.bigBlind}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCardTimerToggle(tournament.id, !!tournament.timer_is_paused);
+                                  }}
+                                  className={`p-1 rounded ${
+                                    isRunning
+                                      ? "bg-yellow-600 hover:bg-yellow-500"
+                                      : "bg-green-600 hover:bg-green-500"
+                                  } text-white transition-colors ml-auto sm:ml-0`}
+                                  title={isRunning ? "Pause timer" : "Resume timer"}
+                                >
+                                  {isRunning ? <Pause size={14} /> : <Play size={14} />}
+                                </button>
+                              </div>
+                            );
+                          })()}
+
                           <div
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
                               tournament.status === "in_progress"
@@ -1815,7 +1943,7 @@ export function FullAdminScreen({
                           })
                         }
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') e.preventDefault();
+                          if (e.key === "Enter") e.preventDefault();
                         }}
                         className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="Tournament director"
@@ -1824,7 +1952,9 @@ export function FullAdminScreen({
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Title
-                        <span className="ml-1 text-xs text-gray-500 font-normal">(optional)</span>
+                        <span className="ml-1 text-xs text-gray-500 font-normal">
+                          (optional)
+                        </span>
                       </label>
                       <textarea
                         rows={1}
@@ -1836,7 +1966,7 @@ export function FullAdminScreen({
                           })
                         }
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') e.preventDefault();
+                          if (e.key === "Enter") e.preventDefault();
                         }}
                         className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="Custom display title"
@@ -2011,7 +2141,7 @@ export function FullAdminScreen({
                           setNewPeriod({ ...newPeriod, name: e.target.value })
                         }
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') e.preventDefault();
+                          if (e.key === "Enter") e.preventDefault();
                         }}
                         className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                         placeholder="e.g., January 2026 or Q1 2026"
@@ -2202,7 +2332,6 @@ export function FullAdminScreen({
                   {generatingQR ? "Generating..." : "QR"}
                 </button>
               )}
-
             </div>
 
             {/* Tournament Info Header */}
@@ -2423,128 +2552,128 @@ export function FullAdminScreen({
             {/* Status Banner */}
             {currentDraft && (
               <>
-              <div
-                className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
-                  currentDraft.status === "integrated"
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-blue-50 border border-blue-200"
-                }`}
-              >
-                <div>
-                  <span
-                    className={`font-medium ${
-                      currentDraft.status === "integrated"
-                        ? "text-green-900"
-                        : "text-blue-900"
-                    }`}
-                  >
-                    Status:{" "}
-                    {currentDraft.status.charAt(0).toUpperCase() +
-                      currentDraft.status.slice(1)}
-                  </span>
-                </div>
-                <div>
-                  <span
-                    className={`text-sm ${
-                      currentDraft.status === "integrated"
-                        ? "text-green-700"
-                        : "text-blue-700"
-                    }`}
-                  >
-                    {currentDraft.status === "integrated"
-                      ? "✅ Tournament completed and integrated"
-                      : "🔄 Tournament in progress - players can check in"}
-                  </span>
-                  {currentDraft.status === "integrated" && (
-                    <div className="mt-3 space-y-2">
-                      <div className="text-sm text-blue-700">
-                        ✅ This tournament has been integrated into the main
-                        system.
+                <div
+                  className={`p-3 flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-11 rounded-lg mb-4 ${
+                    currentDraft.status === "integrated"
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-blue-50 border border-blue-200"
+                  }`}
+                >
+                  <div>
+                    <span
+                      className={`font-medium ${
+                        currentDraft.status === "integrated"
+                          ? "text-green-900"
+                          : "text-blue-900"
+                      }`}
+                    >
+                      Status:{" "}
+                      {currentDraft.status.charAt(0).toUpperCase() +
+                        currentDraft.status.slice(1)}
+                    </span>
+                  </div>
+                  <div>
+                    <span
+                      className={`text-sm ${
+                        currentDraft.status === "integrated"
+                          ? "text-green-700"
+                          : "text-blue-700"
+                      }`}
+                    >
+                      {currentDraft.status === "integrated"
+                        ? "✅ Tournament completed and integrated"
+                        : "🔄 Tournament in progress - players can check in"}
+                    </span>
+                    {currentDraft.status === "integrated" && (
+                      <div className="mt-3 space-y-2">
+                        <div className="text-sm text-blue-700">
+                          ✅ This tournament has been integrated into the main
+                          system.
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
+                          <button
+                            onClick={revertIntegration}
+                            disabled={isReverting}
+                            className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
+                          >
+                            {isReverting ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Reverting...
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                                  />
+                                </svg>
+                                Revert to Draft
+                              </>
+                            )}
+                          </button>
+                          <span className="text-xs text-orange-700">
+                            ⚠️ This will delete main database entries and
+                            restore draft status
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 pt-2 border-t border-blue-200">
-                        <button
-                          onClick={revertIntegration}
-                          disabled={isReverting}
-                          className="flex items-center gap-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded text-sm transition-colors"
-                        >
-                          {isReverting ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Reverting...
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
-                                />
-                              </svg>
-                              Revert to Draft
-                            </>
-                          )}
-                        </button>
-                        <span className="text-xs text-orange-700">
-                          ⚠️ This will delete main database entries and restore
-                          draft status
-                        </span>
+                    )}
+                    {currentDraft.status === "in_progress" && (
+                      <div className="mt-2 text-sm text-blue-700">
+                        📝 Draft mode - You can add/edit players and then
+                        integrate when ready.
                       </div>
-                    </div>
-                  )}
-                  {currentDraft.status === "in_progress" && (
-                    <div className="mt-2 text-sm text-blue-700">
-                      📝 Draft mode - You can add/edit players and then
-                      integrate when ready.
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  {/* Integration Preview */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setShowIntegrationPreview(!showIntegrationPreview)
+                      }
+                      disabled={
+                        players.length === 0 ||
+                        currentDraft?.status === "integrated"
+                      }
+                      className={`px-3 py-1 text-sm flex items-center gap-2 ${
+                        players.length > 0 &&
+                        currentDraft?.status !== "integrated"
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                      }`}
+                    >
+                      <Trophy className="h-4 w-4" />
+                      {currentDraft?.status === "integrated"
+                        ? "Already Integrated"
+                        : showIntegrationPreview
+                          ? "Hide Integration Preview"
+                          : "Preview Integration"}
+                    </button>
+                  </div>
                 </div>
-                {/* Integration Preview */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setShowIntegrationPreview(!showIntegrationPreview)
-                    }
-                    disabled={
-                      players.length === 0 ||
-                      currentDraft?.status === "integrated"
-                    }
-                    className={`px-3 py-1 text-sm flex items-center gap-2 ${
-                      players.length > 0 &&
-                      currentDraft?.status !== "integrated"
-                        ? "bg-blue-600 hover:bg-blue-700 text-white"
-                        : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    }`}
-                  >
-                    <Trophy className="h-4 w-4" />
-                    {currentDraft?.status === "integrated"
-                      ? "Already Integrated"
-                      : showIntegrationPreview
-                        ? "Hide Integration Preview"
-                        : "Preview Integration"}
-                  </button>
-                </div>
-              </div>
-              {showIntegrationPreview &&
-                players.length > 0 &&
-                currentDraft &&
-                currentDraft.status !== "integrated" && (
-                  <TournamentValidationStatus
-                    players={players}
-                    isIntegrated={false}
-                    isIntegrating={isIntegrating}
-                    onIntegrate={integrateToMainSystem}
-                    onAutoCalculateKOPositions={autoCalculateKOPositions}
-                    pendingClaimsCount={pendingClaimsCount}
-                    onOpenClaimsDrawer={() => setShowHitmanClaims(true)}
-                  />
-                )}
+                {showIntegrationPreview &&
+                  players.length > 0 &&
+                  currentDraft &&
+                  currentDraft.status !== "integrated" && (
+                    <TournamentValidationStatus
+                      players={players}
+                      isIntegrated={false}
+                      isIntegrating={isIntegrating}
+                      onIntegrate={integrateToMainSystem}
+                      onAutoCalculateKOPositions={autoCalculateKOPositions}
+                      pendingClaimsCount={pendingClaimsCount}
+                      onOpenClaimsDrawer={() => setShowHitmanClaims(true)}
+                    />
+                  )}
               </>
             )}
           </div>
@@ -2621,17 +2750,20 @@ export function FullAdminScreen({
                 currentDraft?.title ||
                 `${currentDraft?.venue || "Tournament"} - ${
                   currentDraft?.tournament_date
-                    ? new Date(currentDraft.tournament_date).toLocaleDateString("en-US", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        year: "numeric",
-                      })
+                    ? new Date(currentDraft.tournament_date).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        },
+                      )
                     : ""
                 }`
               }
               onChange={(e) => updateTournamentField("title", e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') e.preventDefault();
+                if (e.key === "Enter") e.preventDefault();
               }}
               className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
               placeholder="Custom game title"
@@ -2651,7 +2783,7 @@ export function FullAdminScreen({
                   updateTournamentField("director_name", e.target.value)
                 }
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.preventDefault();
+                  if (e.key === "Enter") e.preventDefault();
                 }}
                 className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
                 placeholder="Director name"
@@ -2965,7 +3097,7 @@ export function FullAdminScreen({
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.preventDefault();
+                  if (e.key === "Enter") e.preventDefault();
                 }}
                 className="w-full px-3 py-2 pr-8 border rounded text-black resize-none overflow-hidden"
                 placeholder="Start typing player name..."
@@ -3140,9 +3272,9 @@ export function FullAdminScreen({
           title="View action history (Ctrl+Z to undo)"
         >
           <History className="h-5 w-5" />
-          {actionHistory.filter(a => a.status === 'applied').length > 0 && (
+          {actionHistory.filter((a) => a.status === "applied").length > 0 && (
             <span className="text-xs text-cyan-400 font-medium">
-              {actionHistory.filter(a => a.status === 'applied').length}
+              {actionHistory.filter((a) => a.status === "applied").length}
             </span>
           )}
         </button>
