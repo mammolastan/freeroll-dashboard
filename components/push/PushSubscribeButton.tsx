@@ -23,6 +23,13 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+// Detect iOS
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 // Get service worker registration, registering it first if needed
 async function getServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
   // Check for existing registration
@@ -42,9 +49,15 @@ async function getServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceW
   // If there's an installing worker, wait for it to finish
   if (reg.installing) {
     console.log('[push] SW installing, waiting for activation');
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.log('[push] SW installation timeout, continuing anyway');
+        resolve();
+      }, 5000);
+
       reg!.installing!.addEventListener('statechange', function handler() {
-        if (this.state === 'activated') {
+        if (this.state === 'activated' || this.state === 'redundant') {
+          clearTimeout(timeout);
           this.removeEventListener('statechange', handler);
           resolve();
         }
@@ -52,7 +65,14 @@ async function getServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceW
     });
   }
 
-  // Now wait for the SW to be controlling the page
+  // On iOS, navigator.serviceWorker.ready can be problematic
+  // If we already have an active worker, use the registration directly
+  if (reg.active) {
+    console.log('[push] SW already active, using existing registration');
+    return reg;
+  }
+
+  // Wait for the SW to be controlling the page
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error('Service worker not ready')), timeoutMs)
   );
@@ -76,19 +96,58 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
     setPermStatus(Notification.permission as PermissionStatus);
 
-    // Wait for service worker to be ready before enabling the button
-    getServiceWorkerRegistration(10000)
-      .then((reg) => {
-        console.log('[push] Service worker ready:', reg.scope);
+    const iOS = isIOS();
+    console.log('[push] Initializing, iOS:', iOS);
+
+    // iOS-specific: Check for standalone mode early
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    if (iOS && !isStandalone) {
+      // On iOS not in standalone mode, just show the button immediately
+      // The button click will show an error telling them to open from home screen
+      console.log('[push] iOS not standalone, enabling button for user guidance');
+      setSwReady(true);
+      setLoading(false);
+      return;
+    }
+
+    // For iOS in standalone mode, use a more aggressive retry strategy
+    const initServiceWorker = async (attempts = 0): Promise<void> => {
+      const maxAttempts = iOS ? 3 : 1;
+      const timeout = iOS ? 5000 : 10000;
+
+      try {
+        const reg = await getServiceWorkerRegistration(timeout);
+        console.log('[push] Service worker ready:', reg.scope, 'active:', !!reg.active);
         setSwReady(true);
-        return checkCurrentSubscription();
-      })
-      .catch((err) => {
-        // SW not ready yet - keep swReady false
-        console.error('[push] Service worker initialization failed:', err);
+        await checkCurrentSubscription();
+      } catch (err) {
+        console.error(`[push] SW init attempt ${attempts + 1} failed:`, err);
+
+        if (iOS && attempts < maxAttempts - 1) {
+          // On iOS, retry after a delay
+          console.log(`[push] iOS: Retrying SW init in 1s (attempt ${attempts + 2}/${maxAttempts})`);
+          await new Promise(r => setTimeout(r, 1000));
+          return initServiceWorker(attempts + 1);
+        }
+
+        // On iOS, if we have any registration, consider it ready enough
+        // The actual subscription will handle any remaining issues
+        if (iOS) {
+          const reg = await navigator.serviceWorker.getRegistration('/');
+          if (reg) {
+            console.log('[push] iOS fallback: Found registration, enabling button');
+            setSwReady(true);
+            return;
+          }
+        }
+
         setSwReady(false);
-      })
-      .finally(() => setLoading(false));
+      }
+    };
+
+    initServiceWorker().finally(() => setLoading(false));
   }, []);
 
   async function checkCurrentSubscription() {
@@ -104,13 +163,19 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   async function subscribe() {
     setLoading(true);
     setError(null);
+    const iOS = isIOS();
+
     try {
       // Check if running as standalone PWA (required for iOS)
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
         || (window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
       if (!isStandalone) {
-        setError('Open this app from your Home Screen to enable notifications');
+        if (iOS) {
+          setError('Add this app to Home Screen from Safari, then open it to enable notifications');
+        } else {
+          setError('Open this app from your Home Screen to enable notifications');
+        }
         return;
       }
 
@@ -119,17 +184,46 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
       if (permission !== 'granted') {
         if (permission === 'denied') {
-          setError('Permission denied - check Settings > Notifications');
+          if (iOS) {
+            setError('Permission denied - go to Settings > Notifications > [This App]');
+          } else {
+            setError('Permission denied - check Settings > Notifications');
+          }
         }
         return;
       }
 
-      let reg: ServiceWorkerRegistration;
-      try {
-        reg = await getServiceWorkerRegistration();
-      } catch {
-        setError('Service worker not ready - try refreshing the app');
+      // On iOS, try harder to get a working service worker registration
+      let reg: ServiceWorkerRegistration | undefined;
+      const maxAttempts = iOS ? 3 : 1;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          reg = await getServiceWorkerRegistration(iOS ? 8000 : 10000);
+          if (reg?.active) break;
+        } catch (err) {
+          console.error(`[push] subscribe: SW attempt ${attempt + 1} failed:`, err);
+          if (iOS && attempt < maxAttempts - 1) {
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      }
+
+      if (!reg) {
+        if (iOS) {
+          setError('Service worker not ready - close and reopen the app, then try again');
+        } else {
+          setError('Service worker not ready - try refreshing the app');
+        }
         return;
+      }
+
+      // On iOS, if we don't have an active worker, try to force activation
+      if (!reg.active && reg.waiting) {
+        console.log('[push] Forcing SW activation');
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        // Wait briefly for activation
+        await new Promise(r => setTimeout(r, 500));
       }
 
       if (!VAPID_PUBLIC_KEY) {
@@ -159,7 +253,11 @@ export default function PushSubscribeButton({ leagueId }: Props) {
     } catch (err) {
       console.error('[push] subscribe error:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Failed: ${message}`);
+      if (iOS && message.includes('push service')) {
+        setError('Push failed - try closing and reopening the app');
+      } else {
+        setError(`Failed: ${message}`);
+      }
     } finally {
       setLoading(false);
     }
