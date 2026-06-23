@@ -926,10 +926,20 @@ app.prepare().then(async () => {
                         game_started: true,
                         title: true,
                         venue: true,
+                        venue_id: true,
                         check_in_token: true,
                         leagues: { select: { slug: true, league_settings: true } },
                     },
                 });
+                // Fetch venue name from venues table if venue_id exists
+                let resolvedVenueName = null;
+                if (tournamentInfo === null || tournamentInfo === void 0 ? void 0 : tournamentInfo.venue_id) {
+                    const venueRecord = await prisma.venues.findUnique({
+                        where: { id: tournamentInfo.venue_id },
+                        select: { name: true },
+                    });
+                    resolvedVenueName = (venueRecord === null || venueRecord === void 0 ? void 0 : venueRecord.name) || null;
+                }
                 const isInitialStart = tournamentInfo && !tournamentInfo.game_started;
                 // Capture state before starting for audit log
                 const previousState = timerStates.get(tournamentId);
@@ -974,10 +984,11 @@ app.prepare().then(async () => {
                     });
                     console.log(`Game marked as started for tournament ${tournamentId}`);
                     // Send push notifications to checked-in players
-                    const venueName = tournamentInfo.title || tournamentInfo.venue || 'the venue';
+                    // Use resolved venue name from venues table, fall back to venue field, then title
+                    const venueName = resolvedVenueName || tournamentInfo.venue || tournamentInfo.title || 'the venue';
                     const leagueSlug = (_a = tournamentInfo.leagues) === null || _a === void 0 ? void 0 : _a.slug;
-                    const token = tournamentInfo.check_in_token;
-                    if (leagueSlug && token) {
+                    console.log(`[push] Tournament start notification - venue: ${venueName}, tournamentId: ${tournamentId}, leagueSlug: ${leagueSlug}`);
+                    if (leagueSlug) {
                         // Determine icon URL from league settings
                         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
                         let iconUrl = `${baseUrl}/icons/default-icon-512.png`; // default fallback
@@ -996,10 +1007,11 @@ app.prepare().then(async () => {
                             console.error('[push] Failed to parse league settings for icon:', e);
                         }
                         // Fire and forget - don't block timer
+                        // Use tournament ID in URL (not check_in_token) since gameview expects numeric ID
                         sendToTournamentPlayers(tournamentId, {
                             title: 'Tournament Starting!',
                             body: `Shuffle up and deal! The tournament at ${venueName} is now underway.`,
-                            url: `/l/${leagueSlug}/gameview/${token}`,
+                            url: `/l/${leagueSlug}/gameview/${tournamentId}`,
                             icon: iconUrl,
                         }).catch((err) => console.error('[push] Timer start notification failed:', err));
                     }
