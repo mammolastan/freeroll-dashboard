@@ -228,10 +228,17 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
+          setError(`Getting SW (attempt ${attempt + 1})...`);
           reg = await getServiceWorkerRegistration(iOS ? 8000 : 10000);
+          if (reg) {
+            const state = reg.active?.state || (reg.installing ? 'installing' : (reg.waiting ? 'waiting' : 'none'));
+            setError(`SW found: active=${!!reg.active}, state=${state}`);
+          }
           if (reg?.active) break;
         } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
           console.error(`[push] subscribe: SW attempt ${attempt + 1} failed:`, err);
+          setError(`Attempt ${attempt + 1} failed: ${errMsg}`);
           if (iOS && attempt < maxAttempts - 1) {
             await new Promise(r => setTimeout(r, 500));
           }
