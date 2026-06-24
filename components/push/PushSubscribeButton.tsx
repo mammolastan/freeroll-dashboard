@@ -85,6 +85,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   const [loading, setLoading] = useState(true);
   const [swReady, setSwReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -118,12 +119,16 @@ export default function PushSubscribeButton({ leagueId }: Props) {
       const timeout = iOS ? 5000 : 10000;
 
       try {
+        setDebugInfo(`Attempt ${attempts + 1}/${maxAttempts}...`);
         const reg = await getServiceWorkerRegistration(timeout);
         console.log('[push] Service worker ready:', reg.scope, 'active:', !!reg.active);
+        setDebugInfo(null);
         setSwReady(true);
         await checkCurrentSubscription();
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[push] SW init attempt ${attempts + 1} failed:`, err);
+        setDebugInfo(`Attempt ${attempts + 1} failed: ${errMsg}`);
 
         if (iOS && attempts < maxAttempts - 1) {
           // On iOS, retry after a delay
@@ -138,9 +143,12 @@ export default function PushSubscribeButton({ leagueId }: Props) {
           const reg = await navigator.serviceWorker.getRegistration('/');
           if (reg) {
             console.log('[push] iOS fallback: Found registration, enabling button');
+            const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
+            setDebugInfo(`Fallback: reg found, state=${state}`);
             setSwReady(true);
             return;
           }
+          setDebugInfo('No SW registration found');
         }
 
         setSwReady(false);
@@ -297,9 +305,14 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   if (!swReady) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
-        <Bell size={16} className="animate-pulse" />
-        Initializing...
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
+          <Bell size={16} className="animate-pulse" />
+          Initializing...
+        </div>
+        {debugInfo && (
+          <span className="text-xs text-yellow-400/70 px-4">{debugInfo}</span>
+        )}
       </div>
     );
   }
