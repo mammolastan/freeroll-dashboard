@@ -37,7 +37,13 @@ async function getServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceW
 
   if (!reg) {
     console.log('[push] No SW registration found, registering now');
-    reg = await navigator.serviceWorker.register('/sw.js');
+    try {
+      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      console.log('[push] SW registered successfully');
+    } catch (regError) {
+      console.error('[push] SW registration failed:', regError);
+      throw new Error(`SW register failed: ${regError instanceof Error ? regError.message : regError}`);
+    }
   }
 
   // If there's a waiting worker, tell it to activate immediately
@@ -140,15 +146,30 @@ export default function PushSubscribeButton({ leagueId }: Props) {
         // On iOS, if we have any registration, consider it ready enough
         // The actual subscription will handle any remaining issues
         if (iOS) {
-          const reg = await navigator.serviceWorker.getRegistration('/');
-          if (reg) {
-            console.log('[push] iOS fallback: Found registration, enabling button');
-            const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
-            setDebugInfo(`Fallback: reg found, state=${state}`);
-            setSwReady(true);
+          try {
+            const reg = await navigator.serviceWorker.getRegistration('/');
+            if (reg) {
+              console.log('[push] iOS fallback: Found registration, enabling button');
+              const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
+              setDebugInfo(`Fallback: reg found, state=${state}`);
+              setSwReady(true);
+              return;
+            }
+          } catch (fallbackErr) {
+            setDebugInfo(`Fallback error: ${fallbackErr instanceof Error ? fallbackErr.message : fallbackErr}`);
+            setSwReady(false);
             return;
           }
-          setDebugInfo('No SW registration found');
+          // Try one more direct registration attempt and show exact error
+          try {
+            setDebugInfo('Attempting direct SW registration...');
+            const directReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+            setDebugInfo(`Direct reg success: ${directReg.scope}`);
+            setSwReady(true);
+            return;
+          } catch (directErr) {
+            setDebugInfo(`Direct reg failed: ${directErr instanceof Error ? directErr.message : directErr}`);
+          }
         }
 
         setSwReady(false);
