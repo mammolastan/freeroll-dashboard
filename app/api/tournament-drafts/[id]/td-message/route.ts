@@ -56,7 +56,7 @@ export async function POST(
 
     // Verify tournament exists and is in progress, get info for push notification
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT td.id, td.status, td.check_in_token, l.slug as league_slug, l.league_settings, v.image_sm as venue_image
+      SELECT td.id, td.status, l.slug as league_slug, l.league_settings, v.image_sm as venue_image
       FROM tournament_drafts td
       LEFT JOIN leagues l ON td.league_id = l.id
       LEFT JOIN venues v ON td.venue_id = v.id
@@ -89,9 +89,8 @@ export async function POST(
 
     // Send push notification to checked-in players (fire and forget)
     const leagueSlug = tournament[0].league_slug as string | null;
-    const checkInToken = tournament[0].check_in_token as string | null;
 
-    if (leagueSlug && checkInToken) {
+    if (leagueSlug) {
       // Determine icon URL: prefer venue image, fall back to league icon
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
       let iconUrl = `${baseUrl}/icons/default-icon-512.png`;
@@ -121,10 +120,11 @@ export async function POST(
         ? trimmedMessage.substring(0, 97) + '...'
         : trimmedMessage;
 
+      // Use tournament ID in URL (not check_in_token) since gameview expects numeric ID
       sendToCheckedInPlayers(tournamentId, {
         title: '📢 TD Message',
         body: notificationBody,
-        url: `/l/${leagueSlug}/gameview/${checkInToken}`,
+        url: `/l/${leagueSlug}/gameview/${tournamentId}`,
         icon: iconUrl,
       }).catch((err) => console.error('[push] TD message notification failed:', err));
     }
