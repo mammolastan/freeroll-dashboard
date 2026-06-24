@@ -39,7 +39,7 @@ export async function GET(
     short_name: shortName,
     description: `${appName} — Poker League`,
     start_url: `/l/${leagueSlug}/`,
-    scope: `/l/${leagueSlug}/`,
+    scope: '/',  // Root scope needed for service worker at /sw.js to work on iOS PWA
     display_override: ["standalone", "minimal-ui"],
     display: 'standalone',
     orientation: 'portrait',
