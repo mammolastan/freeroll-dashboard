@@ -91,7 +91,6 @@ export default function PushSubscribeButton({ leagueId }: Props) {
   const [loading, setLoading] = useState(true);
   const [swReady, setSwReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -125,16 +124,12 @@ export default function PushSubscribeButton({ leagueId }: Props) {
       const timeout = iOS ? 5000 : 10000;
 
       try {
-        setDebugInfo(`Attempt ${attempts + 1}/${maxAttempts}...`);
         const reg = await getServiceWorkerRegistration(timeout);
         console.log('[push] Service worker ready:', reg.scope, 'active:', !!reg.active);
-        setDebugInfo(null);
         setSwReady(true);
         await checkCurrentSubscription();
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[push] SW init attempt ${attempts + 1} failed:`, err);
-        setDebugInfo(`Attempt ${attempts + 1} failed: ${errMsg}`);
 
         if (iOS && attempts < maxAttempts - 1) {
           // On iOS, retry after a delay
@@ -150,25 +145,22 @@ export default function PushSubscribeButton({ leagueId }: Props) {
             const reg = await navigator.serviceWorker.getRegistration('/');
             if (reg) {
               console.log('[push] iOS fallback: Found registration, enabling button');
-              const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
-              setDebugInfo(`Fallback: reg found, state=${state}`);
               setSwReady(true);
               return;
             }
           } catch (fallbackErr) {
-            setDebugInfo(`Fallback error: ${fallbackErr instanceof Error ? fallbackErr.message : fallbackErr}`);
+            console.error('[push] iOS fallback error:', fallbackErr);
             setSwReady(false);
             return;
           }
-          // Try one more direct registration attempt and show exact error
+          // Try one more direct registration attempt
           try {
-            setDebugInfo('Attempting direct SW registration...');
             const directReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-            setDebugInfo(`Direct reg success: ${directReg.scope}`);
+            console.log('[push] Direct reg success:', directReg.scope);
             setSwReady(true);
             return;
           } catch (directErr) {
-            setDebugInfo(`Direct reg failed: ${directErr instanceof Error ? directErr.message : directErr}`);
+            console.error('[push] Direct reg failed:', directErr);
           }
         }
 
@@ -228,17 +220,10 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
-          setError(`Getting SW (attempt ${attempt + 1})...`);
           reg = await getServiceWorkerRegistration(iOS ? 8000 : 10000);
-          if (reg) {
-            const state = reg.active?.state || (reg.installing ? 'installing' : (reg.waiting ? 'waiting' : 'none'));
-            setError(`SW found: active=${!!reg.active}, state=${state}`);
-          }
           if (reg?.active) break;
         } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
           console.error(`[push] subscribe: SW attempt ${attempt + 1} failed:`, err);
-          setError(`Attempt ${attempt + 1} failed: ${errMsg}`);
           if (iOS && attempt < maxAttempts - 1) {
             await new Promise(r => setTimeout(r, 500));
           }
@@ -269,7 +254,7 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
       });
 
       const res = await fetch('/api/push/subscribe', {
@@ -333,14 +318,9 @@ export default function PushSubscribeButton({ leagueId }: Props) {
 
   if (!swReady) {
     return (
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
-          <Bell size={16} className="animate-pulse" />
-          Initializing...
-        </div>
-        {debugInfo && (
-          <span className="text-xs text-yellow-400/70 px-4">{debugInfo}</span>
-        )}
+      <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/30">
+        <Bell size={16} className="animate-pulse" />
+        Initializing...
       </div>
     );
   }
