@@ -148,7 +148,9 @@ export async function POST(
 
       // Maskable icon: smaller image centered with padding
       // This ensures content stays in the safe zone when Android crops to circles/shapes
+      // Flatten first to replace all transparent pixels with the background color
       maskableBuffer = await sharp(buffer)
+        .flatten({ background: backgroundColor })
         .resize(MASKABLE_INNER_SIZE, MASKABLE_INNER_SIZE, {
           fit: 'cover',
           position: 'center',
