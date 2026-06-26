@@ -22,8 +22,14 @@ const ALLOWED_TYPES = [
 // PWA icons should be 512x512 PNG
 const ICON_SIZE = 512;
 // Maskable icons need content in the center ~80% (safe zone)
-const MASKABLE_INNER_SIZE = 410;
-const MASKABLE_PADDING = 51; // (512 - 410) / 2
+// Generate multiple sizes for better Android compatibility
+const MASKABLE_SIZES = [192, 384, 512];
+
+function getMaskableDimensions(size: number) {
+  const innerSize = Math.round(size * 0.8); // 80% for safe zone
+  const padding = Math.round((size - innerSize) / 2);
+  return { innerSize, padding };
+}
 
 async function ensureUploadDir() {
   if (!existsSync(UPLOAD_DIR)) {
@@ -105,9 +111,7 @@ export async function POST(
 
     // Save as PNG for PWA compatibility
     const filename = `${leagueSlug}.png`;
-    const maskableFilename = `${leagueSlug}-maskable.png`;
     const filepath = path.join(UPLOAD_DIR, filename);
-    const maskableFilepath = path.join(UPLOAD_DIR, maskableFilename);
 
     // Delete old icons if they exist
     const config = await getLeagueConfig(league.id);
@@ -115,10 +119,13 @@ export async function POST(
       const oldFilename = config.pwa.logoUrl.split('/').pop()?.split('?')[0];
       if (oldFilename && oldFilename !== filename) {
         const oldFilepath = path.join(UPLOAD_DIR, oldFilename);
-        const oldMaskablePath = path.join(UPLOAD_DIR, oldFilename.replace('.png', '-maskable.png'));
         try {
           await unlink(oldFilepath);
-          await unlink(oldMaskablePath);
+          // Delete all maskable sizes
+          for (const size of MASKABLE_SIZES) {
+            const oldMaskablePath = path.join(UPLOAD_DIR, oldFilename.replace('.png', `-maskable-${size}.png`));
+            await unlink(oldMaskablePath).catch(() => {});
+          }
         } catch {
           // Files might not exist, ignore
         }
@@ -131,7 +138,7 @@ export async function POST(
 
     // Process image: resize to 512x512, convert to PNG
     let processedBuffer: Buffer;
-    let maskableBuffer: Buffer;
+    const maskableBuffers: Map<number, Buffer> = new Map();
 
     // Get background color for maskable icon padding
     const backgroundColor = config.pwa.backgroundColor || '#0f172a';
@@ -146,24 +153,28 @@ export async function POST(
         .png()
         .toBuffer();
 
-      // Maskable icon: smaller image centered with padding
-      // This ensures content stays in the safe zone when Android crops to circles/shapes
+      // Generate maskable icons at multiple sizes
       // Flatten first to replace all transparent pixels with the background color
-      maskableBuffer = await sharp(buffer)
-        .flatten({ background: backgroundColor })
-        .resize(MASKABLE_INNER_SIZE, MASKABLE_INNER_SIZE, {
-          fit: 'cover',
-          position: 'center',
-        })
-        .extend({
-          top: MASKABLE_PADDING,
-          bottom: MASKABLE_PADDING,
-          left: MASKABLE_PADDING,
-          right: MASKABLE_PADDING,
-          background: backgroundColor,
-        })
-        .png()
-        .toBuffer();
+      // Then resize and add padding to keep content in the safe zone
+      for (const size of MASKABLE_SIZES) {
+        const { innerSize, padding } = getMaskableDimensions(size);
+        const maskableBuffer = await sharp(buffer)
+          .flatten({ background: backgroundColor })
+          .resize(innerSize, innerSize, {
+            fit: 'cover',
+            position: 'center',
+          })
+          .extend({
+            top: padding,
+            bottom: padding,
+            left: padding,
+            right: padding,
+            background: backgroundColor,
+          })
+          .png()
+          .toBuffer();
+        maskableBuffers.set(size, maskableBuffer);
+      }
     } catch (err) {
       console.error('Image processing error:', err);
       return NextResponse.json({ error: 'Image processing failed' }, { status: 500 });
@@ -172,7 +183,10 @@ export async function POST(
     // Write processed images to files
     try {
       await writeFile(filepath, processedBuffer);
-      await writeFile(maskableFilepath, maskableBuffer);
+      for (const [size, maskableBuffer] of maskableBuffers) {
+        const maskableFilepath = path.join(UPLOAD_DIR, `${leagueSlug}-maskable-${size}.png`);
+        await writeFile(maskableFilepath, maskableBuffer);
+      }
     } catch (err) {
       console.error('File write error:', err);
       return NextResponse.json({ error: 'Could not save icon' }, { status: 500 });
@@ -229,14 +243,17 @@ export async function DELETE(
     const config = await getLeagueConfig(league.id);
 
     if (config.pwa.logoUrl) {
-      // Delete files (both regular and maskable)
+      // Delete files (regular and all maskable sizes)
       const filename = config.pwa.logoUrl.split('/').pop()?.split('?')[0];
       if (filename) {
         const filepath = path.join(UPLOAD_DIR, filename);
-        const maskableFilepath = path.join(UPLOAD_DIR, filename.replace('.png', '-maskable.png'));
         try {
           await unlink(filepath);
-          await unlink(maskableFilepath);
+          // Delete all maskable sizes
+          for (const size of MASKABLE_SIZES) {
+            const maskableFilepath = path.join(UPLOAD_DIR, filename.replace('.png', `-maskable-${size}.png`));
+            await unlink(maskableFilepath).catch(() => {});
+          }
         } catch {
           // Files might not exist, continue anyway
         }

@@ -28,13 +28,35 @@ export async function GET(
   const themeColor = pwa.themeColor || '#06b6d4';
   const backgroundColor = pwa.backgroundColor || '#0f172a';
   const logoUrl = pwa.logoUrl || '/icons/default-icon-512.png';
-  // Maskable icon: use league-specific if they uploaded a custom icon, otherwise use default
-  // League-specific maskable icons are auto-generated with padding when uploading
-  const maskableLogoUrl = pwa.logoUrl
-    ? pwa.logoUrl.replace('.png', '-maskable.png')
-    : '/uploads/pwa-icons/freeroll-maskable.png';
+  // Maskable icons: use league-specific if they uploaded a custom icon, otherwise use default
+  // League-specific maskable icons are auto-generated at multiple sizes with padding when uploading
+  const MASKABLE_SIZES = [192, 384, 512];
+  const getMaskableUrl = (size: number) => {
+    if (pwa.logoUrl) {
+      return pwa.logoUrl.replace('.png', `-maskable-${size}.png`);
+    }
+    return '/uploads/pwa-icons/freeroll-maskable.png';
+  };
   const trophyIconUrl = '/icons/trophy-1.png';
   const hexagonIconUrl = '/icons/table-overhead.png';
+
+  // Build icons array with maskable icons first (multiple sizes), then regular icon
+  const icons = [
+    // Maskable icons at multiple sizes for better Android compatibility
+    ...MASKABLE_SIZES.map(size => ({
+      src: getMaskableUrl(size),
+      sizes: `${size}x${size}`,
+      type: 'image/png',
+      purpose: 'maskable',
+    })),
+    // Regular icon for other contexts
+    {
+      src: logoUrl,
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any',
+    },
+  ];
 
   const manifest = {
     id: `/l/${leagueSlug}/`,
@@ -48,20 +70,7 @@ export async function GET(
     orientation: 'portrait',
     background_color: backgroundColor,
     theme_color: themeColor,
-    icons: [
-      {
-        src: logoUrl,
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: maskableLogoUrl,
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
-    ],
+    icons,
     shortcuts: [
       {
         name: 'Quarterly Rankings',
