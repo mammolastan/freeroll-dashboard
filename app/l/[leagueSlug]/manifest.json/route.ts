@@ -28,8 +28,11 @@ export async function GET(
   const themeColor = pwa.themeColor || '#06b6d4';
   const backgroundColor = pwa.backgroundColor || '#0f172a';
   const logoUrl = pwa.logoUrl || '/icons/default-icon-512.png';
-  // Static maskable icon with solid background for Android adaptive icons
-  const maskableLogoUrl = '/uploads/pwa-icons/freeroll-maskable.png';
+  // Maskable icon: use league-specific if they uploaded a custom icon, otherwise use default
+  // League-specific maskable icons are auto-generated with padding when uploading
+  const maskableLogoUrl = pwa.logoUrl
+    ? pwa.logoUrl.replace('.png', '-maskable.png')
+    : '/uploads/pwa-icons/freeroll-maskable.png';
   const trophyIconUrl = '/icons/trophy-1.png';
   const hexagonIconUrl = '/icons/table-overhead.png';
 
