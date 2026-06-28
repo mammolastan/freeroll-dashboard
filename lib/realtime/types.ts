@@ -19,6 +19,7 @@ export interface Player {
     name: string; // hitman_name in DB
     nickname: string | null;
   };
+  ko_report_status?: 'none' | 'pending' | 'approved' | 'rejected' | null;
 }
 
 export interface Tournament {

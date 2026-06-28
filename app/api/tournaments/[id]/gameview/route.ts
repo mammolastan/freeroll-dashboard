@@ -16,6 +16,7 @@ interface PlayerRow {
   placement: number | null;
   hitman_name: string | null;
   photo_url?: string | null;
+  ko_report_status: string | null;
 }
 
 export async function GET(
@@ -55,6 +56,7 @@ export async function GET(
         tdp.ko_position,
         tdp.placement,
         tdp.hitman_name,
+        tdp.ko_report_status,
         p.photo_url
       FROM tournament_draft_players tdp
       LEFT JOIN players_v2 p ON tdp.player_uid = p.uid
@@ -87,6 +89,7 @@ export async function GET(
             nickname: null,
           }
           : undefined,
+        ko_report_status: row.ko_report_status as 'none' | 'pending' | 'approved' | 'rejected' | null,
       };
     });
 

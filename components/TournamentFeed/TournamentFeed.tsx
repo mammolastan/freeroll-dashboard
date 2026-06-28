@@ -16,6 +16,7 @@ import { FeedItem } from "./FeedItem";
 import { FeedInput } from "./FeedInput";
 import { ReactionBalance } from "./ReactionBalance";
 import { HitmanClaimModal } from "./HitmanClaimModal";
+import { KnockoutReportModal } from "./KnockoutReportModal";
 import { ReactionType } from "@/types";
 import {
   MessageSquare,
@@ -26,6 +27,7 @@ import {
   MessageCircle,
   Trophy,
   Users,
+  Skull,
 } from "lucide-react";
 import { Player } from "@/lib/realtime/types";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
@@ -53,10 +55,12 @@ function PlayersGrid({
   players,
   variant = "active",
   totalPlayers,
+  onPlayerClick,
 }: {
   players: Player[];
   variant?: "active" | "eliminated";
   totalPlayers?: number;
+  onPlayerClick?: (player: Player) => void;
 }) {
   const isEliminated = variant === "eliminated";
   const emptyLabel = isEliminated
@@ -128,6 +132,24 @@ function PlayersGrid({
     (p) => !p.photo_url || p.photo_url.trim() === "",
   );
 
+  const isClickable = !isEliminated && onPlayerClick;
+  const clickableStyles = isClickable
+    ? "cursor-pointer hover:border-cyan-400/60 hover:bg-cyan-500/10 active:scale-95 transition-all"
+    : "";
+
+  // Helper to render pending report indicator
+  const PendingReportIndicator = ({ player }: { player: Player }) => {
+    if (player.ko_report_status !== 'pending') return null;
+    return (
+      <div className="relative flex-shrink-0">
+        <Skull className="h-4 w-4 text-orange-400 animate-pulse" />
+        <span className="absolute -bottom-0.5 -right-0.5 text-[6px] bg-orange-500 text-white px-0.5 rounded font-bold">
+          ?
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="p-3 space-y-3">
       {withPhoto.length > 0 && (
@@ -135,7 +157,8 @@ function PlayersGrid({
           {withPhoto.map((player) => (
             <div
               key={player.id}
-              className={`flex items-center gap-2 px-2 py-1.5 ${gridBg} rounded border ${gridBorder}`}
+              onClick={() => isClickable && onPlayerClick(player)}
+              className={`flex items-center gap-2 px-2 py-1.5 ${gridBg} rounded border ${player.ko_report_status === 'pending' ? 'border-orange-500/40' : gridBorder} ${clickableStyles}`}
             >
               <PlayerAvatar
                 photoUrl={player.photo_url}
@@ -144,9 +167,10 @@ function PlayersGrid({
                 size="sm"
                 showFallback={false}
               />
-              <span className={`text-xs ${textColor} truncate`}>
+              <span className={`text-xs ${textColor} truncate flex-1`}>
                 {player.nickname || player.name}
               </span>
+              <PendingReportIndicator player={player} />
             </div>
           ))}
         </div>
@@ -156,9 +180,11 @@ function PlayersGrid({
           {withoutPhoto.map((player) => (
             <span
               key={player.id}
-              className={`text-xs ${textColor} px-2 py-1 ${gridBg} rounded border ${gridBorder}`}
+              onClick={() => isClickable && onPlayerClick(player)}
+              className={`text-xs ${textColor} px-2 py-1 ${gridBg} rounded border ${player.ko_report_status === 'pending' ? 'border-orange-500/40' : gridBorder} ${clickableStyles} flex items-center gap-1`}
             >
               {player.nickname || player.name}
+              <PendingReportIndicator player={player} />
             </span>
           ))}
         </div>
@@ -212,6 +238,37 @@ export function TournamentFeed({
     eliminatedPlayerName: string;
   } | null>(null);
 
+  // Knockout report state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
+  // Track locally reported players for optimistic UI updates
+  const [localPendingReports, setLocalPendingReports] = useState<Set<number>>(new Set());
+
+  // Clean up local pending reports when server data confirms them
+  useEffect(() => {
+    if (!players || localPendingReports.size === 0) return;
+
+    // Remove player IDs from local state if they now have pending status from server
+    const confirmedIds = new Set<number>();
+    players.forEach((p) => {
+      if (localPendingReports.has(p.id) && p.ko_report_status === 'pending') {
+        confirmedIds.add(p.id);
+      }
+    });
+
+    if (confirmedIds.size > 0) {
+      setLocalPendingReports((prev) => {
+        const newSet = new Set(prev);
+        confirmedIds.forEach((id) => newSet.delete(id));
+        return newSet;
+      });
+    }
+  }, [players, localPendingReports]);
+
   // Check if user can claim hitman (logged in and is in tournament, or is admin)
   const canClaimHitman = useMemo(() => {
     const userUid = session?.user?.uid;
@@ -221,6 +278,15 @@ export function TournamentFeed({
     // Allow admins to claim for testing/on behalf of players
     const isAdmin = userUid.includes('admin');
     return isInTournament || isAdmin;
+  }, [session, players]);
+
+  // Check if user can report knockouts (logged in and is in tournament)
+  const canReportKnockout = useMemo(() => {
+    const userUid = session?.user?.uid;
+    if (!userUid) return false;
+    if (!players) return false;
+    const isInTournament = players.some((p) => p.uid === userUid);
+    return isInTournament;
   }, [session, players]);
 
   const userName = useMemo(() => {
@@ -239,6 +305,18 @@ export function TournamentFeed({
       setClaimModalOpen(true);
     },
     [],
+  );
+
+  const handleReportKnockout = useCallback(
+    (player: Player) => {
+      if (!canReportKnockout) return;
+      setReportTarget({
+        id: player.id,
+        name: player.nickname || player.name,
+      });
+      setReportModalOpen(true);
+    },
+    [canReportKnockout],
   );
 
   const submitHitmanClaim = useCallback(async () => {
@@ -261,6 +339,36 @@ export function TournamentFeed({
     // Refresh the feed to show updated claim status
     await refresh();
   }, [claimTarget, tournamentId, refresh]);
+
+  const submitKnockoutReport = useCallback(
+    async (hitmanPlayerId: number) => {
+      if (!reportTarget) return;
+
+      const response = await fetch(
+        `/api/tournament-drafts/${tournamentId}/knockout-report`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            victim_player_id: reportTarget.id,
+            hitman_player_id: hitmanPlayerId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to submit report");
+      }
+
+      // Optimistically add to local pending reports for immediate UI feedback
+      setLocalPendingReports((prev) => new Set(prev).add(reportTarget.id));
+
+      // Refresh the feed to show updated status
+      await refresh();
+    },
+    [reportTarget, tournamentId, refresh],
+  );
 
   // Reset to "all" tab if chat is disabled and user was on chat tab
   useEffect(() => {
@@ -433,10 +541,19 @@ export function TournamentFeed({
   }, [items]);
 
   // Active (remaining) players for the Players tab
+  // Apply local pending reports for optimistic UI updates
   const activePlayers = useMemo(() => {
     if (!players) return [];
-    return players.filter((p) => p.is_active);
-  }, [players]);
+    return players
+      .filter((p) => p.is_active)
+      .map((p) => {
+        // If player is in local pending reports, show pending status
+        if (localPendingReports.has(p.id) && p.ko_report_status !== 'pending') {
+          return { ...p, ko_report_status: 'pending' as const };
+        }
+        return p;
+      });
+  }, [players, localPendingReports]);
 
   // Eliminated players for the Eliminated tab
   const eliminatedPlayers = useMemo(() => {
@@ -704,10 +821,16 @@ export function TournamentFeed({
               <span className="text-sm font-medium text-cyan-300">
                 Active Players
               </span>
+              {canReportKnockout && (
+                <span className="text-xs text-gray-500 ml-2">
+                  (tap to report knockout)
+                </span>
+              )}
             </div>
             <PlayersGrid
               players={activePlayers}
               variant="active"
+              onPlayerClick={canReportKnockout ? handleReportKnockout : undefined}
             />
           </div>
         )}
@@ -736,10 +859,16 @@ export function TournamentFeed({
               <span className="text-sm font-medium text-green-300">
                 Remaining ({activePlayers.length})
               </span>
+              {canReportKnockout && (
+                <span className="text-xs text-gray-500 ml-2">
+                  (tap to report knockout)
+                </span>
+              )}
             </div>
             <PlayersGrid
               players={activePlayers}
               variant="active"
+              onPlayerClick={canReportKnockout ? handleReportKnockout : undefined}
             />
 
             {/* Eliminated Players Section */}
@@ -1167,6 +1296,21 @@ export function TournamentFeed({
           eliminatedPlayerName={claimTarget.eliminatedPlayerName}
           claimerName={userName || "You"}
           onConfirm={submitHitmanClaim}
+        />
+      )}
+
+      {/* Knockout Report Modal */}
+      {reportTarget && (
+        <KnockoutReportModal
+          isOpen={reportModalOpen}
+          onClose={() => {
+            setReportModalOpen(false);
+            setReportTarget(null);
+          }}
+          victimPlayer={reportTarget}
+          remainingPlayers={activePlayers}
+          currentUserUid={session?.user?.uid}
+          onConfirm={submitKnockoutReport}
         />
       )}
     </div>

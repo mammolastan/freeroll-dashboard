@@ -36,6 +36,7 @@ export class PlayersService {
               nickname: null,
             }
           : undefined,
+        ko_report_status: p.ko_report_status as 'none' | 'pending' | 'approved' | 'rejected' | null,
       }));
     } catch (error) {
       console.error("Error fetching tournament players:", error);

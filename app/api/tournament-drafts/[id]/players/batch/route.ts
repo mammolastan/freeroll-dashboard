@@ -143,10 +143,24 @@ async function handleBatchUpdate(
           // Store UTC time (same as other feed items like checkins)
           dataToUpdate.knockedout_at = new Date();
         } else if (isUndoKnockout) {
-          // Reset knockout-related fields
+          // Reset knockout-related fields, hitman claim fields, and ko report fields
           dataToUpdate.status = 'active';
           dataToUpdate.hitman_uid = null;
           dataToUpdate.knockedout_at = null;
+          // Clear hitman claim fields
+          dataToUpdate.hitman_claim_uid = null;
+          dataToUpdate.hitman_claim_name = null;
+          dataToUpdate.hitman_claim_status = 'none';
+          dataToUpdate.hitman_claimed_at = null;
+          dataToUpdate.hitman_claim_reviewed_at = null;
+          dataToUpdate.hitman_claim_reviewed_by = null;
+          // Clear ko report fields
+          dataToUpdate.ko_report_status = 'none';
+          dataToUpdate.ko_report_hitman_uid = null;
+          dataToUpdate.ko_reporter_uid = null;
+          dataToUpdate.ko_reported_at = null;
+          dataToUpdate.ko_report_reviewed_at = null;
+          dataToUpdate.ko_report_reviewed_by = null;
         }
 
         // Update the player using Prisma's update method

@@ -148,7 +148,7 @@ export async function POST(
         }
 
         case "KO_ASSIGNED": {
-          // Restore previous KO state and clear hitman claim fields
+          // Restore previous KO state and clear hitman claim fields and ko report fields
           const playerId = reversePayload.tournament_draft_player_id as number;
           const previousKoPosition = reversePayload.previous_ko_position as number | null;
           const previousHitmanName = reversePayload.previous_hitman_name as string | null;
@@ -170,6 +170,12 @@ export async function POST(
               hitman_claimed_at = NULL,
               hitman_claim_reviewed_at = NULL,
               hitman_claim_reviewed_by = NULL,
+              ko_report_status = 'none',
+              ko_report_hitman_uid = NULL,
+              ko_reporter_uid = NULL,
+              ko_reported_at = NULL,
+              ko_report_reviewed_at = NULL,
+              ko_report_reviewed_by = NULL,
               updated_at = NOW()
             WHERE id = ${playerId}
           `;

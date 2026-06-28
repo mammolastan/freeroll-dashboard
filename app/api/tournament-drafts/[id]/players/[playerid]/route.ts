@@ -89,7 +89,7 @@ export async function PUT(
       // Recalculate ko_positions for all knocked out players based on knockedout_at order
       await recalculateKoPositions(draftId, prisma);
     } else if (isUndoKnockout) {
-      // Undoing knockout - reset status and clear knockout fields AND hitman claim fields
+      // Undoing knockout - reset status and clear knockout fields, hitman claim fields, AND ko report fields
       updateResult = await prisma.$executeRaw`
         UPDATE tournament_draft_players
         SET
@@ -106,6 +106,12 @@ export async function PUT(
           hitman_claimed_at = NULL,
           hitman_claim_reviewed_at = NULL,
           hitman_claim_reviewed_by = NULL,
+          ko_report_status = 'none',
+          ko_report_hitman_uid = NULL,
+          ko_reporter_uid = NULL,
+          ko_reported_at = NULL,
+          ko_report_reviewed_at = NULL,
+          ko_report_reviewed_by = NULL,
           updated_at = NOW()
         WHERE id = ${playerId}
       `;

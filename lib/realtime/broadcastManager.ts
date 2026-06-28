@@ -185,4 +185,40 @@ export class BroadcastManager {
     }
   }
 
+  /**
+   * Broadcast knockout report updates (new report, approved, rejected)
+   * Reports are for third-party knockout notifications (player A reports player B KO'd player C)
+   */
+  broadcastKnockoutReportUpdate(
+    tournamentId: number,
+    data: {
+      victim_player_id: number;
+      report_status: 'pending' | 'approved' | 'rejected';
+      hitman_uid: string | null;
+      hitman_name: string | null;
+      reporter_uid: string | null;
+      reporter_name?: string | null;
+      reviewed_by?: string;
+    }
+  ): void {
+    try {
+      if (!global.socketIoInstance) {
+        console.error("Socket.IO instance not available for broadcasting knockout report");
+        return;
+      }
+
+      const room = tournamentId.toString();
+      const payload = {
+        tournament_id: tournamentId,
+        ...data,
+      };
+
+      console.log(`[BROADCAST] knockout:report_update to room ${room}:`, payload);
+
+      global.socketIoInstance.to(room).emit('knockout:report_update', payload);
+    } catch (error) {
+      console.error("Error broadcasting knockout report update:", error);
+    }
+  }
+
 }

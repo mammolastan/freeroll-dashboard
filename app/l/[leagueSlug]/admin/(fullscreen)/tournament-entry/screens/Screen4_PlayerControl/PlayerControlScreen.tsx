@@ -81,30 +81,39 @@ export function PlayerControlScreen({
     type: "success" | "warning";
   } | null>(null);
 
-  // Hitman Claims state
+  // Hitman Claims and Reports state
   const [showHitmanClaims, setShowHitmanClaims] = useState(false);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
 
-  // Fetch pending claims count periodically
+  // Fetch pending claims and reports count periodically
   useEffect(() => {
     if (!currentDraft) return;
 
-    const fetchClaimsCount = async () => {
+    const fetchPendingCounts = async () => {
       try {
-        const response = await fetch(
-          `/api/tournament-drafts/${currentDraft.id}/hitman-claims`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setPendingClaimsCount(data.claims?.length || 0);
+        // Fetch claims and reports in parallel
+        const [claimsResponse, reportsResponse] = await Promise.all([
+          fetch(`/api/tournament-drafts/${currentDraft.id}/hitman-claims`),
+          fetch(`/api/tournament-drafts/${currentDraft.id}/knockout-reports`),
+        ]);
+
+        if (claimsResponse.ok) {
+          const claimsData = await claimsResponse.json();
+          setPendingClaimsCount(claimsData.claims?.length || 0);
+        }
+
+        if (reportsResponse.ok) {
+          const reportsData = await reportsResponse.json();
+          setPendingReportsCount(reportsData.reports?.length || 0);
         }
       } catch (err) {
-        console.error("Failed to fetch claims count:", err);
+        console.error("Failed to fetch pending counts:", err);
       }
     };
 
-    fetchClaimsCount();
-    const interval = setInterval(fetchClaimsCount, 15000); // Refresh every 15 seconds
+    fetchPendingCounts();
+    const interval = setInterval(fetchPendingCounts, 15000); // Refresh every 15 seconds
 
     return () => clearInterval(interval);
   }, [currentDraft]);
@@ -689,9 +698,9 @@ export function PlayerControlScreen({
         gameName={currentDraft.title || currentDraft.venue || "Tournament"}
       />
 
-      {/* Hitman Claims Floating Button */}
+      {/* Hitman Claims & Reports Floating Button */}
       <HitmanClaimsButton
-        pendingCount={pendingClaimsCount}
+        pendingCount={pendingClaimsCount + pendingReportsCount}
         onClick={() => setShowHitmanClaims(true)}
       />
 

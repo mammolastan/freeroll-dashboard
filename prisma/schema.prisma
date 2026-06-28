@@ -126,6 +126,13 @@ model TournamentDraftPlayer {
   hitman_claimed_at        DateTime?                              @db.Timestamp(0)
   hitman_claim_reviewed_at DateTime?                              @db.Timestamp(0)
   hitman_claim_reviewed_by String?                                @db.VarChar(255)
+  // Knockout report fields (for third-party reports)
+  ko_report_status         tournament_draft_players_report_status? @default(none)
+  ko_report_hitman_uid     String?                                @db.VarChar(255)
+  ko_reporter_uid          String?                                @db.VarChar(255)
+  ko_reported_at           DateTime?                              @db.Timestamp(0)
+  ko_report_reviewed_at    DateTime?                              @db.Timestamp(0)
+  ko_report_reviewed_by    String?                                @db.VarChar(255)
   tournament_draft         TournamentDraft                        @relation(fields: [tournament_draft_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tournament_draft_players_ibfk_1")
 
   @@unique([tournament_draft_id, player_name], map: "unique_player_per_tournament")
@@ -476,6 +483,13 @@ enum tournament_draft_players_status {
 }
 
 enum tournament_draft_players_claim_status {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum tournament_draft_players_report_status {
   none
   pending
   approved
