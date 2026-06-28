@@ -197,3 +197,65 @@ export async function sendToSubscriber(
   console.log(`[push] sendToSubscriber id=${subscriberId}: sent=${sent} failed=${failed} removed=${removed}`);
   return { sent, failed, removed };
 }
+
+/**
+ * Send a push notification to ALL devices of a specific player by UID.
+ * Queries all push_subscriptions for the player_uid and league_id,
+ * sends to each subscription, and automatically removes expired (410/404) subscriptions.
+ */
+export async function sendToPlayerByUid(
+  playerUid: string,
+  leagueId: number,
+  payload: PushPayload
+): Promise<BroadcastResult> {
+  ensureVapidInitialized();
+
+  const subs = await prisma.$queryRawUnsafe<
+    { id: number; endpoint: string; p256dh: string; auth: string }[]
+  >(
+    'SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE player_uid = ? AND league_id = ?',
+    playerUid,
+    leagueId
+  );
+
+  if (subs.length === 0) {
+    console.log(`[push] sendToPlayerByUid: No subscriptions found for player_uid=${playerUid} league_id=${leagueId}`);
+    return { sent: 0, failed: 0, removed: 0 };
+  }
+
+  let sent = 0;
+  let failed = 0;
+  let removed = 0;
+  const staleIds: number[] = [];
+
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth },
+        },
+        JSON.stringify(payload)
+      );
+      sent++;
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        staleIds.push(sub.id);
+        removed++;
+      } else {
+        failed++;
+        console.error('[push] sendNotification error:', err.statusCode, err.message);
+      }
+    }
+  }
+
+  if (staleIds.length > 0) {
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM push_subscriptions WHERE id IN (${staleIds.map(() => '?').join(',')})`,
+      ...staleIds
+    );
+  }
+
+  console.log(`[push] sendToPlayerByUid player_uid=${playerUid} league_id=${leagueId}: sent=${sent} failed=${failed} removed=${removed}`);
+  return { sent, failed, removed };
+}

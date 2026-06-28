@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { BroadcastManager } from "@/lib/realtime/broadcastManager";
 import { getLeagueRole, canAccessAdmin } from "@/lib/league-auth";
+import { sendToPlayerByUid } from "@/lib/push/sendPush";
 
 export async function POST(
   request: NextRequest,
@@ -44,9 +45,9 @@ export async function POST(
       );
     }
 
-    // Verify tournament exists and is in progress, get league_id for role check
+    // Verify tournament exists and is in progress, get league_id and TD for role check and notifications
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, status, league_id FROM tournament_drafts WHERE id = ${tournamentId}
+      SELECT id, status, league_id, tournament_director_uid FROM tournament_drafts WHERE id = ${tournamentId}
     `;
 
     if (!tournament.length) {
@@ -186,6 +187,23 @@ export async function POST(
       });
     } catch (broadcastError) {
       console.error("Failed to broadcast hitman claim:", broadcastError);
+    }
+
+    // Send push notification to tournament director
+    const tdUid = tournament[0].tournament_director_uid;
+    if (tdUid) {
+      const victimName = victim.player_nickname
+        ? String(victim.player_nickname)
+        : String(victim.player_name);
+      try {
+        await sendToPlayerByUid(String(tdUid), leagueId, {
+          title: "Knockout Claim",
+          body: `${claimerName} claimed knockout of ${victimName}`,
+          url: `/td/${tournamentId}`,
+        });
+      } catch (pushError) {
+        console.error("Failed to send push notification to TD:", pushError);
+      }
     }
 
     return NextResponse.json({

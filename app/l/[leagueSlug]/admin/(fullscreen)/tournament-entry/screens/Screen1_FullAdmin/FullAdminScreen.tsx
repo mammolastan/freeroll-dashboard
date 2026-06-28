@@ -299,6 +299,7 @@ export function FullAdminScreen({
     tournament_date: "",
     tournament_time: "",
     director_name: "",
+    tournament_director_uid: null as string | null,
     title: "",
     venue_id: null as number | null,
     start_points: 0,
@@ -306,6 +307,20 @@ export function FullAdminScreen({
     allow_chat: true, // Will be set from league defaults on load
     allow_self_checkin: true, // Will be set from league defaults on load
   });
+
+  // League admins for TD dropdown
+  interface LeagueAdmin {
+    id: number;
+    playerUid: string;
+    role: "owner" | "admin";
+    firstName: string | null;
+    lastName: string | null;
+    nickname: string | null;
+  }
+  const [leagueAdmins, setLeagueAdmins] = useState<LeagueAdmin[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [showTDDropdown, setShowTDDropdown] = useState(false);
+  const [showEntryTDDropdown, setShowEntryTDDropdown] = useState(false);
 
   // Player management (using props from parent)
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -578,6 +593,7 @@ export function FullAdminScreen({
         tournament_date: getTodayDateString(),
         tournament_time: "",
         director_name: "",
+        tournament_director_uid: null,
         title: "",
         venue_id: null,
         start_points: 0,
@@ -689,6 +705,50 @@ export function FullAdminScreen({
     if (!newTournament.venue_id) return "";
     const venue = venues.find((v) => v.id === newTournament.venue_id);
     return venue?.name || "";
+  };
+
+  // Update tournament director (both name and UID)
+  const updateTournamentDirector = async (admin: {
+    playerUid: string;
+    displayName: string;
+  }) => {
+    if (!currentDraft || currentDraft.status === "integrated") return;
+
+    try {
+      const updateData = {
+        tournament_name: "",
+        tournament_date: currentDraft.tournament_date,
+        tournament_time: currentDraft.tournament_time,
+        director_name: admin.displayName,
+        tournament_director_uid: admin.playerUid,
+        title: currentDraft.title,
+        venue_id: currentDraft.venue_id,
+        start_points: currentDraft.start_points,
+        allow_chat: currentDraft.allow_chat,
+        allow_self_checkin: currentDraft.allow_self_checkin,
+      };
+
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateData),
+        },
+      );
+
+      if (response.ok) {
+        updateCurrentDraft({
+          ...currentDraft,
+          director_name: admin.displayName,
+        });
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to update tournament director:", errorText);
+      }
+    } catch (error) {
+      console.error("Error updating tournament director:", error);
+    }
   };
 
   // Update tournament field
@@ -1475,15 +1535,47 @@ export function FullAdminScreen({
     setShowLoadMore(tournaments.length > displayCount);
   }, [tournaments.length, displayCount]);
 
-  // Show create modal
+  // Fetch league admins for TD dropdown
+  const loadLeagueAdmins = useCallback(async () => {
+    const leagueSlug = session?.user?.leagueSlug;
+    if (!leagueSlug) return;
+
+    setLoadingAdmins(true);
+    try {
+      const res = await fetch(`/api/${leagueSlug}/admins`);
+      if (res.ok) {
+        const data = await res.json();
+        setLeagueAdmins(data.admins || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch league admins:", err);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }, [session?.user?.leagueSlug]);
+
+  // Show create modal - load admins and set defaults
   useEffect(() => {
     if (showCreateModal) {
+      loadLeagueAdmins();
+      // Set default TD to current user
+      const currentUserUid = session?.user?.uid;
+      const currentUserName = session?.user?.nickname || session?.user?.name || "";
       setNewTournament((prev) => ({
         ...prev,
         tournament_date: getTodayDateString(),
+        tournament_director_uid: currentUserUid || null,
+        director_name: currentUserName,
       }));
     }
-  }, [showCreateModal]);
+  }, [showCreateModal, loadLeagueAdmins, session?.user?.uid, session?.user?.nickname, session?.user?.name]);
+
+  // Load admins when entering entry view (for TD dropdown on existing tournament)
+  useEffect(() => {
+    if (currentView === "entry" && currentDraft) {
+      loadLeagueAdmins();
+    }
+  }, [currentView, currentDraft, loadLeagueAdmins]);
 
   // Welcome Screen
   if (currentView === "welcome") {
@@ -1931,23 +2023,72 @@ export function FullAdminScreen({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
-                        Director
+                        Tournament Director
                       </label>
-                      <textarea
-                        rows={1}
-                        value={newTournament.director_name}
-                        onChange={(e) =>
-                          setNewTournament({
-                            ...newTournament,
-                            director_name: e.target.value,
-                          })
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.preventDefault();
-                        }}
-                        className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
-                        placeholder="Tournament director"
-                      />
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowTDDropdown(!showTDDropdown)}
+                          className="w-full px-3 py-2 border rounded text-black text-left bg-white flex items-center justify-between"
+                        >
+                          <span
+                            className={
+                              newTournament.tournament_director_uid
+                                ? "text-black"
+                                : "text-gray-500"
+                            }
+                          >
+                            {newTournament.director_name || "Select director..."}
+                          </span>
+                          <ChevronDown size={16} />
+                        </button>
+
+                        {showTDDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                            {loadingAdmins ? (
+                              <div className="px-3 py-2 text-gray-500">
+                                Loading...
+                              </div>
+                            ) : leagueAdmins.length === 0 ? (
+                              <div className="px-3 py-2 text-gray-500">
+                                No admins found
+                              </div>
+                            ) : (
+                              leagueAdmins.map((admin) => {
+                                const displayName = admin.nickname
+                                  ? admin.nickname
+                                  : `${admin.firstName || ""} ${admin.lastName || ""}`.trim() || admin.playerUid;
+                                return (
+                                  <button
+                                    key={admin.playerUid}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewTournament({
+                                        ...newTournament,
+                                        tournament_director_uid: admin.playerUid,
+                                        director_name: displayName,
+                                      });
+                                      setShowTDDropdown(false);
+                                    }}
+                                    className={`w-full px-3 py-2 text-left hover:bg-gray-100 text-black ${
+                                      newTournament.tournament_director_uid === admin.playerUid
+                                        ? "bg-blue-50"
+                                        : ""
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span>{displayName}</span>
+                                      <span className="text-xs text-gray-500 capitalize">
+                                        {admin.role}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -2776,19 +2917,58 @@ export function FullAdminScreen({
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Director
               </label>
-              <textarea
-                rows={1}
-                value={currentDraft?.director_name || ""}
-                onChange={(e) =>
-                  updateTournamentField("director_name", e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.preventDefault();
-                }}
-                className="w-full px-3 py-2 border rounded text-black resize-none overflow-hidden"
-                placeholder="Director name"
-                disabled={currentDraft?.status === "integrated"}
-              />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowEntryTDDropdown(!showEntryTDDropdown)}
+                  disabled={currentDraft?.status === "integrated"}
+                  className={`w-full px-3 py-2 border rounded text-black text-left bg-white flex items-center justify-between ${
+                    currentDraft?.status === "integrated" ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <span className={currentDraft?.director_name ? "text-black" : "text-gray-500"}>
+                    {currentDraft?.director_name || "Select director..."}
+                  </span>
+                  <ChevronDown size={16} />
+                </button>
+
+                {showEntryTDDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                    {loadingAdmins ? (
+                      <div className="px-3 py-2 text-gray-500">Loading...</div>
+                    ) : leagueAdmins.length === 0 ? (
+                      <div className="px-3 py-2 text-gray-500">No admins found</div>
+                    ) : (
+                      leagueAdmins.map((admin) => {
+                        const displayName = admin.nickname
+                          ? admin.nickname
+                          : `${admin.firstName || ""} ${admin.lastName || ""}`.trim() || admin.playerUid;
+                        return (
+                          <button
+                            key={admin.playerUid}
+                            type="button"
+                            onClick={() => {
+                              updateTournamentDirector({
+                                playerUid: admin.playerUid,
+                                displayName,
+                              });
+                              setShowEntryTDDropdown(false);
+                            }}
+                            className={`w-full px-3 py-2 text-left hover:bg-gray-100 text-black ${
+                              currentDraft?.director_name === displayName ? "bg-blue-50" : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{displayName}</span>
+                              <span className="text-xs text-gray-500 capitalize">{admin.role}</span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">

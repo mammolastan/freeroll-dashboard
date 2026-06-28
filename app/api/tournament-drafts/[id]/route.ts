@@ -100,6 +100,7 @@ export async function PUT(
       tournament_date,
       tournament_time,
       director_name,
+      tournament_director_uid,
       title,
       venue_id,
       start_points,
@@ -109,7 +110,7 @@ export async function PUT(
 
     // Get current state before updating for audit comparison
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT tournament_date, tournament_time, director_name, title, venue_id, start_points, allow_chat, allow_self_checkin
+      SELECT tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, allow_chat, allow_self_checkin
       FROM tournament_drafts WHERE id = ${draftId}
     `;
 
@@ -128,6 +129,7 @@ export async function PUT(
         tournament_date = ${tournament_date},
         tournament_time = ${tournament_time || null},
         director_name = ${director_name},
+        tournament_director_uid = ${tournament_director_uid || null},
         title = ${title || null},
         venue_id = ${venue_id || null},
         start_points = ${start_points || 0},
@@ -159,6 +161,7 @@ export async function PUT(
         "tournament_date",
         "tournament_time",
         "director_name",
+        "tournament_director_uid",
         "title",
         "venue_id",
         "start_points",
@@ -170,6 +173,7 @@ export async function PUT(
         tournament_date,
         tournament_time: tournament_time || null,
         director_name,
+        tournament_director_uid: tournament_director_uid || null,
         title: title || null,
         venue_id: venue_id || null,
         start_points: start_points || 0,

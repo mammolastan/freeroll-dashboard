@@ -58,6 +58,10 @@ jobs:
             root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/public/
 
           rsync -avz \
+            prisma/ \
+            root@${{ secrets.DROPLET_IP }}:/var/www/freeroll-dashboard/prisma/
+
+          rsync -avz \
             package.json \
             package-lock.json \
             ecosystem.config.js \
@@ -71,6 +75,9 @@ jobs:
 
             echo "Installing production dependencies..."
             npm install --omit=dev
+
+            echo "Generating Prisma client..."
+            npx prisma generate
 
             echo "Restarting application..."
             pm2 startOrRestart ecosystem.config.js --env production && pm2 save
