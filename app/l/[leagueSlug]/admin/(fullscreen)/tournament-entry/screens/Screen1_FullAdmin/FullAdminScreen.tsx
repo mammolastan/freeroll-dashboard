@@ -751,53 +751,71 @@ export function FullAdminScreen({
     }
   };
 
-  // Update tournament field
-  const updateTournamentField = async (
+  // Debounce ref for tournament metadata field updates (separate from player updates)
+  const tournamentFieldTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingTournamentFieldsRef = useRef<Record<string, string | number | boolean | null>>({});
+  const currentDraftForFieldsRef = useRef(currentDraft);
+  currentDraftForFieldsRef.current = currentDraft;
+
+  // Update tournament field with debounced API call
+  const updateTournamentField = (
     field: string,
     value: string | number | boolean | null,
   ) => {
     if (!currentDraft || currentDraft.status === "integrated") return;
 
-    try {
-      // Include tournament_name since it still exists in the database schema
+    // Immediately update local state for responsive UI
+    updateCurrentDraft({ ...currentDraft, [field]: value });
+
+    // Track pending update
+    pendingTournamentFieldsRef.current[field] = value;
+
+    // Clear existing timeout
+    if (tournamentFieldTimeoutRef.current) {
+      clearTimeout(tournamentFieldTimeoutRef.current);
+    }
+
+    // Debounce API call (500ms after last keystroke)
+    tournamentFieldTimeoutRef.current = setTimeout(async () => {
+      const draft = currentDraftForFieldsRef.current;
+      if (!draft) return;
+
+      const pending = pendingTournamentFieldsRef.current;
+
+      // Build update data with all pending changes
       const updateData = {
-        tournament_name: "", // Empty since we're not using tournament names anymore
-        tournament_date:
-          field === "tournament_date" ? value : currentDraft.tournament_date,
-        tournament_time:
-          field === "tournament_time" ? value : currentDraft.tournament_time,
-        director_name:
-          field === "director_name" ? value : currentDraft.director_name,
-        title: field === "title" ? value : currentDraft.title,
-        venue_id: field === "venue_id" ? value : currentDraft.venue_id,
-        start_points:
-          field === "start_points" ? value : currentDraft.start_points,
-        allow_chat: field === "allow_chat" ? value : currentDraft.allow_chat,
-        allow_self_checkin:
-          field === "allow_self_checkin"
-            ? value
-            : currentDraft.allow_self_checkin,
+        tournament_name: "",
+        tournament_date: pending.tournament_date ?? draft.tournament_date,
+        tournament_time: pending.tournament_time ?? draft.tournament_time,
+        director_name: pending.director_name ?? draft.director_name,
+        title: pending.title ?? draft.title,
+        venue_id: pending.venue_id ?? draft.venue_id,
+        start_points: pending.start_points ?? draft.start_points,
+        allow_chat: pending.allow_chat ?? draft.allow_chat,
+        allow_self_checkin: pending.allow_self_checkin ?? draft.allow_self_checkin,
       };
 
-      const response = await fetch(
-        `/api/tournament-drafts/${currentDraft.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateData),
-        },
-      );
+      // Clear pending updates
+      pendingTournamentFieldsRef.current = {};
 
-      if (response.ok) {
-        // Update local state
-        updateCurrentDraft({ ...currentDraft, [field]: value });
-      } else {
-        const errorText = await response.text();
-        console.error("Failed to update tournament field:", errorText);
+      try {
+        const response = await fetch(
+          `/api/tournament-drafts/${draft.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updateData),
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to update tournament field:", errorText);
+        }
+      } catch (error) {
+        console.error("Error updating tournament:", error);
       }
-    } catch (error) {
-      console.error("Error updating tournament:", error);
-    }
+    }, 500);
   };
 
   // Format date for input field (convert from ISO to YYYY-MM-DD)
