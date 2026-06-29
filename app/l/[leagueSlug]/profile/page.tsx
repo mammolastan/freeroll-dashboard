@@ -23,6 +23,8 @@ export default function ProfilePage({
   const [nickname, setNickname] = useState("");
   const [favoriteHand, setFavoriteHand] = useState("");
   const [favoritePro, setFavoritePro] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,6 +74,8 @@ export default function ProfilePage({
         setFavoriteHand(data.favorite_hand || "");
         setFavoritePro(data.favorite_pro || "");
         setPhotoUrl(data.photo_url);
+        setPhoneNumber(data.phone_number || "");
+        setSmsOptIn(data.sms_opt_in || false);
       }
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -92,6 +96,8 @@ export default function ProfilePage({
           nickname: nickname.trim() || null,
           favorite_hand: favoriteHand.trim() || null,
           favorite_pro: favoritePro.trim() || null,
+          phone_number: phoneNumber.trim() || null,
+          sms_opt_in: smsOptIn,
         }),
       });
 
@@ -554,6 +560,35 @@ export default function ProfilePage({
                   maxLength={100}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              {/* SMS Notifications */}
+              <div className="pt-2 border-t mt-4 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">SMS Notifications</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    autoComplete="tel"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="(404) 555-0100"
+                  />
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsOptIn}
+                    onChange={(e) => setSmsOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">
+                    I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Reply STOP to unsubscribe.
+                  </span>
+                </label>
               </div>
 
               {/* Save Button */}

@@ -24,6 +24,8 @@ export async function GET() {
         photo_url: true,
         favorite_hand: true,
         favorite_pro: true,
+        phone_number: true,
+        sms_opt_in: true,
         created: true,
       },
     });
@@ -56,7 +58,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { nickname, favorite_hand, favorite_pro } = await request.json();
+    const { nickname, favorite_hand, favorite_pro, phone_number, sms_opt_in } = await request.json();
 
     // Validate nickname
     if (nickname !== null && nickname !== undefined) {
@@ -109,12 +111,33 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Determine sms_opted_in_at: set on new opt-in, clear on opt-out
+    const currentPlayer = sms_opt_in !== undefined
+      ? await prisma.players_v2.findUnique({
+          where: { uid: session.user.uid },
+          select: { sms_opt_in: true, sms_opted_in_at: true },
+        })
+      : null;
+
+    const smsData = sms_opt_in !== undefined
+      ? {
+          phone_number: phone_number?.trim() || null,
+          sms_opt_in: !!sms_opt_in,
+          sms_opted_in_at: sms_opt_in && !currentPlayer?.sms_opted_in_at
+            ? new Date()
+            : sms_opt_in
+            ? currentPlayer?.sms_opted_in_at
+            : null,
+        }
+      : {};
+
     const updatedPlayer = await prisma.players_v2.update({
       where: { uid: session.user.uid },
       data: {
         nickname: nickname?.trim() || null,
         favorite_hand: favorite_hand?.trim() || null,
         favorite_pro: favorite_pro?.trim() || null,
+        ...smsData,
       },
       select: {
         uid: true,
@@ -123,6 +146,8 @@ export async function PATCH(request: NextRequest) {
         nickname: true,
         favorite_hand: true,
         favorite_pro: true,
+        phone_number: true,
+        sms_opt_in: true,
       },
     });
 

@@ -26,6 +26,8 @@ export default function RegisterPage({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,6 +96,8 @@ export default function RegisterPage({
           password,
           name: isNewPlayer ? name : undefined,
           existingPlayerUid: selectedPlayer?.uid,
+          phone_number: phoneNumber || undefined,
+          sms_opt_in: smsOptIn,
         }),
       });
 
@@ -282,6 +286,34 @@ export default function RegisterPage({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* SMS Opt-In */}
+          <div className="border-t pt-4 mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                autoComplete="tel"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="(404) 555-0100"
+              />
+            </div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smsOptIn}
+                onChange={(e) => setSmsOptIn(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-600">
+                I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Reply STOP to unsubscribe.
+              </span>
+            </label>
           </div>
 
           <button

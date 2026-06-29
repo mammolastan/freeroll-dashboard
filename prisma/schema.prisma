@@ -318,6 +318,9 @@ model players_v2 {
   created                                DateTime        @default(now()) @db.Timestamp(0)
   modified                               DateTime        @default(now()) @db.Timestamp(0)
   isAdmin                                Boolean         @default(false)
+  phone_number                           String?         @db.VarChar(20)
+  sms_opt_in                             Boolean         @default(false)
+  sms_opted_in_at                        DateTime?       @db.Timestamp(0)
   appearances                            appearances[]
   bonus_points                           bonus_points[]
   knockouts_knockouts_hitmanToplayers_v2 knockouts[]     @relation("knockouts_hitmanToplayers_v2")

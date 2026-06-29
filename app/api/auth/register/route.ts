@@ -6,7 +6,7 @@ import { getDisplayName, parseName } from "@/lib/playerUtils";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, existingPlayerUid } = await request.json();
+    const { email, password, name, existingPlayerUid, phone_number, sms_opt_in } = await request.json();
 
     // Validation
     if (!email || !password) {
@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
         data: {
           email: normalizedEmail,
           password_hash,
+          phone_number: phone_number?.trim() || null,
+          sms_opt_in: !!sms_opt_in,
+          sms_opted_in_at: sms_opt_in ? new Date() : null,
         },
       });
     } else {
@@ -88,6 +91,9 @@ export async function POST(request: NextRequest) {
           last_name,
           email: normalizedEmail,
           password_hash,
+          phone_number: phone_number?.trim() || null,
+          sms_opt_in: !!sms_opt_in,
+          sms_opted_in_at: sms_opt_in ? new Date() : null,
         },
       });
     }
