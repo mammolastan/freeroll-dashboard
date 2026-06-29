@@ -166,6 +166,63 @@ export default function GameViewPage() {
   }, [checkInToast]);
 
   const handleCheckInClick = async () => {
+    // If user is signed in, check them in directly without the modal
+    if (session?.user?.uid && session?.user?.name) {
+      setGettingToken(true);
+      try {
+        // First get the check-in token if we don't have it
+        let tokenToUse = checkInToken;
+        if (!tokenToUse) {
+          const tokenResponse = await fetch(`/api/tournaments/${token}/checkin-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+
+          if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.json().catch(() => ({}));
+            if (tokenResponse.status === 403) {
+              alert(errorData.error || "Self check-in is not enabled for this tournament.");
+            } else if (tokenResponse.status === 404) {
+              alert("Tournament not found or check-in is not available.");
+            } else {
+              alert("Failed to start check-in. Please try again.");
+            }
+            return;
+          }
+
+          const tokenData = await tokenResponse.json();
+          tokenToUse = tokenData.token;
+          setCheckInToken(tokenData.token);
+          setCheckInLeagueSlug(tokenData.league_slug || null);
+        }
+
+        // Now perform the direct check-in
+        const response = await fetch(`/api/checkin/${tokenToUse}/players`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            selected_player_uid: session.user.uid,
+            entered_name: session.user.name,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to check in");
+        }
+
+        const displayName = session.user.nickname || session.user.name;
+        setCheckInToast(displayName);
+      } catch (error) {
+        console.error("Error checking in:", error);
+        alert(error instanceof Error ? error.message : "Error checking in. Please try again.");
+      } finally {
+        setGettingToken(false);
+      }
+      return;
+    }
+
+    // For non-signed-in users, show the modal
     if (checkInToken) {
       setShowCheckInModal(true);
       return;
@@ -291,15 +348,15 @@ export default function GameViewPage() {
                 disabled={gettingToken || checkInDisabled}
                 className={`${
                   checkInDisabled
-                    ? "bg-gray-700 cursor-not-allowed border-gray-600"
-                    : "bg-cyan-600 hover:bg-cyan-500 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
-                } disabled:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border`}
+                    ? "bg-gray-700 cursor-not-allowed border-gray-600 text-white"
+                    : "bg-transparent hover:bg-cyan-600/20 border-cyan-500 text-cyan-400 hover:text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]"
+                } disabled:bg-gray-700 disabled:text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border-2`}
               >
                 <UserPlus size={20} />
                 {checkInDisabled
                   ? "Check-In Closed"
                   : gettingToken
-                    ? "Getting Ready..."
+                    ? "Checking In..."
                     : "Check In"}
               </button>
             )
