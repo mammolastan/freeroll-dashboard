@@ -20,6 +20,11 @@ const RichTextEditor = dynamic(
   { ssr: false }
 );
 
+const VenueLocationPicker = dynamic(
+  () => import("@/components/ui/VenueLocationPicker"),
+  { ssr: false }
+);
+
 interface Venue {
   id: number;
   name: string;
@@ -27,6 +32,9 @@ interface Venue {
   notes: string | null;
   isActive: boolean;
   cutoffTime: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  checkinRadiusMeters: number;
   gameCount: number;
   lastGameDate: string | null;
 }
@@ -47,7 +55,12 @@ export default function VenuesAdminPage() {
     notes: "",
     cutoffTime: "",
     isActive: true,
+    latitude: "",
+    longitude: "",
+    checkinRadiusMeters: "150",
   });
+
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   // Toast state
   const [toast, setToast] = useState<{
@@ -85,6 +98,9 @@ export default function VenuesAdminPage() {
       notes: "",
       cutoffTime: "",
       isActive: true,
+      latitude: "",
+      longitude: "",
+      checkinRadiusMeters: "150",
     });
   };
 
@@ -102,8 +118,35 @@ export default function VenuesAdminPage() {
       notes: venue.notes || "",
       cutoffTime: venue.cutoffTime?.toString() || "",
       isActive: venue.isActive,
+      latitude: venue.latitude?.toString() || "",
+      longitude: venue.longitude?.toString() || "",
+      checkinRadiusMeters: venue.checkinRadiusMeters?.toString() || "150",
     });
     setModalOpen(true);
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser", "error");
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(8),
+          longitude: position.coords.longitude.toFixed(8),
+        }));
+        setGettingLocation(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        showToast("Failed to get current location", "error");
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const closeModal = () => {
@@ -134,6 +177,9 @@ export default function VenuesAdminPage() {
           notes: formData.notes || null,
           cutoffTime: formData.cutoffTime || null,
           isActive: formData.isActive,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          checkinRadiusMeters: formData.checkinRadiusMeters || null,
         }),
       });
 
@@ -337,8 +383,8 @@ export default function VenuesAdminPage() {
       {/* Create/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div className="bg-zinc-900 border border-white/10 rounded-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
               <h3 className="text-lg font-semibold text-white">
                 {editingVenue ? "Edit Venue" : "Add Venue"}
               </h3>
@@ -349,7 +395,7 @@ export default function VenuesAdminPage() {
                 <X size={20} />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-1.5">
@@ -412,6 +458,62 @@ export default function VenuesAdminPage() {
                 <p className="text-white/40 text-xs mt-1">
                   Leave blank for no cutoff. Players can check in until this
                   many minutes after the tournament starts.
+                </p>
+              </div>
+
+              {/* Geolocation */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-white/70">
+                    Geolocation Check-in
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={gettingLocation}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors"
+                  >
+                    <MapPin size={12} />
+                    {gettingLocation ? "Locating..." : "Use My Current Location"}
+                  </button>
+                </div>
+                <VenueLocationPicker
+                  latitude={formData.latitude ? parseFloat(formData.latitude) : null}
+                  longitude={formData.longitude ? parseFloat(formData.longitude) : null}
+                  onChange={(lat, lng) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: lat.toFixed(8),
+                      longitude: lng.toFixed(8),
+                    }))
+                  }
+                />
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.latitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, latitude: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500 text-sm"
+                    placeholder="Latitude"
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.longitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, longitude: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500 text-sm"
+                    placeholder="Longitude"
+                  />
+                </div>
+                <p className="text-white/40 text-xs mt-1">
+                  Leave latitude/longitude blank to allow check-in from
+                  anywhere. When set, players must be within the radius to
+                  check in.
                 </p>
               </div>
 

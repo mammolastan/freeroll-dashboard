@@ -41,7 +41,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, address, notes, isActive, cutoffTime } = body;
+  const { name, address, notes, isActive, cutoffTime, latitude, longitude, checkinRadiusMeters } = body;
 
   try {
     const venue = await prisma.venues.update({
@@ -54,6 +54,17 @@ export async function PUT(
         ...(cutoffTime !== undefined && {
           cutoff_time: cutoffTime ? parseInt(cutoffTime) : null,
         }),
+        ...(latitude !== undefined && {
+          latitude: latitude !== null && latitude !== "" ? latitude : null,
+        }),
+        ...(longitude !== undefined && {
+          longitude: longitude !== null && longitude !== "" ? longitude : null,
+        }),
+        ...(checkinRadiusMeters !== undefined &&
+          checkinRadiusMeters !== null &&
+          checkinRadiusMeters !== "" && {
+            checkin_radius_meters: parseInt(checkinRadiusMeters),
+          }),
       },
     });
 
@@ -65,6 +76,9 @@ export async function PUT(
         notes: venue.notes,
         isActive: venue.is_active,
         cutoffTime: venue.cutoff_time,
+        latitude: venue.latitude !== null ? Number(venue.latitude) : null,
+        longitude: venue.longitude !== null ? Number(venue.longitude) : null,
+        checkinRadiusMeters: venue.checkin_radius_meters,
       },
     });
   } catch (error) {

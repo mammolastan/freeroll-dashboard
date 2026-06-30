@@ -28,6 +28,9 @@ export async function GET(
     notes: string | null;
     is_active: boolean;
     cutoff_time: number | null;
+    latitude: string | null;
+    longitude: string | null;
+    checkin_radius_meters: number;
     game_count: bigint;
     last_game_date: Date | null;
   };
@@ -40,6 +43,9 @@ export async function GET(
     v.notes,
     v.is_active,
     v.cutoff_time,
+    v.latitude,
+    v.longitude,
+    v.checkin_radius_meters,
     COUNT(g.id) as game_count,
     MAX(g.date) as last_game_date
   FROM venues v
@@ -71,6 +77,9 @@ export async function GET(
     notes: v.notes,
     isActive: v.is_active,
     cutoffTime: v.cutoff_time,
+    latitude: v.latitude !== null ? Number(v.latitude) : null,
+    longitude: v.longitude !== null ? Number(v.longitude) : null,
+    checkinRadiusMeters: v.checkin_radius_meters,
     gameCount: Number(v.game_count),
     lastGameDate: v.last_game_date
       ? v.last_game_date.toISOString().split("T")[0]
@@ -102,7 +111,7 @@ export async function POST(
   }
 
   const body = await req.json();
-  const { name, address, notes, isActive, cutoffTime } = body;
+  const { name, address, notes, isActive, cutoffTime, latitude, longitude, checkinRadiusMeters } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -117,6 +126,11 @@ export async function POST(
         notes: notes || null,
         is_active: isActive !== undefined ? Boolean(isActive) : true,
         cutoff_time: cutoffTime ? parseInt(cutoffTime) : null,
+        latitude: latitude !== undefined && latitude !== null && latitude !== "" ? latitude : null,
+        longitude: longitude !== undefined && longitude !== null && longitude !== "" ? longitude : null,
+        ...(checkinRadiusMeters !== undefined && checkinRadiusMeters !== null && checkinRadiusMeters !== ""
+          ? { checkin_radius_meters: parseInt(checkinRadiusMeters) }
+          : {}),
       },
     });
 
@@ -129,6 +143,9 @@ export async function POST(
           notes: venue.notes,
           isActive: venue.is_active,
           cutoffTime: venue.cutoff_time,
+          latitude: venue.latitude !== null ? Number(venue.latitude) : null,
+          longitude: venue.longitude !== null ? Number(venue.longitude) : null,
+          checkinRadiusMeters: venue.checkin_radius_meters,
         },
       },
       { status: 201 }
