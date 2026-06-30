@@ -1,12 +1,19 @@
-// app/forgot-password/page.tsx
+// app/l/[leagueSlug]/forgot-password/page.tsx
 
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordPage({
+  params,
+}: {
+  params: Promise<{ leagueSlug: string }>;
+}) {
+  const { leagueSlug } = use(params);
+  const prefix = `/l/${leagueSlug}`;
+
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -71,7 +78,7 @@ export default function ForgotPasswordPage() {
             </button>
 
             <Link
-              href="/login"
+              href={`${prefix}/login`}
               className="block w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors text-center"
             >
               Back to Sign In
@@ -86,7 +93,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <Link
-          href="/login"
+          href={`${prefix}/login`}
           className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -101,7 +108,10 @@ export default function ForgotPasswordPage() {
           Forgot Password?
         </h1>
 
-        <p className="text-gray-600 mb-6">Dumbass.</p>
+        <p className="text-gray-600 mb-6">
+          Enter your email address and we&apos;ll send you a link to reset your
+          password.
+        </p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">

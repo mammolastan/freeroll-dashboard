@@ -120,7 +120,7 @@ function LoginForm({ leagueSlug }: LoginFormProps) {
                 Password
               </label>
               <Link
-                href="/forgot-password"
+                href={`${prefix}/forgot-password`}
                 className="text-sm text-blue-600 hover:underline"
               >
                 Forgot password?
