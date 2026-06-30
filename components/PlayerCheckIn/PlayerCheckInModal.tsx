@@ -322,7 +322,7 @@ export function PlayerCheckInModal({
                   <div className="flex items-center gap-3 text-cyan-300">
                     <LogIn size={20} />
                     <span>
-                      <Link href="/login" className="underline hover:text-cyan-200">
+                      <Link href={leagueSlug ? `/l/${leagueSlug}/login` : '/login'} className="underline hover:text-cyan-200">
                         Sign in
                       </Link>{' '}
                       for faster check-ins next time!

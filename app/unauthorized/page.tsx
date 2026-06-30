@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
+import { useLeaguePrefix } from "@/lib/LeagueContext";
 export default function UnauthorizedPage() {
   const { data: session } = useSession();
+  const leaguePrefix = useLeaguePrefix();
 
   const clearCookies = async () => {
     // Clear all accessible cookies
@@ -16,7 +18,7 @@ export default function UnauthorizedPage() {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     });
     // Sign out and redirect with cache-busting parameter to avoid cached redirects
-    await signOut({ callbackUrl: `/login?t=${Date.now()}` });
+    await signOut({ callbackUrl: `${leaguePrefix}/login?t=${Date.now()}` });
   };
 
   return (
@@ -41,9 +43,9 @@ export default function UnauthorizedPage() {
             >
               Go to Home
             </Link>
-            {!session?.user && (
+            {!session?.user && leaguePrefix && (
               <Link
-                href="/login"
+                href={`${leaguePrefix}/login`}
                 className="inline-block px-4 py-2 border border-black text-black rounded hover:bg-black/10"
               >
                 Log In

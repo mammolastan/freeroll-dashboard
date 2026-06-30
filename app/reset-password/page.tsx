@@ -4,7 +4,6 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { KeyRound, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 
 function ResetPasswordForm() {
@@ -74,12 +73,9 @@ function ResetPasswordForm() {
             new one.
           </p>
 
-          <Link
-            href="/forgot-password"
-            className="block w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors text-center"
-          >
-            Request New Link
-          </Link>
+          <p className="text-sm text-gray-500">
+            Please return to your league&apos;s login page and use the &quot;Forgot password&quot; link to request a new reset link.
+          </p>
         </div>
       </div>
     );
@@ -98,17 +94,9 @@ function ResetPasswordForm() {
             Password Reset Complete
           </h1>
 
-          <p className="text-gray-600 mb-6">
-            Your password has been successfully reset. You can now sign in with
-            your new password.
+          <p className="text-gray-600">
+            Your password has been successfully reset. You can now return to your league&apos;s login page to sign in with your new password.
           </p>
-
-          <Link
-            href="/login"
-            className="block w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors text-center"
-          >
-            Sign In
-          </Link>
         </div>
       </div>
     );
@@ -210,12 +198,6 @@ function ResetPasswordForm() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Remember your password?{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            Sign In
-          </Link>
-        </p>
       </div>
     </div>
   );

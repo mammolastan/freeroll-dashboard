@@ -5,6 +5,7 @@ import { usePlayerReviews } from '../hooks/usePlayerReviews';
 import { RatingSummaryBar } from './RatingSummaryBar';
 import { ReviewCard } from './ReviewCard';
 import { ReviewForm } from './ReviewForm';
+import { useLeaguePrefix } from '@/lib/LeagueContext';
 
 interface PlayerReviewModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function PlayerReviewModal({
   const viewer = session?.user;
   const viewer_uid = viewer?.uid ?? null;
   const isAdmin = viewer?.isAdmin === true;
+  const leaguePrefix = useLeaguePrefix();
 
   const { data, loading, error, submitReview, deleteReview } = usePlayerReviews(
     isOpen ? reviewed_uid : null,
@@ -77,7 +79,7 @@ export function PlayerReviewModal({
               )}
               {!viewer_uid && (
                 <p className="text-sm text-gray-400 italic text-center border border-gray-700 rounded-lg p-3">
-                  <a href="/login" className="text-yellow-400 hover:underline">Log in</a> to leave a review.
+                  <a href={`${leaguePrefix}/login`} className="text-yellow-400 hover:underline">Log in</a> to leave a review.
                 </p>
               )}
 

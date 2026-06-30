@@ -5,6 +5,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { useLeaguePrefix } from '@/lib/LeagueContext';
 
 interface FeedInputProps {
   onSubmit: (message: string) => Promise<{ success: boolean; error?: string }>;
@@ -24,6 +25,7 @@ export function FeedInput({
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const leaguePrefix = useLeaguePrefix();
 
   // Clear error after 3 seconds
   useEffect(() => {
@@ -61,7 +63,7 @@ export function FeedInput({
     return (
       <div className="px-4 py-3 bg-gray-900/30">
         <Link
-          href="/login"
+          href={`${leaguePrefix}/login`}
           className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-cyan-500/50 rounded-lg text-gray-400 hover:text-cyan-300 transition-all text-sm"
         >
           <LogIn className="h-4 w-4" />
