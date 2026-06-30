@@ -2103,12 +2103,7 @@ export function FullAdminScreen({
                                         : ""
                                     }`}
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <span>{displayName}</span>
-                                      <span className="text-xs text-gray-500 capitalize">
-                                        {admin.role}
-                                      </span>
-                                    </div>
+                                    {displayName}
                                   </button>
                                 );
                               })
@@ -2985,10 +2980,7 @@ export function FullAdminScreen({
                               currentDraft?.director_name === displayName ? "bg-blue-50" : ""
                             }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <span>{displayName}</span>
-                              <span className="text-xs text-gray-500 capitalize">{admin.role}</span>
-                            </div>
+                            {displayName}
                           </button>
                         );
                       })
