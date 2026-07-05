@@ -19,6 +19,8 @@ const RESERVED_PATHS = [
   "images",
   "uploads",
   "audio",
+  "privacy-policy",
+  "terms-of-service",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -52,6 +54,6 @@ export const config = {
     "/l/:leagueSlug/admin/:path*",
     // Catch potential old league URLs (anything that's not a reserved path)
     // The middleware function handles the actual filtering logic
-    "/((?!l/|admin|login|register|profile|api|_next|unauthorized|forgot-password|reset-password|knockouts|favicon\\.ico|icons|images|uploads|audio).*)",
+    "/((?!l/|admin|login|register|profile|api|_next|unauthorized|forgot-password|reset-password|knockouts|privacy-policy|terms-of-service|favicon\\.ico|icons|images|uploads|audio).*)",
   ],
 };
