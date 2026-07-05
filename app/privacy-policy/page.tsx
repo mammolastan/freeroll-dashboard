@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage() {
               rates may apply. You can opt out at any time by replying STOP to
               any message, or by contacting us at{" "}
               
-                href="mailto:freerollatlantapoker@gmail.com"
+               <a href="mailto:freerollatlantapoker@gmail.com"
                 className="text-cyan-400 hover:text-cyan-300 underline"
               >
                 freerollatlantapoker@gmail.com
