@@ -93,7 +93,7 @@ export default function TermsOfServicePage() {
             <p className="text-slate-300 leading-relaxed">
               Questions about these Terms? Contact us at{" "}
               
-                href="mailto:freerollatlantapoker@gmail.com"
+                <a href="mailto:freerollatlantapoker@gmail.com"
                 className="text-cyan-400 hover:text-cyan-300 underline"
               >
                 freerollatlantapoker@gmail.com
