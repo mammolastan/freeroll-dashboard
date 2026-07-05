@@ -66,6 +66,15 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-8 px-4 text-center text-slate-500">
         <p>Open Bar League</p>
+        <p className="mt-2 text-sm">
+          <Link href="/privacy-policy" className="hover:text-slate-300 underline">
+            Privacy Policy
+          </Link>
+          {" · "}
+          <Link href="/terms-of-service" className="hover:text-slate-300 underline">
+            Terms of Service
+          </Link>
+        </p>
       </footer>
     </div>
   );
