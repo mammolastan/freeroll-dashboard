@@ -1290,6 +1290,15 @@ app.prepare().then(async () => {
           });
           console.log(`Game marked as started for tournament ${tournamentId}`);
 
+          // Broadcast tournament update to all connected clients (TV screens, etc.)
+          const updatedTournament = await getTournamentData(tournamentId);
+          if (updatedTournament) {
+            io.to(tournamentId.toString()).emit("tournament:updated", {
+              data: { tournament: updatedTournament }
+            });
+            console.log(`Broadcasted game_started update to all clients for tournament ${tournamentId}`);
+          }
+
           // Send push notifications to checked-in players
           // Use resolved venue name from venues table, fall back to venue field, then title
           const venueName = resolvedVenueName || tournamentInfo.venue || tournamentInfo.title || 'the venue';
