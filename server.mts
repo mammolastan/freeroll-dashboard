@@ -73,6 +73,7 @@ async function sendToTournamentPlayers(
      INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
      WHERE tdp.tournament_draft_id = ?
        AND tdp.checked_in_at IS NOT NULL
+       AND tdp.knockedout_at IS NULL
        AND ps.league_id = td.league_id`,
     tournamentId
   );
@@ -161,7 +162,7 @@ declare global {
   var socketIoInstance: TypedServer | undefined;
 }
 
-// Helper: post blind level change to tournament feed
+// Helper: post blind level change to tournament feed and send push notifications
 async function postBlindLevelChangeFeedItem(
   tournamentId: number,
   level: number,
@@ -205,6 +206,64 @@ async function postBlindLevelChangeFeedItem(
     }
 
     console.log(`[FEED] Posted blind level change: ${message}`);
+
+    // Send push notifications to active players (skip level 1 since game start handles that)
+    if (level > 1) {
+      try {
+        // Get tournament info for notification
+        const tournament = await prisma.tournamentDraft.findUnique({
+          where: { id: tournamentId },
+          select: {
+            leagues: { select: { slug: true, league_settings: true } },
+            venue: { select: { image_sm: true } },
+          },
+        });
+
+        if (tournament?.leagues?.slug) {
+          const leagueSlug = tournament.leagues.slug;
+
+          // Determine icon URL: prefer venue image, fall back to league icon
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
+          let iconUrl = `${baseUrl}/icons/default-icon-512.png`;
+
+          // Check if venue has an image
+          const venueImage = tournament.venue?.image_sm;
+          if (venueImage) {
+            iconUrl = `${baseUrl}/images/venues/${venueImage}`;
+          } else {
+            // Fall back to league icon from settings
+            try {
+              const leagueSettings = tournament.leagues.league_settings;
+              if (leagueSettings) {
+                const config = JSON.parse(leagueSettings as string);
+                if (config?.pwa?.logoUrl) {
+                  const logoPath = config.pwa.logoUrl;
+                  iconUrl = logoPath.startsWith('http') ? logoPath : `${baseUrl}${logoPath}`;
+                }
+              }
+            } catch (e) {
+              console.error('[push] Failed to parse league settings for icon:', e);
+            }
+          }
+
+          // Format notification title based on blind level type
+          const pushTitle = blindLevel.isbreak ? '☕ Break Time' : '⏱️ Blinds Up!';
+          const pushBody = blindLevel.isbreak
+            ? 'Take a break - blinds resume shortly.'
+            : `Level ${level}: ${blindLevel.smallBlind}/${blindLevel.bigBlind}${blindLevel.ante ? ` (Ante: ${blindLevel.ante})` : ''}`;
+
+          // Send push notification (fire and forget)
+          sendToTournamentPlayers(tournamentId, {
+            title: pushTitle,
+            body: pushBody,
+            url: `/l/${leagueSlug}/gameview/${tournamentId}`,
+            icon: iconUrl,
+          }).catch((err) => console.error('[push] Blind level change notification failed:', err));
+        }
+      } catch (pushError) {
+        console.error('[push] Failed to send blind level change notification:', pushError);
+      }
+    }
   } catch (error) {
     console.error('Failed to post blind level change to feed:', error);
   }
@@ -1512,6 +1571,9 @@ app.prepare().then(async () => {
           const nextLevel = timer.blindLevels[timer.currentLevel - 1];
           if (nextLevel) {
             timer.timeRemaining = nextLevel.duration * 60;
+
+            // Post feed item and send push notifications for blind level change
+            await postBlindLevelChangeFeedItem(tournamentId, timer.currentLevel, nextLevel);
           }
           timer.lastUpdate = Date.now();
 

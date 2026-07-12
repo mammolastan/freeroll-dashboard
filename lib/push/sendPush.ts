@@ -105,6 +105,7 @@ export async function sendToCheckedInPlayers(
      INNER JOIN tournament_drafts td ON tdp.tournament_draft_id = td.id
      WHERE tdp.tournament_draft_id = ?
        AND tdp.checked_in_at IS NOT NULL
+       AND tdp.knockedout_at IS NULL
        AND ps.league_id = td.league_id`,
     tournamentId
   );
