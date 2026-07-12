@@ -165,9 +165,9 @@ export default function GameViewPage() {
     return () => clearTimeout(timer);
   }, [checkInToast]);
 
-  const handleCheckInClick = async () => {
-    // If user is signed in, check them in directly without the modal
-    if (session?.user?.uid && session?.user?.name) {
+const handleCheckInClick = async () => {
+    // If user is signed in AND not already checked in, check them in directly without the modal
+    if (session?.user?.uid && session?.user?.name && !isUserCheckedIn) {
       setGettingToken(true);
       try {
         // First get the check-in token if we don't have it
@@ -222,7 +222,8 @@ export default function GameViewPage() {
       return;
     }
 
-    // For non-signed-in users, show the modal
+    // Already checked in (or not signed in) — open the modal so they can
+    // either check in as themselves via the guest flow, or check in someone else
     if (checkInToken) {
       setShowCheckInModal(true);
       return;
@@ -257,7 +258,7 @@ export default function GameViewPage() {
     } finally {
       setGettingToken(false);
     }
-  };
+  };  
 
   if (loading) {
     return (

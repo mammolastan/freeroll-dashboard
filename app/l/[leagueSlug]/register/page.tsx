@@ -311,9 +311,12 @@ export default function RegisterPage({
                 className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-600">
-                I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Reply STOP to unsubscribe.
+                I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Msg &amp; Data rates may apply. Reply STOP to opt out, HELP for help.
               </span>
             </label>
+            <p className="text-xs text-gray-500 pl-7">
+              See our <Link href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</Link> and <Link href="/terms-of-service" className="text-blue-600 hover:underline">Terms of Service</Link>.
+            </p>
           </div>
 
           <button
