@@ -213,9 +213,8 @@ async function postBlindLevelChangeFeedItem(
         // Get tournament info for notification
         const tournament = await prisma.tournamentDraft.findUnique({
           where: { id: tournamentId },
-          select: {
+          include: {
             leagues: { select: { slug: true, league_settings: true } },
-            venue: { select: { image_sm: true } },
           },
         });
 
@@ -226,8 +225,16 @@ async function postBlindLevelChangeFeedItem(
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://openbarleague.com';
           let iconUrl = `${baseUrl}/icons/default-icon-512.png`;
 
-          // Check if venue has an image
-          const venueImage = tournament.venue?.image_sm;
+          // Check if venue has an image (fetch venue separately since it's not a relation)
+          let venueImage: string | null = null;
+          if (tournament.venue_id) {
+            const venueRecord = await prisma.venues.findUnique({
+              where: { id: tournament.venue_id },
+              select: { image_sm: true },
+            });
+            venueImage = venueRecord?.image_sm ?? null;
+          }
+
           if (venueImage) {
             iconUrl = `${baseUrl}/images/venues/${venueImage}`;
           } else {
