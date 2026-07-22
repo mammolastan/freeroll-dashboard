@@ -1228,6 +1228,7 @@ app.prepare().then(async () => {
           where: { id: tournamentId },
           select: {
             game_started: true,
+            tournament_time: true,
             title: true,
             venue: true,
             venue_id: true,
@@ -1290,10 +1291,49 @@ app.prepare().then(async () => {
 
         // Handle initial start: mark game_started and send push notifications
         if (isInitialStart && tournamentInfo) {
-          // Mark game as started
+          // Mark game as started, and set tournament_time if not already set
+          // This ensures cutoff time logic works even if TD didn't set a start time
+          const updateData: { game_started: boolean; tournament_time?: Date } = {
+            game_started: true
+          };
+
+          if (!tournamentInfo.tournament_time) {
+            // Get the league's timezone from league_settings
+            let timezone = 'America/New_York'; // default
+            try {
+              if (tournamentInfo.leagues?.league_settings) {
+                const settings = JSON.parse(tournamentInfo.leagues.league_settings as string);
+                if (settings.timezone) {
+                  timezone = settings.timezone;
+                }
+              }
+            } catch {
+              // Use default timezone if parsing fails
+            }
+
+            // Get current time in the league's timezone
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+              timeZone: timezone,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            });
+            const parts = formatter.formatToParts(now);
+            const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+            const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+            const second = parseInt(parts.find(p => p.type === 'second')?.value || '0', 10);
+
+            // Create a Date with the local time as UTC (for MySQL TIME field storage)
+            // MySQL TIME fields store just HH:MM:SS, so we use UTC to avoid timezone shifts
+            updateData.tournament_time = new Date(Date.UTC(1970, 0, 1, hour, minute, second));
+            console.log(`Setting tournament_time to ${hour}:${minute}:${second} (${timezone}) for tournament ${tournamentId}`);
+          }
+
           await prisma.tournamentDraft.update({
             where: { id: tournamentId },
-            data: { game_started: true },
+            data: updateData,
           });
           console.log(`Game marked as started for tournament ${tournamentId}`);
 
