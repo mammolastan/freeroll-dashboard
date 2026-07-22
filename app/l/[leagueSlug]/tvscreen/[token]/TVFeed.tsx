@@ -179,8 +179,8 @@ export function TVFeed({
             {!loading && !error && chatItems.length === 0 && (
               <div className="tvfeed-image-container">
                 <img
-                  src="/images/freeroll-atlanta/new-hats-coming-soon.png"
-                  alt="New hats coming soon"
+                  src="/images/freeroll-atlanta/Freeroll-Atlanta.jpg"
+                  alt="Freeroll Atlanta"
                   className="tvfeed-promo-image"
                 />
               </div>
