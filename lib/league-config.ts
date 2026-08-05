@@ -30,6 +30,10 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
         ...DEFAULT_LEAGUE_CONFIG.pwa,
         ...(stored.pwa ?? {}),
       },
+      homepageTiles: {
+        ...DEFAULT_LEAGUE_CONFIG.homepageTiles,
+        ...(stored.homepageTiles ?? {}),
+      },
       scoringSystem: stored.scoringSystem,
     };
   } catch {
@@ -58,6 +62,10 @@ export async function saveLeagueConfig(
     pwa: {
       ...current.pwa,
       ...(config.pwa ?? {}),
+    },
+    homepageTiles: {
+      ...current.homepageTiles,
+      ...(config.homepageTiles ?? {}),
     },
     // scoringSystem: if explicitly passed use it, otherwise keep current
     scoringSystem: config.scoringSystem !== undefined ? config.scoringSystem : current.scoringSystem,

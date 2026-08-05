@@ -56,4 +56,15 @@ export const DEFAULT_LEAGUE_CONFIG = {
     logoUrl: "",
   },
   pushNotificationsEnabled: false,
+  homepageTiles: {
+    recentGames: true,
+    activeGames: true,
+    seasonRankings: false,
+    quarterlyRankings: true,
+    monthlyRankings: true,
+    players: true,
+    venues: true,
+    badges: true,
+    installApp: true,
+  },
 };

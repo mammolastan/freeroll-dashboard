@@ -58,6 +58,48 @@ export async function GET(
     },
   ];
 
+  // Build shortcuts based on enabled homepage tiles
+  const tiles = config.homepageTiles;
+  const shortcuts: Array<{
+    name: string;
+    short_name: string;
+    url: string;
+    icons: Array<{ src: string; sizes: string; type: string }>;
+  }> = [];
+
+  if (tiles.seasonRankings) {
+    shortcuts.push({
+      name: 'Season Rankings',
+      short_name: 'Season rankings',
+      url: `rankings/season`,
+      icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
+    });
+  }
+  if (tiles.quarterlyRankings) {
+    shortcuts.push({
+      name: 'Quarterly Rankings',
+      short_name: 'Quarterly rankings',
+      url: `rankings/quarterly`,
+      icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
+    });
+  }
+  if (tiles.monthlyRankings) {
+    shortcuts.push({
+      name: 'Monthly Rankings',
+      short_name: 'Monthly rankings',
+      url: `rankings/monthly`,
+      icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
+    });
+  }
+  if (tiles.activeGames) {
+    shortcuts.push({
+      name: 'Active games',
+      short_name: 'Active games',
+      url: `check-in`,
+      icons: [{ src: hexagonIconUrl, sizes: '256x256', type: 'image/png' }],
+    });
+  }
+
   const manifest = {
     id: `/l/${leagueSlug}/`,
     name: appName,
@@ -71,26 +113,7 @@ export async function GET(
     background_color: backgroundColor,
     theme_color: themeColor,
     icons,
-    shortcuts: [
-      {
-        name: 'Quarterly Rankings',
-        short_name: 'Quarterly rankings',
-        url: `rankings/quarterly`,
-        icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
-      },
-      {
-        name: 'Monthly Rankings',
-        short_name: 'Monthly rankings',
-        url: `rankings/monthly`,
-        icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
-      },
-      {
-        name: 'Active games',
-        short_name: 'Active games',
-        url: `check-in`,
-        icons: [{ src: hexagonIconUrl, sizes: '256x256', type: 'image/png' }],
-      },
-    ],
+    shortcuts,
   };
 
   return NextResponse.json(manifest, {

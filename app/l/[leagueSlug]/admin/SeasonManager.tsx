@@ -51,8 +51,9 @@ export default function SeasonManager({
   const [loading, setLoading] = useState(true);
   const [inactiveExpanded, setInactiveExpanded] = useState(false);
   const [periodTypes, setPeriodTypes] = useState<string[]>([
-    "monthly",
+    "season",
     "quarterly",
+    "monthly",
   ]);
 
   // Modal states
@@ -65,7 +66,7 @@ export default function SeasonManager({
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    period_type: "monthly",
+    period_type: "season",
     start_date: "",
     end_date: "",
   });
@@ -97,7 +98,7 @@ export default function SeasonManager({
       );
       if (!response.ok) throw new Error("Failed to fetch types");
       const data = await response.json();
-      setPeriodTypes(data.types || ["monthly", "quarterly"]);
+      setPeriodTypes(data.types || ["season", "quarterly", "monthly"]);
     } catch (error) {
       console.error("Error fetching period types:", error);
     }
@@ -298,7 +299,7 @@ export default function SeasonManager({
   const resetForm = () => {
     setFormData({
       name: "",
-      period_type: "monthly",
+      period_type: "season",
       start_date: "",
       end_date: "",
     });

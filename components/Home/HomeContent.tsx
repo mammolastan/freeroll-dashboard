@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { getNavItems, getAdminNavItems, NavItem } from "@/lib/navConfig";
 import PushSubscribeButton from "@/components/push/PushSubscribeButton";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
+import { HomepageTilesConfig } from "@/types/league-config";
 
 interface HomeContentProps {
   prefix?: string;
@@ -54,17 +55,35 @@ export default function HomeContent({
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [homepageTiles, setHomepageTiles] = useState<HomepageTilesConfig | null>(null);
 
   const title = leagueName
     ? `${leagueName} Player Dashboard`
     : "Freeroll Atlanta Poker Player Dashboard";
 
-  const navItems = getNavItems(prefix);
-  const adminNavItems = getAdminNavItems(prefix);
-
   // Extract league slug from prefix (e.g., "/l/freeroll-atlanta" -> "freeroll-atlanta")
   // The prefix is now in format "/l/[leagueSlug]"
   const leagueSlug = prefix.startsWith("/l/") ? prefix.slice(3) : prefix.replace(/^\//, "");
+
+  // Fetch league config to get homepageTiles settings
+  useEffect(() => {
+    if (!leagueSlug) return;
+
+    fetch(`/api/${leagueSlug}/config`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.homepageTiles) {
+          setHomepageTiles(data.homepageTiles);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch league config:", err);
+      });
+  }, [leagueSlug]);
+
+  // Get nav items filtered by homepageTiles config
+  const navItems = getNavItems(prefix, homepageTiles ?? undefined);
+  const adminNavItems = getAdminNavItems(prefix);
 
   // Fetch the user's role for this league
   useEffect(() => {
@@ -91,6 +110,9 @@ export default function HomeContent({
       .catch(() => setIsAdmin(false))
       .finally(() => setIsLoading(false));
   }, [session, status, leagueSlug]);
+
+  // Check if InstallApp tile should be shown
+  const showInstallApp = homepageTiles?.installApp ?? true;
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -143,7 +165,7 @@ export default function HomeContent({
             />
           );
         })}
-        <InstallAppButton variant="tile" />
+        {showInstallApp && <InstallAppButton variant="tile" />}
       </div>
     </main>
   );

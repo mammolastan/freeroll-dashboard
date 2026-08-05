@@ -34,6 +34,18 @@ export interface PWAConfig {
   logoUrl: string;          // Falls back to /icons/default-icon-512.png if empty
 }
 
+export interface HomepageTilesConfig {
+  recentGames: boolean;
+  activeGames: boolean;
+  seasonRankings: boolean;
+  quarterlyRankings: boolean;
+  monthlyRankings: boolean;
+  players: boolean;
+  venues: boolean;
+  badges: boolean;
+  installApp: boolean;
+}
+
 export interface LeagueConfig {
   // Identity
   leagueName: string;
@@ -106,6 +118,9 @@ export interface LeagueConfig {
 
   // Notifications
   pushNotificationsEnabled: boolean;
+
+  // Homepage & Navigation
+  homepageTiles: HomepageTilesConfig;
 }
 
 export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
@@ -164,4 +179,15 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     defaultTDMessage: '',
   },
   pushNotificationsEnabled: false,
+  homepageTiles: {
+    recentGames: true,
+    activeGames: true,
+    seasonRankings: false,
+    quarterlyRankings: true,
+    monthlyRankings: true,
+    players: true,
+    venues: true,
+    badges: true,
+    installApp: true,
+  },
 };

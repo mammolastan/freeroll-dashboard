@@ -308,7 +308,7 @@ model players_v2 {
   first_name                             String?         @db.VarChar(255)
   last_name                              String?         @db.VarChar(255)
   nickname                               String?         @db.VarChar(255)
-  email                                  String?         @unique(map: "uq_players_email") @db.VarChar(255)
+  email                                  String?         @db.VarChar(255)
   email_verified_at                      DateTime?       @db.Timestamp(0)
   last_login_at                          DateTime?       @db.Timestamp(0)
   password_hash                          String?         @db.VarChar(255)
@@ -329,6 +329,7 @@ model players_v2 {
   PlayerBadge                            PlayerBadge[]
   leagues                                leagues         @relation(fields: [league_id], references: [id], onUpdate: Restrict, map: "fk_players_league")
 
+  @@unique([email, league_id], map: "uq_players_email_league")
   @@index([league_id], map: "idx_players_league")
   @@index([isAdmin], map: "idx_players_v2_isAdmin")
 }

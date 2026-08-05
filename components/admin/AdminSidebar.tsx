@@ -21,6 +21,7 @@ import {
   Award,
   Palette,
   TrendingUp,
+  LayoutGrid,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -65,6 +66,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
           label: "Scoring",
           icon: Trophy,
         },
+        { href: `${base}/navigation`, label: "Navigation", icon: LayoutGrid },
         { href: `${base}/settings`, label: "Identity", icon: Settings },
         { href: `${base}/branding`, label: "Branding", icon: Palette },
       ]

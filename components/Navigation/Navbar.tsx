@@ -18,6 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { getNavItems, NavItem } from "@/lib/navConfig";
+import { HomepageTilesConfig } from "@/types/league-config";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -67,6 +68,23 @@ const Navbar = () => {
       .catch(() => setLeagueName(null));
   }, [leagueSlug]);
 
+  // Fetch league config to get homepageTiles settings
+  const [homepageTiles, setHomepageTiles] = useState<HomepageTilesConfig | null>(null);
+  useEffect(() => {
+    if (!leagueSlug) {
+      setHomepageTiles(null);
+      return;
+    }
+    fetch(`/api/${leagueSlug}/config`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.homepageTiles) {
+          setHomepageTiles(data.homepageTiles);
+        }
+      })
+      .catch(() => setHomepageTiles(null));
+  }, [leagueSlug]);
+
   // Hide navbar on fullscreen pages like tvscreen
   if (pathname?.includes("/tvscreen")) {
     return null;
@@ -75,7 +93,8 @@ const Navbar = () => {
   const toggleMenu = () => setIsOpen(!isOpen);
 
   // Nav links use prefix for league-scoped routes - only show when in a league
-  const navLinks = isInLeague ? getNavItems(prefix) : [];
+  // Filter based on homepageTiles config if available
+  const navLinks = isInLeague ? getNavItems(prefix, homepageTiles ?? undefined) : [];
 
   const handleNavigation = (href: string) => {
     router.push(href);

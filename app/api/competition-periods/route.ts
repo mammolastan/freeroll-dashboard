@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate period_type
-    if (!["monthly", "quarterly"].includes(period_type)) {
+    if (!["monthly", "quarterly", "season"].includes(period_type)) {
       return NextResponse.json(
-        { error: "period_type must be 'monthly' or 'quarterly'" },
+        { error: "period_type must be 'monthly', 'quarterly', or 'season'" },
         { status: 400 }
       );
     }

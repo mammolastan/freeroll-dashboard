@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const types = periods.map((p) => p.period_type);
 
     // Always include the defaults if not present
-    const defaultTypes = ["monthly", "quarterly"];
+    const defaultTypes = ["season", "quarterly", "monthly"];
     const allTypes = [...new Set([...defaultTypes, ...types])];
 
     return NextResponse.json({ types: allTypes });

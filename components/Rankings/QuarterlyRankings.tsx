@@ -19,6 +19,12 @@ import { useLeagueParam } from "@/lib/useLeagueParam";
 import { FEATURES } from "@/lib/features";
 import { PlayerReviewModal } from "@/features/player-reviews";
 
+export interface PeriodRankingsProps {
+  periodType?: "quarterly" | "season";
+  title?: string;
+  periodLabel?: string; // e.g., "Quarter" or "Season"
+}
+
 interface PlayerRanking {
   name: string;
   uid: string;
@@ -77,7 +83,11 @@ function getSelectedPeriodIdFromURL(): number | null {
   return null;
 }
 
-export default function QuarterlyRankings() {
+export default function QuarterlyRankings({
+  periodType = "quarterly",
+  title = "Quarterly Rankings",
+  periodLabel = "Quarter",
+}: PeriodRankingsProps) {
   const [rankingsData, setRankingsData] = useState<RankingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [badgesLoading, setBadgesLoading] = useState(false);
@@ -111,7 +121,7 @@ export default function QuarterlyRankings() {
 
     async function fetchPeriods() {
       try {
-        const response = await fetch(appendLeagueParam("/api/competition-periods?period_type=quarterly"));
+        const response = await fetch(appendLeagueParam(`/api/competition-periods?period_type=${periodType}`));
         if (!response.ok) throw new Error("Failed to fetch periods");
         const data = await response.json();
         setPeriods(data.periods || []);
@@ -128,7 +138,7 @@ export default function QuarterlyRankings() {
     }
 
     fetchPeriods();
-  }, [leagueParamReady, appendLeagueParam]);
+  }, [leagueParamReady, appendLeagueParam, periodType]);
 
   // Fetch league config to check if badges are enabled
   useEffect(() => {
@@ -376,7 +386,7 @@ export default function QuarterlyRankings() {
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <div className="mb-4">
           <label className="block text-sm font-medium text-white mb-2">
-            Select Quarter:
+            Select {periodLabel}:
           </label>
           <select
             value={selectedPeriodId || ""}
@@ -394,7 +404,7 @@ export default function QuarterlyRankings() {
           </select>
         </div>
         <div className="text-xl text-white">
-          No games yet for {selectedPeriod?.name || "this quarter"}. Check back soon.
+          No games yet for {selectedPeriod?.name || `this ${periodLabel.toLowerCase()}`}. Check back soon.
         </div>
       </div>
     );
@@ -407,14 +417,14 @@ export default function QuarterlyRankings() {
       {/* Header section */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">
-          Quarterly Rankings - {selectedPeriod?.name || `Q${rankingsData.quarter} ${rankingsData.year}`}
+          {title} - {selectedPeriod?.name || `${rankingsData.quarter} ${rankingsData.year}`}
         </h2>
 
         <div className="flex flex-col sm:flex-row items-center lg:items-end gap-4 mb-4">
           {/* Quarter Selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Quarter:
+              Select {periodLabel}:
             </label>
             <select
               value={selectedPeriodId || ""}
