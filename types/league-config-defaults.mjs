@@ -56,6 +56,7 @@ export const DEFAULT_LEAGUE_CONFIG = {
     logoUrl: "",
   },
   pushNotificationsEnabled: false,
+  smsEnabled: false,
   homepageTiles: {
     recentGames: true,
     activeGames: true,

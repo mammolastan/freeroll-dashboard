@@ -39,6 +39,21 @@ export default function RegisterPage({
   );
   const [isNewPlayer, setIsNewPlayer] = useState(false);
 
+  // League config
+  const [smsEnabled, setSmsEnabled] = useState(false);
+
+  // Fetch league config
+  useEffect(() => {
+    fetch(`/api/${leagueSlug}/config`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.smsEnabled !== undefined) {
+          setSmsEnabled(data.smsEnabled);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch league config:", err));
+  }, [leagueSlug]);
+
   // Search for existing players
   useEffect(() => {
     if (searchQuery.length < 2) {
@@ -289,36 +304,38 @@ export default function RegisterPage({
             )}
           </div>
 
-          {/* SMS Opt-In */}
-          <div className="border-t pt-4 mt-4 space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+          {/* SMS Opt-In - only shown if SMS is enabled for this league */}
+          {smsEnabled && (
+            <div className="border-t pt-4 mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  autoComplete="tel"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="(404) 555-0100"
+                />
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsOptIn}
+                  onChange={(e) => setSmsOptIn(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">
+                  I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Msg &amp; Data rates may apply. Reply STOP to opt out, HELP for help.
+                </span>
               </label>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                autoComplete="tel"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="(404) 555-0100"
-              />
+              <p className="text-xs text-gray-500 pl-7">
+                See our <Link href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</Link> and <Link href="/terms-of-service" className="text-blue-600 hover:underline">Terms of Service</Link>.
+              </p>
             </div>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={smsOptIn}
-                onChange={(e) => setSmsOptIn(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-600">
-                I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Msg &amp; Data rates may apply. Reply STOP to opt out, HELP for help.
-              </span>
-            </label>
-            <p className="text-xs text-gray-500 pl-7">
-              See our <Link href="/privacy-policy" className="text-blue-600 hover:underline">Privacy Policy</Link> and <Link href="/terms-of-service" className="text-blue-600 hover:underline">Terms of Service</Link>.
-            </p>
-          </div>
+          )}
 
           <button
             type="submit"

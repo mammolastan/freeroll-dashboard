@@ -119,6 +119,9 @@ export interface LeagueConfig {
   // Notifications
   pushNotificationsEnabled: boolean;
 
+  // SMS
+  smsEnabled: boolean;
+
   // Homepage & Navigation
   homepageTiles: HomepageTilesConfig;
 }
@@ -179,6 +182,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     defaultTDMessage: '',
   },
   pushNotificationsEnabled: false,
+  smsEnabled: false,
   homepageTiles: {
     recentGames: true,
     activeGames: true,

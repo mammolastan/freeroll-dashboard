@@ -49,6 +49,9 @@ export default function ProfilePage({
     text: string;
   } | null>(null);
 
+  // League config
+  const [smsEnabled, setSmsEnabled] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Redirect if not authenticated
@@ -57,6 +60,18 @@ export default function ProfilePage({
       router.push(`${prefix}/login?callbackUrl=${prefix}/profile`);
     }
   }, [status, router, prefix]);
+
+  // Fetch league config
+  useEffect(() => {
+    fetch(`/api/${leagueSlug}/config`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.smsEnabled !== undefined) {
+          setSmsEnabled(data.smsEnabled);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch league config:", err));
+  }, [leagueSlug]);
 
   // Load profile data
   useEffect(() => {
@@ -562,34 +577,36 @@ export default function ProfilePage({
                 />
               </div>
 
-              {/* SMS Notifications */}
-              <div className="pt-2 border-t mt-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">SMS Notifications</h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+              {/* SMS Notifications - only shown if SMS is enabled for this league */}
+              {smsEnabled && (
+                <div className="pt-2 border-t mt-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700">SMS Notifications</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      autoComplete="tel"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="(404) 555-0100"
+                    />
+                  </div>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={smsOptIn}
+                      onChange={(e) => setSmsOptIn(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-600">
+                      I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Reply STOP to unsubscribe.
+                    </span>
                   </label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    autoComplete="tel"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="(404) 555-0100"
-                  />
                 </div>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={smsOptIn}
-                    onChange={(e) => setSmsOptIn(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-600">
-                    I agree to receive SMS announcements from Freeroll Atlanta Poker League. Message frequency varies. Reply STOP to unsubscribe.
-                  </span>
-                </label>
-              </div>
+              )}
 
               {/* Save Button */}
               <div className="pt-2">
