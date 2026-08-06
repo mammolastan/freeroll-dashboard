@@ -34,5 +34,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     allowNicknames: config.allowNicknames,
     chatEnabled: config.chatEnabled,
     tournamentFeedEnabled: config.tournamentFeedEnabled,
+    homepageTiles: config.homepageTiles,
   });
 }
