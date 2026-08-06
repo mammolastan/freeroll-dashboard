@@ -128,6 +128,7 @@ export default function RegisterPage({
       const signInResult = await signIn("credentials", {
         email,
         password,
+        leagueSlug,
         redirect: false,
       });
 

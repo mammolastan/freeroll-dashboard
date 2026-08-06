@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/playerUtils";
+import { getLeagueIdBySlug } from "@/lib/league-utils";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -11,16 +12,34 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        leagueSlug: { label: "League", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password required");
         }
 
-        const player = await prisma.players_v2.findFirst({
-          where: { email: credentials.email.toLowerCase() },
-          include: { leagues: { select: { slug: true } } },
-        });
+        const emailLower = credentials.email.toLowerCase();
+        let player = null;
+
+        // If leagueSlug is provided, try to find the player in that specific league
+        if (credentials.leagueSlug) {
+          const leagueId = await getLeagueIdBySlug(credentials.leagueSlug);
+          if (leagueId) {
+            player = await prisma.players_v2.findFirst({
+              where: { email: emailLower, league_id: leagueId },
+              include: { leagues: { select: { slug: true } } },
+            });
+          }
+        }
+
+        // Fallback: if no league-specific player found, find any player with this email
+        if (!player) {
+          player = await prisma.players_v2.findFirst({
+            where: { email: emailLower },
+            include: { leagues: { select: { slug: true } } },
+          });
+        }
 
         if (!player || !player.password_hash) {
           throw new Error("Invalid email or password");

@@ -47,6 +47,7 @@ function LoginForm({ leagueSlug }: LoginFormProps) {
       const result = await signIn("credentials", {
         email,
         password,
+        leagueSlug,
         redirect: false,
       });
 
