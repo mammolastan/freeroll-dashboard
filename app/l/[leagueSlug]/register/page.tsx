@@ -98,6 +98,7 @@ export default function RegisterPage({
           existingPlayerUid: selectedPlayer?.uid,
           phone_number: phoneNumber || undefined,
           sms_opt_in: smsOptIn,
+          leagueSlug,
         }),
       });
 

@@ -3,10 +3,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { getDisplayName, parseName } from "@/lib/playerUtils";
+import { getLeagueIdBySlug } from "@/lib/league-utils";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, existingPlayerUid, phone_number, sms_opt_in } = await request.json();
+    const { email, password, name, existingPlayerUid, phone_number, sms_opt_in, leagueSlug } = await request.json();
 
     // Validation
     if (!email || !password) {
@@ -23,11 +24,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get league ID if leagueSlug provided
+    let leagueId: number | null = null;
+    if (leagueSlug) {
+      leagueId = await getLeagueIdBySlug(leagueSlug);
+      if (!leagueId) {
+        return NextResponse.json(
+          { error: "League not found" },
+          { status: 404 }
+        );
+      }
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if email already registered
+    // Check if email already registered in this league (or globally if no league)
     const existingUser = await prisma.players_v2.findFirst({
-      where: { email: normalizedEmail },
+      where: {
+        email: normalizedEmail,
+        ...(leagueId ? { league_id: leagueId } : {}),
+      },
     });
 
     if (existingUser) {
@@ -94,6 +110,7 @@ export async function POST(request: NextRequest) {
           phone_number: phone_number?.trim() || null,
           sms_opt_in: !!sms_opt_in,
           sms_opted_in_at: sms_opt_in ? new Date() : null,
+          league_id: leagueId,
         },
       });
     }
