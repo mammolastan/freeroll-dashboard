@@ -369,7 +369,6 @@ export async function POST(
             timer_is_paused = false,
             timer_current_level = 1,
             timer_remaining_seconds = NULL,
-            timer_last_updated = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${draftId}
       `;
