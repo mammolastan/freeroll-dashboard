@@ -20,7 +20,7 @@ import { FEATURES } from "@/lib/features";
 import { PlayerReviewModal } from "@/features/player-reviews";
 
 export interface PeriodRankingsProps {
-  periodType?: "quarterly" | "season";
+  periodType?: string;
   title?: string;
   periodLabel?: string; // e.g., "Quarter" or "Season"
 }

@@ -33,21 +33,9 @@ const TILE_OPTIONS: TileOption[] = [
     icon: ClipboardCheck,
   },
   {
-    key: 'seasonRankings',
-    label: 'Season Rankings',
-    description: 'Show rankings for competition periods with type "season"',
-    icon: Trophy,
-  },
-  {
-    key: 'quarterlyRankings',
-    label: 'Quarterly Rankings',
-    description: 'Show rankings for competition periods with type "quarterly"',
-    icon: Trophy,
-  },
-  {
     key: 'monthlyRankings',
     label: 'Monthly Rankings',
-    description: 'Show rankings for competition periods with type "monthly"',
+    description: 'Show venue-based monthly rankings page',
     icon: Trophy,
   },
   {
@@ -169,12 +157,21 @@ export default function NavigationSettingsForm({ leagueSlug, initialTiles }: Pro
         </div>
       </div>
 
-      {/* Info box */}
-      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-        <p className="text-amber-200 text-sm">
-          These settings control which tiles appear on your league&apos;s homepage and in the
-          navigation menu. Disabled tiles will be hidden from all users.
-        </p>
+      {/* Info boxes */}
+      <div className="space-y-3">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+          <p className="text-amber-200 text-sm">
+            These settings control which tiles appear on your league&apos;s homepage and in the
+            navigation menu. Disabled tiles will be hidden from all users.
+          </p>
+        </div>
+        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+          <p className="text-cyan-200 text-sm">
+            <strong>Rankings:</strong> Point-based rankings (Season, Quarterly, Semester, etc.)
+            automatically appear in navigation based on your active competition periods.
+            Manage these in the <a href="seasons" className="underline hover:text-cyan-100">Seasons &amp; Periods</a> settings.
+          </p>
+        </div>
       </div>
 
       {/* Save Button */}

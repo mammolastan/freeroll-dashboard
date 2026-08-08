@@ -67,22 +67,7 @@ export async function GET(
     icons: Array<{ src: string; sizes: string; type: string }>;
   }> = [];
 
-  if (tiles.seasonRankings) {
-    shortcuts.push({
-      name: 'Season Rankings',
-      short_name: 'Season rankings',
-      url: `rankings/season`,
-      icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
-    });
-  }
-  if (tiles.quarterlyRankings) {
-    shortcuts.push({
-      name: 'Quarterly Rankings',
-      short_name: 'Quarterly rankings',
-      url: `rankings/quarterly`,
-      icons: [{ src: trophyIconUrl, sizes: '256x256', type: 'image/png' }],
-    });
-  }
+  // Note: Season/Quarterly rankings shortcuts removed - now dynamic based on competition periods
   if (tiles.monthlyRankings) {
     shortcuts.push({
       name: 'Monthly Rankings',

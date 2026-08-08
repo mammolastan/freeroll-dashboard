@@ -90,14 +90,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate period_type
-    if (!["monthly", "quarterly", "season"].includes(period_type)) {
-      return NextResponse.json(
-        { error: "period_type must be 'monthly', 'quarterly', or 'season'" },
-        { status: 400 }
-      );
-    }
-
     // Calculate display_order based on start_date (newer periods get higher order)
     const startDateObj = new Date(start_date);
     const displayOrder = startDateObj.getFullYear() * 100 + (startDateObj.getMonth() + 1);

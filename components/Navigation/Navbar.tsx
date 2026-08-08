@@ -85,6 +85,24 @@ const Navbar = () => {
       .catch(() => setHomepageTiles(null));
   }, [leagueSlug]);
 
+  // Fetch active period types for dynamic rankings navigation
+  const [activePeriodTypes, setActivePeriodTypes] = useState<string[]>([]);
+  useEffect(() => {
+    if (!leagueSlug) {
+      setActivePeriodTypes([]);
+      return;
+    }
+    fetch(`/api/competition-periods/types?league=${leagueSlug}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.types) {
+          // Filter out 'monthly' since it uses a distinct static route with venue-based logic
+          setActivePeriodTypes(data.types.filter((t: string) => t !== "monthly"));
+        }
+      })
+      .catch(() => setActivePeriodTypes([]));
+  }, [leagueSlug]);
+
   // Hide navbar on fullscreen pages like tvscreen
   if (pathname?.includes("/tvscreen")) {
     return null;
@@ -93,8 +111,10 @@ const Navbar = () => {
   const toggleMenu = () => setIsOpen(!isOpen);
 
   // Nav links use prefix for league-scoped routes - only show when in a league
-  // Filter based on homepageTiles config if available
-  const navLinks = isInLeague ? getNavItems(prefix, homepageTiles ?? undefined) : [];
+  // Filter based on homepageTiles config if available, and use dynamic period types
+  const navLinks = isInLeague
+    ? getNavItems(prefix, homepageTiles ?? undefined, activePeriodTypes)
+    : [];
 
   const handleNavigation = (href: string) => {
     router.push(href);

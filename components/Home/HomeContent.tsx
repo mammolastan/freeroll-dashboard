@@ -81,8 +81,24 @@ export default function HomeContent({
       });
   }, [leagueSlug]);
 
-  // Get nav items filtered by homepageTiles config
-  const navItems = getNavItems(prefix, homepageTiles ?? undefined);
+  // Fetch active period types for dynamic rankings navigation
+  const [activePeriodTypes, setActivePeriodTypes] = useState<string[]>([]);
+  useEffect(() => {
+    if (!leagueSlug) return;
+
+    fetch(`/api/competition-periods/types?league=${leagueSlug}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.types) {
+          // Filter out 'monthly' since it uses a distinct static route with venue-based logic
+          setActivePeriodTypes(data.types.filter((t: string) => t !== "monthly"));
+        }
+      })
+      .catch(() => setActivePeriodTypes([]));
+  }, [leagueSlug]);
+
+  // Get nav items filtered by homepageTiles config and dynamic period types
+  const navItems = getNavItems(prefix, homepageTiles ?? undefined, activePeriodTypes);
   const adminNavItems = getAdminNavItems(prefix);
 
   // Fetch the user's role for this league

@@ -30,11 +30,35 @@ export interface NavItem {
 /**
  * Returns all navigation items with the league prefix applied to hrefs.
  * If homepageTiles config is provided, filters items based on enabled tiles.
+ * If activePeriodTypes is provided, builds rankings children dynamically.
  */
 export function getNavItems(
   prefix: string = "",
-  homepageTiles?: HomepageTilesConfig
+  homepageTiles?: HomepageTilesConfig,
+  activePeriodTypes?: string[]
 ): NavItem[] {
+  // Build rankings children dynamically from active period types
+  let rankingsChildren: NavChild[] = [];
+
+  if (activePeriodTypes && activePeriodTypes.length > 0) {
+    rankingsChildren = activePeriodTypes.map((periodType) => {
+      const label = periodType.charAt(0).toUpperCase() + periodType.slice(1);
+      return {
+        href: `${prefix}/rankings/${periodType}`,
+        text: `${label} Rankings`,
+      };
+    });
+  }
+
+  // Add monthly rankings if enabled (uses static route with distinct venue-based logic)
+  if (homepageTiles?.monthlyRankings) {
+    rankingsChildren.push({
+      href: `${prefix}/rankings/monthly`,
+      text: "Monthly Rankings",
+      tileKey: "monthlyRankings",
+    });
+  }
+
   const allItems: NavItem[] = [
     {
       href: `${prefix}/games`,
@@ -52,11 +76,7 @@ export function getNavItems(
       href: "#",
       icon: Trophy,
       text: "Rankings",
-      children: [
-        { href: `${prefix}/rankings/season`, text: "Season Rankings", tileKey: "seasonRankings" },
-        { href: `${prefix}/rankings/quarterly`, text: "Quarterly Rankings", tileKey: "quarterlyRankings" },
-        { href: `${prefix}/rankings/monthly`, text: "Monthly Rankings", tileKey: "monthlyRankings" },
-      ],
+      children: rankingsChildren.length > 0 ? rankingsChildren : undefined,
     },
     {
       href: `${prefix}/players`,
@@ -78,13 +98,27 @@ export function getNavItems(
     },
   ];
 
-  // If no config provided, return all items
+  // Filter out items that have no children and no direct href (like Rankings with no period types)
+  const filteredItems = allItems.filter((item) => {
+    // If item has children, keep it
+    if (item.children && item.children.length > 0) {
+      return true;
+    }
+    // If item has a valid href (not "#"), keep it
+    if (item.href !== "#") {
+      return true;
+    }
+    // Otherwise, exclude it (e.g., Rankings with no active period types)
+    return false;
+  });
+
+  // If no config provided, return filtered items
   if (!homepageTiles) {
-    return allItems;
+    return filteredItems;
   }
 
   // Filter items based on config
-  return allItems
+  return filteredItems
     .map((item) => {
       // If item has children, filter children first
       if (item.children) {

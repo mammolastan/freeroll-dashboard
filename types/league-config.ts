@@ -37,8 +37,8 @@ export interface PWAConfig {
 export interface HomepageTilesConfig {
   recentGames: boolean;
   activeGames: boolean;
-  seasonRankings: boolean;
-  quarterlyRankings: boolean;
+  // Note: seasonRankings and quarterlyRankings were removed.
+  // Point-based rankings now appear automatically based on active competition periods.
   monthlyRankings: boolean;
   players: boolean;
   venues: boolean;
@@ -186,8 +186,6 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   homepageTiles: {
     recentGames: true,
     activeGames: true,
-    seasonRankings: false,
-    quarterlyRankings: true,
     monthlyRankings: true,
     players: true,
     venues: true,
