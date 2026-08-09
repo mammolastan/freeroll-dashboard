@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getNavItems, NavItem } from "@/lib/navConfig";
 import { HomepageTilesConfig } from "@/types/league-config";
+import AutoScaleText from "./AutoScaleText";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -135,18 +136,22 @@ const Navbar = () => {
           {/* Logo/Brand */}
           <Link
             href={isInLeague ? `${prefix}/` : "/"}
-            className="flex items-center gap-2 text-xl font-bold truncate"
+            className="flex items-center gap-2 text-xl font-bold min-w-0 flex-1 mr-2"
           >
             {!isInLeague && (
               <img
                 src="/icons/default-icon-512.png"
                 alt=""
-                className="w-8 h-8"
+                className="w-8 h-8 flex-shrink-0"
               />
             )}
-            {isInLeague
-              ? (hasMounted && leagueName ? `${leagueName} Player Dashboard` : "Player Dashboard")
-              : "Open Bar League"}
+            {isInLeague ? (
+              <AutoScaleText className="flex-1 min-w-0">
+                {hasMounted && leagueName ? `${leagueName} Player Dashboard` : "Player Dashboard"}
+              </AutoScaleText>
+            ) : (
+              "Open Bar League"
+            )}
           </Link>
 
           {/* Desktop Navigation */}
