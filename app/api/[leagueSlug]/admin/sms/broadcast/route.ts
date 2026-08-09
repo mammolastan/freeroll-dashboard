@@ -52,12 +52,26 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Message is required' }, { status: 400 });
   }
 
-  if (message.length > 1600) {
+  // Get league name for message formatting
+  const league = await prisma.leagues.findUnique({
+    where: { id: leagueId },
+    select: { name: true },
+  });
+  const leagueName = league?.name ?? 'League';
+
+  // Calculate max allowed message length
+  // Format: "{leagueName}: {message} STOP 2 end"
+  const maxMessageLength = 160 - leagueName.length - 2 - 11; // 2 for ": ", 11 for " STOP 2 end"
+
+  if (message.length > maxMessageLength) {
     return NextResponse.json(
-      { error: 'Message too long (max 1600 characters)' },
+      { error: `Message too long (max ${maxMessageLength} characters)` },
       { status: 400 }
     );
   }
+
+  // Format the full message with league name and opt-out
+  const fullMessage = `${leagueName}: ${message} STOP 2 end`;
 
   // Build query - optionally filter to a single player
   const whereClause: {
@@ -98,7 +112,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     : `${players.length} players`;
 
   console.log(
-    `[SMS Broadcast] Sending to ${targetDesc} in league ${leagueId} by ${session.user.uid}`
+    `[SMS Broadcast] Sending to ${targetDesc} in league ${leagueId} by ${session.user.uid}: "${fullMessage}"`
   );
 
   // Send messages in parallel with rate limiting consideration
@@ -107,7 +121,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       if (!player.phone_number) {
         return { success: false, error: 'No phone number' };
       }
-      return sendSms(player.phone_number, message);
+      return sendSms(player.phone_number, fullMessage);
     })
   );
 

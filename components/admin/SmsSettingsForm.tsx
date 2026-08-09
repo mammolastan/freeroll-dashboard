@@ -5,6 +5,7 @@ import { MessageSquare, Send, ChevronDown } from 'lucide-react';
 
 interface Props {
   leagueSlug: string;
+  leagueName: string;
   initialSmsEnabled: boolean;
 }
 
@@ -14,7 +15,16 @@ interface Recipient {
   name: string;
 }
 
-export default function SmsSettingsForm({ leagueSlug, initialSmsEnabled }: Props) {
+// SMS limit: 160 chars total
+// Format: "{leagueName}: {message} STOP 2 end"
+// Overhead: leagueName.length + 2 (": ") + 11 (" STOP 2 end") = leagueName.length + 13
+const SMS_LIMIT = 160;
+const SUFFIX_LENGTH = 11; // " STOP 2 end"
+const SEPARATOR_LENGTH = 2; // ": "
+
+export default function SmsSettingsForm({ leagueSlug, leagueName, initialSmsEnabled }: Props) {
+  // Calculate max message length based on league name
+  const maxMessageLength = SMS_LIMIT - leagueName.length - SEPARATOR_LENGTH - SUFFIX_LENGTH;
   const [smsEnabled, setSmsEnabled] = useState(initialSmsEnabled);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -206,14 +216,24 @@ export default function SmsSettingsForm({ leagueSlug, initialSmsEnabled }: Props
             onChange={(e) => setMessage(e.target.value)}
             placeholder={selectedPlayerId ? 'Type your message...' : 'Type your message to all opted-in players...'}
             className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-cyan-500/50"
-            rows={4}
-            maxLength={1600}
+            rows={3}
+            maxLength={maxMessageLength}
             disabled={sending}
           />
 
+          {/* Message preview */}
+          {message.length > 0 && (
+            <div className="mt-2 p-2 bg-black/20 rounded-lg border border-white/5">
+              <p className="text-white/30 text-xs mb-1">Preview:</p>
+              <p className="text-white/70 text-sm break-words">
+                {leagueName}: {message} STOP 2 end
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mt-3">
-            <span className="text-white/40 text-sm">
-              {message.length}/1600 characters
+            <span className={`text-sm ${message.length >= maxMessageLength - 10 ? 'text-amber-400' : 'text-white/40'}`}>
+              {message.length}/{maxMessageLength} characters
             </span>
 
             <button
