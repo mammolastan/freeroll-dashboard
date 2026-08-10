@@ -592,10 +592,17 @@ async function recoverActiveTimers(): Promise<void> {
   try {
     console.log("Recovering active timers from database...");
 
-    // Find all tournaments with active timer states
+    // Only recover timers for recent tournaments (last 2 days)
+    // Old tournaments shouldn't have their timers recovered on server restart
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    twoDaysAgo.setHours(0, 0, 0, 0);
+
+    // Find all tournaments with active timer states from recent days
     const activeTimers = await prisma.tournamentDraft.findMany({
       where: {
         OR: [{ timer_is_running: true }, { timer_is_paused: true }],
+        tournament_date: { gte: twoDaysAgo },
       },
       select: {
         id: true,
