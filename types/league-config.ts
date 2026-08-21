@@ -52,9 +52,11 @@ export interface FeaturedModulesConfig {
 }
 
 export interface TVScreenSettings {
-  tdChatRotationSeconds: number;
-  featuredRotationSeconds: number;
+  slideRotationSeconds: number;
   featuredModules: FeaturedModulesConfig;
+  // Deprecated - kept for backwards compatibility during migration
+  tdChatRotationSeconds?: number;
+  featuredRotationSeconds?: number;
 }
 
 // Game-level overrides for featured modules (stored in tournament_drafts.featured_settings)
@@ -213,8 +215,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     installApp: true,
   },
   tvScreenSettings: {
-    tdChatRotationSeconds: 20,
-    featuredRotationSeconds: 10,
+    slideRotationSeconds: 15,
     featuredModules: {
       otherActiveGames: true,
     },

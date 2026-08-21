@@ -30,8 +30,7 @@ const getWeatherIcon = (code: number): string => {
 
 // Default TV screen settings
 const DEFAULT_TV_SETTINGS: TVScreenSettings = {
-  tdChatRotationSeconds: 20,
-  featuredRotationSeconds: 10,
+  slideRotationSeconds: 15,
   featuredModules: {
     otherActiveGames: true,
   },
@@ -93,12 +92,20 @@ export default function TVScreenPage() {
         if (configRes.ok) {
           const configData = await configRes.json();
           if (configData.tvScreenSettings) {
+            const fetchedSettings = configData.tvScreenSettings;
+            // Handle backwards compatibility: use old settings if new one doesn't exist
+            const slideRotation = fetchedSettings.slideRotationSeconds
+              ?? fetchedSettings.tdChatRotationSeconds
+              ?? fetchedSettings.featuredRotationSeconds
+              ?? DEFAULT_TV_SETTINGS.slideRotationSeconds;
+
             leagueSettings = {
               ...DEFAULT_TV_SETTINGS,
-              ...configData.tvScreenSettings,
+              ...fetchedSettings,
+              slideRotationSeconds: slideRotation,
               featuredModules: {
                 ...DEFAULT_TV_SETTINGS.featuredModules,
-                ...configData.tvScreenSettings?.featuredModules,
+                ...fetchedSettings?.featuredModules,
               },
             };
           }

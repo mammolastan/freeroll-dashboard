@@ -15,6 +15,7 @@ import {
   Upload,
   Link,
   Loader2,
+  Timer,
 } from "lucide-react";
 
 interface Ad {
@@ -27,11 +28,13 @@ interface Ad {
 }
 
 interface TVScreenSettings {
-  tdChatRotationSeconds: number;
-  featuredRotationSeconds: number;
+  slideRotationSeconds: number;
   featuredModules: {
     otherActiveGames: boolean;
   };
+  // Backwards compatibility
+  tdChatRotationSeconds?: number;
+  featuredRotationSeconds?: number;
 }
 
 export default function FeaturedAdminPage() {
@@ -136,7 +139,16 @@ export default function FeaturedAdminPage() {
       const res = await fetch(`/api/${leagueSlug}/admin/config`);
       if (!res.ok) throw new Error("Failed to fetch config");
       const data = await res.json();
-      setTvSettings(data.config.tvScreenSettings);
+      const settings = data.config.tvScreenSettings;
+      // Handle backwards compatibility
+      const slideRotation = settings?.slideRotationSeconds
+        ?? settings?.tdChatRotationSeconds
+        ?? settings?.featuredRotationSeconds
+        ?? 15;
+      setTvSettings({
+        ...settings,
+        slideRotationSeconds: slideRotation,
+      });
     } catch (error) {
       console.error("Error fetching TV settings:", error);
     }
@@ -347,6 +359,45 @@ export default function FeaturedAdminPage() {
     }
   };
 
+  const handleUpdateRotationSeconds = async (seconds: number) => {
+    if (!tvSettings) return;
+
+    const oldValue = tvSettings.slideRotationSeconds;
+
+    // Optimistic update
+    setTvSettings((prev) =>
+      prev ? { ...prev, slideRotationSeconds: seconds } : null
+    );
+
+    try {
+      const res = await fetch(`/api/${leagueSlug}/admin/config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tvScreenSettings: {
+            slideRotationSeconds: seconds,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        // Revert on error
+        setTvSettings((prev) =>
+          prev ? { ...prev, slideRotationSeconds: oldValue } : null
+        );
+        showToast("Failed to update setting", "error");
+      } else {
+        showToast(`Slide duration set to ${seconds} seconds`, "success");
+      }
+    } catch (error) {
+      console.error("Error updating rotation seconds:", error);
+      setTvSettings((prev) =>
+        prev ? { ...prev, slideRotationSeconds: oldValue } : null
+      );
+      showToast("Failed to update setting", "error");
+    }
+  };
+
   // Separate active and inactive ads
   const activeAds = ads.filter((a) => a.isActive);
   const inactiveAds = ads.filter((a) => !a.isActive);
@@ -399,6 +450,34 @@ export default function FeaturedAdminPage() {
             These settings control which modules appear by default on TV screens.
             TDs can override these settings for individual games.
           </p>
+
+          {/* Slide Rotation Duration */}
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Timer size={18} className="text-cyan-400" />
+              <div>
+                <p className="text-white font-medium">Slide Duration</p>
+                <p className="text-white/40 text-sm">
+                  How long each slide stays visible before switching
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={tvSettings?.slideRotationSeconds ?? 15}
+                onChange={(e) => handleUpdateRotationSeconds(parseInt(e.target.value))}
+                className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+              >
+                <option value="5">5 sec</option>
+                <option value="10">10 sec</option>
+                <option value="15">15 sec</option>
+                <option value="20">20 sec</option>
+                <option value="30">30 sec</option>
+                <option value="45">45 sec</option>
+                <option value="60">60 sec</option>
+              </select>
+            </div>
+          </div>
 
           {/* Other Active Games Toggle */}
           <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">

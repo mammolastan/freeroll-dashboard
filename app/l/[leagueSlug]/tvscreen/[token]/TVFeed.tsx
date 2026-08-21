@@ -28,8 +28,7 @@ interface TVFeedProps {
 
 // Default settings if not provided
 const DEFAULT_TV_SETTINGS: TVScreenSettings = {
-  tdChatRotationSeconds: 20,
-  featuredRotationSeconds: 10,
+  slideRotationSeconds: 15,
   featuredModules: {
     otherActiveGames: true,
   },
@@ -96,13 +95,18 @@ export function TVFeed({
     [hasChatMessages]
   );
 
+  // Use unified rotation setting (with backwards compatibility)
+  const rotationSeconds = tvScreenSettings.slideRotationSeconds
+    ?? tvScreenSettings.tdChatRotationSeconds
+    ?? DEFAULT_TV_SETTINGS.slideRotationSeconds;
+
   const {
     currentSlide: currentMiddleSlide,
     progress: middleProgress,
     isRotating: middleIsRotating,
   } = useSlideshow(
     tdChatSlides,
-    tvScreenSettings.tdChatRotationSeconds,
+    rotationSeconds,
     {
       skipSlide: skipChatSlide,
     }
@@ -258,7 +262,7 @@ export function TVFeed({
           <FeaturedSlideshow
             leagueSlug={leagueSlug}
             gameId={gameId}
-            rotationSeconds={tvScreenSettings.featuredRotationSeconds}
+            rotationSeconds={rotationSeconds}
             enabledModules={tvScreenSettings.featuredModules}
           />
         ) : (
