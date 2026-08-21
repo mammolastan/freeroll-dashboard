@@ -16,6 +16,7 @@ import {
   Upload,
   X,
   Tv,
+  Award,
 } from "lucide-react";
 import Image from "next/image";
 import { TournamentFeed } from "@/components/TournamentFeed/TournamentFeed";
@@ -83,12 +84,16 @@ export function TDMessagesScreen({
   // Featured modules state
   const [featuredSettings, setFeaturedSettings] = useState<{
     otherActiveGames: boolean;
+    recentBadges: boolean;
     isLoading: boolean;
-    isDefault: boolean; // true if using league default (no game override)
+    isDefaultOtherActiveGames: boolean;
+    isDefaultRecentBadges: boolean;
   }>({
     otherActiveGames: true,
+    recentBadges: true,
     isLoading: true,
-    isDefault: true,
+    isDefaultOtherActiveGames: true,
+    isDefaultRecentBadges: true,
   });
   const [isUpdatingFeatured, setIsUpdatingFeatured] = useState(false);
 
@@ -105,8 +110,10 @@ export function TDMessagesScreen({
           const data = await res.json();
           setFeaturedSettings({
             otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+            recentBadges: data.effectiveSettings.recentBadges ?? true,
             isLoading: false,
-            isDefault: data.gameOverrides.otherActiveGames === undefined,
+            isDefaultOtherActiveGames: data.gameOverrides.otherActiveGames === undefined,
+            isDefaultRecentBadges: data.gameOverrides.recentBadges === undefined,
           });
         } else {
           setFeaturedSettings((prev) => ({ ...prev, isLoading: false }));
@@ -121,7 +128,7 @@ export function TDMessagesScreen({
   }, [currentDraft?.id]);
 
   const handleToggleFeaturedModule = async (
-    module: "otherActiveGames",
+    module: "otherActiveGames" | "recentBadges",
     newValue: boolean
   ) => {
     if (!currentDraft?.id || isUpdatingFeatured) return;
@@ -142,8 +149,10 @@ export function TDMessagesScreen({
         const data = await res.json();
         setFeaturedSettings({
           otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+          recentBadges: data.effectiveSettings.recentBadges ?? true,
           isLoading: false,
-          isDefault: data.gameOverrides.otherActiveGames === undefined,
+          isDefaultOtherActiveGames: data.gameOverrides.otherActiveGames === undefined,
+          isDefaultRecentBadges: data.gameOverrides.recentBadges === undefined,
         });
       }
     } catch (err) {
@@ -153,7 +162,7 @@ export function TDMessagesScreen({
     }
   };
 
-  const handleResetToDefault = async (module: "otherActiveGames") => {
+  const handleResetToDefault = async (module: "otherActiveGames" | "recentBadges") => {
     if (!currentDraft?.id || isUpdatingFeatured) return;
 
     setIsUpdatingFeatured(true);
@@ -172,8 +181,10 @@ export function TDMessagesScreen({
         const data = await res.json();
         setFeaturedSettings({
           otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+          recentBadges: data.effectiveSettings.recentBadges ?? true,
           isLoading: false,
-          isDefault: data.gameOverrides.otherActiveGames === undefined,
+          isDefaultOtherActiveGames: data.gameOverrides.otherActiveGames === undefined,
+          isDefaultRecentBadges: data.gameOverrides.recentBadges === undefined,
         });
       }
     } catch (err) {
@@ -811,7 +822,7 @@ export function TDMessagesScreen({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!featuredSettings.isDefault && (
+                    {!featuredSettings.isDefaultOtherActiveGames && (
                       <button
                         onClick={() => handleResetToDefault("otherActiveGames")}
                         disabled={isUpdatingFeatured}
@@ -846,15 +857,64 @@ export function TDMessagesScreen({
                   </div>
                 </div>
 
+                {/* Recent Badges Toggle */}
+                <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-4 w-4 text-purple-400" />
+                      <span className="text-sm font-medium text-gray-200">
+                        Recent Badges
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Celebrate recent badge winners in your league
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!featuredSettings.isDefaultRecentBadges && (
+                      <button
+                        onClick={() => handleResetToDefault("recentBadges")}
+                        disabled={isUpdatingFeatured}
+                        className="text-xs text-gray-400 hover:text-emerald-400 transition-colors"
+                        title="Reset to league default"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        handleToggleFeaturedModule(
+                          "recentBadges",
+                          !featuredSettings.recentBadges
+                        )
+                      }
+                      disabled={isUpdatingFeatured}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        featuredSettings.recentBadges
+                          ? "bg-purple-500"
+                          : "bg-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          featuredSettings.recentBadges
+                            ? "translate-x-5"
+                            : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Status indicator */}
                 <div className="text-xs text-center">
-                  {featuredSettings.isDefault ? (
+                  {featuredSettings.isDefaultOtherActiveGames && featuredSettings.isDefaultRecentBadges ? (
                     <span className="text-gray-500">
                       Using league default settings
                     </span>
                   ) : (
                     <span className="text-emerald-400/70">
-                      Custom setting for this game
+                      Custom settings for this game
                     </span>
                   )}
                 </div>

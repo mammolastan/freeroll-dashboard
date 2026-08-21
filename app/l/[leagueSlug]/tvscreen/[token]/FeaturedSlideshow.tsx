@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useSlideshow } from "@/lib/realtime/hooks/useSlideshow";
 import { AdSlide } from "./AdSlide";
 import { OtherActiveGamesModule } from "./modules/OtherActiveGamesModule";
+import { RecentBadgesModule } from "./modules/RecentBadgesModule";
 import { Sparkles, Loader2, Star } from "lucide-react";
 
 interface Ad {
@@ -21,18 +22,30 @@ interface ActiveGame {
   remainingPlayers: string[];
 }
 
+interface RecentBadge {
+  id: number;
+  playerName: string;
+  playerPhotoUrl: string | null;
+  badgeName: string;
+  badgeImageUrl: string;
+  badgeRarity: string;
+  earnedAt: string;
+}
+
 interface FeaturedSlideshowProps {
   leagueSlug: string;
   gameId: number;
   rotationSeconds: number;
   enabledModules: {
     otherActiveGames: boolean;
+    recentBadges?: boolean;
   };
 }
 
 type SlideType =
   | { type: "ad"; data: Ad }
-  | { type: "game"; data: ActiveGame };
+  | { type: "game"; data: ActiveGame }
+  | { type: "recentBadges"; data: RecentBadge[] };
 
 export function FeaturedSlideshow({
   leagueSlug,
@@ -42,7 +55,10 @@ export function FeaturedSlideshow({
 }: FeaturedSlideshowProps) {
   const [ads, setAds] = useState<Ad[]>([]);
   const [activeGames, setActiveGames] = useState<ActiveGame[]>([]);
+  const [recentBadges, setRecentBadges] = useState<RecentBadge[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track how many times the badges slide has been displayed (for randomization)
+  const [badgesDisplayCount, setBadgesDisplayCount] = useState(0);
 
   // Fetch ads
   useEffect(() => {
@@ -94,6 +110,28 @@ export function FeaturedSlideshow({
     return () => clearInterval(interval);
   }, [leagueSlug, gameId, enabledModules.otherActiveGames]);
 
+  // Fetch recent badges (once on load, no polling needed)
+  useEffect(() => {
+    if (!enabledModules.recentBadges) {
+      setRecentBadges([]);
+      return;
+    }
+
+    const fetchRecentBadges = async () => {
+      try {
+        const res = await fetch(`/api/${leagueSlug}/recent-badges`);
+        if (res.ok) {
+          const data = await res.json();
+          setRecentBadges(data.badges || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recent badges:", err);
+      }
+    };
+
+    fetchRecentBadges();
+  }, [leagueSlug, enabledModules.recentBadges]);
+
   // Build combined slides array
   const slides = useMemo((): SlideType[] => {
     const result: SlideType[] = [];
@@ -110,8 +148,13 @@ export function FeaturedSlideshow({
       }
     }
 
+    // Add recent badges slide (single slide showing all 5 badges)
+    if (enabledModules.recentBadges && recentBadges.length > 0) {
+      result.push({ type: "recentBadges", data: recentBadges });
+    }
+
     return result;
-  }, [ads, activeGames, enabledModules.otherActiveGames]);
+  }, [ads, activeGames, recentBadges, enabledModules.otherActiveGames, enabledModules.recentBadges]);
 
   // Create slide IDs for the useSlideshow hook
   const slideIds = useMemo(() => {
@@ -119,7 +162,13 @@ export function FeaturedSlideshow({
       if (slide.type === "ad") {
         return `ad-${slide.data.id}`;
       }
-      return `game-${slide.data.id}`;
+      if (slide.type === "game") {
+        return `game-${slide.data.id}`;
+      }
+      if (slide.type === "recentBadges") {
+        return "recentBadges";
+      }
+      return "unknown";
     });
   }, [slides]);
 
@@ -130,6 +179,13 @@ export function FeaturedSlideshow({
 
   // Get current slide
   const currentSlide = slides[currentIndex];
+
+  // Increment badges display count when badges slide becomes active
+  useEffect(() => {
+    if (currentSlide?.type === "recentBadges") {
+      setBadgesDisplayCount((prev) => prev + 1);
+    }
+  }, [currentSlide?.type === "recentBadges" ? currentIndex : null]);
 
   // Empty state - no ads and no active games
   if (!loading && slides.length === 0) {
@@ -177,6 +233,12 @@ export function FeaturedSlideshow({
         )}
         {currentSlide?.type === "game" && (
           <OtherActiveGamesModule game={currentSlide.data} />
+        )}
+        {currentSlide?.type === "recentBadges" && (
+          <RecentBadgesModule
+            badges={currentSlide.data}
+            displayCount={badgesDisplayCount}
+          />
         )}
       </div>
 

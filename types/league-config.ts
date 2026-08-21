@@ -48,7 +48,7 @@ export interface HomepageTilesConfig {
 
 export interface FeaturedModulesConfig {
   otherActiveGames: boolean;
-  // Future modules can be added here
+  recentBadges: boolean;
 }
 
 export interface TVScreenSettings {
@@ -63,6 +63,7 @@ export interface TVScreenSettings {
 // null = use league default, true/false = explicit override
 export interface GameFeaturedSettings {
   otherActiveGames?: boolean | null;
+  recentBadges?: boolean | null;
 }
 
 export interface LeagueConfig {
@@ -218,6 +219,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     slideRotationSeconds: 15,
     featuredModules: {
       otherActiveGames: true,
+      recentBadges: true,
     },
   },
 };

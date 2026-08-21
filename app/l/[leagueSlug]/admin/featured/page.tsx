@@ -16,6 +16,7 @@ import {
   Link,
   Loader2,
   Timer,
+  Award,
 } from "lucide-react";
 
 interface Ad {
@@ -31,6 +32,7 @@ interface TVScreenSettings {
   slideRotationSeconds: number;
   featuredModules: {
     otherActiveGames: boolean;
+    recentBadges: boolean;
   };
   // Backwards compatibility
   tdChatRotationSeconds?: number;
@@ -503,6 +505,37 @@ export default function FeaturedAdminPage() {
               <span
                 className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
                   tvSettings?.featuredModules.otherActiveGames
+                    ? "translate-x-4"
+                    : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Recent Badges Toggle */}
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Award size={18} className="text-purple-400" />
+              <div>
+                <p className="text-white font-medium">Recent Badges</p>
+                <p className="text-white/40 text-sm">
+                  Celebrate the 5 most recent badge winners in your league
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleToggleFeaturedModule("recentBadges")}
+              className={`relative w-10 h-6 rounded-full transition-colors ${
+                tvSettings?.featuredModules.recentBadges
+                  ? "bg-emerald-600"
+                  : "bg-white/20"
+              }`}
+              role="switch"
+              aria-checked={tvSettings?.featuredModules.recentBadges}
+            >
+              <span
+                className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  tvSettings?.featuredModules.recentBadges
                     ? "translate-x-4"
                     : "translate-x-0"
                 }`}

@@ -33,6 +33,7 @@ const DEFAULT_TV_SETTINGS: TVScreenSettings = {
   slideRotationSeconds: 15,
   featuredModules: {
     otherActiveGames: true,
+    recentBadges: true,
   },
 };
 

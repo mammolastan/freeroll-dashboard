@@ -70,6 +70,7 @@ export const DEFAULT_LEAGUE_CONFIG = {
     slideRotationSeconds: 15,
     featuredModules: {
       otherActiveGames: true,
+      recentBadges: true,
     },
   },
 };

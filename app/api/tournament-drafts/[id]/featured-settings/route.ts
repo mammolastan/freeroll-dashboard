@@ -45,6 +45,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const leagueConfig = await getLeagueConfig(draft.league_id);
     const leagueDefaults = leagueConfig.tvScreenSettings?.featuredModules ?? {
       otherActiveGames: true,
+      recentBadges: true,
     };
 
     // Parse game-level overrides
@@ -64,6 +65,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         gameOverrides.otherActiveGames !== undefined
           ? gameOverrides.otherActiveGames
           : leagueDefaults.otherActiveGames,
+      recentBadges:
+        gameOverrides.recentBadges !== null &&
+        gameOverrides.recentBadges !== undefined
+          ? gameOverrides.recentBadges
+          : leagueDefaults.recentBadges ?? true,
     };
 
     return NextResponse.json({
@@ -147,6 +153,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Handle recentBadges
+    if ("recentBadges" in body) {
+      if (body.recentBadges === null) {
+        // Reset to league default
+        delete newOverrides.recentBadges;
+      } else if (typeof body.recentBadges === "boolean") {
+        newOverrides.recentBadges = body.recentBadges;
+      }
+    }
+
     // Update the database
     const settingsJson =
       Object.keys(newOverrides).length > 0
@@ -164,6 +180,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const leagueConfig = await getLeagueConfig(draft.league_id);
     const leagueDefaults = leagueConfig.tvScreenSettings?.featuredModules ?? {
       otherActiveGames: true,
+      recentBadges: true,
     };
 
     // Compute effective settings
@@ -173,6 +190,11 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         newOverrides.otherActiveGames !== undefined
           ? newOverrides.otherActiveGames
           : leagueDefaults.otherActiveGames,
+      recentBadges:
+        newOverrides.recentBadges !== null &&
+        newOverrides.recentBadges !== undefined
+          ? newOverrides.recentBadges
+          : leagueDefaults.recentBadges ?? true,
     };
 
     return NextResponse.json({
