@@ -34,6 +34,14 @@ export async function getLeagueConfig(leagueId: number): Promise<LeagueConfig> {
         ...DEFAULT_LEAGUE_CONFIG.homepageTiles,
         ...(stored.homepageTiles ?? {}),
       },
+      tvScreenSettings: {
+        ...DEFAULT_LEAGUE_CONFIG.tvScreenSettings,
+        ...(stored.tvScreenSettings ?? {}),
+        featuredModules: {
+          ...DEFAULT_LEAGUE_CONFIG.tvScreenSettings.featuredModules,
+          ...(stored.tvScreenSettings?.featuredModules ?? {}),
+        },
+      },
       scoringSystem: stored.scoringSystem,
     };
   } catch {
@@ -66,6 +74,14 @@ export async function saveLeagueConfig(
     homepageTiles: {
       ...current.homepageTiles,
       ...(config.homepageTiles ?? {}),
+    },
+    tvScreenSettings: {
+      ...current.tvScreenSettings,
+      ...(config.tvScreenSettings ?? {}),
+      featuredModules: {
+        ...current.tvScreenSettings.featuredModules,
+        ...(config.tvScreenSettings?.featuredModules ?? {}),
+      },
     },
     // scoringSystem: if explicitly passed use it, otherwise keep current
     scoringSystem: config.scoringSystem !== undefined ? config.scoringSystem : current.scoringSystem,

@@ -66,4 +66,11 @@ export const DEFAULT_LEAGUE_CONFIG = {
     badges: true,
     installApp: true,
   },
+  tvScreenSettings: {
+    tdChatRotationSeconds: 20,
+    featuredRotationSeconds: 10,
+    featuredModules: {
+      otherActiveGames: true,
+    },
+  },
 };

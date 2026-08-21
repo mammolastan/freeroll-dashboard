@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Megaphone,
   Send,
@@ -15,6 +15,7 @@ import {
   Camera,
   Upload,
   X,
+  Tv,
 } from "lucide-react";
 import Image from "next/image";
 import { TournamentFeed } from "@/components/TournamentFeed/TournamentFeed";
@@ -78,6 +79,109 @@ export function TDMessagesScreen({
     text: string;
   } | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Featured modules state
+  const [featuredSettings, setFeaturedSettings] = useState<{
+    otherActiveGames: boolean;
+    isLoading: boolean;
+    isDefault: boolean; // true if using league default (no game override)
+  }>({
+    otherActiveGames: true,
+    isLoading: true,
+    isDefault: true,
+  });
+  const [isUpdatingFeatured, setIsUpdatingFeatured] = useState(false);
+
+  // Fetch featured settings on mount
+  useEffect(() => {
+    if (!currentDraft?.id) return;
+
+    const fetchFeaturedSettings = async () => {
+      try {
+        const res = await fetch(
+          `/api/tournament-drafts/${currentDraft.id}/featured-settings`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setFeaturedSettings({
+            otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+            isLoading: false,
+            isDefault: data.gameOverrides.otherActiveGames === undefined,
+          });
+        } else {
+          setFeaturedSettings((prev) => ({ ...prev, isLoading: false }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch featured settings:", err);
+        setFeaturedSettings((prev) => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    fetchFeaturedSettings();
+  }, [currentDraft?.id]);
+
+  const handleToggleFeaturedModule = async (
+    module: "otherActiveGames",
+    newValue: boolean
+  ) => {
+    if (!currentDraft?.id || isUpdatingFeatured) return;
+
+    setIsUpdatingFeatured(true);
+
+    try {
+      const res = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/featured-settings`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [module]: newValue }),
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        setFeaturedSettings({
+          otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+          isLoading: false,
+          isDefault: data.gameOverrides.otherActiveGames === undefined,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update featured settings:", err);
+    } finally {
+      setIsUpdatingFeatured(false);
+    }
+  };
+
+  const handleResetToDefault = async (module: "otherActiveGames") => {
+    if (!currentDraft?.id || isUpdatingFeatured) return;
+
+    setIsUpdatingFeatured(true);
+
+    try {
+      const res = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/featured-settings`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [module]: null }), // null resets to league default
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        setFeaturedSettings({
+          otherActiveGames: data.effectiveSettings.otherActiveGames ?? true,
+          isLoading: false,
+          isDefault: data.gameOverrides.otherActiveGames === undefined,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to reset featured settings:", err);
+    } finally {
+      setIsUpdatingFeatured(false);
+    }
+  };
 
   const handleSpecialsClick = () => {
     const specialsText = "Special hand: \nDrink specials: \nMayor: ";
@@ -669,6 +773,90 @@ export function TDMessagesScreen({
                   >
                     Post this as bounty
                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* TV Screen Modules */}
+          <div className="mt-4 bg-gray-900/80 border-2 border-emerald-500/30 rounded-xl p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
+                <Tv className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-emerald-300">
+                  TV Screen Modules
+                </h2>
+                <p className="text-gray-400 text-xs">
+                  Control what appears in the Featured section
+                </p>
+              </div>
+            </div>
+
+            {featuredSettings.isLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Other Active Games Toggle */}
+                <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-200">
+                      Other Active Games
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Show stats from other games in this league
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!featuredSettings.isDefault && (
+                      <button
+                        onClick={() => handleResetToDefault("otherActiveGames")}
+                        disabled={isUpdatingFeatured}
+                        className="text-xs text-gray-400 hover:text-emerald-400 transition-colors"
+                        title="Reset to league default"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        handleToggleFeaturedModule(
+                          "otherActiveGames",
+                          !featuredSettings.otherActiveGames
+                        )
+                      }
+                      disabled={isUpdatingFeatured}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        featuredSettings.otherActiveGames
+                          ? "bg-emerald-500"
+                          : "bg-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          featuredSettings.otherActiveGames
+                            ? "translate-x-5"
+                            : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status indicator */}
+                <div className="text-xs text-center">
+                  {featuredSettings.isDefault ? (
+                    <span className="text-gray-500">
+                      Using league default settings
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400/70">
+                      Custom setting for this game
+                    </span>
+                  )}
                 </div>
               </div>
             )}

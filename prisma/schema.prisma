@@ -88,6 +88,7 @@ model TournamentDraft {
   allow_self_checkin      Boolean?
   game_started            Boolean
   tournament_director_uid String?                 @db.VarChar(255)
+  featured_settings       String?                 @db.LongText // JSON: game-level overrides for featured modules
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
@@ -282,9 +283,27 @@ model leagues {
   blind_schedules     BlindSchedule[]
   competition_periods competition_periods[]
   games               games[]
+  league_ads          LeagueAd[]
   players_v2          players_v2[]
   tournament_drafts   TournamentDraft[]
   venues              venues[]
+}
+
+model LeagueAd {
+  id            Int      @id @default(autoincrement())
+  league_id     Int
+  image_url     String   @db.Text
+  title         String?  @db.VarChar(255)
+  link_url      String?  @db.VarChar(500)
+  display_order Int      @default(0)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  leagues leagues @relation(fields: [league_id], references: [id], onDelete: Cascade)
+
+  @@index([league_id])
+  @@map("league_ads")
 }
 
 model league_roles {

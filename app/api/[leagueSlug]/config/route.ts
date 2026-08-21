@@ -36,5 +36,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     tournamentFeedEnabled: config.tournamentFeedEnabled,
     smsEnabled: config.smsEnabled,
     homepageTiles: config.homepageTiles,
+    tvScreenSettings: config.tvScreenSettings,
   });
 }

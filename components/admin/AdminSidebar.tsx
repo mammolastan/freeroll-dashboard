@@ -23,6 +23,7 @@ import {
   TrendingUp,
   LayoutGrid,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -57,6 +58,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       icon: ListOrdered,
     },
     { href: `${base}/badges`, label: "Badges", icon: Star },
+    { href: `${base}/featured`, label: "Featured", icon: Sparkles },
     { href: `${base}/members`, label: "Players", icon: Users },
   ];
 

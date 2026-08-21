@@ -9,6 +9,7 @@ import { TVScreenTimer } from "./TVScreenTimer";
 import { TVFeed } from "./TVFeed";
 import { formatTime, formatCutoffTime } from "@/lib/utils";
 import { formatLeagueDate } from "@/lib/league-time";
+import { TVScreenSettings } from "@/types/league-config";
 import "./tvscreen.css";
 
 interface HourlyWeather {
@@ -27,8 +28,17 @@ const getWeatherIcon = (code: number): string => {
   return "☁️";
 };
 
+// Default TV screen settings
+const DEFAULT_TV_SETTINGS: TVScreenSettings = {
+  tdChatRotationSeconds: 20,
+  featuredRotationSeconds: 10,
+  featuredModules: {
+    otherActiveGames: true,
+  },
+};
+
 export default function TVScreenPage() {
-  const { token } = useParams();
+  const { token, leagueSlug } = useParams();
   const { gameData, computedStats, loading, error, connectionStatus } = useRealtimeGameData(
     token as string
   );
@@ -36,6 +46,7 @@ export default function TVScreenPage() {
   const [currentTime, setCurrentTime] = useState<string>("");
   const [weather, setWeather] = useState<HourlyWeather[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [tvScreenSettings, setTvScreenSettings] = useState<TVScreenSettings>(DEFAULT_TV_SETTINGS);
 
   // Track browser online/offline status for immediate feedback
   useEffect(() => {
@@ -68,6 +79,56 @@ export default function TVScreenPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch TV screen settings (league config + game overrides)
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!gameData?.tournament?.id || !leagueSlug) return;
+
+      try {
+        // Fetch league config for base TV settings
+        const configRes = await fetch(`/api/${leagueSlug}/config`);
+        let leagueSettings = DEFAULT_TV_SETTINGS;
+
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          if (configData.tvScreenSettings) {
+            leagueSettings = {
+              ...DEFAULT_TV_SETTINGS,
+              ...configData.tvScreenSettings,
+              featuredModules: {
+                ...DEFAULT_TV_SETTINGS.featuredModules,
+                ...configData.tvScreenSettings?.featuredModules,
+              },
+            };
+          }
+        }
+
+        // Fetch game-level overrides
+        const featuredRes = await fetch(
+          `/api/tournament-drafts/${gameData.tournament.id}/featured-settings`
+        );
+
+        if (featuredRes.ok) {
+          const featuredData = await featuredRes.json();
+          // Use effective settings which already merge league + game overrides
+          setTvScreenSettings({
+            ...leagueSettings,
+            featuredModules: {
+              ...leagueSettings.featuredModules,
+              ...featuredData.effectiveSettings,
+            },
+          });
+        } else {
+          setTvScreenSettings(leagueSettings);
+        }
+      } catch (err) {
+        console.error("Failed to fetch TV screen settings:", err);
+      }
+    };
+
+    fetchSettings();
+  }, [gameData?.tournament?.id, leagueSlug]);
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -221,6 +282,9 @@ export default function TVScreenPage() {
           players={gameData.players}
           allowChat={gameData.tournament.allow_chat}
           defaultTDMessage={gameData.tournament.defaultTDMessage}
+          leagueSlug={leagueSlug as string}
+          gameId={gameData.tournament.id}
+          tvScreenSettings={tvScreenSettings}
         />
       </div>
 

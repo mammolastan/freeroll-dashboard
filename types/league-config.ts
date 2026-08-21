@@ -46,6 +46,23 @@ export interface HomepageTilesConfig {
   installApp: boolean;
 }
 
+export interface FeaturedModulesConfig {
+  otherActiveGames: boolean;
+  // Future modules can be added here
+}
+
+export interface TVScreenSettings {
+  tdChatRotationSeconds: number;
+  featuredRotationSeconds: number;
+  featuredModules: FeaturedModulesConfig;
+}
+
+// Game-level overrides for featured modules (stored in tournament_drafts.featured_settings)
+// null = use league default, true/false = explicit override
+export interface GameFeaturedSettings {
+  otherActiveGames?: boolean | null;
+}
+
 export interface LeagueConfig {
   // Identity
   leagueName: string;
@@ -124,6 +141,9 @@ export interface LeagueConfig {
 
   // Homepage & Navigation
   homepageTiles: HomepageTilesConfig;
+
+  // TV Screen
+  tvScreenSettings: TVScreenSettings;
 }
 
 export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
@@ -191,5 +211,12 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     venues: true,
     badges: true,
     installApp: true,
+  },
+  tvScreenSettings: {
+    tdChatRotationSeconds: 20,
+    featuredRotationSeconds: 10,
+    featuredModules: {
+      otherActiveGames: true,
+    },
   },
 };
