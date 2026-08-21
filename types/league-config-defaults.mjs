@@ -67,8 +67,7 @@ export const DEFAULT_LEAGUE_CONFIG = {
     installApp: true,
   },
   tvScreenSettings: {
-    tdChatRotationSeconds: 20,
-    featuredRotationSeconds: 10,
+    slideRotationSeconds: 15,
     featuredModules: {
       otherActiveGames: true,
     },
