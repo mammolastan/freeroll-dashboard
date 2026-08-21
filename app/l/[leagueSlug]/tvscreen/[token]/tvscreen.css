@@ -1049,18 +1049,6 @@
   object-fit: contain;
 }
 
-.featured-ad-title {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0.5rem 0.75rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  color: #e5e7eb;
-  font-size: 0.75rem;
-  text-align: center;
-}
-
 /* ===========================================
    OTHER ACTIVE GAMES MODULE
    =========================================== */

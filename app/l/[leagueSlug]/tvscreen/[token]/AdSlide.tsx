@@ -19,11 +19,6 @@ export function AdSlide({ imageUrl, title }: AdSlideProps) {
         style={{ objectFit: "contain" }}
         unoptimized // Allow external URLs
       />
-      {title && (
-        <div className="featured-ad-title">
-          {title}
-        </div>
-      )}
     </div>
   );
 }

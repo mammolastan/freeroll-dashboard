@@ -10,17 +10,17 @@ import {
   X,
   Check,
   Image as ImageIcon,
-  GripVertical,
-  ExternalLink,
   Monitor,
   Users,
+  Upload,
+  Link,
+  Loader2,
 } from "lucide-react";
 
 interface Ad {
   id: number;
   imageUrl: string;
   title: string | null;
-  linkUrl: string | null;
   displayOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -43,12 +43,13 @@ export default function FeaturedAdminPage() {
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageInputMode, setImageInputMode] = useState<"upload" | "url">("upload");
 
   // Form state
   const [formData, setFormData] = useState({
     imageUrl: "",
     title: "",
-    linkUrl: "",
     isActive: true,
   });
 
@@ -61,6 +62,61 @@ export default function FeaturedAdminPage() {
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"];
+    if (!allowedTypes.includes(file.type)) {
+      showToast("Invalid file type. Use JPG, PNG, GIF, or WebP.", "error");
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("File too large. Maximum size is 10MB.", "error");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append("image", file);
+
+      const res = await fetch(`/api/${leagueSlug}/admin/ads/upload`, {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFormData({ ...formData, imageUrl: data.imageUrl });
+        showToast("Image uploaded", "success");
+      } else {
+        const err = await res.json();
+        showToast(err.error || "Failed to upload image", "error");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      showToast("Failed to upload image", "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   };
 
   const fetchAds = useCallback(async () => {
@@ -96,9 +152,9 @@ export default function FeaturedAdminPage() {
     setFormData({
       imageUrl: "",
       title: "",
-      linkUrl: "",
       isActive: true,
     });
+    setImageInputMode("upload");
   };
 
   const openCreateModal = () => {
@@ -112,7 +168,6 @@ export default function FeaturedAdminPage() {
     setFormData({
       imageUrl: ad.imageUrl,
       title: ad.title || "",
-      linkUrl: ad.linkUrl || "",
       isActive: ad.isActive,
     });
     setModalOpen(true);
@@ -143,7 +198,6 @@ export default function FeaturedAdminPage() {
         body: JSON.stringify({
           imageUrl: formData.imageUrl.trim(),
           title: formData.title.trim() || null,
-          linkUrl: formData.linkUrl.trim() || null,
           isActive: formData.isActive,
         }),
       });
@@ -466,23 +520,99 @@ export default function FeaturedAdminPage() {
               </button>
             </div>
             <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Image URL */}
+              {/* Image Input Mode Toggle */}
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">
-                  Image URL *
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Image *
                 </label>
-                <input
-                  type="text"
-                  value={formData.imageUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-emerald-500"
-                  placeholder="https://example.com/image.jpg"
-                />
-                <p className="text-white/40 text-xs mt-1">
-                  Direct link to the image file (JPEG, PNG, WebP, or GIF)
-                </p>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setImageInputMode("upload")}
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      imageInputMode === "upload"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >
+                    <Upload size={16} />
+                    Upload
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageInputMode("url")}
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      imageInputMode === "url"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >
+                    <Link size={16} />
+                    URL
+                  </button>
+                </div>
+
+                {/* Upload Mode */}
+                {imageInputMode === "upload" && (
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      uploading
+                        ? "border-emerald-500 bg-emerald-500/10"
+                        : "border-white/20 hover:border-white/40"
+                    }`}
+                  >
+                    {uploading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 size={24} className="text-emerald-400 animate-spin" />
+                        <p className="text-white/60 text-sm">Uploading...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={24} className="mx-auto text-white/40 mb-2" />
+                        <p className="text-white/60 text-sm mb-2">
+                          Drag & drop an image here, or
+                        </p>
+                        <label className="inline-block px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg cursor-pointer transition-colors">
+                          Browse Files
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file);
+                            }}
+                          />
+                        </label>
+                        <p className="text-white/40 text-xs mt-3">
+                          JPG, PNG, GIF, or WebP. Max 10MB.
+                          <br />
+                          Recommended: 640x800px (portrait 4:5)
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* URL Mode */}
+                {imageInputMode === "url" && (
+                  <>
+                    <input
+                      type="text"
+                      value={formData.imageUrl}
+                      onChange={(e) =>
+                        setFormData({ ...formData, imageUrl: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-emerald-500"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <p className="text-white/40 text-xs mt-1">
+                      Direct link to an image file. Recommended: 640x800px (portrait 4:5)
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Image Preview */}
@@ -491,11 +621,16 @@ export default function FeaturedAdminPage() {
                   <img
                     src={formData.imageUrl}
                     alt="Preview"
-                    className="w-full h-32 object-contain bg-black/50"
+                    className="w-full h-40 object-contain bg-black/50"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
+                  {imageInputMode === "upload" && (
+                    <div className="px-3 py-2 bg-white/5 border-t border-white/10">
+                      <p className="text-white/40 text-xs truncate">{formData.imageUrl}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -515,25 +650,6 @@ export default function FeaturedAdminPage() {
                 />
                 <p className="text-white/40 text-xs mt-1">
                   For your reference only, not displayed on TV
-                </p>
-              </div>
-
-              {/* Link URL */}
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">
-                  Link URL (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.linkUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, linkUrl: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-emerald-500"
-                  placeholder="https://sponsor-website.com"
-                />
-                <p className="text-white/40 text-xs mt-1">
-                  Website link (for future QR code feature)
                 </p>
               </div>
 
@@ -639,14 +755,6 @@ function AdRow({
             {!ad.isActive && (
               <span className="px-2 py-0.5 bg-white/10 text-white/50 text-xs rounded">
                 Inactive
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5 text-white/40 text-sm">
-            {ad.linkUrl && (
-              <span className="flex items-center gap-1 truncate">
-                <ExternalLink size={12} />
-                {ad.linkUrl}
               </span>
             )}
           </div>
