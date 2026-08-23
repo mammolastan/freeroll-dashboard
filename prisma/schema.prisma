@@ -86,9 +86,10 @@ model TournamentDraft {
   title                   String?                 @db.Text
   allow_chat              Boolean?
   allow_self_checkin      Boolean?
+  cutoff_time             Int?
   game_started            Boolean
   tournament_director_uid String?                 @db.VarChar(255)
-  featured_settings       String?                 @db.LongText // JSON: game-level overrides for featured modules
+  featured_settings       String?                 @db.LongText
   TournamentAuditLog      TournamentAuditLog[]
   games                   games[]
   players                 TournamentDraftPlayer[]
@@ -299,8 +300,7 @@ model LeagueAd {
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  leagues leagues @relation(fields: [league_id], references: [id], onDelete: Cascade)
+  leagues       leagues  @relation(fields: [league_id], references: [id], onDelete: Cascade)
 
   @@index([league_id])
   @@map("league_ads")

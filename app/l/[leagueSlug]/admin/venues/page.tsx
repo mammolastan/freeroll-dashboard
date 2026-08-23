@@ -5,24 +5,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import {
-  Plus,
-  Trash2,
-  X,
-  Check,
-  MapPin,
-  Clock,
-  Calendar,
-} from "lucide-react";
+import { Plus, Trash2, X, Check, MapPin, Clock, Calendar } from "lucide-react";
 
-const RichTextEditor = dynamic(
-  () => import("@/components/ui/RichTextEditor"),
-  { ssr: false }
-);
+const RichTextEditor = dynamic(() => import("@/components/ui/RichTextEditor"), {
+  ssr: false,
+});
 
 const VenueLocationPicker = dynamic(
   () => import("@/components/ui/VenueLocationPicker"),
-  { ssr: false }
+  { ssr: false },
 );
 
 interface Venue {
@@ -145,7 +136,7 @@ export default function VenuesAdminPage() {
         showToast("Failed to get current location", "error");
         setGettingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
@@ -456,8 +447,8 @@ export default function VenuesAdminPage() {
                   min="0"
                 />
                 <p className="text-white/40 text-xs mt-1">
-                  Leave blank for no cutoff. Players can check in until this
-                  many minutes after the tournament starts.
+                  Leave blank to match default league cutoff. Players can check
+                  in until this many minutes after the tournament starts.
                 </p>
               </div>
 
@@ -474,12 +465,18 @@ export default function VenuesAdminPage() {
                     className="flex items-center gap-1 px-2 py-1 text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors"
                   >
                     <MapPin size={12} />
-                    {gettingLocation ? "Locating..." : "Use My Current Location"}
+                    {gettingLocation
+                      ? "Locating..."
+                      : "Use My Current Location"}
                   </button>
                 </div>
                 <VenueLocationPicker
-                  latitude={formData.latitude ? parseFloat(formData.latitude) : null}
-                  longitude={formData.longitude ? parseFloat(formData.longitude) : null}
+                  latitude={
+                    formData.latitude ? parseFloat(formData.latitude) : null
+                  }
+                  longitude={
+                    formData.longitude ? parseFloat(formData.longitude) : null
+                  }
                   onChange={(lat, lng) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -512,8 +509,8 @@ export default function VenuesAdminPage() {
                 </div>
                 <p className="text-white/40 text-xs mt-1">
                   Leave latitude/longitude blank to allow check-in from
-                  anywhere. When set, players must be within the radius to
-                  check in.
+                  anywhere. When set, players must be within the radius to check
+                  in.
                 </p>
               </div>
 
@@ -641,7 +638,10 @@ function VenueRow({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex items-center gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
         {deleteConfirm ? (
           <>
             <span className="text-red-400 text-sm mr-2">Delete?</span>

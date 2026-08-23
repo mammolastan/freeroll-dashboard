@@ -78,6 +78,7 @@ interface TournamentDraft {
   period_ids?: string | null;
   allow_chat?: boolean | null;
   allow_self_checkin?: boolean | null;
+  cutoff_time?: number | null;
   game_uid?: string | null;
   // Timer fields
   timer_current_level?: number | null;
@@ -92,6 +93,7 @@ interface TournamentDraft {
 interface VenueOption {
   id: number;
   name: string;
+  cutoffTime?: number | null;
 }
 
 interface PlayerSearchResult {
@@ -302,6 +304,7 @@ export function FullAdminScreen({
   const [leagueGameDefaults, setLeagueGameDefaults] = useState({
     allowChat: true,
     allowSelfCheckIn: true,
+    lateRegistrationWindowMinutes: 100,
   });
 
   const [newTournament, setNewTournament] = useState({
@@ -415,6 +418,7 @@ export function FullAdminScreen({
             const defaults = {
               allowChat: data.gameDefaults.allowChat ?? true,
               allowSelfCheckIn: data.gameDefaults.allowSelfCheckIn ?? true,
+              lateRegistrationWindowMinutes: data.gameDefaults.lateRegistrationWindowMinutes ?? 100,
             };
             setLeagueGameDefaults(defaults);
             // Update newTournament with league defaults
@@ -3059,6 +3063,41 @@ export function FullAdminScreen({
                 <option value="on">On</option>
                 <option value="off">Off</option>
               </select>
+            </div>
+            {/* Cutoff Time Override */}
+            <div className="flex items-center justify-between col-span-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-900">
+                  Check-in Cutoff
+                </label>
+                <p className="text-xs text-gray-500">
+                  {(() => {
+                    const selectedVenue = venues.find(v => v.id === currentDraft?.venue_id);
+                    if (currentDraft?.cutoff_time != null) {
+                      return `Override: ${currentDraft.cutoff_time} min`;
+                    } else if (selectedVenue?.cutoffTime != null) {
+                      return `Venue: ${selectedVenue.cutoffTime} min`;
+                    } else {
+                      return `League: ${leagueGameDefaults.lateRegistrationWindowMinutes} min`;
+                    }
+                  })()}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Default"
+                  value={currentDraft?.cutoff_time ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                    updateTournamentField("cutoff_time", value);
+                  }}
+                  className="w-20 px-2 py-1.5 border rounded text-black text-sm"
+                  disabled={currentDraft?.status === "integrated"}
+                />
+                <span className="text-xs text-gray-500">min</span>
+              </div>
             </div>
           </div>
         </div>

@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
         td.title as game_title,
         v.name AS venue,
         v.cutoff_time AS venue_cutoff_time,
+        td.cutoff_time AS tournament_cutoff_time,
         td.start_points,
         td.status,
         td.blind_schedule,
@@ -70,10 +71,13 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // Priority: tournament override → venue setting → league default
         const cutoffMinutes =
-          tournament.venue_cutoff_time != null
-            ? Number(tournament.venue_cutoff_time)
-            : leagueConfig.gameDefaults.lateRegistrationWindowMinutes;
+          tournament.tournament_cutoff_time != null
+            ? Number(tournament.tournament_cutoff_time)
+            : tournament.venue_cutoff_time != null
+              ? Number(tournament.venue_cutoff_time)
+              : leagueConfig.gameDefaults.lateRegistrationWindowMinutes;
 
         return {
           ...tournament,
