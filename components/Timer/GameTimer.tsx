@@ -212,26 +212,23 @@ export function GameTimer({
 
     console.log("GameTimer: Setting up for tournament", tournamentId);
 
-    // Setup function to join room and request sync
-    const setupTimer = () => {
-      socket.emit("joinRoom", tournamentId.toString());
+    // Request timer sync - room joining is handled by useRealtimeGameData
+    // We only need to request sync in case GameTimer mounts after the room was already joined
+    const requestTimerSync = () => {
       socket.emit("timer:requestSync", { tournamentId });
     };
 
-    // Initial setup
-    setupTimer();
+    // Request initial sync (the room should already be joined by useRealtimeGameData)
+    // Small delay to avoid race condition with joinRoom handler on server
+    const syncTimeout = setTimeout(requestTimerSync, 100);
 
     // Listen for timer updates
     const handleTimerUpdate = (newState: TimerState) => {
       // CRITICAL: Only accept timer updates for THIS tournament
       if (newState.tournamentId !== tournamentId) {
-        console.log(
-          `GameTimer: Ignoring timer update for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`,
-        );
         return;
       }
       console.log("GameTimer: Received timer update:", {
-        tournamentId: newState.tournamentId,
         level: newState.currentLevel,
         time: newState.timeRemaining,
         isRunning: newState.isRunning,
@@ -242,13 +239,9 @@ export function GameTimer({
     const handleTimerSync = (newState: TimerState) => {
       // CRITICAL: Only accept timer syncs for THIS tournament
       if (newState.tournamentId !== tournamentId) {
-        console.log(
-          `GameTimer: Ignoring timer sync for tournament ${newState.tournamentId}, we are viewing tournament ${tournamentId}`,
-        );
         return;
       }
       console.log("GameTimer: Received timer sync:", {
-        tournamentId: newState.tournamentId,
         level: newState.currentLevel,
         time: newState.timeRemaining,
         isRunning: newState.isRunning,
@@ -256,10 +249,12 @@ export function GameTimer({
       setTimerState(newState);
     };
 
-    // Handle reconnection - rejoin room when socket reconnects
+    // Handle reconnection - useRealtimeGameData will rejoin the room,
+    // but we need to request a fresh timer sync
     const handleReconnect = () => {
-      console.log("Socket reconnected, rejoining timer room...");
-      setupTimer();
+      console.log("GameTimer: Socket reconnected, requesting timer sync...");
+      // Delay to allow useRealtimeGameData to rejoin the room first
+      setTimeout(requestTimerSync, 200);
     };
 
     socket.on("timer:update", handleTimerUpdate);
@@ -267,6 +262,7 @@ export function GameTimer({
     socket.on("connect", handleReconnect);
 
     return () => {
+      clearTimeout(syncTimeout);
       console.log("GameTimer: Cleaning up for tournament", tournamentId);
       socket.off("timer:update", handleTimerUpdate);
       socket.off("timer:sync", handleTimerSync);

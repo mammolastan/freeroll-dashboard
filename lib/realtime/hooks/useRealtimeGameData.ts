@@ -105,6 +105,16 @@ export function useRealtimeGameData(tournamentId: string | number) {
   useEffect(() => {
     if (!tournamentIdNum) return;
 
+    // Track if we've joined the room in this effect lifecycle to prevent duplicates
+    let hasJoinedRoom = false;
+
+    const joinRoom = () => {
+      if (hasJoinedRoom) return;
+      hasJoinedRoom = true;
+      console.log(`[Socket] Joining room ${tournamentIdNum}`);
+      socket.emit("joinRoom", tournamentIdNum.toString());
+    };
+
     // Clear any existing fallback interval
     if (reconnectIntervalRef.current) {
       clearInterval(reconnectIntervalRef.current);
@@ -112,7 +122,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
     }
 
     // Connect and join room
-    socket.on("connect", () => {
+    const handleConnect = () => {
       console.log("Connected to server with ID:", socket.id);
       setConnectionStatus('connected');
       setError(null); // Clear any previous errors
@@ -124,7 +134,9 @@ export function useRealtimeGameData(tournamentId: string | number) {
         reconnectIntervalRef.current = null;
       }
 
-      socket.emit("joinRoom", tournamentIdNum.toString());
+      // Reset join flag on reconnect so we rejoin the room
+      hasJoinedRoom = false;
+      joinRoom();
 
       // Refresh data on reconnect to catch any missed updates
       fetchGameData().then(data => {
@@ -132,12 +144,16 @@ export function useRealtimeGameData(tournamentId: string | number) {
       }).catch(err => {
         console.error('[GameData] Error refreshing after reconnect:', err);
       });
-    });
+    };
+
+    socket.on("connect", handleConnect);
 
     // Handle disconnection
     socket.on("disconnect", (reason) => {
       console.log("Disconnected from server:", reason);
       setConnectionStatus('disconnected');
+      // Reset join flag so we rejoin on reconnect
+      hasJoinedRoom = false;
 
       // Start fallback reconnection polling every 10 seconds
       // This catches cases where Socket.IO's built-in reconnection fails
@@ -182,7 +198,7 @@ export function useRealtimeGameData(tournamentId: string | number) {
     if (socket.connected) {
       console.log("Already connected, joining room immediately");
       setConnectionStatus('connected');
-      socket.emit("joinRoom", tournamentIdNum.toString());
+      joinRoom();
     } else {
       // Not connected, try to connect
       socket.connect();

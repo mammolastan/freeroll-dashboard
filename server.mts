@@ -293,88 +293,117 @@ interface TimerState {
 // Store timer states for each tournament
 const timerStates = new Map<number, TimerState>();
 
+// Track pending timer initializations to prevent race conditions
+const pendingTimerInits = new Map<number, Promise<TimerState | null>>();
+
 // Timer helper functions
 async function getOrCreateTimerState(
   tournamentId: number
 ): Promise<TimerState | null> {
-  if (!timerStates.has(tournamentId)) {
-    console.log(`Initializing timer state for tournament ${tournamentId}`);
+  // Return existing timer state if available
+  if (timerStates.has(tournamentId)) {
+    return timerStates.get(tournamentId) || null;
+  }
 
-    // First try to load existing timer state from database
-    const existingState = await loadTimerStateFromDB(tournamentId);
-    if (existingState) {
-      console.log(
-        `Loaded existing timer state from database for tournament ${tournamentId}`
-      );
-      timerStates.set(tournamentId, existingState);
-      return existingState;
-    }
+  // Check if initialization is already in progress (prevents race condition)
+  if (pendingTimerInits.has(tournamentId)) {
+    return pendingTimerInits.get(tournamentId)!;
+  }
 
-    // No existing state found, create new timer state
-    console.log(`Creating new timer state for tournament ${tournamentId}`);
+  // Start initialization and track the promise
+  const initPromise = initializeTimerState(tournamentId);
+  pendingTimerInits.set(tournamentId, initPromise);
 
-    // Fetch tournament's blind schedule from database
-    let blindLevels: BlindLevel[];
-    try {
-      const tournament = await prisma.tournamentDraft.findUnique({
-        where: { id: tournamentId },
-        select: { blind_schedule: true, custom_blind_levels: true },
-      });
+  try {
+    const result = await initPromise;
+    return result;
+  } finally {
+    // Clean up pending promise after completion
+    pendingTimerInits.delete(tournamentId);
+  }
+}
 
-      // If tournament doesn't exist, don't create a timer state for it
-      if (!tournament) {
-        console.log(`Tournament ${tournamentId} not found in database, skipping timer creation`);
-        return null;
-      }
+// Actual initialization logic (separated to support promise coalescing)
+async function initializeTimerState(
+  tournamentId: number
+): Promise<TimerState | null> {
+  console.log(`Initializing timer state for tournament ${tournamentId}`);
 
-      console.log(
-        `Tournament ${tournamentId} blind_schedule:`,
-        tournament?.blind_schedule,
-        `has custom levels:`,
-        !!tournament?.custom_blind_levels
-      );
-
-      // Check for custom blind levels first, then fall back to DB schedule
-      if (tournament?.custom_blind_levels) {
-        try {
-          blindLevels = JSON.parse(tournament.custom_blind_levels as string);
-          console.log(`Using custom blind levels with ${blindLevels.length} levels`);
-        } catch (parseError) {
-          console.error("Error parsing custom_blind_levels, falling back to DB schedule:", parseError);
-          blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
-        }
-      } else {
-        blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
-        console.log(`Using DB schedule id="${tournament.blind_schedule}" with ${blindLevels.length} levels`);
-      }
-    } catch (error) {
-      console.error("Error fetching tournament blind schedule:", error);
-      return null; // Don't create timer state if we can't verify tournament exists
-    }
-
-    const currentLevel = 1;
-    const currentBlindLevel = blindLevels[0];
+  // First try to load existing timer state from database
+  const existingState = await loadTimerStateFromDB(tournamentId);
+  if (existingState) {
     console.log(
-      `Creating timer state: level ${currentLevel}, time ${currentBlindLevel.duration * 60
-      }s`
+      `Loaded existing timer state from database for tournament ${tournamentId}`
+    );
+    timerStates.set(tournamentId, existingState);
+    return existingState;
+  }
+
+  // No existing state found, create new timer state
+  console.log(`Creating new timer state for tournament ${tournamentId}`);
+
+  // Fetch tournament's blind schedule from database
+  let blindLevels: BlindLevel[];
+  try {
+    const tournament = await prisma.tournamentDraft.findUnique({
+      where: { id: tournamentId },
+      select: { blind_schedule: true, custom_blind_levels: true },
+    });
+
+    // If tournament doesn't exist, don't create a timer state for it
+    if (!tournament) {
+      console.log(`Tournament ${tournamentId} not found in database, skipping timer creation`);
+      return null;
+    }
+
+    console.log(
+      `Tournament ${tournamentId} blind_schedule:`,
+      tournament?.blind_schedule,
+      `has custom levels:`,
+      !!tournament?.custom_blind_levels
     );
 
-    const newTimerState: TimerState = {
-      tournamentId,
-      currentLevel,
-      timeRemaining: currentBlindLevel.duration * 60, // convert to seconds
-      isRunning: false,
-      isPaused: false,
-      blindLevels,
-      lastUpdate: Date.now(),
-    };
-
-    timerStates.set(tournamentId, newTimerState);
-
-    // Save initial state to database
-    await saveTimerStateToDB(tournamentId, newTimerState);
+    // Check for custom blind levels first, then fall back to DB schedule
+    if (tournament?.custom_blind_levels) {
+      try {
+        blindLevels = JSON.parse(tournament.custom_blind_levels as string);
+        console.log(`Using custom blind levels with ${blindLevels.length} levels`);
+      } catch (parseError) {
+        console.error("Error parsing custom_blind_levels, falling back to DB schedule:", parseError);
+        blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
+      }
+    } else {
+      blindLevels = await resolveBlindSchedule(tournament.blind_schedule ?? null);
+      console.log(`Using DB schedule id="${tournament.blind_schedule}" with ${blindLevels.length} levels`);
+    }
+  } catch (error) {
+    console.error("Error fetching tournament blind schedule:", error);
+    return null; // Don't create timer state if we can't verify tournament exists
   }
-  return timerStates.get(tournamentId) || null;
+
+  const currentLevel = 1;
+  const currentBlindLevel = blindLevels[0];
+  console.log(
+    `Creating timer state: level ${currentLevel}, time ${currentBlindLevel.duration * 60
+    }s`
+  );
+
+  const newTimerState: TimerState = {
+    tournamentId,
+    currentLevel,
+    timeRemaining: currentBlindLevel.duration * 60, // convert to seconds
+    isRunning: false,
+    isPaused: false,
+    blindLevels,
+    lastUpdate: Date.now(),
+  };
+
+  timerStates.set(tournamentId, newTimerState);
+
+  // Save initial state to database
+  await saveTimerStateToDB(tournamentId, newTimerState);
+
+  return newTimerState;
 }
 
 async function updateTimer(tournamentId: number): Promise<TimerState | null> {
@@ -1105,17 +1134,23 @@ app.prepare().then(async () => {
     }, 1000);
 
     // Periodic database sync - save all timer states every 30 seconds
+    // Only sync timers that are active (running or paused) AND have connected clients
     setInterval(async () => {
       for (const [tournamentId, timer] of Array.from(timerStates.entries())) {
         try {
-          const tournament = await prisma.tournamentDraft.findUnique({
-            where: { id: tournamentId },
-            select: { id: true },
-          });
+          // Check if any clients are in this tournament's room
+          const room = io.sockets.adapter.rooms.get(tournamentId.toString());
+          const clientCount = room?.size || 0;
 
-          if (!tournament) {
-            console.log(`Tournament ${tournamentId} no longer exists, removing timer state`);
+          // If timer is stopped (not running and not paused) and no clients, remove from memory
+          if (!timer.isRunning && !timer.isPaused && clientCount === 0) {
+            console.log(`Removing inactive timer state for tournament ${tournamentId} (no clients, timer stopped)`);
             timerStates.delete(tournamentId);
+            continue;
+          }
+
+          // Skip sync if no clients are connected (timer state is already in DB)
+          if (clientCount === 0) {
             continue;
           }
 
@@ -1127,7 +1162,7 @@ app.prepare().then(async () => {
           }
 
           await saveTimerStateToDB(tournamentId, timer);
-          console.log(`Periodic sync completed for tournament ${tournamentId}`);
+          console.log(`Periodic sync completed for tournament ${tournamentId} (${clientCount} clients)`);
         } catch (error) {
           console.error(
             `Periodic sync failed for tournament ${tournamentId}:`,
