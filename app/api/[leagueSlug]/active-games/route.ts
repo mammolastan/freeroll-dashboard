@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           select: {
             player_name: true,
             player_nickname: true,
-            placement: true, // null = still in, non-null = eliminated
+            ko_position: true, // null = still in, non-null = eliminated
           },
         },
       },
@@ -60,12 +60,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     // Transform to the format needed by the module
     const games: ActiveGameData[] = activeGames.map((game) => {
+      // ko_position is set when a player is knocked out
+      // null = still in the game, non-null = eliminated
       const remainingPlayers = game.players
-        .filter((p) => p.placement === null)
+        .filter((p) => p.ko_position === null)
         .map((p) => p.player_nickname || p.player_name);
 
       const eliminatedCount = game.players.filter(
-        (p) => p.placement !== null
+        (p) => p.ko_position !== null
       ).length;
 
       return {

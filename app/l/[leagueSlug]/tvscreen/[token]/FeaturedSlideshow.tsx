@@ -5,7 +5,7 @@ import { useSlideshow } from "@/lib/realtime/hooks/useSlideshow";
 import { AdSlide } from "./AdSlide";
 import { OtherActiveGamesModule } from "./modules/OtherActiveGamesModule";
 import { RecentBadgesModule } from "./modules/RecentBadgesModule";
-import { Sparkles, Loader2, Star } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface Ad {
   id: number;
@@ -210,12 +210,7 @@ export function FeaturedSlideshow({
 
   return (
     <div className="featured-slideshow">
-      {/* Header */}
-      <div className="tvfeed-column-header tvfeed-column-header--emerald">
-        <Star className="tvfeed-header-icon" />
-        <span>Featured</span>
-      </div>
-      {/* Progress bar - below header */}
+      {/* Progress bar - at top */}
       {isRotating && (
         <div className="slideshow-progress-bar slideshow-progress-bar--below-header">
           <div
@@ -241,20 +236,6 @@ export function FeaturedSlideshow({
           />
         )}
       </div>
-
-      {/* Slide indicators */}
-      {slides.length > 1 && (
-        <div className="featured-indicators">
-          {slides.map((_, index) => (
-            <div
-              key={index}
-              className={`featured-indicator ${
-                index === currentIndex ? "featured-indicator--active" : ""
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

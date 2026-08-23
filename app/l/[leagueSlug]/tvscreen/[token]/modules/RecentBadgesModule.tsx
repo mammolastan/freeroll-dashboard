@@ -20,7 +20,7 @@ interface RecentBadgesModuleProps {
 }
 
 /** Number of badges to display at a time */
-const DISPLAY_COUNT = 5;
+const DISPLAY_COUNT = 3;
 
 function getRarityColor(rarity: string): string {
   switch (rarity?.toLowerCase()) {
