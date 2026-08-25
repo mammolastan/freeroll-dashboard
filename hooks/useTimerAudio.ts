@@ -17,6 +17,27 @@ const AUDIO_FILES: Record<TimerAudioSound, string> = {
   levelChange: '/audio/homepod_timer.mp3',
 };
 
+// Global audio state shared across instances (set by tournament-entry page on first interaction)
+let globalAudioContext: AudioContext | null = null;
+let globalAudioBuffers: Map<string, AudioBuffer> = new Map();
+let globalAudioUnlocked = false;
+
+// Called by tournament-entry page to set up shared audio
+export function setGlobalAudioState(
+  ctx: AudioContext | null,
+  buffers: Map<string, AudioBuffer>,
+  unlocked: boolean
+) {
+  globalAudioContext = ctx;
+  globalAudioBuffers = buffers;
+  globalAudioUnlocked = unlocked;
+}
+
+// Check if global audio has been unlocked (for initial state)
+export function isGlobalAudioUnlocked() {
+  return globalAudioUnlocked;
+}
+
 export function useTimerAudio(
   timerLabel: string = 'Tournament Timer',
   blindScheduleName?: string
@@ -25,12 +46,34 @@ export function useTimerAudio(
   const buffersRef = useRef<Partial<Record<TimerAudioSound, AudioBuffer>>>({});
   const unlockedRef = useRef(false);
 
+  // Check if global audio is already unlocked (from parent page interaction)
+  useEffect(() => {
+    if (globalAudioUnlocked && globalAudioContext) {
+      ctxRef.current = globalAudioContext;
+      // Copy global buffers to local refs using the correct keys
+      for (const [key, url] of Object.entries(AUDIO_FILES) as [TimerAudioSound, string][]) {
+        const buffer = globalAudioBuffers.get(url);
+        if (buffer) {
+          buffersRef.current[key] = buffer;
+        }
+      }
+      unlockedRef.current = true;
+      console.log('[useTimerAudio] Using pre-unlocked global audio context');
+    }
+  }, []);
+
   // Decode both audio files into AudioBuffers once context is available
   const decodeBuffers = useCallback(async (ctx: AudioContext) => {
     await Promise.all(
       (Object.entries(AUDIO_FILES) as [TimerAudioSound, string][]).map(
         async ([key, url]) => {
-          if (buffersRef.current[key]) return; // already decoded
+          // Check global buffers first
+          const globalBuffer = globalAudioBuffers.get(url);
+          if (globalBuffer) {
+            buffersRef.current[key] = globalBuffer;
+            return;
+          }
+          if (buffersRef.current[key]) return; // already decoded locally
           try {
             const res = await fetch(url);
             const arrayBuffer = await res.arrayBuffer();
@@ -44,9 +87,24 @@ export function useTimerAudio(
   }, []);
 
   // Must be called on a user gesture (button tap, etc.)
+  // If global audio is already unlocked, this is a no-op
   const unlockAudio = useCallback(async () => {
     if (unlockedRef.current) return;
     if (typeof window === 'undefined') return;
+
+    // Use global context if available
+    if (globalAudioUnlocked && globalAudioContext) {
+      ctxRef.current = globalAudioContext;
+      for (const [key, url] of Object.entries(AUDIO_FILES) as [TimerAudioSound, string][]) {
+        const buffer = globalAudioBuffers.get(url);
+        if (buffer) {
+          buffersRef.current[key] = buffer;
+        }
+      }
+      unlockedRef.current = true;
+      console.log('[useTimerAudio] Using pre-unlocked global audio context');
+      return;
+    }
 
     try {
       const ctx = new AudioContext();
@@ -159,10 +217,13 @@ export function useTimerAudio(
     return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, [playOneMinuteWarning, playLevelChangeSound]);
 
-  // Cleanup AudioContext on unmount
+  // Cleanup AudioContext on unmount (but don't close if using global context)
   useEffect(() => {
     return () => {
-      ctxRef.current?.close().catch(() => {});
+      // Don't close the global audio context - it's shared across components
+      if (ctxRef.current && ctxRef.current !== globalAudioContext) {
+        ctxRef.current.close().catch(() => {});
+      }
       ctxRef.current = null;
       unlockedRef.current = false;
       buffersRef.current = {};

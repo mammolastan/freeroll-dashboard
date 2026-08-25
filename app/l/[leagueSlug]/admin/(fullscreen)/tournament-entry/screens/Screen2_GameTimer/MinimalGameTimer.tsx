@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Edit3, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
-import { useTimerAudio } from '@/hooks/useTimerAudio';
+import { useTimerAudio, isGlobalAudioUnlocked } from '@/hooks/useTimerAudio';
 
 interface BlindLevel {
   level: number;
@@ -46,7 +46,8 @@ export function MinimalGameTimer({
   const [editSeconds, setEditSeconds] = useState('');
   const [lastLevel, setLastLevel] = useState<number | null>(null);
   const [hasPlayedOneMinuteWarning, setHasPlayedOneMinuteWarning] = useState(false);
-  const [audioReady, setAudioReady] = useState(false);
+  // Check if audio was already unlocked by user interaction elsewhere in the admin area
+  const [audioReady, setAudioReady] = useState(() => isGlobalAudioUnlocked());
   const minutesInputRef = useRef<HTMLInputElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 

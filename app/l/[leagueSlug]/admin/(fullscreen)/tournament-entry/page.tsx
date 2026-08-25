@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScreenRouter } from "./hooks/useScreenRouter";
 import { useSocketConnectionStatus } from "./hooks/useSocketConnectionStatus";
@@ -13,6 +13,51 @@ import { PlayerControlScreen } from "./screens/Screen4_PlayerControl/PlayerContr
 import { TDMessagesScreen } from "./screens/Screen5_TDMessages/TDMessagesScreen";
 import { TableAssignmentScreen } from "./screens/Screen6_TableAssignment";
 import { socket } from "@/lib/socketClient";
+import { setGlobalAudioState } from "@/hooks/useTimerAudio";
+
+// Pre-load audio files and prime the AudioContext on first user interaction
+// This enables timer sounds without requiring a separate "Enable Sound" click
+const AUDIO_FILES = [
+  '/audio/OneMinuteRemaining-RedAlert.mp3',
+  '/audio/homepod_timer.mp3',
+];
+
+let audioUnlockAttempted = false;
+
+async function unlockGlobalAudio() {
+  if (audioUnlockAttempted) return;
+  audioUnlockAttempted = true;
+  if (typeof window === 'undefined') return;
+
+  try {
+    const ctx = new AudioContext();
+
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+
+    // Pre-load audio files into buffers
+    const buffers = new Map<string, AudioBuffer>();
+    await Promise.all(
+      AUDIO_FILES.map(async (url) => {
+        try {
+          const res = await fetch(url);
+          const arrayBuffer = await res.arrayBuffer();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          buffers.set(url, audioBuffer);
+        } catch (err) {
+          console.warn(`[AudioPreload] Failed to decode ${url}:`, err);
+        }
+      })
+    );
+
+    // Share with the useTimerAudio hook
+    setGlobalAudioState(ctx, buffers, true);
+    console.log('[AudioPreload] Audio unlocked and buffers pre-loaded');
+  } catch (err) {
+    console.warn('[AudioPreload] Failed to unlock audio:', err);
+  }
+}
 
 interface TournamentDraft {
   id: number;
@@ -52,9 +97,36 @@ export default function TournamentEntryPage() {
   const { connectionStatus, reconnectAttempt, manualReconnect } = useSocketConnectionStatus();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const audioUnlockedRef = useRef(false);
 
   // Read the panel parameter for deep-linking (e.g., ?panel=hitman-claims)
   const initialOpenPanel = searchParams.get("panel");
+
+  // Unlock audio on first user interaction anywhere in the admin area
+  // This enables timer sounds without requiring a separate "Enable Sound" click
+  useEffect(() => {
+    if (audioUnlockedRef.current) return;
+
+    const handleFirstInteraction = () => {
+      if (audioUnlockedRef.current) return;
+      audioUnlockedRef.current = true;
+      unlockGlobalAudio();
+      // Remove listeners after first interaction
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('keydown', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, []);
 
   // Authentication is now handled by middleware - if we reach this page, user is an admin
 
