@@ -60,11 +60,12 @@ export async function POST(
       );
     }
 
-    // Verify tournament exists and is in progress
+    // Verify tournament exists and is in progress (include league slug for deep-link URL)
     const tournament = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT id, status, league_id, tournament_director_uid
-      FROM tournament_drafts
-      WHERE id = ${tournamentId}
+      SELECT td.id, td.status, td.league_id, td.tournament_director_uid, l.slug as league_slug
+      FROM tournament_drafts td
+      INNER JOIN leagues l ON td.league_id = l.id
+      WHERE td.id = ${tournamentId}
     `;
 
     if (!tournament.length) {
@@ -205,14 +206,15 @@ export async function POST(
       console.error("Failed to broadcast knockout report:", broadcastError);
     }
 
-    // Send push notification to tournament director
+    // Send push notification to tournament director with deep-link to admin screen
     const tdUid = tournament[0].tournament_director_uid;
-    if (tdUid) {
+    const leagueSlug = tournament[0].league_slug ? String(tournament[0].league_slug) : null;
+    if (tdUid && leagueSlug) {
       try {
         await sendToPlayerByUid(String(tdUid), leagueId, {
           title: "Knockout Report",
           body: `${reporterName} reports: ${hitmanName} KO'd ${victimName}`,
-          url: `/td/${tournamentId}`,
+          url: `/l/${leagueSlug}/admin/tournament-entry?panel=hitman-claims`,
         });
       } catch (pushError) {
         console.error("Failed to send push notification to TD:", pushError);

@@ -3,6 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useScreenRouter } from "./hooks/useScreenRouter";
 import { useSocketConnectionStatus } from "./hooks/useSocketConnectionStatus";
 import { FullAdminScreen } from "./screens/Screen1_FullAdmin/FullAdminScreen";
@@ -49,6 +50,11 @@ interface Player {
 export default function TournamentEntryPage() {
   const { currentScreen, setCurrentScreen } = useScreenRouter(1);
   const { connectionStatus, reconnectAttempt, manualReconnect } = useSocketConnectionStatus();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Read the panel parameter for deep-linking (e.g., ?panel=hitman-claims)
+  const initialOpenPanel = searchParams.get("panel");
 
   // Authentication is now handled by middleware - if we reach this page, user is an admin
 
@@ -333,6 +339,13 @@ export default function TournamentEntryPage() {
           onDataChange={handleDataChange}
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
+          initialOpenPanel={initialOpenPanel}
+          onPanelOpened={() => {
+            // Clear the panel parameter from URL after opening to prevent re-open on refresh
+            const url = new URL(window.location.href);
+            url.searchParams.delete("panel");
+            router.replace(url.pathname + url.search, { scroll: false });
+          }}
         />
       )}
 

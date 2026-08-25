@@ -148,6 +148,8 @@ interface FullAdminScreenProps {
   onDataChange: () => void;
   currentScreen: ScreenNumber;
   onScreenChange: (screen: ScreenNumber) => void;
+  initialOpenPanel?: string | null;
+  onPanelOpened?: () => void;
 }
 
 export function FullAdminScreen({
@@ -159,6 +161,8 @@ export function FullAdminScreen({
   onDataChange,
   currentScreen,
   onScreenChange,
+  initialOpenPanel,
+  onPanelOpened,
 }: FullAdminScreenProps) {
   // Authentication is now handled by middleware - if we reach this page, user is an admin
   const { data: session } = useSession();
@@ -183,6 +187,15 @@ export function FullAdminScreen({
   const [showHitmanClaims, setShowHitmanClaims] = useState(false);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
+
+  // Auto-open hitman claims drawer when navigated via deep-link (e.g., from push notification)
+  useEffect(() => {
+    if (initialOpenPanel === "hitman-claims" && currentDraftProp) {
+      setShowHitmanClaims(true);
+      // Clear the URL parameter to prevent re-opening on refresh
+      onPanelOpened?.();
+    }
+  }, [initialOpenPanel, currentDraftProp, onPanelOpened]);
 
   // Poll for tournament data every 30 seconds when there are in_progress tournaments
   // (Timer state in DB only updates every ~30 seconds from Socket.IO server)
