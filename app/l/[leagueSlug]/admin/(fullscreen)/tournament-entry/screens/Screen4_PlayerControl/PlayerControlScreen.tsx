@@ -8,7 +8,6 @@ import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
-import { HitmanClaimsDrawer, HitmanClaimsButton } from "@/components/td/HitmanClaimsDrawer";
 
 interface TournamentDraft {
   id: number;
@@ -80,43 +79,6 @@ export function PlayerControlScreen({
     message: string;
     type: "success" | "warning";
   } | null>(null);
-
-  // Hitman Claims and Reports state
-  const [showHitmanClaims, setShowHitmanClaims] = useState(false);
-  const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
-  const [pendingReportsCount, setPendingReportsCount] = useState(0);
-
-  // Fetch pending claims and reports count periodically
-  useEffect(() => {
-    if (!currentDraft) return;
-
-    const fetchPendingCounts = async () => {
-      try {
-        // Fetch claims and reports in parallel
-        const [claimsResponse, reportsResponse] = await Promise.all([
-          fetch(`/api/tournament-drafts/${currentDraft.id}/hitman-claims`),
-          fetch(`/api/tournament-drafts/${currentDraft.id}/knockout-reports`),
-        ]);
-
-        if (claimsResponse.ok) {
-          const claimsData = await claimsResponse.json();
-          setPendingClaimsCount(claimsData.claims?.length || 0);
-        }
-
-        if (reportsResponse.ok) {
-          const reportsData = await reportsResponse.json();
-          setPendingReportsCount(reportsData.reports?.length || 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch pending counts:", err);
-      }
-    };
-
-    fetchPendingCounts();
-    const interval = setInterval(fetchPendingCounts, 15000); // Refresh every 15 seconds
-
-    return () => clearInterval(interval);
-  }, [currentDraft]);
 
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
   const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
@@ -696,24 +658,6 @@ export function PlayerControlScreen({
         onUndo={triggerUndo}
         isUndoing={isUndoing}
         gameName={currentDraft.title || currentDraft.venue || "Tournament"}
-      />
-
-      {/* Hitman Claims & Reports Floating Button */}
-      <HitmanClaimsButton
-        pendingCount={pendingClaimsCount + pendingReportsCount}
-        onClick={() => setShowHitmanClaims(true)}
-      />
-
-      {/* Hitman Claims Drawer */}
-      <HitmanClaimsDrawer
-        isOpen={showHitmanClaims}
-        onClose={() => setShowHitmanClaims(false)}
-        tournamentId={currentDraft.id}
-        onClaimsUpdated={() => {
-          // Refresh claims count and player data
-          setPendingClaimsCount((prev) => Math.max(0, prev - 1));
-          onDataChange();
-        }}
       />
     </div>
   );

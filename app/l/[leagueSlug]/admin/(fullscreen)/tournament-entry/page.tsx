@@ -14,6 +14,10 @@ import { TDMessagesScreen } from "./screens/Screen5_TDMessages/TDMessagesScreen"
 import { TableAssignmentScreen } from "./screens/Screen6_TableAssignment";
 import { socket } from "@/lib/socketClient";
 import { setGlobalAudioState } from "@/hooks/useTimerAudio";
+import {
+  HitmanClaimsDrawer,
+  HitmanClaimsButton,
+} from "@/components/td/HitmanClaimsDrawer";
 
 // Pre-load audio files and prime the AudioContext on first user interaction
 // This enables timer sounds without requiring a separate "Enable Sound" click
@@ -141,6 +145,62 @@ export default function TournamentEntryPage() {
   );
   const [players, setPlayers] = useState<Player[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
+
+  // Hitman Claims and Reports state (shared across all screens)
+  const [showHitmanClaims, setShowHitmanClaims] = useState(false);
+  const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+
+  // Auto-open hitman claims drawer when navigated via deep-link (e.g., from push notification)
+  useEffect(() => {
+    if (initialOpenPanel === "hitman-claims" && currentDraft) {
+      setShowHitmanClaims(true);
+      // Clear the panel parameter from URL after opening
+      const url = new URL(window.location.href);
+      url.searchParams.delete("panel");
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [initialOpenPanel, currentDraft, router]);
+
+  // Fetch pending claims and reports count periodically
+  useEffect(() => {
+    if (!currentDraft) return;
+
+    const fetchPendingCounts = async () => {
+      try {
+        const [claimsResponse, reportsResponse] = await Promise.all([
+          fetch(`/api/tournament-drafts/${currentDraft.id}/hitman-claims`),
+          fetch(`/api/tournament-drafts/${currentDraft.id}/knockout-reports`),
+        ]);
+
+        if (claimsResponse.ok) {
+          const claimsData = await claimsResponse.json();
+          setPendingClaimsCount(claimsData.claims?.length || 0);
+        }
+
+        if (reportsResponse.ok) {
+          const reportsData = await reportsResponse.json();
+          setPendingReportsCount(reportsData.reports?.length || 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pending counts:", err);
+      }
+    };
+
+    fetchPendingCounts();
+    const interval = setInterval(fetchPendingCounts, 15000); // Refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [currentDraft]);
+
+  // Callback to refresh player data after claim/report is processed
+  const handleClaimsUpdated = useCallback(() => {
+    // Optimistically decrement the count
+    setPendingClaimsCount((prev) => Math.max(0, prev - 1));
+    setPendingReportsCount((prev) => Math.max(0, prev - 1));
+    // Trigger a data refresh
+    setDataVersion((prev) => prev + 1);
+  }, []);
 
   // Load tournament and player data
   const loadData = useCallback(async () => {
@@ -411,13 +471,8 @@ export default function TournamentEntryPage() {
           onDataChange={handleDataChange}
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
-          initialOpenPanel={initialOpenPanel}
-          onPanelOpened={() => {
-            // Clear the panel parameter from URL after opening to prevent re-open on refresh
-            const url = new URL(window.location.href);
-            url.searchParams.delete("panel");
-            router.replace(url.pathname + url.search, { scroll: false });
-          }}
+          pendingClaimsCount={pendingClaimsCount}
+          onOpenClaimsDrawer={() => setShowHitmanClaims(true)}
         />
       )}
 
@@ -467,6 +522,22 @@ export default function TournamentEntryPage() {
           currentScreen={currentScreen}
           onScreenChange={setCurrentScreen}
         />
+      )}
+
+      {/* Hitman Claims & Reports - Global Overlay (appears on all screens) */}
+      {currentDraft && (
+        <>
+          <HitmanClaimsButton
+            pendingCount={pendingClaimsCount + pendingReportsCount}
+            onClick={() => setShowHitmanClaims(true)}
+          />
+          <HitmanClaimsDrawer
+            isOpen={showHitmanClaims}
+            onClose={() => setShowHitmanClaims(false)}
+            tournamentId={currentDraft.id}
+            onClaimsUpdated={handleClaimsUpdated}
+          />
+        </>
       )}
     </>
   );

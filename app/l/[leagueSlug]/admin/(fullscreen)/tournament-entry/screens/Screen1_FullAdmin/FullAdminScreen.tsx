@@ -48,10 +48,6 @@ import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
-import {
-  HitmanClaimsDrawer,
-  HitmanClaimsButton,
-} from "@/components/td/HitmanClaimsDrawer";
 import MoveKnockoutModal from "../../components/MoveKnockoutModal";
 import { useAutoRefresh } from "./hooks/useAutoRefresh";
 import { useOptimisticUpdates } from "./hooks/useOptimisticUpdates";
@@ -148,8 +144,9 @@ interface FullAdminScreenProps {
   onDataChange: () => void;
   currentScreen: ScreenNumber;
   onScreenChange: (screen: ScreenNumber) => void;
-  initialOpenPanel?: string | null;
-  onPanelOpened?: () => void;
+  // Hitman claims props (managed by parent)
+  pendingClaimsCount?: number;
+  onOpenClaimsDrawer?: () => void;
 }
 
 export function FullAdminScreen({
@@ -161,8 +158,8 @@ export function FullAdminScreen({
   onDataChange,
   currentScreen,
   onScreenChange,
-  initialOpenPanel,
-  onPanelOpened,
+  pendingClaimsCount: pendingClaimsCountProp = 0,
+  onOpenClaimsDrawer,
 }: FullAdminScreenProps) {
   // Authentication is now handled by middleware - if we reach this page, user is an admin
   const { data: session } = useSession();
@@ -182,20 +179,6 @@ export function FullAdminScreen({
 
   // Action History state
   const [showActionHistory, setShowActionHistory] = useState(false);
-
-  // Hitman Claims and Reports state
-  const [showHitmanClaims, setShowHitmanClaims] = useState(false);
-  const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
-  const [pendingReportsCount, setPendingReportsCount] = useState(0);
-
-  // Auto-open hitman claims drawer when navigated via deep-link (e.g., from push notification)
-  useEffect(() => {
-    if (initialOpenPanel === "hitman-claims" && currentDraftProp) {
-      setShowHitmanClaims(true);
-      // Clear the URL parameter to prevent re-opening on refresh
-      onPanelOpened?.();
-    }
-  }, [initialOpenPanel, currentDraftProp, onPanelOpened]);
 
   // Poll for tournament data every 30 seconds when there are in_progress tournaments
   // (Timer state in DB only updates every ~30 seconds from Socket.IO server)
@@ -253,37 +236,6 @@ export function FullAdminScreen({
     }, 500);
   };
 
-  // Fetch pending claims and reports count periodically
-  useEffect(() => {
-    if (!currentDraft) return;
-
-    const fetchPendingCounts = async () => {
-      try {
-        // Fetch claims and reports in parallel
-        const [claimsResponse, reportsResponse] = await Promise.all([
-          fetch(`/api/tournament-drafts/${currentDraft.id}/hitman-claims`),
-          fetch(`/api/tournament-drafts/${currentDraft.id}/knockout-reports`),
-        ]);
-
-        if (claimsResponse.ok) {
-          const claimsData = await claimsResponse.json();
-          setPendingClaimsCount(claimsData.claims?.length || 0);
-        }
-
-        if (reportsResponse.ok) {
-          const reportsData = await reportsResponse.json();
-          setPendingReportsCount(reportsData.reports?.length || 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch pending counts:", err);
-      }
-    };
-
-    fetchPendingCounts();
-    const interval = setInterval(fetchPendingCounts, 15000); // Refresh every 15 seconds
-
-    return () => clearInterval(interval);
-  }, [currentDraft]);
   // Refs for functions that are defined later but needed in early hooks
   const clearHitmanSearchValuesRef = useRef<() => void>(() => {});
 
@@ -2850,8 +2802,8 @@ export function FullAdminScreen({
                       isIntegrating={isIntegrating}
                       onIntegrate={integrateToMainSystem}
                       onAutoCalculateKOPositions={autoCalculateKOPositions}
-                      pendingClaimsCount={pendingClaimsCount}
-                      onOpenClaimsDrawer={() => setShowHitmanClaims(true)}
+                      pendingClaimsCount={pendingClaimsCountProp}
+                      onOpenClaimsDrawer={onOpenClaimsDrawer}
                     />
                   )}
               </>
@@ -3541,26 +3493,6 @@ export function FullAdminScreen({
         isUndoing={isUndoing}
         gameName={currentDraft?.title || currentDraft?.venue || "Tournament"}
       />
-
-      {/* Hitman Claims & Reports Floating Button */}
-      <HitmanClaimsButton
-        pendingCount={pendingClaimsCount + pendingReportsCount}
-        onClick={() => setShowHitmanClaims(true)}
-      />
-
-      {/* Hitman Claims Drawer */}
-      {currentDraft && (
-        <HitmanClaimsDrawer
-          isOpen={showHitmanClaims}
-          onClose={() => setShowHitmanClaims(false)}
-          tournamentId={currentDraft.id}
-          onClaimsUpdated={() => {
-            // Refresh claims count and player data
-            setPendingClaimsCount((prev) => Math.max(0, prev - 1));
-            loadPlayersForTournament();
-          }}
-        />
-      )}
     </div>
   );
 }
