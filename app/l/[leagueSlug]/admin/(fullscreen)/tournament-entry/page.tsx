@@ -162,10 +162,11 @@ export default function TournamentEntryPage() {
     }
   }, [initialOpenPanel, currentDraft, router]);
 
-  // Fetch pending claims and reports count periodically
+  // Fetch initial pending claims and reports count, then listen for real-time updates
   useEffect(() => {
     if (!currentDraft) return;
 
+    // Fetch initial counts once
     const fetchPendingCounts = async () => {
       try {
         const [claimsResponse, reportsResponse] = await Promise.all([
@@ -188,9 +189,34 @@ export default function TournamentEntryPage() {
     };
 
     fetchPendingCounts();
-    const interval = setInterval(fetchPendingCounts, 15000); // Refresh every 15 seconds
 
-    return () => clearInterval(interval);
+    // Listen for real-time claim updates via Socket.IO
+    const handleClaimUpdate = (data: { claim_status: 'pending' | 'approved' | 'rejected' }) => {
+      if (data.claim_status === 'pending') {
+        setPendingClaimsCount((prev) => prev + 1);
+      } else {
+        // approved or rejected = claim was processed, decrement
+        setPendingClaimsCount((prev) => Math.max(0, prev - 1));
+      }
+    };
+
+    // Listen for real-time knockout report updates via Socket.IO
+    const handleReportUpdate = (data: { report_status: 'pending' | 'approved' | 'rejected' }) => {
+      if (data.report_status === 'pending') {
+        setPendingReportsCount((prev) => prev + 1);
+      } else {
+        // approved or rejected = report was processed, decrement
+        setPendingReportsCount((prev) => Math.max(0, prev - 1));
+      }
+    };
+
+    socket.on('hitman:claim_update', handleClaimUpdate);
+    socket.on('knockout:report_update', handleReportUpdate);
+
+    return () => {
+      socket.off('hitman:claim_update', handleClaimUpdate);
+      socket.off('knockout:report_update', handleReportUpdate);
+    };
   }, [currentDraft]);
 
   // Callback to refresh player data after claim/report is processed

@@ -169,6 +169,21 @@ export interface HitmanClaimUpdatePayload {
 }
 
 /**
+ * Knockout report update payload for real-time report updates
+ * Reports are for third-party knockout notifications (player A reports player B KO'd player C)
+ */
+export interface KnockoutReportUpdatePayload {
+  tournament_id: number;
+  victim_player_id: number;
+  report_status: 'pending' | 'approved' | 'rejected';
+  hitman_uid: string | null;
+  hitman_name: string | null;
+  reporter_uid: string | null;
+  reporter_name?: string | null;
+  reviewed_by?: string;
+}
+
+/**
  * Feed item payload for real-time feed updates
  */
 export interface FeedItemPayload {
@@ -235,6 +250,9 @@ export interface ServerToClientEvents {
 
   // Hitman claim events
   'hitman:claim_update': (payload: HitmanClaimUpdatePayload) => void;
+
+  // Knockout report events
+  'knockout:report_update': (payload: KnockoutReportUpdatePayload) => void;
 
   // Timer events
   'timer:updated': (payload: TimerUpdatePayload) => void;
