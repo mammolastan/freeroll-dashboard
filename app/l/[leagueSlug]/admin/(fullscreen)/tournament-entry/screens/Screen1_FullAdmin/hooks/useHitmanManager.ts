@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import React from "react";
 
 interface Player {
@@ -19,7 +19,6 @@ interface UseHitmanManagerOptions {
   players: Player[];
   displayPlayers: Player[];
   updatePlayer: (playerId: number, field: string, value: string | number | null) => Promise<void>;
-  temporarilyDisableAutoRefresh: () => void;
 }
 
 interface UseHitmanManagerReturn {
@@ -47,7 +46,6 @@ export function useHitmanManager({
   players,
   displayPlayers,
   updatePlayer,
-  temporarilyDisableAutoRefresh,
 }: UseHitmanManagerOptions): UseHitmanManagerReturn {
   const [hitmanSearchValues, setHitmanSearchValues] = useState<{ [key: number]: string }>({});
   const [hitmanDropdownVisible, setHitmanDropdownVisible] = useState<{ [key: number]: boolean }>({});
@@ -114,9 +112,6 @@ export function useHitmanManager({
           return;
         }
 
-        // Disable auto-refresh temporarily
-        temporarilyDisableAutoRefresh();
-
         // Clear ALL related UI state for this player IMMEDIATELY
         setHitmanSearchValues((prev) => ({ ...prev, [playerId]: "" }));
         setHitmanDropdownVisible((prev) => ({ ...prev, [playerId]: false }));
@@ -132,7 +127,7 @@ export function useHitmanManager({
         );
       }
     },
-    [players, updatePlayer, temporarilyDisableAutoRefresh]
+    [players, updatePlayer]
   );
 
   // Handle crosshair click - toggle knockout state

@@ -49,7 +49,6 @@ import { BlindScheduleEditModal } from "./BlindScheduleEditModal";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
 import MoveKnockoutModal from "../../components/MoveKnockoutModal";
-import { useAutoRefresh } from "./hooks/useAutoRefresh";
 import { useOptimisticUpdates } from "./hooks/useOptimisticUpdates";
 import { useSortedPlayerList } from "./hooks/useSortedPlayerList";
 import { usePeriodManager } from "./hooks/usePeriodManager";
@@ -334,17 +333,6 @@ export function FullAdminScreen({
 
   const loadPlayersRef = useRef<(id: number) => Promise<void>>(async () => {});
   const onDataChangeRef = useRef<() => void>(() => {});
-
-  // Auto-refresh hook for smart polling
-  const { temporarilyDisableAutoRefresh } = useAutoRefresh({
-    enabled: Boolean(currentDraft && currentDraft.status === "in_progress"),
-    intervalMs: 15000,
-    onRefresh: useCallback(async () => {
-      if (currentDraft) {
-        await loadPlayersRef.current(currentDraft.id);
-      }
-    }, [currentDraft]),
-  });
 
   // Move knockout modal state
   const [moveKnockoutModal, setMoveKnockoutModal] = useState<{
@@ -1026,7 +1014,6 @@ export function FullAdminScreen({
 
             // Success - socket will broadcast the update to other screens
             await response.json();
-            temporarilyDisableAutoRefresh();
           } catch (error) {
             console.error("Knockout save error:", error);
             alert(
@@ -1109,7 +1096,6 @@ export function FullAdminScreen({
 
             // ✅ SUCCESS PATH
             await response.json();
-            temporarilyDisableAutoRefresh();
 
             // Don't call onDataChange here - Socket.IO will handle real-time updates
             // Calling it causes a flicker due to race condition between HTTP fetch and socket update
@@ -1154,7 +1140,6 @@ export function FullAdminScreen({
     players,
     displayPlayers,
     updatePlayer,
-    temporarilyDisableAutoRefresh,
   });
 
   // Update ref for undo functionality
