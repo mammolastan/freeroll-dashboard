@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Users, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 interface OtherActiveGamesModuleProps {
   game: {
@@ -11,6 +11,7 @@ interface OtherActiveGamesModuleProps {
     remainingCount: number;
     eliminatedCount: number;
     remainingPlayers: string[];
+    currentBlinds: { smallBlind: number; bigBlind: number } | null;
   };
 }
 
@@ -70,21 +71,20 @@ export function OtherActiveGamesModule({ game }: OtherActiveGamesModuleProps) {
         <span className="featured-module-header-title">Also Playing</span>
       </div>
 
-      {/* Game Title */}
-      <div className="featured-module-game-name">
-        {displayName}
-      </div>
-
-      {/* Stats Row */}
-      <div className="featured-module-stats">
-        <div className="featured-module-stat featured-module-stat--remaining">
-          <Users className="featured-module-stat-icon" />
-          <span className="featured-module-stat-value">{game.remainingCount}</span>
-          <span className="featured-module-stat-label">remaining</span>
+      {/* Game Title with Stats */}
+      <div className="featured-module-game-header">
+        <div className="featured-module-game-name">
+          {displayName}
         </div>
-        <div className="featured-module-stat featured-module-stat--eliminated">
-          <span className="featured-module-stat-value">{game.eliminatedCount}</span>
-          <span className="featured-module-stat-label">eliminated</span>
+        <div className="featured-module-game-stats">
+          <span className="featured-module-game-stat">
+            {game.remainingCount} remaining
+          </span>
+          {game.currentBlinds && (
+            <span className="featured-module-game-blinds">
+              {game.currentBlinds.smallBlind}/{game.currentBlinds.bigBlind}
+            </span>
+          )}
         </div>
       </div>
 

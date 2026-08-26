@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLeagueIdBySlug } from "@/lib/league-utils";
+import { resolveBlindSchedule, BlindLevel } from "@/lib/blindLevels";
 
 interface RouteParams {
   params: Promise<{ leagueSlug: string }>;
@@ -13,6 +14,7 @@ interface ActiveGameData {
   remainingCount: number;
   eliminatedCount: number;
   remainingPlayers: string[];
+  currentBlinds: { smallBlind: number; bigBlind: number } | null;
 }
 
 /**
@@ -48,6 +50,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         id: true,
         venue: true,
         title: true,
+        blind_schedule: true,
+        custom_blind_levels: true,
+        timer_current_level: true,
         players: {
           select: {
             player_name: true,
@@ -59,26 +64,62 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     });
 
     // Transform to the format needed by the module
-    const games: ActiveGameData[] = activeGames.map((game) => {
-      // ko_position is set when a player is knocked out
-      // null = still in the game, non-null = eliminated
-      const remainingPlayers = game.players
-        .filter((p) => p.ko_position === null)
-        .map((p) => p.player_nickname || p.player_name);
+    const games: ActiveGameData[] = await Promise.all(
+      activeGames.map(async (game) => {
+        // ko_position is set when a player is knocked out
+        // null = still in the game, non-null = eliminated
+        const remainingPlayers = game.players
+          .filter((p) => p.ko_position === null)
+          .map((p) => p.player_nickname || p.player_name);
 
-      const eliminatedCount = game.players.filter(
-        (p) => p.ko_position !== null
-      ).length;
+        const eliminatedCount = game.players.filter(
+          (p) => p.ko_position !== null
+        ).length;
 
-      return {
-        id: game.id,
-        venueName: game.venue,
-        title: game.title,
-        remainingCount: remainingPlayers.length,
-        eliminatedCount,
-        remainingPlayers,
-      };
-    });
+        // Get current blind levels
+        let currentBlinds: { smallBlind: number; bigBlind: number } | null =
+          null;
+        try {
+          let blindLevels: BlindLevel[] = [];
+
+          // Check for custom blind levels first
+          if (game.custom_blind_levels) {
+            blindLevels = JSON.parse(game.custom_blind_levels) as BlindLevel[];
+          } else if (game.blind_schedule) {
+            blindLevels = await resolveBlindSchedule(
+              game.blind_schedule,
+              leagueId
+            );
+          }
+
+          // Get current level (1-indexed)
+          const currentLevelIndex = (game.timer_current_level ?? 1) - 1;
+          const currentLevel = blindLevels[currentLevelIndex];
+
+          if (currentLevel && !currentLevel.isbreak) {
+            currentBlinds = {
+              smallBlind: currentLevel.smallBlind,
+              bigBlind: currentLevel.bigBlind,
+            };
+          }
+        } catch (err) {
+          console.error(
+            `Error resolving blind levels for game ${game.id}:`,
+            err
+          );
+        }
+
+        return {
+          id: game.id,
+          venueName: game.venue,
+          title: game.title,
+          remainingCount: remainingPlayers.length,
+          eliminatedCount,
+          remainingPlayers,
+          currentBlinds,
+        };
+      })
+    );
 
     return NextResponse.json({ games });
   } catch (error) {

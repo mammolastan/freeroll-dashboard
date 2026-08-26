@@ -20,6 +20,7 @@ interface ActiveGame {
   remainingCount: number;
   eliminatedCount: number;
   remainingPlayers: string[];
+  currentBlinds: { smallBlind: number; bigBlind: number } | null;
 }
 
 interface RecentBadge {

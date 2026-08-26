@@ -1089,51 +1089,40 @@
   font-weight: 600;
 }
 
+.featured-module-game-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(0.25rem, 1vh, 0.75rem) 0;
+  flex-shrink: 0;
+}
+
 .featured-module-game-name {
   color: #22d3ee;
   font-size: clamp(1rem, 2vh, 1.5rem);
   font-weight: 700;
   text-align: center;
-  padding: clamp(0.25rem, 1vh, 0.75rem) 0;
   text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
-  flex-shrink: 0;
 }
 
-.featured-module-stats {
-  display: flex;
-  justify-content: center;
-  gap: clamp(0.75rem, 2vh, 1.5rem);
-  padding: clamp(0.25rem, 0.75vh, 0.5rem) 0;
-  flex-shrink: 0;
-}
-
-.featured-module-stat {
+.featured-module-game-stats {
   display: flex;
   align-items: center;
-  gap: clamp(0.125rem, 0.5vh, 0.375rem);
+  justify-content: center;
+  gap: clamp(0.75rem, 1.5vh, 1.25rem);
+  padding-top: clamp(0.125rem, 0.5vh, 0.375rem);
 }
 
-.featured-module-stat-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.featured-module-stat--remaining {
+.featured-module-game-stat {
   color: #4ade80;
+  font-size: clamp(1.125rem, 2vh, 1.5rem);
+  font-weight: 600;
 }
 
-.featured-module-stat--eliminated {
-  color: #f87171;
-}
-
-.featured-module-stat-value {
-  font-size: clamp(1.25rem, 2.5vh, 2rem);
+.featured-module-game-blinds {
+  color: #fbbf24;
+  font-size: clamp(1.25rem, 2.25vh, 1.75rem);
   font-weight: 700;
-}
-
-.featured-module-stat-label {
-  font-size: clamp(0.625rem, 1vh, 0.75rem);
-  opacity: 0.8;
 }
 
 .featured-module-players-header {
