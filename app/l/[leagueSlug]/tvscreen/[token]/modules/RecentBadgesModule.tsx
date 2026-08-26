@@ -99,37 +99,58 @@ export function RecentBadgesModule({ badges, displayCount }: RecentBadgesModuleP
               animationDelay: `${index * 0.1}s`,
             }}
           >
-            {/* Badge Image */}
-            <div
-              className="recent-badge-image-wrapper"
-              style={{
-                borderColor: getRarityColor(badge.badgeRarity),
-                boxShadow: `0 0 12px ${getRarityColor(badge.badgeRarity)}40`,
-              }}
-            >
-              <img
-                src={badge.badgeImageUrl}
-                alt={badge.badgeName}
-                className="recent-badge-image"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/icons/badge-96.png";
-                }}
-              />
+            {/* Player Photo */}
+            <div className="recent-badge-player-photo-wrapper">
+              <span className="recent-badge-player-initial">
+                {badge.playerName.charAt(0).toUpperCase()}
+              </span>
+              {badge.playerPhotoUrl && (
+                <img
+                  src={badge.playerPhotoUrl}
+                  alt={badge.playerName}
+                  className="recent-badge-player-photo"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              )}
             </div>
 
-            {/* Badge Info */}
-            <div className="recent-badge-info">
+            {/* Player Info */}
+            <div className="recent-badge-player-info">
               <div className="recent-badge-player-name">
                 {badge.playerName}
               </div>
-              <div
-                className="recent-badge-name"
-                style={{ color: getRarityColor(badge.badgeRarity) }}
-              >
-                {badge.badgeName}
+            </div>
+
+            {/* Badge Info + Icon */}
+            <div className="recent-badge-right">
+              <div className="recent-badge-text">
+                <div
+                  className="recent-badge-name"
+                  style={{ color: getRarityColor(badge.badgeRarity) }}
+                >
+                  {badge.badgeName}
+                </div>
+                <div className="recent-badge-time">
+                  {formatTimeAgo(badge.earnedAt)}
+                </div>
               </div>
-              <div className="recent-badge-time">
-                {formatTimeAgo(badge.earnedAt)}
+              <div
+                className="recent-badge-image-wrapper"
+                style={{
+                  borderColor: getRarityColor(badge.badgeRarity),
+                  boxShadow: `0 0 12px ${getRarityColor(badge.badgeRarity)}40`,
+                }}
+              >
+                <img
+                  src={badge.badgeImageUrl}
+                  alt={badge.badgeName}
+                  className="recent-badge-image"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/icons/badge-96.png";
+                  }}
+                />
               </div>
             </div>
           </div>

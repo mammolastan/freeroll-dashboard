@@ -174,9 +174,16 @@ export function FeaturedSlideshow({
   }, [slides]);
 
   // Use the slideshow hook
-  const { currentIndex, progress, isRotating } = useSlideshow(slideIds, rotationSeconds, {
+  const slideshow = useSlideshow(slideIds, rotationSeconds, {
     paused: slides.length <= 1,
   });
+  const { currentIndex, progress, isRotating } = slideshow;
+
+  // Debug: expose slideshow controls on window for devtools
+  useEffect(() => {
+    (window as any).__featuredSlideshow = slideshow;
+    return () => { delete (window as any).__featuredSlideshow; };
+  }, [slideshow]);
 
   // Get current slide
   const currentSlide = slides[currentIndex];
