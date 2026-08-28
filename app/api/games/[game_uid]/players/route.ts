@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SCORING_SYSTEM, ScoringSystemConfig, LeagueConfig } from "@/types/league-config";
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,27 @@ export async function GET(
     });
 
     if (!game) {
-      return NextResponse.json({ players: [] });
+      return NextResponse.json({ players: [], scoringSystem: DEFAULT_SCORING_SYSTEM });
+    }
+
+    // Get league scoring config
+    const league = await prisma.leagues.findUnique({
+      where: { id: game.league_id },
+      select: { league_settings: true },
+    });
+
+    let scoringSystem: ScoringSystemConfig = DEFAULT_SCORING_SYSTEM;
+    if (league?.league_settings) {
+      try {
+        const settings: LeagueConfig = typeof league.league_settings === 'string'
+          ? JSON.parse(league.league_settings)
+          : league.league_settings as LeagueConfig;
+        if (settings.scoringSystem) {
+          scoringSystem = settings.scoringSystem;
+        }
+      } catch {
+        // Use default if parsing fails
+      }
     }
 
     // Get all appearances (players) for this game
@@ -47,7 +68,7 @@ export async function GET(
       playerScore: a.player_score,
     }));
 
-    return NextResponse.json({ players });
+    return NextResponse.json({ players, scoringSystem, bonusPoints });
   } catch (error) {
     console.error("Error fetching players:", error);
     return NextResponse.json(

@@ -12,7 +12,25 @@ import {
   X,
   Check,
   Loader2,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Venue {
   id: number;
@@ -36,6 +54,33 @@ interface Game {
   venue: Venue;
   periods: Period[];
   playerCount: number;
+}
+
+interface Player {
+  id: number;
+  name: string;
+  uid: string;
+  placement: number | null;
+  startPoints: number;
+  hitman: string | null;
+  totalPoints: number;
+  playerScore: number | null;
+}
+
+interface ScoringRule {
+  placement: number;
+  points: number;
+}
+
+interface ScoringSystem {
+  rules: ScoringRule[];
+  defaultPoints: number;
+}
+
+// Helper function to calculate points for a given placement
+function getPointsForPlacement(placement: number, scoringSystem: ScoringSystem): number {
+  const rule = scoringSystem.rules.find((r) => r.placement === placement);
+  return rule?.points ?? scoringSystem.defaultPoints;
 }
 
 interface TournamentsSectionProps {
@@ -316,6 +361,7 @@ function GameEditor({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [showPlayersModal, setShowPlayersModal] = useState(false);
 
   const hasChanges =
     venueId !== game.venue.id ||
@@ -488,6 +534,13 @@ function GameEditor({
           )}
           Save Changes
         </button>
+        <button
+          onClick={() => setShowPlayersModal(true)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Users className="w-4 h-4" />
+          Players
+        </button>
         {saveMessage && (
           <span
             className={`text-sm ${
@@ -505,6 +558,283 @@ function GameEditor({
           Game UID: {game.uid} | Players: {game.playerCount}
           {game.director && ` | Director: ${game.director}`}
         </div>
+      </div>
+
+      {/* Players Modal */}
+      {showPlayersModal && (
+        <PlayersModal
+          gameUid={game.uid}
+          onClose={() => setShowPlayersModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// PlayersModal component for editing player placements
+interface PlayersModalProps {
+  gameUid: string;
+  onClose: () => void;
+}
+
+const DEFAULT_SCORING_SYSTEM: ScoringSystem = {
+  rules: [
+    { placement: 1, points: 10 },
+    { placement: 2, points: 7 },
+    { placement: 3, points: 6 },
+    { placement: 4, points: 5 },
+    { placement: 5, points: 4 },
+    { placement: 6, points: 3 },
+    { placement: 7, points: 2 },
+    { placement: 8, points: 1 },
+  ],
+  defaultPoints: 0,
+};
+
+function PlayersModal({ gameUid, onClose }: PlayersModalProps) {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [originalPlayers, setOriginalPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [scoringSystem, setScoringSystem] = useState<ScoringSystem>(DEFAULT_SCORING_SYSTEM);
+  const [bonusPoints, setBonusPoints] = useState(0);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Fetch players when modal opens
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const res = await fetch(`/api/games/${gameUid}/players`);
+        if (!res.ok) throw new Error("Failed to fetch players");
+        const data = await res.json();
+        // Store scoring system and bonus points
+        if (data.scoringSystem) {
+          setScoringSystem(data.scoringSystem);
+        }
+        if (data.bonusPoints !== undefined) {
+          setBonusPoints(data.bonusPoints);
+        }
+        // Sort by placement
+        const sorted = [...data.players].sort(
+          (a: Player, b: Player) => (a.placement || 999) - (b.placement || 999)
+        );
+        setPlayers(sorted);
+        setOriginalPlayers(sorted);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load players");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlayers();
+  }, [gameUid]);
+
+  const hasChanges =
+    JSON.stringify(players.map((p) => p.id)) !==
+    JSON.stringify(originalPlayers.map((p) => p.id));
+
+  // Recalculate points for all players based on their current position
+  const recalculatePoints = (playerList: Player[]): Player[] => {
+    return playerList.map((player, index) => {
+      const placement = index + 1;
+      const placementPoints = getPointsForPlacement(placement, scoringSystem);
+      return {
+        ...player,
+        totalPoints: placementPoints + bonusPoints,
+      };
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setPlayers((items) => {
+        const oldIndex = items.findIndex((p) => p.id === active.id);
+        const newIndex = items.findIndex((p) => p.id === over.id);
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        // Recalculate points after reordering
+        return recalculatePoints(reordered);
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/games/${gameUid}/placements`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerOrder: players.map((p) => ({ playerId: p.id })),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      const data = await res.json();
+      // Update with server response (has recalculated points)
+      const sorted = [...data.players].sort(
+        (a: Player, b: Player) => (a.placement || 999) - (b.placement || 999)
+      );
+      setPlayers(sorted);
+      setOriginalPlayers(sorted);
+      setSaveMessage("Saved!");
+      setTimeout(() => setSaveMessage(null), 2000);
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 border border-white/10 rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+          <h3 className="text-white font-medium">Edit Player Placements</h3>
+          <button
+            onClick={onClose}
+            className="p-1 text-white/40 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="text-red-400 text-center py-8">{error}</div>
+          ) : players.length === 0 ? (
+            <div className="text-white/40 text-center py-8">
+              No players found
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={players.map((p) => p.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1">
+                  {players.map((player, index) => (
+                    <SortablePlayer
+                      key={player.id}
+                      player={player}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between">
+          <div className="text-white/40 text-xs">
+            Drag to reorder placements
+          </div>
+          <div className="flex items-center gap-3">
+            {saveMessage && (
+              <span
+                className={`text-sm ${
+                  saveMessage === "Saved!" ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                {saveMessage}
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-white/60 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges || saving}
+              className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-white/10 disabled:text-white/30 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sortable player row component
+interface SortablePlayerProps {
+  player: Player;
+  index: number;
+}
+
+function SortablePlayer({ player, index }: SortablePlayerProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: player.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const placement = index + 1;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
+        isDragging ? "bg-white/20 opacity-80" : "bg-white/5 hover:bg-white/10"
+      }`}
+    >
+      <button
+        className="p-1 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <div className="w-8 text-center">
+        <span className="text-white/60 font-mono text-sm">{placement}</span>
+      </div>
+      <div className="flex-1">
+        <span className="text-white">{player.name}</span>
+      </div>
+      <div className="text-right">
+        <span className="text-cyan-400 text-sm">{player.totalPoints} pts</span>
       </div>
     </div>
   );
