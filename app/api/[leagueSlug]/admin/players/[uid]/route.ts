@@ -69,7 +69,7 @@ export async function GET(
       p.created,
       p.modified,
       COUNT(DISTINCT a.game_id) as game_count,
-      COALESCE(SUM(a.points), 0) as total_points,
+      COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as total_points,
       (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = p.id) as knockout_count,
       MAX(g.date) as last_game_date,
       MIN(g.date) as first_game_date,

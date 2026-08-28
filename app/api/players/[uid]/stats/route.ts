@@ -94,7 +94,7 @@ export async function GET(
     }[] = await prisma.$queryRaw`
       SELECT
         COUNT(CASE WHEN v.name != 'bonus' THEN 1 END) as gamesPlayed,
-        COALESCE(SUM(a.points), 0) as totalPoints,
+        COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as totalPoints,
         COALESCE((
           SELECT COUNT(*) FROM knockouts k
           JOIN games kg ON kg.id = k.game_id
@@ -179,7 +179,7 @@ export async function GET(
     >`
         SELECT
           v.name as venue,
-          SUM(a.points) as points
+          SUM(a.points + COALESCE(g.bonus_points, 0)) as points
         FROM appearances a
         JOIN games g ON g.id = a.game_id
         JOIN venues v ON v.id = g.venue_id
@@ -212,7 +212,7 @@ export async function GET(
         g.date,
         v.name as venue,
         a.placement,
-        a.points,
+        (a.points + COALESCE(g.bonus_points, 0)) as points,
         (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = a.player_id AND k.game_id = g.id) as knockouts,
         g.uid as game_uid
       FROM appearances a
@@ -232,7 +232,7 @@ export async function GET(
       date: game.date,
       venue: game.venue,
       placement: game.placement,
-      points: game.points,
+      points: Number(game.points),
       knockouts: Number(game.knockouts),
       game_uid: game.game_uid,
     }));

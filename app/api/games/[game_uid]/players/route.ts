@@ -34,14 +34,16 @@ export async function GET(
     });
 
     // Transform to match the expected response format
+    // Total points = placement points (in appearances) + bonus points (in games)
+    const bonusPoints = game.bonus_points || 0;
     const players = appearances.map((a) => ({
       id: a.player_id,
       name: `${a.players_v2.first_name || ''} ${a.players_v2.last_name || ''}`.trim(),
       uid: a.players_v2.uid,
       placement: a.placement,
-      startPoints: 0, // Not stored separately in new schema
+      startPoints: bonusPoints, // Bonus points from game
       hitman: null, // Would need separate query to knockouts table
-      totalPoints: a.points,
+      totalPoints: (a.points || 0) + bonusPoints,
       playerScore: a.player_score,
     }));
 

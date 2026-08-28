@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         p.nickname,
         p.photo_url,
         COUNT(DISTINCT CASE WHEN v.name != 'bonus' THEN g.id END) as gamesPlayed,
-        CAST(SUM(a.points) AS SIGNED) as totalPoints,
+        CAST(SUM(a.points + COALESCE(g.bonus_points, 0)) AS SIGNED) as totalPoints,
         CAST((
           SELECT COUNT(*) FROM knockouts k
           JOIN game_periods kgp ON kgp.game_id = k.game_id

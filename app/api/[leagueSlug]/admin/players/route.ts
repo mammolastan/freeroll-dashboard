@@ -122,7 +122,7 @@ export async function GET(
         p.created,
         p.modified,
         COUNT(DISTINCT a.game_id) as game_count,
-        COALESCE(SUM(a.points), 0) as total_points,
+        COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as total_points,
         MAX(g.date) as last_game_date
       FROM players_v2 p
       LEFT JOIN league_roles lr ON lr.league_id = p.league_id AND lr.player_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci
@@ -179,7 +179,7 @@ export async function GET(
         p.created,
         p.modified,
         COUNT(DISTINCT a.game_id) as game_count,
-        COALESCE(SUM(a.points), 0) as total_points,
+        COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as total_points,
         MAX(g.date) as last_game_date
       FROM players_v2 p
       LEFT JOIN league_roles lr ON lr.league_id = p.league_id AND lr.player_uid COLLATE utf8mb4_unicode_ci = p.uid COLLATE utf8mb4_unicode_ci

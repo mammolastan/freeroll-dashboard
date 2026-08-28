@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
           p.favorite_hand,
           p.favorite_pro,
           COUNT(DISTINCT a.game_id) as TotalGames,
-          COALESCE(SUM(a.points), 0) as TotalPoints,
+          COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as TotalPoints,
           MAX(g.date) as LastGameDate
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
             ELSE 0
           END,
           MAX(g.date) DESC,
-          SUM(a.points) DESC,
+          SUM(a.points + COALESCE(g.bonus_points, 0)) DESC,
           p.first_name ASC
         LIMIT 10
       `;
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
           p.favorite_pro,
           p.league_id,
           COUNT(DISTINCT a.game_id) as TotalGames,
-          COALESCE(SUM(a.points), 0) as TotalPoints,
+          COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as TotalPoints,
           MAX(g.date) as LastGameDate
         FROM players_v2 p
         LEFT JOIN appearances a ON p.id = a.player_id
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
             ELSE 0
           END,
           MAX(g.date) DESC,
-          SUM(a.points) DESC,
+          SUM(a.points + COALESCE(g.bonus_points, 0)) DESC,
           p.first_name ASC
         LIMIT 10
       `;

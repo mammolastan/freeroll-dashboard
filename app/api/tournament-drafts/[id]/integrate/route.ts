@@ -227,6 +227,7 @@ export async function POST(
             time: gameTime,
             director: draft.director_name,
             tournament_draft_id: draftId,
+            bonus_points: draft.start_points, // Store bonus points at game level
           }
         });
 
@@ -311,20 +312,22 @@ export async function POST(
           }
 
           // Calculate points and score
+          // NOTE: We store only placement points in appearances.points
+          // Bonus points are stored at the game level (games.bonus_points)
+          // Total points = appearances.points + games.bonus_points (calculated at query time)
           const placementPoints = getPointsForPlacement(player.placement!, scoringSystem);
           const playerScore = calculatePlayerScore(
             player.placement!,
             playersWithPlacements.length
           );
-          const totalPoints = draft.start_points + placementPoints;
 
-          // Create appearance record
+          // Create appearance record with placement points only
           await tx.appearances.create({
             data: {
               game_id: game.id,
               player_id: playerId,
               placement: player.placement,
-              points: totalPoints,
+              points: placementPoints, // Placement points only; bonus added at query time
               player_score: playerScore,
             }
           });
@@ -408,15 +411,16 @@ export async function POST(
         // Build detailed player data for audit logging
         const playerDetails = playersWithPlacements.map((p) => {
           const placementPoints = getPointsForPlacement(p.placement!, scoringSystem);
-          const totalPoints = draft.start_points + placementPoints;
+          const totalPoints = draft.start_points + placementPoints; // For display in audit logs
           return {
             playerUid: p.player_uid,
             playerName: p.player_name,
             placement: p.placement,
             knockouts: p.knockouts,
             hitmanName: p.hitman_name,
-            placementPoints,
-            totalPoints,
+            placementPoints,       // Stored in appearances.points
+            bonusPoints: draft.start_points, // Stored in games.bonus_points
+            totalPoints,           // Calculated total for audit display
             isNewPlayer: p.is_new_player,
           };
         });

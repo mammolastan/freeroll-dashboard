@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           SELECT
             CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
             a.placement,
-            a.points as totalPoints,
+            (a.points + COALESCE(g.bonus_points, 0)) as totalPoints,
             (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = p.id AND k.game_id = g.id) as knockouts,
             v.name as venue,
             p.uid,
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         // Get top 3 players
         const topThree = players.slice(0, 3).map((player) => ({
           name: player.name,
-          points: player.totalPoints || 0,
+          points: Number(player.totalPoints) || 0,
           knockouts: Number(player.knockouts) || 0,
           UID: player.uid,
           nickname: player.nickname,

@@ -122,7 +122,7 @@ export async function GET(request: Request) {
           CONCAT(COALESCE(pl.first_name, ''), ' ', COALESCE(pl.last_name, '')) as name,
           pl.uid,
           pl.nickname,
-          SUM(a.points) as totalPoints,
+          SUM(a.points + COALESCE(g.bonus_points, 0)) as totalPoints,
           AVG(a.player_score) as avgScore
         FROM appearances a
         JOIN games g ON g.id = a.game_id
@@ -160,7 +160,7 @@ export async function GET(request: Request) {
             SELECT
               CONCAT(COALESCE(pl.first_name, ''), ' ', COALESCE(pl.last_name, '')) as name,
               pl.uid,
-              SUM(a.points) as totalPoints,
+              SUM(a.points + COALESCE(g.bonus_points, 0)) as totalPoints,
               AVG(a.player_score) as avgScore
             FROM appearances a
             JOIN games g ON g.id = a.game_id

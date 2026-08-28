@@ -63,7 +63,7 @@ export async function GET(
         p.uid as UID,
         p.nickname,
         COUNT(*) as gamesPlayed,
-        SUM(a.points) as totalPoints,
+        SUM(a.points + COALESCE(g.bonus_points, 0)) as totalPoints,
         (SELECT COUNT(*) FROM knockouts k
          JOIN games kg ON kg.id = k.game_id
          JOIN venues kv ON kv.id = kg.venue_id
@@ -88,7 +88,7 @@ export async function GET(
       SELECT
         COUNT(DISTINCT g.id) as totalGames,
         COUNT(DISTINCT a.player_id) as uniquePlayers,
-        AVG(a.points) as avgPoints,
+        AVG(a.points + COALESCE(g.bonus_points, 0)) as avgPoints,
         (SELECT COUNT(*) FROM knockouts k
          JOIN games kg ON kg.id = k.game_id
          JOIN venues kv ON kv.id = kg.venue_id

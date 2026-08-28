@@ -70,7 +70,7 @@ export async function GET(request: Request) {
           SELECT
             CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, '')) as name,
             p.uid,
-            SUM(a.points) as totalPoints,
+            SUM(a.points + COALESCE(g.bonus_points, 0)) as totalPoints,
             (SELECT COUNT(*) FROM knockouts k
              JOIN games kg ON kg.id = k.game_id
              JOIN venues kv ON kv.id = kg.venue_id

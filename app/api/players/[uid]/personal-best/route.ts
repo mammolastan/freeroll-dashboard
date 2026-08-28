@@ -30,7 +30,7 @@ export async function GET(
         QUARTER(g.date) as quarter,
         YEAR(g.date) as year,
         COUNT(*) as gamesPlayed,
-        COALESCE(SUM(a.points), 0) as totalPoints,
+        COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as totalPoints,
         COALESCE(SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
         COALESCE(SUM(CASE WHEN a.placement = 1 THEN 1 ELSE 0 END), 0) as wins,
         COALESCE(AVG(a.player_score), 0) as avgScore
@@ -73,7 +73,7 @@ export async function GET(
         >`
           SELECT
             p.uid,
-            COALESCE(SUM(a.points), 0) as totalPoints,
+            COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as totalPoints,
             COALESCE(AVG(a.player_score), 0) as avgScore
           FROM appearances a
           JOIN games g ON g.id = a.game_id
