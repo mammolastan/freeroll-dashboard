@@ -25,7 +25,7 @@ type PlayerRow = {
   created: Date;
   modified: Date;
   game_count: bigint;
-  total_points: number | null;
+  total_points: bigint;
   last_game_date: Date | null;
 };
 

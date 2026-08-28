@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
           Array<{
             name: string;
             placement: number;
-            totalPoints: number;
+            totalPoints: bigint;
             knockouts: bigint;
             venue: string;
             uid: string;

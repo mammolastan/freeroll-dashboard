@@ -35,7 +35,7 @@ export async function GET(
         UID: string;
         Placement: number;
         Knockouts: bigint;
-        Total_Points: number;
+        Total_Points: bigint;
         Player_Score: number;
         Venue: string;
         nickname: string | null;
@@ -88,7 +88,7 @@ export async function GET(
       0
     );
     const totalPoints = players.reduce(
-      (sum, player) => sum + (player.Total_Points || 0),
+      (sum, player) => sum + Number(player.Total_Points || 0),
       0
     );
     const averagePoints = totalPoints / totalPlayers;
