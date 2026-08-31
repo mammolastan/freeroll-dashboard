@@ -182,15 +182,22 @@ export function PlayerControlScreen({
     setHighlightedIndex(-1);
   }, [filterText]);
 
-  // Reset hitman search when modal opens/closes
+  // Reset hitman search when modal opens/closes, auto-populate if only one hitman possible
   useEffect(() => {
     if (selectedPlayer) {
-      setHitmanSearchText("");
-      setSelectedHitman("");
+      const possibleHitmen = allRemainingPlayers.filter(p => p.id !== selectedPlayer.id);
+      if (possibleHitmen.length === 1) {
+        // Only one possible hitman - pre-populate
+        setHitmanSearchText(possibleHitmen[0].player_name);
+        setSelectedHitman(possibleHitmen[0].player_name);
+      } else {
+        setHitmanSearchText("");
+        setSelectedHitman("");
+      }
       setHighlightedHitmanIndex(-1);
       hitmanInputRef.current?.focus();
     }
-  }, [selectedPlayer]);
+  }, [selectedPlayer, allRemainingPlayers]);
 
   // Keyboard navigation for player list and modal
   useEffect(() => {
@@ -399,89 +406,175 @@ export function PlayerControlScreen({
 
       {/* Knockout Modal */}
       {selectedPlayer && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border-2 border-cyan-500 rounded-xl p-8 max-w-2xl w-full">
-            <h2 className="text-3xl font-bold text-cyan-300 mb-6 text-center">
-              Record Knockout
-            </h2>
+        <div className="fixed inset-0 bg-black/80 flex items-start lg:items-center justify-center z-50 p-2 lg:p-4 pt-2">
+          <div className="flex flex-col lg:flex-row gap-2 lg:gap-4 max-w-5xl w-full h-[calc(100vh-1rem)] lg:h-auto lg:max-h-[90vh]">
+            {/* Main Modal */}
+            <div className="bg-gray-900 border-2 border-cyan-500 rounded-xl p-4 lg:p-8 lg:flex-1 shrink-0 overflow-y-auto">
+              <h2 className="text-2xl lg:text-3xl font-bold text-cyan-300 mb-4 lg:mb-6 text-center">
+                Record Knockout
+              </h2>
 
-            <div className="mb-6 text-center">
-              <div className="text-2xl font-bold text-white mb-2">
-                {selectedPlayer.player_name}
+              <div className="mb-4 lg:mb-6 text-center">
+                <div className="text-xl lg:text-2xl font-bold text-white mb-2">
+                  {selectedPlayer.player_name}
+                </div>
+                <div className="text-base lg:text-lg text-gray-400">
+                  Placement: #{allRemainingPlayers.length}
+                </div>
               </div>
-              <div className="text-lg text-gray-400">
-                Placement: #{allRemainingPlayers.length}
+
+              <div className="mb-4 lg:mb-6">
+                <label className="block text-gray-300 text-base lg:text-lg mb-2 lg:mb-3">
+                  Select hitman from the list, or type a name:
+                </label>
+                <textarea
+                  ref={hitmanInputRef}
+                  rows={1}
+                  value={hitmanSearchText}
+                  onChange={(e) => {
+                    setHitmanSearchText(e.target.value);
+                    setHighlightedHitmanIndex(-1);
+                  }}
+                  placeholder="Type name or press Enter for 'unknown'..."
+                  className="w-full px-4 py-3 text-lg lg:text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none overflow-hidden"
+                />
+                {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
+                    {filteredHitmanOptions.map((p, index) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setHighlightedHitmanIndex(-1);
+                          handleKnockout(selectedPlayer, p.player_name);
+                        }}
+                        className={`w-full px-4 py-3 text-left text-lg transition-all ${
+                          highlightedHitmanIndex === index
+                            ? "bg-cyan-500/30 text-cyan-300"
+                            : "text-white hover:bg-gray-700"
+                        }`}
+                      >
+                        {p.player_name}
+                        {p.player_nickname && (
+                          <span className="text-cyan-400 ml-2">({p.player_nickname})</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleKnockout(selectedPlayer, hitmanSearchText.trim() || "unknown")}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 lg:px-6 py-3 text-lg lg:text-xl font-bold bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                >
+                  <Target
+                    className="inline mr-2"
+                    size={24}
+                  />
+                  {hitmanSearchText.trim() ? `Knockout by "${hitmanSearchText.trim()}"` : "Knockout (Unknown)"}
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedPlayer(null);
+                    setSelectedHitman("");
+                  }}
+                  disabled={isSubmitting}
+                  className="px-4 lg:px-6 py-3 text-lg lg:text-xl font-bold bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all border-2 border-gray-600"
+                >
+                  <X
+                    className="inline mr-2"
+                    size={24}
+                  />
+                  Cancel
+                </button>
               </div>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-gray-300 text-lg mb-3">
-                Who knocked them out? (Type to search, or press Enter for
-                &quot;unknown&quot;)
-              </label>
-              <textarea
-                ref={hitmanInputRef}
-                rows={1}
-                value={hitmanSearchText}
-                onChange={(e) => {
-                  setHitmanSearchText(e.target.value);
-                  setHighlightedHitmanIndex(-1);
+            {/* Active Players List */}
+            <div className="bg-gray-900 border-2 border-green-500 rounded-xl pl-2 pt-2 pb-2 pr-0 lg:p-3 flex flex-col flex-1 lg:flex-none min-h-0 lg:w-auto lg:max-w-md lg:self-start">
+              <h3 className="text-base lg:text-lg font-bold text-green-400 mb-2 text-center flex items-center justify-center gap-2 pr-2 lg:pr-0">
+                <Target size={18} />
+                Select Hitman
+              </h3>
+              {/* Mobile: vertical scrolling list */}
+              <div
+                className="hitman-list flex-1 overflow-y-auto space-y-1 pr-2 lg:hidden"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#22c55e #1f2937'
                 }}
-                placeholder="Hit Enter for 'unknown'..."
-                className="w-full px-4 py-3 text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none overflow-hidden"
-              />
-              {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
-                <div className="mt-2 max-h-60 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
-                  {filteredHitmanOptions.map((p, index) => (
+              >
+                <style>{`
+                  .hitman-list::-webkit-scrollbar {
+                    width: 6px;
+                  }
+                  .hitman-list::-webkit-scrollbar-track {
+                    background: #1f2937;
+                    border-radius: 3px;
+                  }
+                  .hitman-list::-webkit-scrollbar-thumb {
+                    background: #22c55e;
+                    border-radius: 3px;
+                  }
+                  .hitman-list::-webkit-scrollbar-thumb:hover {
+                    background: #16a34a;
+                  }
+                `}</style>
+                {allRemainingPlayers
+                  .filter((p) => p.id !== selectedPlayer.id)
+                  .sort((a, b) => a.player_name.localeCompare(b.player_name))
+                  .map((player) => (
                     <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setHighlightedHitmanIndex(-1);
-                        handleKnockout(selectedPlayer, p.player_name);
-                      }}
-                      className={`w-full px-4 py-3 text-left text-lg transition-all ${
-                        highlightedHitmanIndex === index
-                          ? "bg-cyan-500/30 text-cyan-300"
-                          : "text-white hover:bg-gray-700"
-                      }`}
+                      key={player.id}
+                      onClick={() => handleKnockout(selectedPlayer, player.player_name)}
+                      disabled={isSubmitting}
+                      className="w-full px-2 py-1.5 bg-gray-800/80 border border-green-500/50 rounded text-left hover:bg-green-500/20 hover:border-green-400 transition-all disabled:opacity-50"
                     >
-                      {p.player_name}
-                      {p.player_nickname && (
-                        <span className="text-cyan-400 ml-2">({p.player_nickname})</span>
+                      <div className="text-sm font-semibold text-white leading-tight">
+                        {player.player_name}
+                      </div>
+                      {player.player_nickname && (
+                        <div className="text-xs text-cyan-400 leading-tight">
+                          &quot;{player.player_nickname}&quot;
+                        </div>
                       )}
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={() => handleKnockout(selectedPlayer, selectedHitman)}
-                disabled={isSubmitting}
-                className="flex-1 px-6 py-3 text-xl font-bold bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
-              >
-                <Target
-                  className="inline mr-2"
-                  size={24}
-                />
-                Confirm Knockout
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedPlayer(null);
-                  setSelectedHitman("");
-                }}
-                disabled={isSubmitting}
-                className="px-6 py-3 text-xl font-bold bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all border-2 border-gray-600"
-              >
-                <X
-                  className="inline mr-2"
-                  size={24}
-                />
-                Cancel
-              </button>
+                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id).length === 0 && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    No other players remaining
+                  </div>
+                )}
+              </div>
+              {/* Desktop: wrapping grid that expands to fit all players */}
+              <div className="hidden lg:flex flex-wrap gap-1.5 content-start">
+                {allRemainingPlayers
+                  .filter((p) => p.id !== selectedPlayer.id)
+                  .sort((a, b) => a.player_name.localeCompare(b.player_name))
+                  .map((player) => (
+                    <button
+                      key={player.id}
+                      onClick={() => handleKnockout(selectedPlayer, player.player_name)}
+                      disabled={isSubmitting}
+                      className="px-2 py-1 bg-gray-800/80 border border-green-500/50 rounded text-left hover:bg-green-500/20 hover:border-green-400 transition-all disabled:opacity-50 shrink-0"
+                    >
+                      <div className="text-sm font-semibold text-white whitespace-nowrap">
+                        {player.player_name}
+                        {player.player_nickname && (
+                          <span className="text-cyan-400 ml-1 text-xs">({player.player_nickname})</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id).length === 0 && (
+                  <div className="text-center py-4 text-gray-500 text-sm w-full">
+                    No other players remaining
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
