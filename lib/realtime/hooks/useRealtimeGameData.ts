@@ -254,6 +254,10 @@ export function useRealtimeGameData(tournamentId: string | number) {
               incoming.game_started !== undefined
                 ? incoming.game_started
                 : prev.tournament.game_started,
+            cutoffMinutes:
+              incoming.cutoffMinutes !== undefined
+                ? incoming.cutoffMinutes
+                : prev.tournament.cutoffMinutes,
           },
         };
       });
