@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Target, Users, Trophy, X, History } from "lucide-react";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
@@ -100,7 +100,11 @@ export function PlayerControlScreen({
   });
 
   // Players are knocked out when they have a ko_position (not null)
-  const allRemainingPlayers = players.filter((p) => p.ko_position === null);
+  // Memoize to prevent useEffect from resetting hitmanSearchText on every keystroke
+  const allRemainingPlayers = useMemo(
+    () => players.filter((p) => p.ko_position === null),
+    [players]
+  );
 
   // Filter remaining players based on filter text
   const remainingPlayers = allRemainingPlayers.filter((p) => {
