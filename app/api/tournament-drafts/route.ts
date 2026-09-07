@@ -120,6 +120,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate tournament_date format (YYYY-MM-DD) and components
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tournament_date)) {
+      return NextResponse.json(
+        { error: "Invalid tournament date format. Must be YYYY-MM-DD." },
+        { status: 400 }
+      );
+    }
+    const [year, month, day] = tournament_date.split('-').map(Number);
+    if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return NextResponse.json(
+        { error: "Invalid tournament date. Year, month, and day must be valid." },
+        { status: 400 }
+      );
+    }
+
     // Serialize period_ids as JSON string if provided
     const periodIdsJson = period_ids && Array.isArray(period_ids) && period_ids.length > 0
       ? JSON.stringify(period_ids)

@@ -109,6 +109,23 @@ export async function PUT(
       cutoff_time,
     } = body;
 
+    // Validate tournament_date is a valid date (YYYY-MM-DD format and not empty)
+    if (!tournament_date || !/^\d{4}-\d{2}-\d{2}$/.test(tournament_date)) {
+      return NextResponse.json(
+        { error: "Invalid tournament date. Must be in YYYY-MM-DD format." },
+        { status: 400 }
+      );
+    }
+
+    // Additional check: ensure date components are valid (not 0000-00-00)
+    const [year, month, day] = tournament_date.split('-').map(Number);
+    if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return NextResponse.json(
+        { error: "Invalid tournament date. Year, month, and day must be valid." },
+        { status: 400 }
+      );
+    }
+
     // Get current state before updating for audit comparison
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
       SELECT tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, allow_chat, allow_self_checkin, cutoff_time

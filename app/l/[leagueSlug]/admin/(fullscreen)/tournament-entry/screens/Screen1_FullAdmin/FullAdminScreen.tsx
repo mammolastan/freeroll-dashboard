@@ -2827,9 +2827,13 @@ export function FullAdminScreen({
               <input
                 type="date"
                 value={formatDateForInput(currentDraft?.tournament_date || "")}
-                onChange={(e) =>
-                  updateTournamentField("tournament_date", e.target.value)
-                }
+                onChange={(e) => {
+                  // Only update if a valid date is selected (not empty/cleared)
+                  const dateValue = e.target.value;
+                  if (dateValue && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                    updateTournamentField("tournament_date", dateValue);
+                  }
+                }}
                 className="w-full px-3 py-2 border rounded text-black"
                 disabled={currentDraft?.status === "integrated"}
               />
