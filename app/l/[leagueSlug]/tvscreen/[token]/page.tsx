@@ -47,6 +47,7 @@ export default function TVScreenPage() {
   const [weather, setWeather] = useState<HourlyWeather[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [tvScreenSettings, setTvScreenSettings] = useState<TVScreenSettings>(DEFAULT_TV_SETTINGS);
+  const [showConnectionBanner, setShowConnectionBanner] = useState<boolean>(false);
 
   // Track browser online/offline status for immediate feedback
   useEffect(() => {
@@ -63,6 +64,23 @@ export default function TVScreenPage() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Delay showing the connection banner by 30 seconds after connection is lost
+  useEffect(() => {
+    const isDisconnected = !isOnline || connectionStatus === 'disconnected' || connectionStatus === 'reconnecting' || connectionStatus === 'connecting';
+
+    if (isDisconnected) {
+      // Start 30-second timer to show the banner
+      const timer = setTimeout(() => {
+        setShowConnectionBanner(true);
+      }, 30000);
+
+      return () => clearTimeout(timer);
+    } else {
+      // Connection restored - hide banner immediately and reset timer
+      setShowConnectionBanner(false);
+    }
+  }, [isOnline, connectionStatus]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -296,8 +314,8 @@ export default function TVScreenPage() {
         />
       </div>
 
-      {/* Connection status indicator */}
-      {!isOnline || connectionStatus === 'disconnected' || connectionStatus === 'reconnecting' || connectionStatus === 'connecting' ? (
+      {/* Connection status indicator - warning banner only shows after 30 seconds of disconnection */}
+      {showConnectionBanner ? (
         <div className="tvscreen-connection-banner">
           <span className="tvscreen-connection-banner-icon">
             {!isOnline ? '📡' : connectionStatus === 'disconnected' ? '⚠️' : '🔄'}
@@ -309,11 +327,11 @@ export default function TVScreenPage() {
             {isOnline && connectionStatus === 'connecting' && 'Connecting...'}
           </span>
         </div>
-      ) : (
+      ) : connectionStatus === 'connected' && isOnline ? (
         <div className="tvscreen-connection-indicator tvscreen-connection-indicator--connected">
           🟢 Live
         </div>
-      )}
+      ) : null}
 
       {/* Weather and clock */}
       <div className="tvscreen-top-bar">
