@@ -1,7 +1,9 @@
 // components/VenueDashboard/VenueDetails.tsx
+'use client';
 import { useState, useEffect } from 'react';
 import { Trophy, Users, Award, Crown, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useLeaguePrefix } from '@/lib/LeagueContext';
 
 interface VenueStats {
     topPlayers: Array<{
@@ -37,6 +39,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
     const [stats, setStats] = useState<VenueStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const leaguePrefix = useLeaguePrefix();
 
     useEffect(() => {
         async function fetchVenueStats() {
@@ -126,7 +129,7 @@ export function VenueDetails({ venueName, isCurrentMonth = true }: VenueDetailsP
                                 <div>
                                     <div className="font-semibold text-gray-900">
                                         <Link
-                                            href={`/players?uid=${encodeURIComponent(player.UID)}`}
+                                            href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.UID)}`}
                                             className="freeroll-link text-lg font-medium  truncate"
                                         >
                                             {player.nickname || player.Name}
