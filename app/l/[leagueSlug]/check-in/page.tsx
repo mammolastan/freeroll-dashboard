@@ -94,8 +94,8 @@ function CheckInPageContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 overflow-x-hidden">
+            <div className="max-w-6xl mx-auto w-full">
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-cyan-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)] mb-2">
@@ -134,13 +134,13 @@ function CheckInPageContent() {
                             <Link
                                 key={tournament.id}
                                 href={`${leaguePrefix}/gameview/${tournament.id}`}
-                                className="block transition-transform hover:scale-105"
+                                className="block transition-transform hover:scale-105 min-w-0"
                             >
                                 <div className="h-full bg-gray-900/80 border border-cyan-500/30 rounded-lg hover:border-cyan-500/60 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all backdrop-blur-sm overflow-hidden">
                                     {/* Header */}
-                                    <div className="border-b border-cyan-500/20 p-6 pb-4">
-                                        <div className="text-xl font-semibold text-cyan-300 flex items-center justify-between">
-                                            <span className="truncate">{tournament.game_title || tournament.venue}</span>
+                                    <div className="border-b border-cyan-500/20 p-6 pb-4 overflow-hidden">
+                                        <div className="text-xl font-semibold text-cyan-300 flex items-center justify-between min-w-0">
+                                            <span className="break-words min-w-0">{tournament.game_title || tournament.venue}</span>
                                             <ArrowRight className="h-5 w-5 flex-shrink-0 ml-2" />
                                         </div>
                                     </div>
