@@ -184,7 +184,20 @@ export function MinimalGameTimer({
 
     // Check for level change
     if (lastLevel !== null && lastLevel !== timerState.currentLevel) {
-      playLevelChangeSound();
+      // Only play sound if the new level just started (within 10 seconds)
+      // This prevents playing sound when app syncs after being closed
+      const currentBlind = timerState.blindLevels?.[timerState.currentLevel - 1];
+      if (currentBlind) {
+        const levelDurationSeconds = currentBlind.duration * 60;
+        const clockOffset = timerState.serverTime ? Date.now() - timerState.serverTime : 0;
+        const elapsedSinceUpdate = Math.floor((Date.now() - timerState.lastUpdate - clockOffset) / 1000);
+        const actualTimeRemaining = Math.max(0, timerState.timeRemaining - elapsedSinceUpdate);
+        const elapsedInLevel = levelDurationSeconds - actualTimeRemaining;
+
+        if (elapsedInLevel <= 10) {
+          playLevelChangeSound();
+        }
+      }
       setHasPlayedOneMinuteWarning(false); // Reset for new level
     }
     setLastLevel(timerState.currentLevel);
