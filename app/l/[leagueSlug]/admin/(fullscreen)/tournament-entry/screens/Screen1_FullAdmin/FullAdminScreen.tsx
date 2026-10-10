@@ -749,9 +749,12 @@ export function FullAdminScreen({
       const pending = pendingTournamentFieldsRef.current;
 
       // Build update data with all pending changes
+      // Format tournament_date as YYYY-MM-DD (strip any ISO timestamp suffix)
+      const rawDate = (pending.tournament_date ?? draft.tournament_date) as string;
+      const formattedDate = rawDate ? rawDate.split("T")[0] : "";
       const updateData = {
         tournament_name: "",
-        tournament_date: pending.tournament_date ?? draft.tournament_date,
+        tournament_date: formattedDate,
         tournament_time: pending.tournament_time ?? draft.tournament_time,
         director_name: pending.director_name ?? draft.director_name,
         title: pending.title ?? draft.title,
@@ -759,6 +762,7 @@ export function FullAdminScreen({
         start_points: pending.start_points ?? draft.start_points,
         allow_chat: pending.allow_chat ?? draft.allow_chat,
         allow_self_checkin: pending.allow_self_checkin ?? draft.allow_self_checkin,
+        cutoff_time: pending.cutoff_time ?? draft.cutoff_time,
       };
 
       // Clear pending updates
