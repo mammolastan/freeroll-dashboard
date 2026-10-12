@@ -59,12 +59,20 @@ export function DateRangeSelector({ onRangeChange, selectedRange }: DateRangeSel
         const currentRangeExists = ranges.some(r => r.value === selectedRange);
 
         if (!currentRangeExists) {
-            // Default to first quarterly period, or "all-time" if none
-            const defaultQuarterly = ranges.find(r =>
+            // Default to the quarterly period that contains today's date, or first quarterly, or all-time
+            const today = new Date();
+            const quarterlyRanges = ranges.filter(r =>
                 r.value.startsWith('period-') &&
                 periods.find(p => `period-${p.id}` === r.value)?.period_type === 'quarterly'
             );
-            const defaultRange = defaultQuarterly || ranges[0];
+
+            // Find the period that contains today
+            const currentQuarterlyPeriod = quarterlyRanges.find(r =>
+                r.startDate && r.endDate &&
+                today >= r.startDate && today <= r.endDate
+            );
+
+            const defaultRange = currentQuarterlyPeriod || quarterlyRanges[0] || ranges[0];
 
             if (defaultRange) {
                 onRangeChange(defaultRange.startDate, defaultRange.endDate, defaultRange.value);

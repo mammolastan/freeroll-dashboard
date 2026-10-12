@@ -81,15 +81,9 @@ export function PlayerDetails({ playerUID, playerName, initialRange }: PlayerDet
     const leaguePrefix = useLeaguePrefix();
     const timezone = useLeagueTimezone();
 
-    const [selectedRange, setSelectedRange] = useState(() => {
-        if (initialRange) {
-            return initialRange;
-        }
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
-        const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
-        return `Q${currentQuarter}-${currentYear}`;
-    });
+    // selectedRange should only hold values that exist in DateRangeSelector's options.
+    // If initialRange is null, we let DateRangeSelector determine the default via onRangeChange.
+    const [selectedRange, setSelectedRange] = useState<string>(initialRange ?? '');
     const [selectedVenue, setSelectedVenue] = useState("all");
     const [availableVenues, setAvailableVenues] = useState<string[]>([]);
 
