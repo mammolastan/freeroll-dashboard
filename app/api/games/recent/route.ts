@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       WHERE g.date IS NOT NULL
       AND g.league_id = ${leagueId}
       GROUP BY g.id, g.uid, g.date, v.name, td.title
-      ORDER BY g.date DESC
+      ORDER BY g.date DESC, g.time DESC
       LIMIT 15
     `;
 
