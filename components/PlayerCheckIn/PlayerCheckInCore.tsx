@@ -37,6 +37,7 @@ interface PlayerCheckInCoreProps {
   onSuccess?: (playerName: string) => void;
   showRecentlyCheckedIn?: boolean;
   leagueSlug?: string | null;
+  onNumberKeyPress?: (num: number) => void;
 }
 
 export function PlayerCheckInCore({
@@ -45,6 +46,7 @@ export function PlayerCheckInCore({
   onSuccess,
   showRecentlyCheckedIn = true,
   leagueSlug,
+  onNumberKeyPress,
 }: PlayerCheckInCoreProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
@@ -282,6 +284,13 @@ export function PlayerCheckInCore({
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
               onKeyDown={(e) => {
+                // Handle number keys 1-6 for screen switching when input is empty
+                // No player names start with numbers, so this allows TDs to quickly switch screens
+                if (onNumberKeyPress && searchQuery === "" && e.key >= "1" && e.key <= "6") {
+                  e.preventDefault();
+                  onNumberKeyPress(parseInt(e.key, 10));
+                  return;
+                }
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
                   if (showDropdown && searchResults.length > 0) {

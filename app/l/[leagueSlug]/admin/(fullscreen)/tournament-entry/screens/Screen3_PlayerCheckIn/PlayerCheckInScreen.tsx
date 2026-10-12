@@ -109,6 +109,7 @@ export function PlayerCheckInScreen({ currentDraft, players, onDataChange, curre
           onCheckIn={handleCheckIn}
           onSuccess={onDataChange}
           showRecentlyCheckedIn={true}
+          onNumberKeyPress={(num) => onScreenChange(num as ScreenNumber)}
         />
       </div>
     </div>
