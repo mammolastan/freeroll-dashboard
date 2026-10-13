@@ -49,6 +49,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       select: {
         id: true,
         venue: true,
+        venue_id: true,
         title: true,
         blind_schedule: true,
         custom_blind_levels: true,
@@ -62,6 +63,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         },
       },
     });
+
+    // Fetch venue names for games that have venue_id
+    const venueIds = activeGames
+      .map((g) => g.venue_id)
+      .filter((id): id is number => id !== null);
+
+    const venueMap = new Map<number, string>();
+    if (venueIds.length > 0) {
+      const venues = await prisma.venues.findMany({
+        where: { id: { in: venueIds } },
+        select: { id: true, name: true },
+      });
+      for (const v of venues) {
+        venueMap.set(v.id, v.name);
+      }
+    }
 
     // Transform to the format needed by the module
     const games: ActiveGameData[] = await Promise.all(
@@ -109,9 +126,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           );
         }
 
+        // Get venue name from venues table, fall back to legacy venue field
+        const venueName = game.venue_id
+          ? venueMap.get(game.venue_id) || game.venue
+          : game.venue;
+
         return {
           id: game.id,
-          venueName: game.venue,
+          venueName,
           title: game.title,
           remainingCount: remainingPlayers.length,
           eliminatedCount,
