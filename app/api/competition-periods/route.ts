@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     const leagueIdNum = await getLeagueIdFromRequest(request);
     const periodType = searchParams.get("period_type");
     const activeOnly = searchParams.get("active_only") !== "false"; // defaults to true
+    const playerUid = searchParams.get("playerUid"); // Optional: filter to periods where player has games
 
     // Build the query
     const whereClause: {
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       whereClause.is_active = true;
     }
 
-    const periods = await prisma.competition_periods.findMany({
+    let periods = await prisma.competition_periods.findMany({
       where: whereClause,
       orderBy: {
         display_order: "desc", // Newest first for UI dropdowns
@@ -49,6 +50,31 @@ export async function GET(request: Request) {
         display_order: true,
       },
     });
+
+    // If playerUid is provided, filter to only periods where the player has games
+    if (playerUid) {
+      // Get dates of all games the player participated in
+      const playerGames = await prisma.$queryRaw<{ game_date: Date }[]>`
+        SELECT DISTINCT g.date as game_date
+        FROM appearances a
+        JOIN games g ON g.id = a.game_id
+        JOIN players_v2 p ON p.id = a.player_id
+        WHERE p.uid = ${playerUid}
+        AND g.league_id = ${leagueIdNum}
+      `;
+
+      const gameDates = playerGames.map(g => g.game_date);
+
+      // Filter periods to only those that contain at least one of the player's game dates
+      periods = periods.filter(period => {
+        const periodStart = new Date(period.start_date);
+        const periodEnd = new Date(period.end_date);
+        return gameDates.some(gameDate => {
+          const gd = new Date(gameDate);
+          return gd >= periodStart && gd <= periodEnd;
+        });
+      });
+    }
 
     return NextResponse.json({
       periods,

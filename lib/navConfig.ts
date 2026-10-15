@@ -8,7 +8,8 @@ import {
   Award,
   Settings,
   Play,
-  Tv
+  Tv,
+  BarChart3,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { HomepageTilesConfig } from "@/types/league-config";
@@ -142,6 +143,19 @@ export function getNavItems(
       return item;
     })
     .filter((item): item is NavItem => item !== null);
+}
+
+/**
+ * Returns authenticated user navigation items (only shown when signed in)
+ */
+export function getAuthenticatedNavItems(prefix: string = ""): NavItem[] {
+  return [
+    {
+      href: `${prefix}/stats`,
+      icon: BarChart3,
+      text: "Advanced Stats",
+    },
+  ];
 }
 
 /**

@@ -15,6 +15,12 @@ export async function GET(
     const endDateParam = searchParams.get("endDate");
     const venue = searchParams.get("venue");
 
+    // Pagination params for game history
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const limit = limitParam ? parseInt(limitParam) : 50;
+    const offset = offsetParam ? parseInt(offsetParam) : 0;
+
     const startDate =
       startDateParam && startDateParam !== "null"
         ? new Date(startDateParam)
@@ -197,7 +203,21 @@ export async function GET(
       points: Number(stat.points),
     }));
 
-    // Recent Games
+    // Total games count for pagination
+    const totalGamesQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count
+      FROM appearances a
+      JOIN games g ON g.id = a.game_id
+      JOIN venues v ON v.id = g.venue_id
+      JOIN players_v2 p ON p.id = a.player_id
+      WHERE p.uid = ${playerUID}
+      AND g.league_id = ${leagueId}
+      ${dateCondition}
+      ${venueCondition}
+    `;
+    const totalGames = Number(totalGamesQuery[0]?.count || 0);
+
+    // Recent Games with pagination
     const recentGamesRaw = await prisma.$queryRaw<
       Array<{
         date: Date;
@@ -224,7 +244,7 @@ export async function GET(
       ${dateCondition}
       ${venueCondition}
       ORDER BY g.date DESC
-      LIMIT 50
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
     // Serialize BigInt values in recentGames
@@ -283,6 +303,12 @@ export async function GET(
       })),
       venueStats,
       recentGames,
+      totalGames,
+      pagination: {
+        limit,
+        offset,
+        hasMore: offset + recentGames.length < totalGames,
+      },
       earliestGameDate,
       placementFrequency: placementFrequency.map((pf) => ({
         placement: Number(pf.Placement),
