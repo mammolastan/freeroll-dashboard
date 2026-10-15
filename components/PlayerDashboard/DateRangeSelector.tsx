@@ -197,23 +197,13 @@ export function DateRangeSelector({ onRangeChange, selectedRange, showAllPeriods
             // Select "All Time" when switching to "all"
             onRangeChange(null, null, "all-time");
         } else {
-            // When changing year, auto-select the first quarterly period for that year if available
-            const yearPeriods = getPeriodsForYear(year);
-            const firstQuarterly = yearPeriods.find(p => p.period_type === 'quarterly');
-            if (firstQuarterly) {
-                onRangeChange(
-                    new Date(firstQuarterly.start_date),
-                    new Date(firstQuarterly.end_date),
-                    `period-${firstQuarterly.id}`
-                );
-            } else if (yearPeriods.length > 0) {
-                const firstPeriod = yearPeriods[0];
-                onRangeChange(
-                    new Date(firstPeriod.start_date),
-                    new Date(firstPeriod.end_date),
-                    `period-${firstPeriod.id}`
-                );
-            }
+            // Default to full year (Jan 1 - Dec 31)
+            const yearNum = parseInt(year);
+            onRangeChange(
+                new Date(yearNum, 0, 1),      // Jan 1
+                new Date(yearNum, 11, 31),    // Dec 31
+                `full-year-${year}`
+            );
         }
     };
 
@@ -230,6 +220,16 @@ export function DateRangeSelector({ onRangeChange, selectedRange, showAllPeriods
                 createDate(currentYear, currentMonth, 1),
                 createDate(currentYear, currentMonth + 1, 0),
                 "current-month"
+            );
+            return;
+        }
+        // Handle full year selection
+        if (periodValue.startsWith("full-year-")) {
+            const yearNum = parseInt(periodValue.replace("full-year-", ""));
+            onRangeChange(
+                new Date(yearNum, 0, 1),      // Jan 1
+                new Date(yearNum, 11, 31),    // Dec 31
+                periodValue
             );
             return;
         }
@@ -278,6 +278,9 @@ export function DateRangeSelector({ onRangeChange, selectedRange, showAllPeriods
                             onChange={(e) => handlePeriodChange(e.target.value)}
                             disabled={loading}
                         >
+                            <option value={`full-year-${selectedYear}`}>
+                                Full Year {selectedYear}
+                            </option>
                             {quarterlyForYear.length > 0 && (
                                 <optgroup label="Quarterly">
                                     {quarterlyForYear.map(period => (

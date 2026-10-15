@@ -60,6 +60,9 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
   const [venues, setVenues] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState("all");
 
+  // Min games filter
+  const [minGames, setMinGames] = useState(1);
+
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
   const router = useRouter();
 
@@ -139,6 +142,11 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
   const getSortedAndFilteredRankings = () => {
     let filteredRankings = rankings;
 
+    // Apply minimum games filter
+    filteredRankings = filteredRankings.filter(
+      (player) => player.gamesPlayed >= minGames
+    );
+
     // Apply name or nickname filter
     if (filterText) {
       filteredRankings = filteredRankings.filter(
@@ -170,7 +178,7 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
 
       {/* Filters */}
       <div className="bg-theme-surface rounded-lg p-4 mb-6">
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <DateRangeSelector
             onRangeChange={handleRangeChange}
             selectedRange={selectedRange}
@@ -184,6 +192,25 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                 selectedVenue={selectedVenue}
                 onVenueChange={setSelectedVenue}
               />
+            </div>
+          </div>
+          <div className="mb-6">
+            <label className="text-sm font-medium text-white-700">
+              Min. # Games: {minGames}
+            </label>
+            <div className="mt-2">
+              <input
+                type="range"
+                min="1"
+                max="100"
+                value={minGames}
+                onChange={(e) => setMinGames(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>1</span>
+                <span>100</span>
+              </div>
             </div>
           </div>
         </div>
