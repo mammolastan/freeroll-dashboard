@@ -93,6 +93,8 @@ export async function GET(
     const quarterlyStats: {
       gamesPlayed: number;
       totalPoints: number;
+      placementPoints: number;
+      bonusPoints: number;
       knockouts: number;
       finalTables: number;
       avgScore: number;
@@ -101,6 +103,8 @@ export async function GET(
       SELECT
         COUNT(CASE WHEN v.name != 'bonus' THEN 1 END) as gamesPlayed,
         COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as totalPoints,
+        COALESCE(SUM(CASE WHEN v.name != 'bonus' THEN a.points ELSE 0 END), 0) as placementPoints,
+        COALESCE(SUM(CASE WHEN v.name != 'bonus' THEN COALESCE(g.bonus_points, 0) ELSE 0 END), 0) as bonusPoints,
         COALESCE((
           SELECT COUNT(*) FROM knockouts k
           JOIN games kg ON kg.id = k.game_id
@@ -224,6 +228,8 @@ export async function GET(
         venue: string;
         placement: number;
         points: number;
+        placementPoints: number;
+        bonusPoints: number;
         knockouts: bigint;
         game_uid: string;
       }>
@@ -233,6 +239,8 @@ export async function GET(
         v.name as venue,
         a.placement,
         (a.points + COALESCE(g.bonus_points, 0)) as points,
+        a.points as placementPoints,
+        COALESCE(g.bonus_points, 0) as bonusPoints,
         (SELECT COUNT(*) FROM knockouts k WHERE k.hitman = a.player_id AND k.game_id = g.id) as knockouts,
         g.uid as game_uid
       FROM appearances a
@@ -253,6 +261,8 @@ export async function GET(
       venue: game.venue,
       placement: game.placement,
       points: Number(game.points),
+      placementPoints: Number(game.placementPoints),
+      bonusPoints: Number(game.bonusPoints),
       knockouts: Number(game.knockouts),
       game_uid: game.game_uid,
     }));
@@ -281,6 +291,8 @@ export async function GET(
       quarterlyStats: {
         gamesPlayed: Number(quarterlyStats[0]?.gamesPlayed || 0),
         totalPoints: Number(quarterlyStats[0]?.totalPoints || 0),
+        placementPoints: Number(quarterlyStats[0]?.placementPoints || 0),
+        bonusPoints: Number(quarterlyStats[0]?.bonusPoints || 0),
         knockouts: Number(quarterlyStats[0]?.knockouts || 0),
         finalTables: Number(quarterlyStats[0]?.finalTables || 0),
         avgScore: Number(quarterlyStats[0]?.avgScore || 0),

@@ -1,9 +1,9 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getLeagueIdBySlug } from '@/lib/league-utils';
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import { BarChart3, Trophy, User } from 'lucide-react';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getLeagueIdBySlug } from "@/lib/league-utils";
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { Trophy, User } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ leagueSlug: string }>;
@@ -13,12 +13,16 @@ interface QuickStats {
   gamesPlayed: number;
   totalPoints: number;
   currentRank: number | null;
-  totalPlayers: number;
 }
 
-async function getQuickStats(uid: string, leagueId: number): Promise<QuickStats> {
+async function getQuickStats(
+  uid: string,
+  leagueId: number,
+): Promise<QuickStats> {
   // Get player's games and points
-  const playerStats = await prisma.$queryRaw<{ gamesPlayed: bigint; totalPoints: bigint }[]>`
+  const playerStats = await prisma.$queryRaw<
+    { gamesPlayed: bigint; totalPoints: bigint }[]
+  >`
     SELECT
       COUNT(DISTINCT CASE WHEN v.name != 'bonus' THEN g.id END) as gamesPlayed,
       COALESCE(SUM(a.points + COALESCE(g.bonus_points, 0)), 0) as totalPoints
@@ -34,17 +38,18 @@ async function getQuickStats(uid: string, leagueId: number): Promise<QuickStats>
   const currentPeriod = await prisma.competition_periods.findFirst({
     where: {
       league_id: leagueId,
-      period_type: 'quarterly',
+      period_type: "quarterly",
     },
-    orderBy: { end_date: 'desc' },
+    orderBy: { end_date: "desc" },
   });
 
   let currentRank: number | null = null;
-  let totalPlayers = 0;
 
   if (currentPeriod) {
     // Get rankings for current period
-    const rankings = await prisma.$queryRaw<{ uid: string; totalPoints: bigint }[]>`
+    const rankings = await prisma.$queryRaw<
+      { uid: string; totalPoints: bigint }[]
+    >`
       SELECT
         p.uid,
         CAST(SUM(a.points + COALESCE(g.bonus_points, 0)) AS SIGNED) as totalPoints
@@ -61,8 +66,7 @@ async function getQuickStats(uid: string, leagueId: number): Promise<QuickStats>
       ORDER BY totalPoints DESC
     `;
 
-    totalPlayers = rankings.length;
-    const playerIndex = rankings.findIndex(r => r.uid === uid);
+    const playerIndex = rankings.findIndex((r) => r.uid === uid);
     if (playerIndex !== -1) {
       currentRank = playerIndex + 1;
     }
@@ -72,7 +76,6 @@ async function getQuickStats(uid: string, leagueId: number): Promise<QuickStats>
     gamesPlayed: Number(playerStats[0]?.gamesPlayed || 0),
     totalPoints: Number(playerStats[0]?.totalPoints || 0),
     currentRank,
-    totalPlayers,
   };
 }
 
@@ -89,32 +92,32 @@ export default async function StatsPage({ params }: PageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Advanced Stats</h1>
+      <h1 className="text-3xl font-bold mb-2">Stats Plus</h1>
       <p className="text-gray-400 mb-8">
-        Premium statistics and analytics for league members
+        Deep statistics and analytics for premium league members
       </p>
 
       {/* Quick Stats Summary */}
       <div className="bg-theme-surface rounded-lg p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Your Quick Stats</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-400">{quickStats.gamesPlayed}</div>
+            <div className="text-3xl font-bold text-blue-400">
+              {quickStats.gamesPlayed}
+            </div>
             <div className="text-sm text-gray-400">Games Played</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green-400">{quickStats.totalPoints}</div>
+            <div className="text-3xl font-bold text-green-400">
+              {quickStats.totalPoints}
+            </div>
             <div className="text-sm text-gray-400">Total Points</div>
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-yellow-400">
-              {quickStats.currentRank ? `#${quickStats.currentRank}` : '-'}
+              {quickStats.currentRank ? `#${quickStats.currentRank}` : "-"}
             </div>
             <div className="text-sm text-gray-400">Current Rank</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-400">{quickStats.totalPlayers}</div>
-            <div className="text-sm text-gray-400">Active Players</div>
           </div>
         </div>
       </div>
@@ -132,7 +135,9 @@ export default async function StatsPage({ params }: PageProps) {
             </div>
             <div>
               <h3 className="text-xl font-semibold">My Game History</h3>
-              <p className="text-gray-400 text-sm">View your complete game history and ranking progression</p>
+              <p className="text-gray-400 text-sm">
+                View your complete game history and ranking progression
+              </p>
             </div>
           </div>
           <ul className="text-sm text-gray-400 space-y-1 ml-16">
@@ -153,7 +158,9 @@ export default async function StatsPage({ params }: PageProps) {
             </div>
             <div>
               <h3 className="text-xl font-semibold">League Leaderboard</h3>
-              <p className="text-gray-400 text-sm">Filter rankings by custom date ranges and venues</p>
+              <p className="text-gray-400 text-sm">
+                Filter rankings by custom date ranges and venues
+              </p>
             </div>
           </div>
           <ul className="text-sm text-gray-400 space-y-1 ml-16">
@@ -164,25 +171,6 @@ export default async function StatsPage({ params }: PageProps) {
         </Link>
       </div>
 
-      {/* Browse Other Players */}
-      <div className="mt-8 p-6 bg-theme-surface rounded-lg border border-gray-700">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-purple-500/20 rounded-lg">
-            <BarChart3 className="w-6 h-6 text-purple-400" />
-          </div>
-          <div>
-            <h3 className="font-semibold">View Any Player&apos;s Stats</h3>
-            <p className="text-gray-400 text-sm">
-              As a premium member, you can view the complete game history and ranking progression
-              of any player in the league. Just search for them on the{' '}
-              <Link href={`/l/${leagueSlug}/players`} className="text-blue-400 hover:underline">
-                Players page
-              </Link>
-              .
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

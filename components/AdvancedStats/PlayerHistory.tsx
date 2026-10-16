@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -40,6 +41,8 @@ interface Game {
   venue: string;
   placement: number;
   points: number;
+  placementPoints: number;
+  bonusPoints: number;
   knockouts: number;
   game_uid: string;
 }
@@ -48,6 +51,8 @@ interface PlayerStats {
   quarterlyStats: {
     gamesPlayed: number;
     totalPoints: number;
+    placementPoints: number;
+    bonusPoints: number;
     knockouts: number;
     finalTables: number;
     avgScore: number;
@@ -78,7 +83,7 @@ interface PlayerHistoryProps {
   isOwnProfile: boolean;
 }
 
-type SortField = "date" | "placement" | "points" | "knockouts";
+type SortField = "date" | "placement" | "points" | "placementPoints" | "bonusPoints" | "knockouts";
 type SortDirection = "asc" | "desc";
 
 export default function PlayerHistory({
@@ -110,6 +115,7 @@ export default function PlayerHistory({
   });
 
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
+  const router = useRouter();
 
   // Fetch ranking history once on mount
   useEffect(() => {
@@ -280,7 +286,7 @@ export default function PlayerHistory({
 
       {/* Quick Stats */}
       {playerStats && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
           <div className="bg-theme-surface rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-blue-400">
               {playerStats.quarterlyStats.gamesPlayed}
@@ -291,7 +297,19 @@ export default function PlayerHistory({
             <div className="text-2xl font-bold text-yellow-400">
               {playerStats.quarterlyStats.totalPoints}
             </div>
-            <div className="text-xs text-gray-400">Points</div>
+            <div className="text-xs text-gray-400">Total Points</div>
+          </div>
+          <div className="bg-theme-surface rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-orange-400">
+              {playerStats.quarterlyStats.placementPoints}
+            </div>
+            <div className="text-xs text-gray-400">Placement Pts</div>
+          </div>
+          <div className="bg-theme-surface rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-pink-400">
+              {playerStats.quarterlyStats.bonusPoints}
+            </div>
+            <div className="text-xs text-gray-400">Bonus Pts</div>
           </div>
           <div className="bg-theme-surface rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-red-400">
@@ -428,51 +446,72 @@ export default function PlayerHistory({
             No games found for the selected filters.
           </div>
         ) : (
-          <>
-            {/* Table Header */}
-            <div className="hidden md:grid grid-cols-5 gap-4 px-4 py-3 bg-theme-surface-hover text-sm text-gray-400">
-              <SortableHeader field="date" label="Date" icon={Calendar} />
-              <div className="flex items-center gap-1">
-                <MapPin size={14} />
-                <span>Venue</span>
-              </div>
-              <SortableHeader field="placement" label="Place" icon={Award} />
-              <SortableHeader field="points" label="Points" icon={Trophy} />
-              <SortableHeader field="knockouts" label="KOs" icon={Swords} />
-            </div>
-
-            {/* Table Body */}
-            <div className="divide-y divide-gray-700">
-              {sortedGames.map((game, index) => (
-                <Link
-                  key={`${game.game_uid}-${index}`}
-                  href={`/l/${leagueSlug}/games/${game.game_uid}`}
-                  className="grid grid-cols-2 md:grid-cols-5 gap-4 px-4 py-3 hover:bg-theme-surface-hover transition-colors"
-                >
-                  <div className="text-gray-300">
-                    {new Date(game.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </div>
-                  <div className="text-gray-300 truncate">{game.venue}</div>
-                  <div className={`font-medium ${
-                    game.placement === 1 ? 'text-yellow-400' :
-                    game.placement <= 3 ? 'text-blue-400' :
-                    game.placement <= 8 ? 'text-green-400' : 'text-gray-400'
-                  }`}>
-                    {game.placement === 1 ? '1st' :
-                     game.placement === 2 ? '2nd' :
-                     game.placement === 3 ? '3rd' :
-                     `${game.placement}th`}
-                  </div>
-                  <div className="text-yellow-400 font-medium">{game.points}</div>
-                  <div className="text-red-400">{game.knockouts}</div>
-                </Link>
-              ))}
-            </div>
-          </>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-theme-surface-hover text-gray-400">
+                  <th className="py-3 px-4 text-left sticky left-0 bg-[#1e293b] z-10">
+                    <SortableHeader field="date" label="Date" icon={Calendar} />
+                  </th>
+                  <th className="py-3 px-4 text-left sticky left-[100px] bg-[#1e293b] z-10 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-[#1e293b] after:pointer-events-none">
+                    <div className="flex items-center gap-1">
+                      <MapPin size={14} />
+                      <span>Venue</span>
+                    </div>
+                  </th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">
+                    <SortableHeader field="placement" label="Place" icon={Award} />
+                  </th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">
+                    <SortableHeader field="points" label="Total Pts" icon={Trophy} />
+                  </th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">
+                    <SortableHeader field="placementPoints" label="Place Pts" icon={Award} />
+                  </th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">
+                    <SortableHeader field="bonusPoints" label="Bonus Pts" icon={Trophy} />
+                  </th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">
+                    <SortableHeader field="knockouts" label="KOs" icon={Swords} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {sortedGames.map((game, index) => (
+                  <tr
+                    key={`${game.game_uid}-${index}`}
+                    onClick={() => router.push(`/l/${leagueSlug}/games/${game.game_uid}`)}
+                    className="hover:bg-theme-surface-hover transition-colors cursor-pointer group"
+                  >
+                    <td className="py-3 px-4 text-gray-300 sticky left-0 bg-[#0f172a] group-hover:bg-[#1e293b] z-10 whitespace-nowrap">
+                      {new Date(game.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-3 px-4 text-gray-300 sticky left-[100px] bg-[#0f172a] group-hover:bg-[#1e293b] z-10">
+                      <span className="truncate block max-w-[120px]">{game.venue}</span>
+                    </td>
+                    <td className={`py-3 px-4 font-medium whitespace-nowrap ${
+                      game.placement === 1 ? 'text-yellow-400' :
+                      game.placement <= 3 ? 'text-blue-400' :
+                      game.placement <= 8 ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {game.placement === 1 ? '1st' :
+                       game.placement === 2 ? '2nd' :
+                       game.placement === 3 ? '3rd' :
+                       `${game.placement}th`}
+                    </td>
+                    <td className="py-3 px-4 text-yellow-400 font-medium">{game.points}</td>
+                    <td className="py-3 px-4 text-gray-300">{game.placementPoints}</td>
+                    <td className="py-3 px-4 text-gray-300">{game.bonusPoints}</td>
+                    <td className="py-3 px-4 text-red-400">{game.knockouts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

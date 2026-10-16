@@ -13,11 +13,14 @@ interface PlayerRanking {
   uid: string;
   gamesPlayed: number;
   totalPoints: number;
+  placementPoints: number;
+  bonusPoints: number;
   totalKnockouts: number;
   finalTables: number;
   avgScore: number;
   finalTablePercentage: number;
   pointsPerGame: number;
+  placementPPG: number;
   ranking: number;
   nickname: string | null;
   photoUrl: string | null;
@@ -25,12 +28,15 @@ interface PlayerRanking {
 
 type SortField =
   | "totalPoints"
+  | "placementPoints"
+  | "bonusPoints"
   | "totalKnockouts"
   | "finalTables"
   | "ranking"
   | "avgScore"
   | "finalTablePercentage"
   | "pointsPerGame"
+  | "placementPPG"
   | "gamesPlayed";
 
 type SortDirection = "asc" | "desc";
@@ -140,25 +146,13 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
   };
 
   const getSortedAndFilteredRankings = () => {
-    let filteredRankings = rankings;
-
-    // Apply minimum games filter
-    filteredRankings = filteredRankings.filter(
+    // Apply minimum games filter first
+    let filteredByGames = rankings.filter(
       (player) => player.gamesPlayed >= minGames
     );
 
-    // Apply name or nickname filter
-    if (filterText) {
-      filteredRankings = filteredRankings.filter(
-        (player) =>
-          player.name.toLowerCase().includes(filterText.toLowerCase()) ||
-          (player.nickname &&
-            player.nickname.toLowerCase().includes(filterText.toLowerCase()))
-      );
-    }
-
-    // Apply sort
-    return [...filteredRankings].sort((a, b) => {
+    // Sort the list
+    const sorted = [...filteredByGames].sort((a, b) => {
       let valueA: number = a[sortConfig.field] as number;
       let valueB: number = b[sortConfig.field] as number;
       const multiplier = sortConfig.direction === "asc" ? 1 : -1;
@@ -168,6 +162,24 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
 
       return (valueA - valueB) * multiplier;
     });
+
+    // Assign position numbers based on sorted order (before text filter)
+    const withPositions = sorted.map((player, index) => ({
+      ...player,
+      sortPosition: index + 1,
+    }));
+
+    // Apply name or nickname filter (positions are preserved)
+    if (filterText) {
+      return withPositions.filter(
+        (player) =>
+          player.name.toLowerCase().includes(filterText.toLowerCase()) ||
+          (player.nickname &&
+            player.nickname.toLowerCase().includes(filterText.toLowerCase()))
+      );
+    }
+
+    return withPositions;
   };
 
   const sortedRankings = getSortedAndFilteredRankings();
@@ -257,21 +269,39 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-gray-600 text-left text-gray-400">
-                  <th className="py-2 px-2 font-medium w-12">#</th>
-                  <th className="py-2 px-2 font-medium">Player</th>
-                  <th className="py-2 px-2 font-medium text-right">
+                  <th className="py-2 px-2 font-medium w-12 sticky left-0 bg-[#0f172a] z-10">#</th>
+                  <th className="py-2 px-2 font-medium sticky left-10 bg-[#0f172a] z-10 min-w-[120px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-[#0f172a] after:pointer-events-none">Player</th>
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("totalPoints")}
                       className="inline-flex items-center gap-1 hover:text-white"
                     >
-                      Points
+                      Total Pts
                       <ArrowUpDown size={12} className={sortConfig.field === "totalPoints" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
-                  <th className="py-2 px-2 font-medium text-right hidden md:table-cell">
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleSort("placementPoints")}
+                      className="inline-flex items-center gap-1 hover:text-white"
+                    >
+                      Place Pts
+                      <ArrowUpDown size={12} className={sortConfig.field === "placementPoints" ? "text-blue-400" : "opacity-30"} />
+                    </button>
+                  </th>
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleSort("bonusPoints")}
+                      className="inline-flex items-center gap-1 hover:text-white"
+                    >
+                      Bonus Pts
+                      <ArrowUpDown size={12} className={sortConfig.field === "bonusPoints" ? "text-blue-400" : "opacity-30"} />
+                    </button>
+                  </th>
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("gamesPlayed")}
                       className="inline-flex items-center gap-1 hover:text-white"
@@ -280,7 +310,7 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                       <ArrowUpDown size={12} className={sortConfig.field === "gamesPlayed" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
-                  <th className="py-2 px-2 font-medium text-right hidden md:table-cell">
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("totalKnockouts")}
                       className="inline-flex items-center gap-1 hover:text-white"
@@ -289,7 +319,7 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                       <ArrowUpDown size={12} className={sortConfig.field === "totalKnockouts" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
-                  <th className="py-2 px-2 font-medium text-right hidden md:table-cell">
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("finalTables")}
                       className="inline-flex items-center gap-1 hover:text-white"
@@ -298,7 +328,7 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                       <ArrowUpDown size={12} className={sortConfig.field === "finalTables" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
-                  <th className="py-2 px-2 font-medium text-right hidden lg:table-cell">
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("finalTablePercentage")}
                       className="inline-flex items-center gap-1 hover:text-white"
@@ -307,7 +337,7 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                       <ArrowUpDown size={12} className={sortConfig.field === "finalTablePercentage" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
-                  <th className="py-2 px-2 font-medium text-right hidden lg:table-cell">
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
                     <button
                       onClick={() => handleSort("pointsPerGame")}
                       className="inline-flex items-center gap-1 hover:text-white"
@@ -316,30 +346,39 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                       <ArrowUpDown size={12} className={sortConfig.field === "pointsPerGame" ? "text-blue-400" : "opacity-30"} />
                     </button>
                   </th>
+                  <th className="py-2 px-2 font-medium text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleSort("placementPPG")}
+                      className="inline-flex items-center gap-1 hover:text-white"
+                    >
+                      PPG-Place
+                      <ArrowUpDown size={12} className={sortConfig.field === "placementPPG" ? "text-blue-400" : "opacity-30"} />
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedRankings.map((player) => (
                   <tr
                     key={player.uid}
-                    className="border-b border-gray-700/50 hover:bg-white/5 cursor-pointer"
+                    className="border-b border-gray-700/50 hover:bg-white/5 cursor-pointer group"
                     onClick={() => router.push(`/l/${leagueSlug}/stats/player/${player.uid}`)}
                   >
-                    <td className="py-2 px-2 text-gray-400">{player.ranking}</td>
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-2 text-gray-400 sticky left-0 bg-[#0f172a] group-hover:bg-[#1e293b] z-10">{player.sortPosition}</td>
+                    <td className="py-2 px-2 sticky left-10 bg-[#0f172a] group-hover:bg-[#1e293b] z-10">
                       <div className="flex items-center gap-2">
-                        <span className="truncate">{player.nickname || player.name}</span>
-                        {player.nickname && (
-                          <span className="text-gray-500 text-xs hidden sm:inline">({player.name})</span>
-                        )}
+                        <span className="truncate max-w-[150px]">{player.nickname || player.name}</span>
                       </div>
                     </td>
                     <td className="py-2 px-2 text-right font-medium">{player.totalPoints}</td>
-                    <td className="py-2 px-2 text-right hidden md:table-cell">{player.gamesPlayed}</td>
-                    <td className="py-2 px-2 text-right hidden md:table-cell">{player.totalKnockouts}</td>
-                    <td className="py-2 px-2 text-right hidden md:table-cell">{player.finalTables}</td>
-                    <td className="py-2 px-2 text-right hidden lg:table-cell">{player.finalTablePercentage}%</td>
-                    <td className="py-2 px-2 text-right hidden lg:table-cell">{player.pointsPerGame}</td>
+                    <td className="py-2 px-2 text-right">{player.placementPoints}</td>
+                    <td className="py-2 px-2 text-right">{player.bonusPoints}</td>
+                    <td className="py-2 px-2 text-right">{player.gamesPlayed}</td>
+                    <td className="py-2 px-2 text-right">{player.totalKnockouts}</td>
+                    <td className="py-2 px-2 text-right">{player.finalTables}</td>
+                    <td className="py-2 px-2 text-right">{player.finalTablePercentage}%</td>
+                    <td className="py-2 px-2 text-right">{player.pointsPerGame}</td>
+                    <td className="py-2 px-2 text-right">{player.placementPPG}</td>
                   </tr>
                 ))}
               </tbody>

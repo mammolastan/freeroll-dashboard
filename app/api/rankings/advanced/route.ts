@@ -61,6 +61,8 @@ export async function GET(request: Request) {
         p.photo_url,
         COUNT(DISTINCT CASE WHEN v.name != 'bonus' THEN g.id END) as gamesPlayed,
         CAST(SUM(a.points + COALESCE(g.bonus_points, 0)) AS SIGNED) as totalPoints,
+        CAST(SUM(CASE WHEN v.name != 'bonus' THEN a.points ELSE 0 END) AS SIGNED) as placementPoints,
+        CAST(SUM(CASE WHEN v.name != 'bonus' THEN COALESCE(g.bonus_points, 0) ELSE 0 END) AS SIGNED) as bonusPoints,
         CAST((
           SELECT COUNT(*) FROM knockouts k
           JOIN games kg ON kg.id = k.game_id
@@ -92,6 +94,7 @@ export async function GET(request: Request) {
       const gamesPlayed = Number(player.gamesPlayed) || 0;
       const finalTables = Number(player.finalTables) || 0;
       const totalPoints = Number(player.totalPoints) || 0;
+      const placementPoints = Number(player.placementPoints) || 0;
 
       return {
         ...player,
@@ -105,6 +108,10 @@ export async function GET(request: Request) {
         pointsPerGame:
           gamesPlayed > 0
             ? Number((totalPoints / gamesPlayed).toFixed(2))
+            : 0,
+        placementPPG:
+          gamesPlayed > 0
+            ? Number((placementPoints / gamesPlayed).toFixed(2))
             : 0,
       };
     });
