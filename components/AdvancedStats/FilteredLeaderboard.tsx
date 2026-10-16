@@ -366,8 +366,12 @@ export default function FilteredLeaderboard({ leagueSlug }: FilteredLeaderboardP
                   >
                     <td className="py-2 px-2 text-gray-400 sticky left-0 bg-[#0f172a] group-hover:bg-[#1e293b] z-10">{player.sortPosition}</td>
                     <td className="py-2 px-2 sticky left-10 bg-[#0f172a] group-hover:bg-[#1e293b] z-10">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[150px]">{player.nickname || player.name}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="truncate max-w-[200px]">
+                          {player.nickname
+                            ? `${player.nickname} (${player.name})`
+                            : player.name}
+                        </span>
                       </div>
                     </td>
                     <td className="py-2 px-2 text-right font-medium">{player.totalPoints}</td>
