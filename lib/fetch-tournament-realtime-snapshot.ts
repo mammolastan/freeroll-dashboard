@@ -12,8 +12,6 @@ interface TournamentDraftRow {
   tournament_date: string | Date;
   tournament_time: unknown;
   venue: string | null;
-  venue_cutoff_time: number | null;
-  tournament_cutoff_time: number | null;
   status: string;
   start_points: number;
   director_name: string | null;
@@ -44,8 +42,6 @@ export async function fetchTournamentRealtimeSnapshot(
       td.tournament_date,
       td.tournament_time,
       v.name as venue,
-      v.cutoff_time as venue_cutoff_time,
-      td.cutoff_time as tournament_cutoff_time,
       td.status,
       td.start_points,
       td.director_name,
@@ -73,14 +69,6 @@ export async function fetchTournamentRealtimeSnapshot(
       ? leagueConfig.gameDefaults.allowSelfCheckIn
       : Boolean(row.allow_self_checkin);
 
-  // Priority: tournament override → venue setting → league default
-  const cutoffMinutes =
-    row.tournament_cutoff_time != null
-      ? Number(row.tournament_cutoff_time)
-      : row.venue_cutoff_time != null
-        ? Number(row.venue_cutoff_time)
-        : leagueConfig.gameDefaults.lateRegistrationWindowMinutes;
-
   // Use custom title if set, otherwise use default (Venue - Date)
   const title = row.custom_title && row.custom_title.trim()
     ? String(row.custom_title)
@@ -99,7 +87,6 @@ export async function fetchTournamentRealtimeSnapshot(
     timezone: leagueConfig.timezone,
     allow_chat: effectiveAllowChat,
     allow_self_checkin: effectiveAllowSelfCheckin,
-    cutoffMinutes,
     game_started: Boolean(row.game_started),
     defaultTDMessage: leagueConfig.gameDefaults.defaultTDMessage || '',
   };

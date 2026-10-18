@@ -10,8 +10,8 @@ import { GameTimer } from "@/components/Timer/GameTimer";
 import { PlayerCheckInModal } from "@/components/PlayerCheckIn/PlayerCheckInModal";
 import { QrCode, UserPlus, Check } from "lucide-react";
 import { QRCodeModal } from "@/app/l/[leagueSlug]/admin/(fullscreen)/tournament-entry/QRCodeModal";
-import { formatTime, formatCutoffTime } from "@/lib/utils";
-import { formatLeagueDate, getLeagueNow } from "@/lib/league-time";
+import { formatTime } from "@/lib/utils";
+import { formatLeagueDate } from "@/lib/league-time";
 import { TournamentFeed } from "@/components/TournamentFeed";
 
 interface TournamentHeaderData {
@@ -21,48 +21,6 @@ interface TournamentHeaderData {
   venue?: string | null;
   td?: string | null;
   timezone: string;
-  cutoffMinutes: number;
-}
-
-function isPastCutoff(
-  date: string | Date,
-  time: string | null | undefined,
-  timezone: string,
-  cutoffMinutes: number = 100,
-): boolean {
-  if (!time) return false;
-
-  try {
-    const dateStr = typeof date === "string" ? date : date.toISOString();
-    const timeStr = typeof time === "string" ? time : String(time);
-
-    // Parse the date (just the date part)
-    const dateOnly = dateStr.split("T")[0];
-
-    let hours: number;
-    let minutes: number;
-
-    if (timeStr.includes("T")) {
-      const d = new Date(timeStr);
-      hours = d.getUTCHours();
-      minutes = d.getUTCMinutes();
-    } else {
-      const parts = timeStr.split(":");
-      if (parts.length < 2) return false;
-      hours = parseInt(parts[0], 10);
-      minutes = parseInt(parts[1], 10);
-    }
-
-    // Create cutoff datetime (start time + cutoffMinutes)
-    const cutoffDate = new Date(`${dateOnly}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`);
-    cutoffDate.setMinutes(cutoffDate.getMinutes() + cutoffMinutes);
-
-    // Get current time in the league's timezone
-    const now = getLeagueNow(timezone);
-    return now > cutoffDate;
-  } catch {
-    return false;
-  }
 }
 
 function TournamentHeader({
@@ -98,11 +56,6 @@ function TournamentHeader({
               )}
             </p>
           )}
-          {formatCutoffTime(tournament.time, tournament.cutoffMinutes) && (
-            <p className="text-yellow-400 text-sm mt-1">
-              Cutoff Time: {formatCutoffTime(tournament.time, tournament.cutoffMinutes)}
-            </p>
-          )}
         </div>
       </div>
     </div>
@@ -123,7 +76,6 @@ export default function GameViewPage() {
   const [gettingToken, setGettingToken] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [checkInUrl, setCheckInUrl] = useState<string>("");
-  const [checkInDisabled, setCheckInDisabled] = useState(false);
   const [checkInToast, setCheckInToast] = useState<string | null>(null);
 
   // Check if the logged-in user is already checked in
@@ -137,26 +89,6 @@ export default function GameViewPage() {
       setCheckInUrl(`${window.location.origin}${basePath}`);
     }
   }, [token, leagueSlug]);
-
-  // Check if past cutoff time and update periodically
-  React.useEffect(() => {
-    if (!gameData?.tournament) return;
-
-    const checkCutoff = () => {
-      const pastCutoff = isPastCutoff(
-        gameData.tournament.date,
-        gameData.tournament.time,
-        gameData.tournament.timezone,
-        gameData.tournament.cutoffMinutes,
-      );
-      setCheckInDisabled(pastCutoff);
-    };
-
-    checkCutoff();
-    const interval = setInterval(checkCutoff, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [gameData?.tournament]);
 
   // Auto-clear check-in toast after 4 seconds
   React.useEffect(() => {
@@ -333,32 +265,22 @@ const handleCheckInClick = async () => {
                   <Check size={20} />
                   Checked In
                 </button>
-                {!checkInDisabled && (
-                  <button
-                    onClick={handleCheckInClick}
-                    disabled={gettingToken}
-                    className="text-cyan-400 hover:text-cyan-300 text-sm underline underline-offset-2 transition-colors"
-                  >
-                    {gettingToken ? "Getting Ready..." : "Check in someone else"}
-                  </button>
-                )}
+                <button
+                  onClick={handleCheckInClick}
+                  disabled={gettingToken}
+                  className="text-cyan-400 hover:text-cyan-300 text-sm underline underline-offset-2 transition-colors"
+                >
+                  {gettingToken ? "Getting Ready..." : "Check in someone else"}
+                </button>
               </div>
             ) : (
               <button
                 onClick={handleCheckInClick}
-                disabled={gettingToken || checkInDisabled}
-                className={`${
-                  checkInDisabled
-                    ? "bg-gray-700 cursor-not-allowed border-gray-600 text-white"
-                    : "bg-transparent hover:bg-cyan-600/20 border-cyan-500 text-cyan-400 hover:text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]"
-                } disabled:bg-gray-700 disabled:text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border-2`}
+                disabled={gettingToken}
+                className="bg-transparent hover:bg-cyan-600/20 border-cyan-500 text-cyan-400 hover:text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] disabled:bg-gray-700 disabled:text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all border-2"
               >
                 <UserPlus size={20} />
-                {checkInDisabled
-                  ? "Check-In Closed"
-                  : gettingToken
-                    ? "Checking In..."
-                    : "Check In"}
+                {gettingToken ? "Checking In..." : "Check In"}
               </button>
             )
           ) : (

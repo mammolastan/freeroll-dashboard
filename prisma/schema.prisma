@@ -86,7 +86,6 @@ model TournamentDraft {
   title                   String?                 @db.Text
   allow_chat              Boolean?
   allow_self_checkin      Boolean?
-  cutoff_time             Int?
   game_started            Boolean
   tournament_director_uid String?                 @db.VarChar(255)
   featured_settings       String?                 @db.LongText
@@ -361,7 +360,6 @@ model venues {
   address               String?  @db.VarChar(300)
   notes                 String?  @db.Text
   is_active             Boolean  @default(true)
-  cutoff_time           Int?
   image_sm              String?  @db.Text
   created               DateTime @default(now()) @db.Timestamp(0)
   modified              DateTime @default(now()) @db.Timestamp(0)

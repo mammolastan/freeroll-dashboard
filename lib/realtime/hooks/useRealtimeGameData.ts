@@ -221,7 +221,6 @@ export function useRealtimeGameData(tournamentId: string | number) {
           timezone: 'America/New_York',
           allow_chat: true,
           allow_self_checkin: true,
-          cutoffMinutes: 100,
           game_started: false,
         },
         players
@@ -254,10 +253,6 @@ export function useRealtimeGameData(tournamentId: string | number) {
               incoming.game_started !== undefined
                 ? incoming.game_started
                 : prev.tournament.game_started,
-            cutoffMinutes:
-              incoming.cutoffMinutes !== undefined
-                ? incoming.cutoffMinutes
-                : prev.tournament.cutoffMinutes,
           },
         };
       });

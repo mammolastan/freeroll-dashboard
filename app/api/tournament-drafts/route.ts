@@ -92,7 +92,6 @@ export async function POST(request: NextRequest) {
       blind_schedule,
       allow_chat,
       allow_self_checkin,
-      cutoff_time,
     } = body;
     const leagueId = await getLeagueIdFromRequest(request);
 
@@ -143,10 +142,10 @@ export async function POST(request: NextRequest) {
     // Insert the new tournament draft
     const result = await prisma.$executeRaw`
       INSERT INTO tournament_drafts
-      (tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, blind_schedule, status, period_ids, league_id, allow_chat, allow_self_checkin, cutoff_time)
+      (tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, blind_schedule, status, period_ids, league_id, allow_chat, allow_self_checkin)
       VALUES (${tournament_date}, ${tournament_time || null}, ${director_name || ""}, ${tournament_director_uid || null}, ${title || null}, ${venue_id}, ${
       start_points || 0
-    }, ${scheduleId}, 'in_progress', ${periodIdsJson}, ${leagueId}, ${allow_chat ?? null}, ${allow_self_checkin ?? null}, ${cutoff_time ?? null})
+    }, ${scheduleId}, 'in_progress', ${periodIdsJson}, ${leagueId}, ${allow_chat ?? null}, ${allow_self_checkin ?? null})
     `;
 
     console.log("Insert result:", result);

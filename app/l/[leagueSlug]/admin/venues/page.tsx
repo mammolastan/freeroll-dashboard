@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Plus, Trash2, X, Check, MapPin, Clock, Calendar } from "lucide-react";
+import { Plus, Trash2, X, Check, MapPin, Calendar } from "lucide-react";
 
 const RichTextEditor = dynamic(() => import("@/components/ui/RichTextEditor"), {
   ssr: false,
@@ -22,7 +22,6 @@ interface Venue {
   address: string | null;
   notes: string | null;
   isActive: boolean;
-  cutoffTime: number | null;
   latitude: number | null;
   longitude: number | null;
   checkinRadiusMeters: number;
@@ -44,7 +43,6 @@ export default function VenuesAdminPage() {
     name: "",
     address: "",
     notes: "",
-    cutoffTime: "",
     isActive: true,
     latitude: "",
     longitude: "",
@@ -87,7 +85,6 @@ export default function VenuesAdminPage() {
       name: "",
       address: "",
       notes: "",
-      cutoffTime: "",
       isActive: true,
       latitude: "",
       longitude: "",
@@ -107,7 +104,6 @@ export default function VenuesAdminPage() {
       name: venue.name,
       address: venue.address || "",
       notes: venue.notes || "",
-      cutoffTime: venue.cutoffTime?.toString() || "",
       isActive: venue.isActive,
       latitude: venue.latitude?.toString() || "",
       longitude: venue.longitude?.toString() || "",
@@ -166,7 +162,6 @@ export default function VenuesAdminPage() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           notes: formData.notes || null,
-          cutoffTime: formData.cutoffTime || null,
           isActive: formData.isActive,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
@@ -431,27 +426,6 @@ export default function VenuesAdminPage() {
                 />
               </div>
 
-              {/* Cutoff Time */}
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">
-                  Check-in Cutoff (minutes after start)
-                </label>
-                <input
-                  type="number"
-                  value={formData.cutoffTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cutoffTime: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-cyan-500"
-                  placeholder="e.g., 30"
-                  min="0"
-                />
-                <p className="text-white/40 text-xs mt-1">
-                  Leave blank to match default league cutoff. Players can check
-                  in until this many minutes after the tournament starts.
-                </p>
-              </div>
-
               {/* Geolocation */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -630,12 +604,6 @@ function VenueRow({
               ? `Last: ${formatDate(venue.lastGameDate)}`
               : "No games yet"}
           </span>
-          {venue.cutoffTime && (
-            <span className="flex items-center gap-1 flex-shrink-0">
-              <Clock size={12} />
-              {venue.cutoffTime}min cutoff
-            </span>
-          )}
         </div>
       </div>
       <div

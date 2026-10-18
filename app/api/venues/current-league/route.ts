@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
     name: string;
     address: string | null;
     is_active: boolean;
-    cutoff_time: number | null;
     game_count: bigint;
     last_game_date: Date | null;
   };
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
       v.name,
       v.address,
       v.is_active,
-      v.cutoff_time,
       COUNT(g.id) as game_count,
       MAX(g.date) as last_game_date
     FROM venues v
@@ -60,7 +58,6 @@ export async function GET(req: NextRequest) {
     name: v.name,
     address: v.address,
     isActive: v.is_active,
-    cutoffTime: v.cutoff_time,
     gameCount: Number(v.game_count),
     lastGameDate: v.last_game_date
       ? v.last_game_date.toISOString().split("T")[0]

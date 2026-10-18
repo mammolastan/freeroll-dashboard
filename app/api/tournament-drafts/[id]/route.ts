@@ -106,7 +106,6 @@ export async function PUT(
       start_points,
       allow_chat,
       allow_self_checkin,
-      cutoff_time,
     } = body;
 
     // Validate tournament_date is a valid date (YYYY-MM-DD format and not empty)
@@ -128,7 +127,7 @@ export async function PUT(
 
     // Get current state before updating for audit comparison
     const currentDraftResult = await prisma.$queryRaw<RawQueryResult[]>`
-      SELECT tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, allow_chat, allow_self_checkin, cutoff_time
+      SELECT tournament_date, tournament_time, director_name, tournament_director_uid, title, venue_id, start_points, allow_chat, allow_self_checkin
       FROM tournament_drafts WHERE id = ${draftId}
     `;
 
@@ -153,7 +152,6 @@ export async function PUT(
         start_points = ${start_points || 0},
         allow_chat = ${allow_chat ?? null},
         allow_self_checkin = ${allow_self_checkin ?? null},
-        cutoff_time = ${cutoff_time ?? null},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${draftId}
     `;
@@ -186,7 +184,6 @@ export async function PUT(
         "start_points",
         "allow_chat",
         "allow_self_checkin",
-        "cutoff_time",
       ];
 
       const newValues: Record<string, unknown> = {
@@ -199,7 +196,6 @@ export async function PUT(
         start_points: start_points || 0,
         allow_chat: allow_chat ?? null,
         allow_self_checkin: allow_self_checkin ?? null,
-        cutoff_time: cutoff_time ?? null,
       };
 
       for (const field of fieldsToTrack) {
