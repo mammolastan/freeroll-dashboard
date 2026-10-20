@@ -10,6 +10,7 @@ import {
   Store,
   Award,
   Download,
+  BarChart3,
 } from 'lucide-react';
 
 interface TileOption {
@@ -37,6 +38,12 @@ const TILE_OPTIONS: TileOption[] = [
     label: 'Monthly Rankings',
     description: 'Show venue-based monthly rankings page',
     icon: Trophy,
+  },
+  {
+    key: 'statsPlus',
+    label: 'Stats Plus',
+    description: 'Advanced analytics dashboard with detailed player statistics',
+    icon: BarChart3,
   },
   {
     key: 'players',

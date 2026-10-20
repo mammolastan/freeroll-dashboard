@@ -40,6 +40,7 @@ export interface HomepageTilesConfig {
   // Note: seasonRankings and quarterlyRankings were removed.
   // Point-based rankings now appear automatically based on active competition periods.
   monthlyRankings: boolean;
+  statsPlus: boolean;
   players: boolean;
   venues: boolean;
   badges: boolean;
@@ -210,6 +211,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     recentGames: true,
     activeGames: true,
     monthlyRankings: true,
+    statsPlus: false,
     players: true,
     venues: true,
     badges: true,

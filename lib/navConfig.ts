@@ -60,6 +60,15 @@ export function getNavItems(
     });
   }
 
+  // Add Stats Plus if enabled (advanced analytics dashboard)
+  if (homepageTiles?.statsPlus) {
+    rankingsChildren.push({
+      href: `${prefix}/stats`,
+      text: "Stats Plus",
+      tileKey: "statsPlus",
+    });
+  }
+
   const allItems: NavItem[] = [
     {
       href: `${prefix}/games`,
