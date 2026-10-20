@@ -150,6 +150,11 @@ export interface LeagueConfig {
   tvScreenSettings: TVScreenSettings;
 }
 
+/**
+ * IMPORTANT: Keep in sync with types/league-config-defaults.mjs
+ * That file is a plain ESM copy used by server.mts (Socket.IO server)
+ * which cannot import TypeScript files directly.
+ */
 export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   leagueName: '',
   leagueImageUrl: null,

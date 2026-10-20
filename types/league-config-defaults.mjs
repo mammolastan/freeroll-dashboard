@@ -61,6 +61,7 @@ export const DEFAULT_LEAGUE_CONFIG = {
     recentGames: true,
     activeGames: true,
     monthlyRankings: true,
+    statsPlus: false,
     players: true,
     venues: true,
     badges: true,
