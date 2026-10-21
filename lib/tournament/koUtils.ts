@@ -7,37 +7,30 @@ type PrismaTransactionClient = Omit<
 >;
 
 /**
- * Assign ko_position to knocked out players who don't have one yet.
- * Preserves existing ko_positions - only assigns the next available position
- * to players with knockedout_at but no ko_position.
+ * Fully recalculate ko_position for ALL knocked out players based on knockedout_at order.
+ * This ensures ko_position always matches the knockedout_at timestamp order.
+ * Oldest knockedout_at = position 1, second oldest = position 2, etc.
  * Works with both regular prisma client and transaction client.
  */
 export async function recalculateKoPositions(
   draftId: number,
   db: PrismaClient | PrismaTransactionClient
 ): Promise<void> {
-  // Find the current max ko_position to determine the next position
-  const maxResult = await db.$queryRaw<{ max_ko: number | null }[]>`
-    SELECT MAX(ko_position) as max_ko FROM tournament_draft_players
-    WHERE tournament_draft_id = ${draftId}
-  `;
-
-  const currentMaxKo = maxResult[0]?.max_ko ?? 0;
-
-  // Only get players who are knocked out but don't have a ko_position yet
-  const playersNeedingKoPosition = await db.$queryRaw<{ id: number }[]>`
+  // Get ALL knocked out players ordered by knockedout_at, then id (for tie-breaking)
+  const knockedOutPlayers = await db.$queryRaw<{ id: number }[]>`
     SELECT id FROM tournament_draft_players
     WHERE tournament_draft_id = ${draftId}
       AND knockedout_at IS NOT NULL
-      AND ko_position IS NULL
     ORDER BY knockedout_at ASC, id ASC
   `;
 
-  for (let i = 0; i < playersNeedingKoPosition.length; i++) {
+  // Update each player's ko_position based on their order in the sorted list
+  for (let i = 0; i < knockedOutPlayers.length; i++) {
+    const newKoPosition = i + 1;
     await db.$executeRaw`
       UPDATE tournament_draft_players
-      SET ko_position = ${currentMaxKo + i + 1}
-      WHERE id = ${playersNeedingKoPosition[i].id}
+      SET ko_position = ${newKoPosition}
+      WHERE id = ${knockedOutPlayers[i].id}
     `;
   }
 }

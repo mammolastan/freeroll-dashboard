@@ -187,9 +187,9 @@ export function PlayerRow({
                 {calculatedKoPosition !== null ? (
                     <>
                         <span className="px-2 py-1 text-black text-sm font-medium">
-                            #{calculatedKoPosition}{' '}
-                            <span className="text-gray-500 font-normal">
-                                ({toOrdinal(totalPlayers - calculatedKoPosition + 1)})
+                            {toOrdinal(totalPlayers - calculatedKoPosition + 1)} place{' '}
+                            <span className="text-gray-500 font-normal whitespace-nowrap">
+                                (KO #{calculatedKoPosition})
                             </span>
                         </span>
                         {!isIntegrated && (

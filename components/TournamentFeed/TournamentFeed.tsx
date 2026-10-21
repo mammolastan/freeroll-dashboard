@@ -82,17 +82,28 @@ function PlayersGrid({
   // For eliminated players, maintain sort order (most recent KO first)
   // For active players, split by photo status for visual grouping
   if (isEliminated) {
+    // Calculate KO positions based on eliminated_at order (consistent with admin screens)
+    // Players are already sorted by eliminated_at (newest first), so we can derive positions
+    const koPositionMap = new Map<number, number>();
+    const sortedByTime = [...players].sort((a, b) => {
+      const timeA = a.eliminated_at ? new Date(a.eliminated_at).getTime() : 0;
+      const timeB = b.eliminated_at ? new Date(b.eliminated_at).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB; // oldest first for position calculation
+      return a.id - b.id;
+    });
+    sortedByTime.forEach((p, idx) => koPositionMap.set(p.id, idx + 1));
+
     return (
       <div className="p-3">
         <div className="flex flex-wrap gap-1.5">
           {players.map((player) => {
             const hasPhoto = player.photo_url && player.photo_url.trim() !== "";
-            // Calculate placement: use stored value, or compute from ko_position
-            // placement = totalPlayers - ko_position + 1
+            // Calculate placement from eliminated_at order
+            const koPosition = koPositionMap.get(player.id);
             const placement =
               player.placement ||
-              (totalPlayers && player.elimination_position
-                ? totalPlayers - player.elimination_position + 1
+              (totalPlayers && koPosition
+                ? totalPlayers - koPosition + 1
                 : null);
             return (
               <div
@@ -556,13 +567,19 @@ export function TournamentFeed({
   }, [players, localPendingReports]);
 
   // Eliminated players for the Eliminated tab
+  // Sort by eliminated_at (knockedout_at) for consistent ordering with admin screens
   const eliminatedPlayers = useMemo(() => {
     if (!players) return [];
     return players
       .filter((p) => !p.is_active)
-      .sort(
-        (a, b) => (b.elimination_position || 0) - (a.elimination_position || 0),
-      );
+      .sort((a, b) => {
+        // Sort by elimination time, most recent first
+        const timeA = a.eliminated_at ? new Date(a.eliminated_at).getTime() : 0;
+        const timeB = b.eliminated_at ? new Date(b.eliminated_at).getTime() : 0;
+        if (timeB !== timeA) return timeB - timeA;
+        // Tie-breaker: higher id = later knockout
+        return b.id - a.id;
+      });
   }, [players]);
 
   // Determine if tournament is over and who won

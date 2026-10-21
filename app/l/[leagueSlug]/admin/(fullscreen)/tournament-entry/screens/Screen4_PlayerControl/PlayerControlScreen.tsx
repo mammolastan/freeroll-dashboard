@@ -8,6 +8,11 @@ import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
 import { ActionHistoryDrawer } from "@/components/td/ActionHistoryDrawer";
+import {
+  getKnockedOutPlayersSorted,
+  calculatePlacement as calculatePlacementFromKo,
+} from "../../utils/koPositionUtils";
+import { toOrdinal } from "@/lib/formatUtils";
 
 interface TournamentDraft {
   id: number;
@@ -36,6 +41,7 @@ interface Player {
   added_by?: "admin" | "self_checkin";
   checked_in_at?: string;
   player_nickname?: string | null;
+  knockedout_at?: string | null;
 }
 
 interface PlayerControlScreenProps {
@@ -46,14 +52,6 @@ interface PlayerControlScreenProps {
   onScreenChange: (screen: ScreenNumber) => void;
 }
 
-// Helper function to calculate dynamic placement based on ko_position
-function calculatePlacement(
-  player: Player,
-  totalPlayers: number,
-): number | null {
-  if (player.ko_position === null) return null;
-  return totalPlayers - player.ko_position + 1;
-}
 
 export function PlayerControlScreen({
   currentDraft,
@@ -129,9 +127,8 @@ export function PlayerControlScreen({
       );
     });
 
-  const knockedOutPlayers = players
-    .filter((p) => p.ko_position !== null)
-    .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
+  // Use knockedout_at-based calculation for consistent KO position display
+  const knockedOutPlayers = getKnockedOutPlayersSorted(players);
 
   const handleKnockout = useCallback(
     async (player: Player, hitmanName: string) => {
@@ -684,7 +681,10 @@ export function PlayerControlScreen({
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="text-2xl font-bold text-red-400">
-                          KO #{player.ko_position}
+                          {toOrdinal(calculatePlacementFromKo(player.calculatedKoPosition, players.length) || 0)} place{" "}
+                          <span className="text-lg text-red-300 font-normal whitespace-nowrap">
+                            (KO #{player.calculatedKoPosition})
+                          </span>
                         </div>
                         <div>
                           <div className="text-xl font-bold text-white">
@@ -707,12 +707,6 @@ export function PlayerControlScreen({
                           <span className="text-cyan-400 font-semibold">
                             {player.hitman_name}
                           </span>
-                        </div>
-                      )}
-                      {calculatePlacement(player, players.length) !== null && (
-                        <div className="text-gray-500 text-sm ml-16 mt-1">
-                          Final Placement: #
-                          {calculatePlacement(player, players.length)}
                         </div>
                       )}
                     </div>

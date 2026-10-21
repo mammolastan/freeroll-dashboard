@@ -10,6 +10,11 @@ import { ScreenNumber } from '../../hooks/useScreenRouter';
 import { TableMap } from './TableMap';
 import { useTableAssignment } from './useTableAssignment';
 import { PlayerCheckInCore } from '@/components/PlayerCheckIn/PlayerCheckInCore';
+import {
+  getKnockedOutPlayersSorted,
+  calculatePlacement as calculatePlacementFromKo,
+} from '../../utils/koPositionUtils';
+import { toOrdinal } from '@/lib/formatUtils';
 
 interface TournamentDraft {
   id: number;
@@ -39,6 +44,7 @@ interface Player {
   player_nickname?: string | null;
   t_assign?: number;
   photo_url?: string | null;
+  knockedout_at?: string | null;
 }
 
 interface TableAssignmentScreenProps {
@@ -187,16 +193,8 @@ export function TableAssignmentScreen({
     [currentDraft, onDataChange]
   );
 
-  // Get knocked out players sorted by most recent knockout first
-  const knockedOutPlayers = propPlayers
-    .filter((p) => p.ko_position !== null && p.ko_position > 0)
-    .sort((a, b) => (b.ko_position || 0) - (a.ko_position || 0));
-
-  // Calculate placement based on ko_position
-  const calculatePlacement = (player: Player): number | null => {
-    if (player.ko_position === null) return null;
-    return propPlayers.length - player.ko_position + 1;
-  };
+  // Get knocked out players sorted by most recent knockout first (using knockedout_at)
+  const knockedOutPlayers = getKnockedOutPlayersSorted(propPlayers);
 
   // Handle undo knockout
   const handleUndoKnockout = useCallback(
@@ -418,7 +416,8 @@ export function TableAssignmentScreen({
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-red-400 font-bold text-sm">
-                      #{player.ko_position}
+                      {toOrdinal(calculatePlacementFromKo(player.calculatedKoPosition, propPlayers.length) || 0)} place{' '}
+                      <span className="text-red-300 font-normal whitespace-nowrap">(KO #{player.calculatedKoPosition})</span>
                     </div>
                     <div>
                       <div className="text-white font-medium">
@@ -427,16 +426,12 @@ export function TableAssignmentScreen({
                           <span className="text-cyan-400 ml-1">({player.player_nickname})</span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-400 flex items-center gap-1">
-                        {player.hitman_name && (
-                          <>
-                            <Target size={10} />
-                            <span>by {player.hitman_name}</span>
-                            <span className="mx-1">•</span>
-                          </>
-                        )}
-                        <span>Placed #{calculatePlacement(player)}</span>
-                      </div>
+                      {player.hitman_name && (
+                        <div className="text-xs text-gray-400 flex items-center gap-1">
+                          <Target size={10} />
+                          <span>by {player.hitman_name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

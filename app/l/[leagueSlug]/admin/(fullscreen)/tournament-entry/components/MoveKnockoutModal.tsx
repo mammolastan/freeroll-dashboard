@@ -50,7 +50,9 @@ function DraggablePlayerRow({
     id: "player-to-move",
   });
 
-  const positionLabel = isLatest ? `Latest (${toOrdinal(placement)})` : `#${position} (${toOrdinal(placement)})`;
+  const positionLabel = isLatest
+    ? `Latest - ${toOrdinal(placement)} place`
+    : `${toOrdinal(placement)} place (KO #${position})`;
 
   // Show placeholder when dragging
   if (isDragging) {
@@ -162,7 +164,9 @@ function KnockoutListItem({
   isLatest: boolean;
 }) {
   const displayName = player.player_nickname || player.player_name;
-  const positionLabel = isLatest ? `Latest (${toOrdinal(placement)})` : `#${position} (${toOrdinal(placement)})`;
+  const positionLabel = isLatest
+    ? `Latest - ${toOrdinal(placement)} place`
+    : `${toOrdinal(placement)} place (KO #${position})`;
 
   return (
     <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-gray-700">
@@ -343,7 +347,8 @@ export default function MoveKnockoutModal({
                 <p className="text-lg text-gray-700">
                   Move to{" "}
                   <span className="font-semibold text-blue-600">
-                    KO #{pendingMove.newPosition} ({toOrdinal(totalPlayers - pendingMove.newPosition + 1)})
+                    {toOrdinal(totalPlayers - pendingMove.newPosition + 1)} place{" "}
+                    <span className="whitespace-nowrap">(KO #{pendingMove.newPosition})</span>
                   </span>
                   ?
                 </p>

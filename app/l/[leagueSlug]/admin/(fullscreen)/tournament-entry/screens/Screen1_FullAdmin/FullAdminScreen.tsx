@@ -53,6 +53,7 @@ import { useOptimisticUpdates } from "./hooks/useOptimisticUpdates";
 import { useSortedPlayerList } from "./hooks/useSortedPlayerList";
 import { usePeriodManager } from "./hooks/usePeriodManager";
 import { useHitmanManager } from "./hooks/useHitmanManager";
+import { calculateKoPositions } from "../../utils/koPositionUtils";
 
 interface TournamentDraft {
   id: number;
@@ -111,26 +112,6 @@ interface Player {
   knockedout_at?: string | null;
 }
 
-// Calculate ko_position based on knockedout_at timestamp order
-// Oldest knockedout_at = position 1, second oldest = position 2, etc.
-function calculateKoPositions(players: Player[]): Map<number, number> {
-  const knockedOutPlayers = players
-    .filter((p) => p.knockedout_at)
-    .sort((a, b) => {
-      const timeA = new Date(a.knockedout_at!).getTime();
-      const timeB = new Date(b.knockedout_at!).getTime();
-      if (timeA !== timeB) return timeA - timeB;
-      // Tie-breaker: use player id
-      return a.id - b.id;
-    });
-
-  const positionMap = new Map<number, number>();
-  knockedOutPlayers.forEach((player, index) => {
-    positionMap.set(player.id, index + 1);
-  });
-
-  return positionMap;
-}
 
 interface FullAdminScreenProps {
   currentView: "welcome" | "entry";
@@ -3022,48 +3003,6 @@ export function FullAdminScreen({
           </div>
         </div>
 
-        {/* Tournament Summary */}
-        {displayPlayers.length > 0 && (
-          <div className="mb-6 p-4 bg-gray-50 rounded">
-            <h4 className="font-semibold text-black mb-2">
-              Tournament Summary
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-black">Total Players:</span>
-                <span className="ml-2 text-black font-medium">
-                  {displayPlayers.length}
-                </span>
-              </div>
-              <div>
-                <span className="text-black">Players Remaining:</span>
-                <span className="ml-2 text-black font-medium">
-                  {displayPlayers.length -
-                    displayPlayers.filter((p) => p.hitman_name !== null).length}
-                </span>
-              </div>
-              <div>
-                <span className="text-black">New Players:</span>
-                <span className="ml-2 font-medium text-black ">
-                  {displayPlayers.filter((p) => p.is_new_player).length}
-                </span>
-              </div>
-              <div>
-                <span className="text-black">With Hitmen:</span>
-                <span className="ml-2 font-medium text-black ">
-                  {displayPlayers.filter((p) => p.hitman_name !== null).length}
-                </span>
-              </div>
-              <div>
-                <span className="text-black">With Placements:</span>
-                <span className="ml-2 font-medium text-black ">
-                  {displayPlayers.filter((p) => p.placement !== null).length}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Blind Schedule Selector & Game Timer */}
         {currentDraft && (
           <div className="mb-6">
@@ -3295,6 +3234,42 @@ export function FullAdminScreen({
                   newPlayerName={newPlayerName}
                 />
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Tournament Summary */}
+        {displayPlayers.length > 0 && (
+          <div className="mb-6 p-4 bg-gray-50 rounded">
+            <h4 className="font-semibold text-black mb-2">
+              Tournament Summary
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-black">Total Players:</span>
+                <span className="ml-2 text-black font-medium">
+                  {displayPlayers.length}
+                </span>
+              </div>
+              <div>
+                <span className="text-black">Players Remaining:</span>
+                <span className="ml-2 text-black font-medium">
+                  {displayPlayers.length -
+                    displayPlayers.filter((p) => p.hitman_name !== null).length}
+                </span>
+              </div>
+              <div>
+                <span className="text-black">New Players:</span>
+                <span className="ml-2 font-medium text-black ">
+                  {displayPlayers.filter((p) => p.is_new_player).length}
+                </span>
+              </div>
+              <div>
+                <span className="text-black">With Hitmen:</span>
+                <span className="ml-2 font-medium text-black ">
+                  {displayPlayers.filter((p) => p.hitman_name !== null).length}
+                </span>
+              </div>
             </div>
           </div>
         )}
