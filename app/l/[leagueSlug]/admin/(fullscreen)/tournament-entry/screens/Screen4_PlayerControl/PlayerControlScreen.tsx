@@ -2,7 +2,13 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { Target, Users, Trophy, X, History } from "lucide-react";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
@@ -52,7 +58,6 @@ interface PlayerControlScreenProps {
   onScreenChange: (screen: ScreenNumber) => void;
 }
 
-
 export function PlayerControlScreen({
   currentDraft,
   players,
@@ -79,7 +84,9 @@ export function PlayerControlScreen({
   } | null>(null);
 
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
-  const actionLogGameUid = currentDraft?.game_uid || (currentDraft ? `draft-${currentDraft.id}` : null);
+  const actionLogGameUid =
+    currentDraft?.game_uid ||
+    (currentDraft ? `draft-${currentDraft.id}` : null);
   const {
     actions: actionHistory,
     canUndo,
@@ -101,7 +108,7 @@ export function PlayerControlScreen({
   // Memoize to prevent useEffect from resetting hitmanSearchText on every keystroke
   const allRemainingPlayers = useMemo(
     () => players.filter((p) => p.ko_position === null),
-    [players]
+    [players],
   );
 
   // Filter remaining players based on filter text
@@ -123,7 +130,8 @@ export function PlayerControlScreen({
       const searchText = hitmanSearchText.toLowerCase();
       return (
         p.player_name.toLowerCase().includes(searchText) ||
-        (p.player_nickname && p.player_nickname.toLowerCase().includes(searchText))
+        (p.player_nickname &&
+          p.player_nickname.toLowerCase().includes(searchText))
       );
     });
 
@@ -186,7 +194,9 @@ export function PlayerControlScreen({
   // Reset hitman search when modal opens/closes, auto-populate if only one hitman possible
   useEffect(() => {
     if (selectedPlayer) {
-      const possibleHitmen = allRemainingPlayers.filter(p => p.id !== selectedPlayer.id);
+      const possibleHitmen = allRemainingPlayers.filter(
+        (p) => p.id !== selectedPlayer.id,
+      );
       if (possibleHitmen.length === 1) {
         // Only one possible hitman - pre-populate
         setHitmanSearchText(possibleHitmen[0].player_name);
@@ -379,9 +389,13 @@ export function PlayerControlScreen({
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className={`text-sm font-medium ${
-                toast.type === "success" ? "text-green-200" : "text-yellow-200"
-              }`}>
+              <p
+                className={`text-sm font-medium ${
+                  toast.type === "success"
+                    ? "text-green-200"
+                    : "text-yellow-200"
+                }`}
+              >
                 {toast.message}
               </p>
               <button
@@ -401,7 +415,7 @@ export function PlayerControlScreen({
           Player Control
         </h1>
         <p className="text-xl text-gray-400">
-          {currentDraft.title || currentDraft.venue || 'Tournament'}
+          {currentDraft.title || currentDraft.venue || "Tournament"}
         </p>
       </div>
 
@@ -439,35 +453,43 @@ export function PlayerControlScreen({
                   placeholder="Type name or press Enter for 'unknown'..."
                   className="w-full px-4 py-3 text-lg lg:text-xl bg-gray-800 border-2 border-cyan-500/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-500 resize-none overflow-hidden"
                 />
-                {hitmanSearchText.trim() && filteredHitmanOptions.length > 0 && (
-                  <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
-                    {filteredHitmanOptions.map((p, index) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setHighlightedHitmanIndex(-1);
-                          handleKnockout(selectedPlayer, p.player_name);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-lg transition-all ${
-                          highlightedHitmanIndex === index
-                            ? "bg-cyan-500/30 text-cyan-300"
-                            : "text-white hover:bg-gray-700"
-                        }`}
-                      >
-                        {p.player_name}
-                        {p.player_nickname && (
-                          <span className="text-cyan-400 ml-2">({p.player_nickname})</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {hitmanSearchText.trim() &&
+                  filteredHitmanOptions.length > 0 && (
+                    <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border-2 border-cyan-500/50 rounded-lg">
+                      {filteredHitmanOptions.map((p, index) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setHighlightedHitmanIndex(-1);
+                            handleKnockout(selectedPlayer, p.player_name);
+                          }}
+                          className={`w-full px-4 py-3 text-left text-lg transition-all ${
+                            highlightedHitmanIndex === index
+                              ? "bg-cyan-500/30 text-cyan-300"
+                              : "text-white hover:bg-gray-700"
+                          }`}
+                        >
+                          {p.player_name}
+                          {p.player_nickname && (
+                            <span className="text-cyan-400 ml-2">
+                              ({p.player_nickname})
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
               </div>
 
               <div className="flex gap-4">
                 <button
-                  onClick={() => handleKnockout(selectedPlayer, hitmanSearchText.trim() || "unknown")}
+                  onClick={() =>
+                    handleKnockout(
+                      selectedPlayer,
+                      hitmanSearchText.trim() || "unknown",
+                    )
+                  }
                   disabled={isSubmitting}
                   className="flex-1 px-4 lg:px-6 py-3 text-lg lg:text-xl font-bold bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
                 >
@@ -475,7 +497,9 @@ export function PlayerControlScreen({
                     className="inline mr-2"
                     size={24}
                   />
-                  {hitmanSearchText.trim() ? `Knockout by "${hitmanSearchText.trim()}"` : "Knockout (Unknown)"}
+                  {hitmanSearchText.trim()
+                    ? `Knockout by "${hitmanSearchText.trim()}"`
+                    : "Knockout (Unknown)"}
                 </button>
                 <button
                   onClick={() => {
@@ -504,8 +528,8 @@ export function PlayerControlScreen({
               <div
                 className="hitman-list flex-1 overflow-y-auto space-y-1 pr-2 lg:hidden"
                 style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#22c55e #1f2937'
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#22c55e #1f2937",
                 }}
               >
                 <style>{`
@@ -530,7 +554,9 @@ export function PlayerControlScreen({
                   .map((player) => (
                     <button
                       key={player.id}
-                      onClick={() => handleKnockout(selectedPlayer, player.player_name)}
+                      onClick={() =>
+                        handleKnockout(selectedPlayer, player.player_name)
+                      }
                       disabled={isSubmitting}
                       className="w-full px-2 py-1.5 bg-gray-800/80 border border-green-500/50 rounded text-left hover:bg-green-500/20 hover:border-green-400 transition-all disabled:opacity-50"
                     >
@@ -544,7 +570,8 @@ export function PlayerControlScreen({
                       )}
                     </button>
                   ))}
-                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id).length === 0 && (
+                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id)
+                  .length === 0 && (
                   <div className="text-center py-4 text-gray-500 text-sm">
                     No other players remaining
                   </div>
@@ -558,19 +585,24 @@ export function PlayerControlScreen({
                   .map((player) => (
                     <button
                       key={player.id}
-                      onClick={() => handleKnockout(selectedPlayer, player.player_name)}
+                      onClick={() =>
+                        handleKnockout(selectedPlayer, player.player_name)
+                      }
                       disabled={isSubmitting}
                       className="px-2 py-1 bg-gray-800/80 border border-green-500/50 rounded text-left hover:bg-green-500/20 hover:border-green-400 transition-all disabled:opacity-50 shrink-0"
                     >
                       <div className="text-sm font-semibold text-white whitespace-nowrap">
                         {player.player_name}
                         {player.player_nickname && (
-                          <span className="text-cyan-400 ml-1 text-xs">({player.player_nickname})</span>
+                          <span className="text-cyan-400 ml-1 text-xs">
+                            ({player.player_nickname})
+                          </span>
                         )}
                       </div>
                     </button>
                   ))}
-                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id).length === 0 && (
+                {allRemainingPlayers.filter((p) => p.id !== selectedPlayer.id)
+                  .length === 0 && (
                   <div className="text-center py-4 text-gray-500 text-sm w-full">
                     No other players remaining
                   </div>
@@ -681,7 +713,13 @@ export function PlayerControlScreen({
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="text-2xl font-bold text-red-400">
-                          {toOrdinal(calculatePlacementFromKo(player.calculatedKoPosition, players.length) || 0)} place{" "}
+                          {toOrdinal(
+                            calculatePlacementFromKo(
+                              player.calculatedKoPosition,
+                              players.length,
+                            ) || 0,
+                          )}{" "}
+                          place{" "}
                           <span className="text-lg text-red-300 font-normal whitespace-nowrap">
                             (KO #{player.calculatedKoPosition})
                           </span>
@@ -703,7 +741,7 @@ export function PlayerControlScreen({
                             size={16}
                             className="inline mr-1"
                           />
-                          Knocked out by:{" "}
+                          KO&apos;d by:{" "}
                           <span className="text-cyan-400 font-semibold">
                             {player.hitman_name}
                           </span>
@@ -733,9 +771,9 @@ export function PlayerControlScreen({
         title="View action history (Ctrl+Z to undo)"
       >
         <History className="h-5 w-5" />
-        {actionHistory.filter(a => a.status === 'applied').length > 0 && (
+        {actionHistory.filter((a) => a.status === "applied").length > 0 && (
           <span className="text-xs text-cyan-400 font-medium">
-            {actionHistory.filter(a => a.status === 'applied').length}
+            {actionHistory.filter((a) => a.status === "applied").length}
           </span>
         )}
       </button>
