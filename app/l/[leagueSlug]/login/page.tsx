@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, Suspense, useEffect, use } from "react";
-import { signIn, useSession, getSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -54,8 +54,8 @@ function LoginForm({ leagueSlug }: LoginFormProps) {
       if (result?.error) {
         setError("Invalid email or password");
       } else {
-        const redirectUrl = callbackUrl || prefix;
-        router.push(redirectUrl);
+        // Just refresh to trigger useSession update - the useEffect will handle redirect
+        // once the session is properly synchronized
         router.refresh();
       }
     } catch {
