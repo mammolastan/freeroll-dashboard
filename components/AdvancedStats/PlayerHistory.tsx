@@ -34,7 +34,12 @@ interface RankingPeriod {
   ranking: number;
   totalPoints: number;
   totalPlayers: number;
+  gamesPlayed: number;
+  finalTables: number;
+  ftpPercentage: number;
 }
+
+type ChartMetric = "ranking" | "ftpPercentage" | "finalTables" | "totalPoints";
 
 interface Game {
   date: string;
@@ -98,6 +103,7 @@ export default function PlayerHistory({
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [gamesLoading, setGamesLoading] = useState(false);
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("ranking");
 
   // Filters
   const [selectedRange, setSelectedRange] = useState("all-time");
@@ -210,12 +216,142 @@ export default function PlayerHistory({
   // Chart data preparation
   const chartData = rankingHistory
     .filter(p => p.period_type === 'quarterly')
-    .map(p => ({
-      name: p.period_name,
-      ranking: p.ranking,
-      points: p.totalPoints,
-      totalPlayers: p.totalPlayers,
-    }));
+    .map(p => {
+      // Parse period_name like "Q1 2024" into quarter and year
+      const match = p.period_name.match(/^(Q\d)\s+(\d{4})$/);
+      const quarter = match ? match[1] : p.period_name;
+      const year = match ? match[2] : '';
+      return {
+        name: p.period_name,
+        quarter,
+        year,
+        ranking: p.ranking,
+        totalPoints: p.totalPoints,
+        totalPlayers: p.totalPlayers,
+        gamesPlayed: p.gamesPlayed,
+        finalTables: p.finalTables,
+        ftpPercentage: p.ftpPercentage,
+      };
+    });
+
+  // Get unique years for alternating colors
+  const uniqueYears = [...new Set(chartData.map(d => d.year))];
+  const yearColorMap: Record<string, string> = {};
+  uniqueYears.forEach((year, index) => {
+    yearColorMap[year] = index % 2 === 0 ? 'rgba(255,255,255,0.7)' : 'rgba(147,197,253,0.8)';
+  });
+
+  // Calculate year label info: which index to render at and x-offset for centering
+  const yearLabelInfo: Record<number, { year: string; offsetTicks: number }> = {};
+  uniqueYears.forEach(year => {
+    const yearIndices = chartData
+      .map((d, i) => d.year === year ? i : -1)
+      .filter(i => i !== -1);
+    if (yearIndices.length > 0) {
+      const firstIdx = yearIndices[0];
+      const lastIdx = yearIndices[yearIndices.length - 1];
+      // Offset is half the span (in tick units) to center the year label
+      const offsetTicks = (lastIdx - firstIdx) / 2;
+      yearLabelInfo[firstIdx] = { year, offsetTicks };
+    }
+  });
+
+  // Estimate tick spacing (will be calculated from actual x positions)
+  const tickPositions: number[] = [];
+
+  // Custom X-axis tick component
+  const CustomXAxisTick = ({ x, y, payload, index }: { x: number; y: number; payload: { value: string }; index?: number }) => {
+    const dataPoint = chartData.find(d => d.name === payload.value);
+    if (!dataPoint || index === undefined) return null;
+
+    // Store tick position for spacing calculation
+    tickPositions[index] = x;
+
+    const color = yearColorMap[dataPoint.year] || 'rgba(255,255,255,0.4)';
+    const yearInfo = yearLabelInfo[index];
+
+    // Calculate tick spacing from adjacent ticks
+    let tickSpacing = 50; // default fallback
+    if (chartData.length > 1 && tickPositions.length >= 2) {
+      // Find two adjacent populated positions
+      for (let i = 1; i < tickPositions.length; i++) {
+        if (tickPositions[i] !== undefined && tickPositions[i - 1] !== undefined) {
+          tickSpacing = tickPositions[i] - tickPositions[i - 1];
+          break;
+        }
+      }
+    }
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={12}
+          textAnchor="middle"
+          fill={color}
+          fontSize={12}
+          fontWeight={500}
+        >
+          {dataPoint.quarter}
+        </text>
+        {yearInfo && (
+          <text
+            x={yearInfo.offsetTicks * tickSpacing}
+            y={0}
+            dy={26}
+            textAnchor="middle"
+            fill={color}
+            fontSize={10}
+          >
+            {yearInfo.year}
+          </text>
+        )}
+      </g>
+    );
+  };
+
+  const chartConfigs: Record<ChartMetric, {
+    label: string;
+    color: string;
+    reversed: boolean;
+    yAxisLabel: string;
+    tooltipFormatter: (value: number) => [string, string];
+    helperText?: string;
+  }> = {
+    ranking: {
+      label: "League Rank",
+      color: "#06b6d4",
+      reversed: true,
+      yAxisLabel: "Rank",
+      tooltipFormatter: (value) => [`#${value}`, "Rank"],
+      helperText: "Lower rank = better position (1 is first place)",
+    },
+    ftpPercentage: {
+      label: "FTP%",
+      color: "#a855f7",
+      reversed: false,
+      yAxisLabel: "FTP%",
+      tooltipFormatter: (value) => [`${value}%`, "FTP%"],
+      helperText: "Percentage of games finishing in the final table (top 8)",
+    },
+    finalTables: {
+      label: "Final Tables",
+      color: "#22c55e",
+      reversed: false,
+      yAxisLabel: "Final Tables",
+      tooltipFormatter: (value) => [String(value), "Final Tables"],
+    },
+    totalPoints: {
+      label: "Total Points",
+      color: "#eab308",
+      reversed: false,
+      yAxisLabel: "Points",
+      tooltipFormatter: (value) => [String(value), "Points"],
+    },
+  };
+
+  const currentConfig = chartConfigs[chartMetric];
 
   const SortableHeader = ({
     field,
@@ -343,10 +479,28 @@ export default function PlayerHistory({
         <div className="bg-theme-surface rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="text-green-400" />
-            Ranking Progression
+            Performance Over Time
           </h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData}>
+
+          {/* Tabs */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {(Object.keys(chartConfigs) as ChartMetric[]).map((metric) => (
+              <button
+                key={metric}
+                onClick={() => setChartMetric(metric)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  chartMetric === metric
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/40"
+                    : "bg-theme-surface-hover text-gray-400 hover:text-gray-200 border border-transparent"
+                }`}
+              >
+                {chartConfigs[metric].label}
+              </button>
+            ))}
+          </div>
+
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={chartData} margin={{ bottom: 20 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="rgba(255,255,255,0.1)"
@@ -354,15 +508,17 @@ export default function PlayerHistory({
               <XAxis
                 dataKey="name"
                 stroke="rgba(255,255,255,0.4)"
-                tick={{ fontSize: 12 }}
+                tick={(props) => <CustomXAxisTick {...props} />}
+                height={45}
+                interval={0}
               />
               <YAxis
-                reversed
+                reversed={currentConfig.reversed}
                 stroke="rgba(255,255,255,0.4)"
                 tick={{ fontSize: 12 }}
                 domain={['auto', 'auto']}
                 label={{
-                  value: 'Rank',
+                  value: currentConfig.yAxisLabel,
                   angle: -90,
                   position: 'insideLeft',
                   style: { fill: 'rgba(255,255,255,0.4)' }
@@ -375,27 +531,24 @@ export default function PlayerHistory({
                   borderRadius: 8,
                 }}
                 labelStyle={{ color: "rgba(255,255,255,0.6)" }}
-                formatter={(value: number, name: string) => {
-                  if (name === 'ranking') {
-                    return [`#${value}`, 'Rank'];
-                  }
-                  return [value, name];
-                }}
+                formatter={(value: number) => currentConfig.tooltipFormatter(value)}
               />
               <Line
                 type="monotone"
-                dataKey="ranking"
-                name="ranking"
-                stroke="#06b6d4"
+                dataKey={chartMetric}
+                name={chartMetric}
+                stroke={currentConfig.color}
                 strokeWidth={2}
-                dot={{ fill: "#06b6d4", strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, fill: "#06b6d4" }}
+                dot={{ fill: currentConfig.color, strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6, fill: currentConfig.color }}
               />
             </LineChart>
           </ResponsiveContainer>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Lower rank = better position (1 is first place)
-          </p>
+          {currentConfig.helperText && (
+            <p className="text-xs text-gray-400 text-center mt-2">
+              {currentConfig.helperText}
+            </p>
+          )}
         </div>
       )}
 

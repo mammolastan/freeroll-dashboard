@@ -1,3 +1,5 @@
+// app/l/[leagueSlug]/stats/player/[uid]/page.tsx
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
