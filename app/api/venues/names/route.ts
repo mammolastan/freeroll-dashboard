@@ -6,6 +6,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
+// Cache for 6 hours - venue list rarely changes
+export const revalidate = 21600;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

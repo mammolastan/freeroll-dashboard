@@ -3,6 +3,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Cache for 2 hours - historical period data never changes
+export const revalidate = 7200;
+
 interface RankingPeriod {
   period_id: number;
   period_name: string;

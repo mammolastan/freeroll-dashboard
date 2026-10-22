@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { RawQueryResult } from "@/types";
 import { getLeagueIdFromRequest } from "@/lib/league-utils";
 
+// Cache for 1 hour - leaderboard data changes infrequently
+export const revalidate = 3600;
+
 // Helper function to convert BigInt values
 function serializeResults(results: RawQueryResult[]) {
   return results.map((record) => {

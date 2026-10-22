@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+// Cache for 30 minutes - player stats update after games finalize
+export const revalidate = 1800;
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ uid: string }> }
