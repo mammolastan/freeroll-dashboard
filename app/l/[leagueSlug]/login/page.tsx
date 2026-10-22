@@ -54,9 +54,10 @@ function LoginForm({ leagueSlug }: LoginFormProps) {
       if (result?.error) {
         setError("Invalid email or password");
       } else {
-        // Just refresh to trigger useSession update - the useEffect will handle redirect
-        // once the session is properly synchronized
-        router.refresh();
+        // Use hard navigation to avoid race conditions between client-side routing
+        // and server-side session detection (known Next.js 15 + NextAuth issue)
+        const redirectUrl = callbackUrl || prefix;
+        window.location.href = redirectUrl;
       }
     } catch {
       setError("Something went wrong. Please try again.");
