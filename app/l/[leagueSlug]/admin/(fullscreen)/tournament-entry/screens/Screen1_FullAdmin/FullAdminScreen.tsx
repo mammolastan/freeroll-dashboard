@@ -32,7 +32,6 @@ import {
 import { formatGameDate, formatTime } from "@/lib/utils";
 import { QRCodeModal } from "../../QRCodeModal";
 import { GameTimer } from "@/components/Timer/GameTimer";
-import { useRealtimeGameData } from "@/lib/realtime/hooks/useRealtimeGameData";
 import { socket } from "@/lib/socketClient";
 import { PlayerSearchDropdown } from "@/components/PlayerSearchDropdown";
 import { PlayerRow } from "../../components/PlayerRow";
@@ -153,7 +152,9 @@ export function FullAdminScreen({
   const [displayCount, setDisplayCount] = useState(8);
   const [showLoadMore, setShowLoadMore] = useState(false);
   const [isReverting, setIsReverting] = useState(false);
-  const { computedStats } = useRealtimeGameData(currentDraft?.id || 0);
+
+  // Calculate players remaining from the shared players prop (consistent with other screens)
+  const playersRemaining = players.filter(p => p.ko_position === null).length;
 
   // Action History state
   const [showActionHistory, setShowActionHistory] = useState(false);
@@ -3167,7 +3168,7 @@ export function FullAdminScreen({
             {/* Game Timer */}
             <GameTimer
               tournamentId={currentDraft.id}
-              playersRemaining={computedStats?.playersRemaining}
+              playersRemaining={playersRemaining}
               isAdmin={true}
               blindScheduleName={getBlindScheduleDisplayName(
                 currentDraft,
