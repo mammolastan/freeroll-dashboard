@@ -104,6 +104,7 @@ export default function PlayerHistory({
   const [loading, setLoading] = useState(true);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("ranking");
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   // Filters
   const [selectedRange, setSelectedRange] = useState("all-time");
@@ -122,6 +123,16 @@ export default function PlayerHistory({
 
   const { appendLeagueParam, isReady: leagueParamReady } = useLeagueParam();
   const router = useRouter();
+
+  // Detect small screen for responsive chart
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 640);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   // Fetch ranking history once on mount
   useEffect(() => {
@@ -500,7 +511,7 @@ export default function PlayerHistory({
           </div>
 
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ bottom: 20 }}>
+            <LineChart data={chartData} margin={{ bottom: 20, left: isSmallScreen ? 0 : 10 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="rgba(255,255,255,0.1)"
@@ -513,6 +524,7 @@ export default function PlayerHistory({
                 interval={0}
               />
               <YAxis
+                hide={isSmallScreen}
                 reversed={currentConfig.reversed}
                 stroke="rgba(255,255,255,0.4)"
                 tick={{ fontSize: 12 }}
