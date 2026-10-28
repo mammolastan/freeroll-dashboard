@@ -1375,7 +1375,8 @@ export function FullAdminScreen({
 
     setGeneratingQR(true);
     const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const newCheckInUrl = `${baseURL}/gameview/${currentDraft.id}`;
+    const leagueSlug = session?.user?.leagueSlug;
+    const newCheckInUrl = `${baseURL}/l/${leagueSlug}/gameview/${currentDraft.id}`;
     setCheckInUrl(newCheckInUrl);
     setShowQRCode(true);
     setGeneratingQR(false);
