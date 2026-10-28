@@ -53,6 +53,7 @@ import { useSortedPlayerList } from "./hooks/useSortedPlayerList";
 import { usePeriodManager } from "./hooks/usePeriodManager";
 import { useHitmanManager } from "./hooks/useHitmanManager";
 import { calculateKoPositions } from "../../utils/koPositionUtils";
+import styles from "./FullAdminScreen.module.css";
 
 interface TournamentDraft {
   id: number;
@@ -1542,187 +1543,168 @@ export function FullAdminScreen({
   // Welcome Screen
   if (currentView === "welcome") {
     return (
-      <div className="min-h-screen bg-gray-100 p-4">
-        <div className="max-w-6xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="">
-                <div className="">
-                  <span style={{ margin: "auto" }}>
-                    Tournament Entry System
-                  </span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mx-auto"
-            >
-              <Plus size={16} />
-              Create New Tournament
-            </button>
-            <CardContent>
-              <div className="mb-6"></div>
+      <div className={styles.welcomeContainer}>
+        {/* Header */}
+        <div className={styles.header}>
+          <h1 className={styles.headerTitle}>Tournament Entry System</h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className={styles.createButton}
+          >
+            <Plus size={16} />
+            Create New Tournament
+          </button>
+        </div>
 
-              {loadingTournaments ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="mt-2 text-gray-600">Loading tournaments...</p>
-                </div>
-              ) : tournaments.length === 0 ? (
-                <div className="text-center py-8">
-                  <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No tournament drafts found.</p>
-                  <p className="text-gray-500 text-sm">
-                    Click &quot;Create New Tournament&quot; to get started.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {tournaments.slice(0, displayCount).map((tournament) => (
-                    <div
-                      key={tournament.id}
-                      className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="text-black text-sm">{tournament.id}</div>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div
-                          className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1 cursor-pointer"
-                          onClick={() => selectTournament(tournament)}
-                        >
-                          <div className="flex flex-col">
-                            {tournament.title && (
-                              <div className="text-base font-bold text-blue-700 mb-1">
-                                {tournament.title}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                              <Calendar className="w-4 h-4 text-blue-600" />
-                              {formatGameDate(tournament.tournament_date || "")}
-                              {formatTime(tournament.tournament_time) && (
-                                <span className="text-sm">
-                                  {formatTime(tournament.tournament_time)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <MapPin className="w-4 h-4" />
-                              {tournament.venue}
-                            </div>
+        {/* Tournament List */}
+        <div className={styles.tournamentList}>
+          {loadingTournaments ? (
+            <div className={styles.loadingState}>
+              <div className={styles.loadingSpinner}></div>
+              <p className={styles.loadingText}>Loading tournaments...</p>
+            </div>
+          ) : tournaments.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Trophy className={styles.emptyStateIcon} />
+              <p className={styles.emptyStateText}>No tournament drafts found.</p>
+              <p className={styles.emptyStateSubtext}>
+                Click &quot;Create New Tournament&quot; to get started.
+              </p>
+            </div>
+          ) : (
+            <>
+              {tournaments.slice(0, displayCount).map((tournament) => (
+                <div
+                  key={tournament.id}
+                  className={styles.tournamentCard}
+                  onClick={() => selectTournament(tournament)}
+                >
+                  <div className={styles.tournamentId}>#{tournament.id}</div>
+                  <div className={styles.tournamentContent}>
+                    <div className={styles.tournamentMain}>
+                      <div className={styles.tournamentInfo}>
+                        {tournament.title && (
+                          <div className={styles.tournamentTitle}>
+                            {tournament.title}
                           </div>
-
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Users className="w-4 h-4" />
-                              {tournament.status === "in_progress" &&
-                              tournament.remaining_players !== undefined
-                                ? `${tournament.remaining_players}/${tournament.player_count}`
-                                : `${tournament.player_count} players`}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              {tournament.director_name || "No director"}
-                            </div>
-                          </div>
+                        )}
+                        <div className={styles.tournamentDate}>
+                          <Calendar className={styles.tournamentDateIcon} />
+                          {formatGameDate(tournament.tournament_date || "")}
+                          {formatTime(tournament.tournament_time) && (
+                            <span className={styles.tournamentTime}>
+                              {formatTime(tournament.tournament_time)}
+                            </span>
+                          )}
                         </div>
+                        <div className={styles.tournamentVenue}>
+                          <MapPin className={styles.tournamentVenueIcon} />
+                          {tournament.venue}
+                        </div>
+                      </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                          {/* Timer display for in_progress tournaments */}
-                          {tournament.status === "in_progress" && tournament.timer_remaining_seconds != null && (() => {
-                            const remainingTime = tournament.timer_remaining_seconds;
-                            const isRunning = tournament.timer_is_running && !tournament.timer_is_paused;
-                            const currentBlinds = getCurrentBlinds(tournament);
-                            const timeColor = remainingTime < 60
-                              ? "text-red-600"
-                              : remainingTime < 300
-                                ? "text-yellow-600"
-                                : "text-green-600";
-                            return (
-                              <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-1.5 w-full sm:w-auto">
-                                <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
-                                <span className={`font-mono font-bold text-lg ${timeColor}`}>
-                                  {formatTimerDisplay(remainingTime)}
-                                </span>
-                                {tournament.timer_current_level && (
-                                  <span className="text-xs text-gray-400">
-                                    L{tournament.timer_current_level}
-                                  </span>
-                                )}
-                                {currentBlinds && (
-                                  <span className="text-xs text-cyan-300 font-mono">
-                                    {currentBlinds.smallBlind}/{currentBlinds.bigBlind}
-                                  </span>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCardTimerToggle(tournament.id, !!tournament.timer_is_paused);
-                                  }}
-                                  className={`p-1 rounded ${
-                                    isRunning
-                                      ? "bg-yellow-600 hover:bg-yellow-500"
-                                      : "bg-green-600 hover:bg-green-500"
-                                  } text-white transition-colors ml-auto sm:ml-0`}
-                                  title={isRunning ? "Pause timer" : "Resume timer"}
-                                >
-                                  {isRunning ? <Pause size={14} /> : <Play size={14} />}
-                                </button>
-                              </div>
-                            );
-                          })()}
-
-                          <div
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              tournament.status === "in_progress"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : tournament.status === "integrated"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {tournament.status === "in_progress"
-                              ? "In Progress"
-                              : tournament.status === "integrated"
-                                ? "Integrated"
-                                : "Finalized"}
-                          </div>
-
-                          {/* Delete Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent selecting the tournament when clicking delete
-                              const tournamentName = `${new Date(tournament.tournament_date).toLocaleDateString()} - ${tournament.venue}`;
-                              deleteTournament(tournament.id, tournamentName);
-                            }}
-                            className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs transition-colors"
-                            title="Delete Tournament"
-                          >
-                            <X size={14} />
-                            Delete
-                          </button>
+                      <div className={styles.tournamentMeta}>
+                        <div className={styles.tournamentMetaItem}>
+                          <Users className={styles.tournamentMetaIcon} />
+                          {tournament.status === "in_progress" &&
+                          tournament.remaining_players !== undefined
+                            ? `${tournament.remaining_players}/${tournament.player_count}`
+                            : `${tournament.player_count} players`}
+                        </div>
+                        <div className={styles.tournamentMetaItem}>
+                          <User className={styles.tournamentMetaIcon} />
+                          {tournament.director_name || "No director"}
                         </div>
                       </div>
                     </div>
-                  ))}
-                  {/* Load More Button */}
-                  {showLoadMore && (
-                    <div className="flex justify-center mt-6">
-                      <button
-                        onClick={handleLoadMore}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+
+                    <div className={styles.tournamentActions} onClick={(e) => e.stopPropagation()}>
+                      {/* Timer display for in_progress tournaments */}
+                      {tournament.status === "in_progress" && tournament.timer_remaining_seconds != null && (() => {
+                        const remainingTime = tournament.timer_remaining_seconds;
+                        const isRunning = tournament.timer_is_running && !tournament.timer_is_paused;
+                        const currentBlinds = getCurrentBlinds(tournament);
+                        const timeColorClass = remainingTime < 60
+                          ? styles.timerTimeRed
+                          : remainingTime < 300
+                            ? styles.timerTimeYellow
+                            : styles.timerTimeGreen;
+                        return (
+                          <div className={styles.timerDisplay}>
+                            <Clock className={styles.timerIcon} />
+                            <span className={`${styles.timerTime} ${timeColorClass}`}>
+                              {formatTimerDisplay(remainingTime)}
+                            </span>
+                            {tournament.timer_current_level && (
+                              <span className={styles.timerLevel}>
+                                L{tournament.timer_current_level}
+                              </span>
+                            )}
+                            {currentBlinds && (
+                              <span className={styles.timerBlinds}>
+                                {currentBlinds.smallBlind}/{currentBlinds.bigBlind}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleCardTimerToggle(tournament.id, !!tournament.timer_is_paused)}
+                              className={`${styles.timerButton} ${isRunning ? styles.timerButtonPause : styles.timerButtonPlay}`}
+                              title={isRunning ? "Pause timer" : "Resume timer"}
+                            >
+                              {isRunning ? <Pause size={14} /> : <Play size={14} />}
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      <span
+                        className={`${styles.statusBadge} ${
+                          tournament.status === "in_progress"
+                            ? styles.statusInProgress
+                            : tournament.status === "integrated"
+                              ? styles.statusIntegrated
+                              : styles.statusFinalized
+                        }`}
                       >
-                        <Plus size={16} />
-                        Load More Tournaments (
-                        {tournaments.length - displayCount} remaining)
+                        {tournament.status === "in_progress"
+                          ? "In Progress"
+                          : tournament.status === "integrated"
+                            ? "Integrated"
+                            : "Finalized"}
+                      </span>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => {
+                          const tournamentName = `${new Date(tournament.tournament_date).toLocaleDateString()} - ${tournament.venue}`;
+                          deleteTournament(tournament.id, tournamentName);
+                        }}
+                        className={styles.deleteButton}
+                        title="Delete Tournament"
+                      >
+                        <X size={14} />
+                        Delete
                       </button>
                     </div>
-                  )}
+                  </div>
+                </div>
+              ))}
+              {/* Load More Button */}
+              {showLoadMore && (
+                <div className={styles.loadMoreContainer}>
+                  <button
+                    onClick={handleLoadMore}
+                    className={styles.loadMoreButton}
+                  >
+                    <Plus size={16} />
+                    Load More Tournaments ({tournaments.length - displayCount} remaining)
+                  </button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </>
+          )}
+        </div>
 
-          {/* Create Tournament Modal */}
+        {/* Create Tournament Modal */}
           {showCreateModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4">
               <Card className="w-full max-w-96 mx-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto">
@@ -2329,8 +2311,7 @@ export function FullAdminScreen({
                 </CardContent>
               </Card>
             </div>
-          )}
-        </div>
+        )}
       </div>
     );
   }

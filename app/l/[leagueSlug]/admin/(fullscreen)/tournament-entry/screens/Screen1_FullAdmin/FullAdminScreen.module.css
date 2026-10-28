@@ -1,0 +1,442 @@
+/* FullAdminScreen.module.css - Custom styles for the welcome/tournament list view */
+
+/* Container - no padding on mobile, subtle padding on larger screens */
+.welcomeContainer {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+}
+
+/* Header section */
+.header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+  color: white;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .header {
+    padding: 1.5rem 2rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.headerTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .headerTitle {
+    font-size: 1.5rem;
+  }
+}
+
+.createButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.createButton:hover {
+  background-color: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.createButton:active {
+  transform: translateY(0);
+}
+
+/* Tournament list container */
+.tournamentList {
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .tournamentList {
+    padding: 1rem 1.5rem;
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: #6b7280;
+}
+
+.emptyStateIcon {
+  width: 3rem;
+  height: 3rem;
+  color: #9ca3af;
+  margin: 0 auto 1rem;
+}
+
+.emptyStateText {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.emptyStateSubtext {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+/* Loading state */
+.loadingState {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.loadingSpinner {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  margin-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+/* Tournament card */
+.tournamentCard {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.tournamentCard:hover {
+  background-color: #f0f9ff;
+}
+
+.tournamentCard:active {
+  background-color: #e0f2fe;
+}
+
+/* On larger screens, add card-like styling */
+@media (min-width: 640px) {
+  .tournamentCard {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .tournamentCard:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.tournamentId {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-bottom: 0.25rem;
+}
+
+.tournamentContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .tournamentContent {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.tournamentMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+@media (min-width: 640px) {
+  .tournamentMain {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+
+.tournamentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tournamentTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 0.125rem;
+}
+
+.tournamentDate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tournamentDateIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.tournamentTime {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.tournamentVenue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.tournamentVenueIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.tournamentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.tournamentMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.tournamentMetaIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Right side actions */
+.tournamentActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .tournamentActions {
+    width: auto;
+    gap: 0.75rem;
+  }
+}
+
+/* Timer display */
+.timerDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1e293b;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  flex: 1;
+}
+
+@media (min-width: 640px) {
+  .timerDisplay {
+    flex: none;
+  }
+}
+
+.timerIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #22d3ee;
+  flex-shrink: 0;
+}
+
+.timerTime {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.timerTimeGreen {
+  color: #22c55e;
+}
+
+.timerTimeYellow {
+  color: #eab308;
+}
+
+.timerTimeRed {
+  color: #ef4444;
+}
+
+.timerLevel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.timerBlinds {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  color: #67e8f9;
+}
+
+.timerButton {
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  margin-left: auto;
+}
+
+@media (min-width: 640px) {
+  .timerButton {
+    margin-left: 0;
+  }
+}
+
+.timerButtonPause {
+  background-color: #ca8a04;
+}
+
+.timerButtonPause:hover {
+  background-color: #eab308;
+}
+
+.timerButtonPlay {
+  background-color: #16a34a;
+}
+
+.timerButtonPlay:hover {
+  background-color: #22c55e;
+}
+
+/* Status badge */
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusInProgress {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statusIntegrated {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.statusFinalized {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Delete button */
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.deleteButton:hover {
+  background-color: #b91c1c;
+}
+
+/* Load more button */
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .loadMoreContainer {
+    padding: 1.5rem;
+  }
+}
+
+.loadMoreButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.loadMoreButton:hover {
+  background-color: #2563eb;
+}
