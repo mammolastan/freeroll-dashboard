@@ -1961,6 +1961,132 @@ app.prepare().then(async () => {
         );
       });
 
+      // Change to a different blind schedule while preserving timer state
+      // Finds matching level based on current blinds, keeps timer running
+      socket.on("timer:changeSchedule", async ({ tournamentId, scheduleId }) => {
+        // Verify admin authorization
+        const auth = await checkTournamentAdmin(socket, tournamentId);
+        if (!auth) {
+          console.log(`Unauthorized timer:changeSchedule attempt for tournament ${tournamentId}`);
+          socket.emit("timer:error", { message: "Admin access required" });
+          return;
+        }
+
+        const timer = await getOrCreateTimerState(tournamentId);
+        if (!timer) {
+          console.error(`Cannot change schedule - tournament ${tournamentId} not found`);
+          return;
+        }
+
+        // Get current blind values before changing schedule
+        const currentBlind = timer.blindLevels[timer.currentLevel - 1];
+        const currentSmallBlind = currentBlind?.smallBlind;
+        const currentBigBlind = currentBlind?.bigBlind;
+        const previousLevelCount = timer.blindLevels.length;
+        const previousLevel = timer.currentLevel;
+
+        console.log(`Changing schedule for tournament ${tournamentId}: current blinds ${currentSmallBlind}/${currentBigBlind}, level ${timer.currentLevel}`);
+
+        try {
+          // Load new schedule
+          const newBlindLevels = await resolveBlindSchedule(scheduleId);
+
+          // Find matching level in new schedule based on blinds
+          let newLevelIndex = -1;
+
+          // First, try to find exact match on small/big blind
+          for (let i = 0; i < newBlindLevels.length; i++) {
+            const level = newBlindLevels[i];
+            if (level.smallBlind === currentSmallBlind && level.bigBlind === currentBigBlind) {
+              newLevelIndex = i;
+              break;
+            }
+          }
+
+          // If no exact match, find closest level by big blind
+          if (newLevelIndex === -1 && currentBigBlind !== undefined) {
+            let closestDiff = Infinity;
+            for (let i = 0; i < newBlindLevels.length; i++) {
+              const level = newBlindLevels[i];
+              if (level.isbreak) continue; // Skip breaks
+              const diff = Math.abs(level.bigBlind - currentBigBlind);
+              if (diff < closestDiff) {
+                closestDiff = diff;
+                newLevelIndex = i;
+              }
+            }
+          }
+
+          // Fallback: clamp to valid range
+          if (newLevelIndex === -1) {
+            newLevelIndex = Math.min(timer.currentLevel - 1, newBlindLevels.length - 1);
+          }
+
+          const newLevel = newLevelIndex + 1; // Convert to 1-based
+          const newLevelData = newBlindLevels[newLevelIndex];
+          const newLevelDuration = newLevelData.duration * 60;
+
+          // Preserve time remaining, but cap at new level's max duration
+          const newTimeRemaining = Math.min(timer.timeRemaining, newLevelDuration);
+
+          console.log(`Schedule change: level ${previousLevel} -> ${newLevel}, blinds ${currentSmallBlind}/${currentBigBlind} -> ${newLevelData.smallBlind}/${newLevelData.bigBlind}, time ${timer.timeRemaining}s -> ${newTimeRemaining}s`);
+
+          // Update timer state
+          timer.blindLevels = newBlindLevels;
+          timer.currentLevel = newLevel;
+          timer.timeRemaining = newTimeRemaining;
+          timer.lastUpdate = Date.now();
+
+          // Save state change to database
+          await saveTimerStateToDB(tournamentId, timer);
+
+          // Broadcast update to all clients
+          const timerPayload = {
+            tournamentId: timer.tournamentId,
+            currentLevel: timer.currentLevel,
+            timeRemaining: timer.timeRemaining,
+            isRunning: timer.isRunning,
+            isPaused: timer.isPaused,
+            blindLevels: timer.blindLevels,
+            lastUpdate: timer.lastUpdate,
+            serverTime: Date.now(),
+          };
+          io.to(tournamentId.toString()).emit("timer:update", timerPayload);
+
+          // Audit log
+          await logSocketAuditEvent({
+            tournamentId,
+            actionType: 'BLIND_SCHEDULE_CHANGED',
+            actionCategory: 'ADMIN',
+            actorId: null,
+            actorName: auth.user.name,
+            previousValue: {
+              levelCount: previousLevelCount,
+              level: previousLevel,
+              smallBlind: currentSmallBlind,
+              bigBlind: currentBigBlind,
+            },
+            newValue: {
+              scheduleId: scheduleId,
+              levelCount: newBlindLevels.length,
+              level: newLevel,
+              smallBlind: newLevelData.smallBlind,
+              bigBlind: newLevelData.bigBlind,
+            },
+            metadata: {
+              actorUid: auth.user.uid,
+              preservedTimer: true,
+            },
+            ipAddress: socket.data.clientIP,
+          });
+
+          console.log(`Schedule changed for tournament ${tournamentId} by ${auth.user.name}: now at level ${newLevel} (${newLevelData.smallBlind}/${newLevelData.bigBlind})`);
+        } catch (error) {
+          console.error("Error changing schedule:", error);
+          socket.emit("timer:error", { message: "Failed to change schedule" });
+        }
+      });
+
       socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
       });

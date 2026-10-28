@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Users, Edit3, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Edit3, Check, X, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { socket } from '@/lib/socketClient';
 import { useTimerAudio, isGlobalAudioUnlocked } from '@/hooks/useTimerAudio';
 
@@ -349,7 +349,7 @@ export function MinimalGameTimer({
   const currentBlind = timerState.blindLevels?.[timerState.currentLevel - 1];
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center gap-8">
+    <div className="w-full h-full flex flex-col items-center justify-center gap-4 sm:gap-6 md:gap-8 px-4 max-w-full overflow-hidden">
       {/* Enable Sound Button */}
       {!audioReady && (
         <button
@@ -371,47 +371,47 @@ export function MinimalGameTimer({
       )}
 
       {/* Time Remaining */}
-      <div className="relative flex items-center gap-4">
-        {isEditingTime && timerState.isPaused ? (
-          <div className="flex items-center gap-4">
+      <div className="relative flex items-center gap-2 sm:gap-4 w-full justify-center">
+        {isEditingTime && (!timerState.isRunning || timerState.isPaused) ? (
+          <div className="flex items-center gap-2 sm:gap-4">
             <input
               ref={minutesInputRef}
               type="number"
               value={editMinutes}
               onChange={(e) => setEditMinutes(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-32 px-4 py-2 text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-16 sm:w-24 md:w-32 px-2 sm:px-4 py-1 sm:py-2 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="MM"
               min="0"
               max="99"
             />
-            <span className="text-6xl font-mono font-bold text-cyan-400">:</span>
+            <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-mono font-bold text-cyan-400">:</span>
             <input
               type="number"
               value={editSeconds}
               onChange={(e) => setEditSeconds(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-32 px-4 py-2 text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-16 sm:w-24 md:w-32 px-2 sm:px-4 py-1 sm:py-2 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-mono text-center border border-cyan-500/50 bg-gray-800/80 text-cyan-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="SS"
               min="0"
               max="59"
             />
             <button
               onClick={handleSaveEdit}
-              className="ml-4 p-3 bg-green-600 text-white rounded hover:bg-green-500 transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
+              className="ml-2 sm:ml-4 p-2 sm:p-3 bg-green-600 text-white rounded hover:bg-green-500 transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] border border-green-500/50"
             >
-              <Check size={32} />
+              <Check className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" />
             </button>
             <button
               onClick={handleCancelEdit}
-              className="p-3 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-all border border-gray-600"
+              className="p-2 sm:p-3 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-all border border-gray-600"
             >
-              <X size={32} />
+              <X className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" />
             </button>
           </div>
         ) : (
           <>
-            <div className={`text-9xl lg:text-[16rem] font-mono font-bold transition-all duration-300 ${timerState.isPaused
+            <div className={`text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[12rem] 2xl:text-[16rem] font-mono font-bold transition-all duration-300 ${timerState.isPaused
               ? 'text-gray-500 drop-shadow-[0_0_20px_rgba(107,114,128,0.5)]'
               : displaySeconds < 60
                 ? 'text-red-400 drop-shadow-[0_0_30px_rgba(239,68,68,0.9)]'
@@ -421,40 +421,70 @@ export function MinimalGameTimer({
               }`}>
               {formatTime(displaySeconds)}
             </div>
-            {timerState.isPaused && (
+            {(!timerState.isRunning || timerState.isPaused) && (
               <button
                 onClick={handleStartEdit}
-                className="p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800"
+                className="p-2 sm:p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800"
                 title="Edit time"
               >
-                <Edit3 size={48} />
+                <Edit3 className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12" />
               </button>
             )}
           </>
         )}
       </div>
 
+      {/* Start/Pause/Resume Button */}
+      <button
+        onClick={() => {
+          if (!timerState.isRunning) {
+            handleStart();
+          } else if (timerState.isPaused) {
+            handleResume();
+          } else {
+            handlePause();
+          }
+        }}
+        className={`flex items-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-xl text-lg sm:text-xl md:text-2xl font-semibold transition-all ${
+          !timerState.isRunning || timerState.isPaused
+            ? 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] border border-green-500/50'
+            : 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.4)] border border-yellow-500/50'
+        }`}
+      >
+        {!timerState.isRunning || timerState.isPaused ? (
+          <>
+            <Play className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+            <span>{timerState.isRunning ? 'Resume' : 'Start'}</span>
+          </>
+        ) : (
+          <>
+            <Pause className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+            <span>Pause</span>
+          </>
+        )}
+      </button>
+
       {/* Blind Levels with Level Shifting Controls */}
       {currentBlind && (
-        <div className="flex items-center gap-6">
-          {timerState.isPaused && timerState.currentLevel > 1 && (
+        <div className="flex items-center gap-2 sm:gap-4 md:gap-6 w-full justify-center">
+          {(!timerState.isRunning || timerState.isPaused) && timerState.currentLevel > 1 && (
             <button
               onClick={handlePrevLevel}
-              className="p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800"
+              className="p-2 sm:p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800 flex-shrink-0"
               title="Previous level"
             >
-              <ChevronLeft size={64} />
+              <ChevronLeft className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-16 lg:h-16" />
             </button>
           )}
 
-          <div className="text-center">
-            <div className="text-3xl text-gray-400 mb-4">Level {timerState.currentLevel}</div>
+          <div className="text-center flex-1 min-w-0">
+            <div className="text-xl sm:text-2xl md:text-3xl text-gray-400 mb-2 sm:mb-4">Level {timerState.currentLevel}</div>
             {currentBlind.isbreak ? (
-              <div className="text-9xl lg:text-[16rem] font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
+              <div className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-orange-400 drop-shadow-[0_0_25px_rgba(249,115,22,0.7)]">
                 🔥 BREAK
               </div>
             ) : (
-              <div className={`text-9xl lg:text-[10rem] font-mono text-center font-bold transition-all duration-300 ${timerState.isPaused
+              <div className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[10rem] font-mono text-center font-bold transition-all duration-300 leading-tight ${timerState.isPaused
                 ? 'text-gray-500 drop-shadow-[0_0_20px_rgba(107,114,128,0.5)]'
                 : 'text-cyan-300 drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]'
                 }`}>
@@ -463,21 +493,21 @@ export function MinimalGameTimer({
             )}
           </div>
 
-          {timerState.isPaused && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
+          {(!timerState.isRunning || timerState.isPaused) && timerState.blindLevels && timerState.currentLevel < timerState.blindLevels.length && (
             <button
               onClick={handleNextLevel}
-              className="p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800"
+              className="p-2 sm:p-3 text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800/50 rounded-lg hover:bg-gray-800 flex-shrink-0"
               title="Next level"
             >
-              <ChevronRight size={64} />
+              <ChevronRight className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-16 lg:h-16" />
             </button>
           )}
         </div>
       )}
 
       {/* Players Remaining */}
-      <div className="flex items-center gap-4 text-4xl font-bold text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] mt-4">
-        <Users size={48} className="text-purple-400" />
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 text-2xl sm:text-3xl md:text-4xl font-bold text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] mt-2 sm:mt-4">
+        <Users className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-purple-400" />
         <span>{playersRemaining}</span>
       </div>
 

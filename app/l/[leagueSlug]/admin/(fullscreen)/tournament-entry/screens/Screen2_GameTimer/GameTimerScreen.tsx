@@ -119,7 +119,7 @@ export function GameTimerScreen({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-2 sm:p-4 md:p-8">
       {/* Screen Navigation Tabs */}
       <ScreenTabs currentScreen={currentScreen} onScreenChange={onScreenChange} />
 

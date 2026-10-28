@@ -3039,8 +3039,10 @@ export function FullAdminScreen({
                             blind_schedule: newSchedule,
                             custom_blind_levels: null,
                           });
-                          socket.emit("timer:reset", {
+                          // Change schedule without resetting timer - finds matching blind level
+                          socket.emit("timer:changeSchedule", {
                             tournamentId: currentDraft.id,
+                            scheduleId: newSchedule,
                           });
                         } else {
                           console.error("Failed to update blind schedule");
