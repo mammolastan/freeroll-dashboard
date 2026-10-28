@@ -248,7 +248,6 @@ export function FullAdminScreen({
   const [leagueGameDefaults, setLeagueGameDefaults] = useState({
     allowChat: true,
     allowSelfCheckIn: true,
-    lateRegistrationWindowMinutes: 100,
   });
 
   const [newTournament, setNewTournament] = useState({
@@ -351,7 +350,6 @@ export function FullAdminScreen({
             const defaults = {
               allowChat: data.gameDefaults.allowChat ?? true,
               allowSelfCheckIn: data.gameDefaults.allowSelfCheckIn ?? true,
-              lateRegistrationWindowMinutes: data.gameDefaults.lateRegistrationWindowMinutes ?? 100,
             };
             setLeagueGameDefaults(defaults);
             // Update newTournament with league defaults

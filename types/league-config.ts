@@ -94,7 +94,6 @@ export interface LeagueConfig {
 
   // Check-In
   allowSelfCheckIn: boolean;
-  lateRegistrationWindowMinutes: number;
 
   // Player Profiles
   allowPlayerProfiles: boolean;
@@ -133,7 +132,6 @@ export interface LeagueConfig {
     showInActiveGames: boolean;
     blindSchedule: string;
     startPoints: number;
-    lateRegistrationWindowMinutes: number;
     defaultTDMessage: string; // Markdown - shown on TV screen when no TD messages exist
   };
 
@@ -174,7 +172,6 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   requireEmailVerification: false,
   allowGuestCheckIn: false,
   allowSelfCheckIn: true,
-  lateRegistrationWindowMinutes: 30,
   allowPlayerProfiles: true,
   allowProfilePictures: true,
   allowNicknames: true,
@@ -207,7 +204,6 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     showInActiveGames: true,
     blindSchedule: 'standard',
     startPoints: 1,
-    lateRegistrationWindowMinutes: 100,
     defaultTDMessage: '',
   },
   pushNotificationsEnabled: false,

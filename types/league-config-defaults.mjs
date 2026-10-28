@@ -13,7 +13,6 @@ export const DEFAULT_LEAGUE_CONFIG = {
   requireEmailVerification: false,
   allowGuestCheckIn: false,
   allowSelfCheckIn: true,
-  lateRegistrationWindowMinutes: 30,
   allowPlayerProfiles: true,
   allowProfilePictures: true,
   allowNicknames: true,
@@ -46,7 +45,6 @@ export const DEFAULT_LEAGUE_CONFIG = {
     showInActiveGames: true,
     blindSchedule: "standard",
     startPoints: 1,
-    lateRegistrationWindowMinutes: 100,
     defaultTDMessage: "",
   },
   pwa: {

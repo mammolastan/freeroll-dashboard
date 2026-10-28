@@ -238,14 +238,6 @@ export default async function AdminDashboardPage({ params }: PageProps) {
               {config.gameDefaults.allowSelfCheckIn ? "Enabled" : "Disabled"}
             </p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-5 col-span-2">
-            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
-              Late Registration Window
-            </p>
-            <p className="text-white font-medium">
-              {config.gameDefaults.lateRegistrationWindowMinutes} minutes
-            </p>
-          </div>
         </div>
       </div>
 
