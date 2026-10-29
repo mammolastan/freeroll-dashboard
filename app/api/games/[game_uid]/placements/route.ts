@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPointsForPlacement } from "@/lib/scoring";
 import { DEFAULT_SCORING_SYSTEM, ScoringSystemConfig, LeagueConfig } from "@/types/league-config";
+import { revalidateRankingsCache } from "@/lib/rankings-cache";
 
 interface PlacementUpdate {
   playerId: number; // This is players_v2.id
@@ -107,6 +108,14 @@ export async function PUT(
       totalPoints: (a.points || 0) + bonusPoints,
       playerScore: a.player_score,
     }));
+
+    // Invalidate all rankings cache for this league (simpler approach for admin edits)
+    try {
+      await revalidateRankingsCache(game.league_id);
+    } catch (cacheError) {
+      console.error("Rankings cache invalidation failed:", cacheError);
+      // Don't throw - allow main operation to succeed
+    }
 
     return NextResponse.json({
       success: true,

@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   MessageSquare,
   Sparkles,
+  Wrench,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -73,6 +74,7 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
         { href: `${base}/sms`, label: "SMS", icon: MessageSquare },
         { href: `${base}/settings`, label: "Identity", icon: Settings },
         { href: `${base}/branding`, label: "Branding", icon: Palette },
+        { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
       ]
     : [];
 

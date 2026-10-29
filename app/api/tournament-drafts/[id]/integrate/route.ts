@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePlayersCache } from "@/lib/players-cache";
+import { revalidateRankingsCache } from "@/lib/rankings-cache";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent, getClientIP, getAuditSession, getActorFromSession, withActorMetadata } from "@/lib/auditlog";
 import { logError } from "@/lib/error-logger";
@@ -435,11 +436,15 @@ export async function POST(
             final_placement: p.placement,
             hitman: p.hitman_name,
           })),
-          // Additional data for audit logging (not exposed in response)
+          // Additional data for audit logging and cache invalidation (not exposed in response)
           _auditData: {
             playerDetails,
             newPlayersCreated,
             startPoints: draft.start_points,
+          },
+          _cacheData: {
+            leagueId: draft.league_id,
+            periodIds,
           },
         };
       },
@@ -564,8 +569,25 @@ export async function POST(
       // Don't throw - allow main operation to succeed
     }
 
+    // Invalidate rankings cache for affected period types
+    try {
+      const { leagueId, periodIds } = result._cacheData;
+      if (periodIds.length > 0) {
+        // Look up the period types for the affected periods
+        const periods = await prisma.competition_periods.findMany({
+          where: { id: { in: periodIds } },
+          select: { period_type: true },
+        });
+        const periodTypes = Array.from(new Set(periods.map((p) => p.period_type)));
+        await revalidateRankingsCache(leagueId, periodTypes);
+      }
+    } catch (cacheError) {
+      console.error("Rankings cache invalidation failed:", cacheError);
+      // Don't throw - allow main operation to succeed
+    }
+
     // Remove internal audit data before returning response
-    const { _auditData, ...responseData } = result;
+    const { _auditData, _cacheData, ...responseData } = result;
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("Integration error:", error);

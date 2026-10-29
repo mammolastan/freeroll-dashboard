@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getLeagueIdBySlug } from "@/lib/league-utils";
 import { getLeagueRole } from "@/lib/league-auth";
 import { prisma } from "@/lib/prisma";
+import { revalidateRankingsCache } from "@/lib/rankings-cache";
 
 interface RouteContext {
   params: Promise<{ leagueSlug: string; gameId: string }>;
@@ -137,6 +138,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   if (!updatedGame) {
     return NextResponse.json({ error: "Game not found" }, { status: 404 });
+  }
+
+  // Invalidate all rankings cache for this league (simpler approach for admin edits)
+  try {
+    await revalidateRankingsCache(leagueId);
+  } catch (cacheError) {
+    console.error("Rankings cache invalidation failed:", cacheError);
+    // Don't throw - allow main operation to succeed
   }
 
   return NextResponse.json({
