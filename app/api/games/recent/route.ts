@@ -127,10 +127,7 @@ export async function GET(request: NextRequest) {
 
     const result = await getCachedRecentGames(leagueId);
 
-    return NextResponse.json({
-      ...result,
-      fetchTimestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Recent games error:", error);
     return NextResponse.json(
