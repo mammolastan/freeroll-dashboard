@@ -60,6 +60,7 @@ interface TournamentDraft {
   tournament_date: string;
   tournament_time?: string;
   director_name: string;
+  tournament_director_uid?: string | null;
   title?: string | null;
   venue: string | null;
   venue_id: number | null;
@@ -277,6 +278,22 @@ export function FullAdminScreen({
   const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [showTDDropdown, setShowTDDropdown] = useState(false);
   const [showEntryTDDropdown, setShowEntryTDDropdown] = useState(false);
+
+  // Helper to get director display name with nickname
+  const getDirectorDisplayName = (tournament: TournamentDraft): string => {
+    if (!tournament.tournament_director_uid) {
+      return tournament.director_name || "No director";
+    }
+    const admin = leagueAdmins.find(a => a.playerUid === tournament.tournament_director_uid);
+    if (!admin) {
+      return tournament.director_name || "No director";
+    }
+    const fullName = `${admin.firstName || ""} ${admin.lastName || ""}`.trim();
+    if (admin.nickname && fullName) {
+      return `${fullName} (${admin.nickname})`;
+    }
+    return admin.nickname || fullName || tournament.director_name || "No director";
+  };
 
   // Player management (using props from parent)
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -1518,6 +1535,11 @@ export function FullAdminScreen({
     }
   }, [session?.user?.leagueSlug]);
 
+  // Load admins on mount for director display names in tournament list
+  useEffect(() => {
+    loadLeagueAdmins();
+  }, [loadLeagueAdmins]);
+
   // Show create modal - load admins and set defaults
   useEffect(() => {
     if (showCreateModal) {
@@ -1614,7 +1636,7 @@ export function FullAdminScreen({
                         </div>
                         <div className={styles.tournamentMetaItem}>
                           <User className={styles.tournamentMetaIcon} />
-                          {tournament.director_name || "No director"}
+                          {getDirectorDisplayName(tournament)}
                         </div>
                       </div>
                     </div>
