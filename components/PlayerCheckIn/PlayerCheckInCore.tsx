@@ -5,6 +5,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Check, UserPlus, Search, X } from "lucide-react";
 
+// Hook to detect touch-capable devices
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    setIsTouch(
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia('(pointer: coarse)').matches
+    );
+  }, []);
+
+  return isTouch;
+}
+
 interface Player {
   id: number;
   player_name: string;
@@ -48,6 +63,7 @@ export function PlayerCheckInCore({
   leagueSlug,
   onNumberKeyPress,
 }: PlayerCheckInCoreProps) {
+  const isTouch = useIsTouchDevice();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -385,7 +401,7 @@ export function PlayerCheckInCore({
                           ) : (
                             <div className="text-cyan-400 text-sm md:text-xl font-bold">
                               <span className="hidden sm:inline">
-                                Tap to Check In
+                                {isTouch ? 'Tap' : 'Click'} to Check In
                               </span>
                               <span className="sm:hidden">Check In</span>
                             </div>
