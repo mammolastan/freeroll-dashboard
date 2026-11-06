@@ -60,6 +60,7 @@ interface PlayerStats {
     bonusPoints: number;
     knockouts: number;
     finalTables: number;
+    firstPlaceFinishes: number;
     avgScore: number;
     finalTablePercentage: number;
   };
@@ -469,6 +470,12 @@ export default function PlayerHistory({
               {playerStats.quarterlyStats.finalTables}
             </div>
             <div className="text-xs text-gray-400">Final Tables</div>
+          </div>
+          <div className="bg-theme-surface rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-amber-400">
+              {playerStats.quarterlyStats.firstPlaceFinishes}
+            </div>
+            <div className="text-xs text-gray-400">1st Places</div>
           </div>
           <div className="bg-theme-surface rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-purple-400">

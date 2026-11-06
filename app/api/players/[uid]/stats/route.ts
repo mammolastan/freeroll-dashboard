@@ -100,6 +100,7 @@ export async function GET(
       bonusPoints: number;
       knockouts: number;
       finalTables: number;
+      firstPlaceFinishes: number;
       avgScore: number;
       finalTablePercentage: number;
     }[] = await prisma.$queryRaw`
@@ -118,6 +119,7 @@ export async function GET(
           ${endDate ? Prisma.sql`AND kg.date <= DATE(${endDate})` : Prisma.sql``}
         ), 0) as knockouts,
         COALESCE(SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END), 0) as finalTables,
+        COALESCE(SUM(CASE WHEN a.placement = 1 AND v.name != 'bonus' THEN 1 ELSE 0 END), 0) as firstPlaceFinishes,
         COALESCE(CAST(AVG(a.player_score) AS DECIMAL(10,2)), 0) as avgScore,
         COALESCE(CAST(
           (SUM(CASE WHEN a.placement <= 8 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0))
@@ -298,6 +300,7 @@ export async function GET(
         bonusPoints: Number(quarterlyStats[0]?.bonusPoints || 0),
         knockouts: Number(quarterlyStats[0]?.knockouts || 0),
         finalTables: Number(quarterlyStats[0]?.finalTables || 0),
+        firstPlaceFinishes: Number(quarterlyStats[0]?.firstPlaceFinishes || 0),
         avgScore: Number(quarterlyStats[0]?.avgScore || 0),
         finalTablePercentage: Number(
           quarterlyStats[0]?.finalTablePercentage || 0
