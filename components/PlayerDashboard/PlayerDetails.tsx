@@ -12,6 +12,7 @@ import { formatLeagueDate } from '@/lib/league-time';
 import { TooltipProvider, MobileTooltipTrigger } from "@/components/ui/tooltip"
 import VenueSelector from './VenueSelector';
 import { BadgeData, BadgeGroup } from '@/components/ui/Badge';
+import { ExpandableList } from '@/components/ui/ExpandableList';
 import { HelpCircle, Swords } from "lucide-react"
 import { KnockoutStats } from './KnockoutStats';
 import { PersonalBestCard } from './PersonalBestCard';
@@ -385,35 +386,37 @@ Math: log(total_players + 1 / Placement)`}
                                 <div className="p-4 space-y-4">
                                     <div>
                                         <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out by:</div>
-                                        <div className="space-y-2">
-                                            {stats.mostKnockedOutBy.map((player, index) => {
-                                                return (
-                                                    <div key={player.name} className="flex items-baseline justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-purple-700">{index + 1}.</span>
-                                                            <Link
-                                                                href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
-                                                                className="freeroll-link"
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
-                                                                }}
-                                                            >
-                                                                {player.nickname || player.name}
-                                                            </Link>
-                                                        </div>
-                                                        <span className="text-sm font-medium text-purple-700">
-                                                            {player.count} times
-                                                        </span>
+                                        <ExpandableList
+                                            items={stats.mostKnockedOutBy}
+                                            maxItems={10}
+                                            renderItem={(player, index) => (
+                                                <div key={player.name} className="flex items-baseline justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-purple-700">{index + 1}.</span>
+                                                        <Link
+                                                            href={`${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`}
+                                                            className="freeroll-link"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                window.location.href = `${leaguePrefix}/players?uid=${encodeURIComponent(player.uid)}&range=${selectedRange}`;
+                                                            }}
+                                                        >
+                                                            {player.nickname || player.name}
+                                                        </Link>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    <span className="text-sm font-medium text-purple-700">
+                                                        {player.count} times
+                                                    </span>
+                                                </div>
+                                            )}
+                                        />
                                     </div>
                                     <div>
                                         <div className="text-sm font-medium text-purple-900 mb-2">Most knocked out:</div>
-                                        <div className="space-y-2">
-                                            {stats.mostKnockedOut.map((player, index) => (
+                                        <ExpandableList
+                                            items={stats.mostKnockedOut}
+                                            maxItems={10}
+                                            renderItem={(player, index) => (
                                                 <div key={player.name} className="flex items-baseline justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm text-purple-700">{index + 1}.</span>
@@ -432,8 +435,8 @@ Math: log(total_players + 1 / Placement)`}
                                                         {player.count} times
                                                     </span>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            )}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -447,8 +450,10 @@ Math: log(total_players + 1 / Placement)`}
                             <h3 className="font-bold text-lg text-green-900">Points by Venue</h3>
                         </div>
                         <div className="p-4">
-                            <div className="space-y-3">
-                                {stats.venueStats.map(venue => (
+                            <ExpandableList
+                                items={stats.venueStats}
+                                maxItems={10}
+                                renderItem={(venue) => (
                                     <div key={venue.venue} className="flex justify-between items-center">
                                         <Link
                                             href={`${leaguePrefix}/venues?venue=${encodeURIComponent(venue.venue)}`}
@@ -457,10 +462,9 @@ Math: log(total_players + 1 / Placement)`}
                                             {venue.venue}
                                         </Link>
                                         <span className="font-medium text-green-600">{venue.points}</span>
-
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            />
                         </div>
                     </div>
 
