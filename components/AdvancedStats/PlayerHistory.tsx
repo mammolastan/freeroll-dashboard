@@ -660,6 +660,7 @@ export default function PlayerHistory({
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
+                        timeZone: 'UTC',
                       })}
                     </td>
                     <td className="py-3 px-4 text-gray-300 sticky left-[100px] bg-[#0f172a] group-hover:bg-[#1e293b] z-10">
