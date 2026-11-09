@@ -318,6 +318,60 @@ export default function MoveKnockoutModal({
     setPendingMove(null);
   };
 
+  // Calculate neighbors for the confirmation view
+  const neighbors = useMemo(() => {
+    if (!pendingMove) return { above: null, below: null };
+
+    // Get all knocked out players except the one being moved
+    const othersKnockedOut = allKnockedOut.filter((p) => p.id !== playerId);
+
+    // The newPosition is the KO# the player will have
+    // In the "latest first" display, higher KO# = earlier in list (index 0 = highest)
+    // So we need to find:
+    // - playerAbove: the one who will have KO# = newPosition + 1 (knocked out later)
+    // - playerBelow: the one who will have KO# = newPosition - 1 (knocked out earlier)
+
+    // After the move, the target will be at newPosition
+    // Players currently at KO# >= newPosition need to shift up by 1
+    // So the player who was at newPosition becomes newPosition+1 (above target)
+    // The player at newPosition-1 stays (below target)
+
+    // Calculate what the new order will look like:
+    // In the current list (excluding target), their positions are 1 to othersKnockedOut.length
+    // We need to insert target at newPosition
+
+    // For "above" (higher KO#, later knockout):
+    // This is the player who will end up at newPosition + 1
+    // Before our insert, they were at index where their effective position was newPosition
+    // In latest-first order, index = total - position
+    // So index = othersKnockedOut.length - newPosition (this gives us who was at newPosition)
+    const aboveIndex = othersKnockedOut.length - pendingMove.newPosition;
+    const playerAbove =
+      aboveIndex >= 0 && aboveIndex < othersKnockedOut.length
+        ? othersKnockedOut[aboveIndex]
+        : null;
+
+    // For "below" (lower KO#, earlier knockout):
+    // This is the player at newPosition - 1
+    // In latest-first order, index = total - (newPosition - 1) = total - newPosition + 1
+    const belowIndex = othersKnockedOut.length - pendingMove.newPosition + 1;
+    const playerBelow =
+      belowIndex >= 0 && belowIndex < othersKnockedOut.length
+        ? othersKnockedOut[belowIndex]
+        : null;
+
+    return {
+      above: playerAbove,
+      below: playerBelow,
+      abovePlacement: playerAbove
+        ? totalPlayers - (pendingMove.newPosition + 1) + 1
+        : null,
+      belowPlacement: playerBelow
+        ? totalPlayers - (pendingMove.newPosition - 1) + 1
+        : null,
+    };
+  }, [pendingMove, allKnockedOut, playerId, totalPlayers]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4">
       <div className="bg-white rounded-lg max-w-md w-full mx-4 my-auto shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
@@ -339,19 +393,53 @@ export default function MoveKnockoutModal({
         <div className="p-5 flex-1 overflow-y-auto">
           {pendingMove ? (
             /* Confirmation View */
-            <div className="text-center py-6">
-              <div className="mb-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white font-medium mb-4">
+            <div className="py-4">
+              <p className="text-center text-gray-600 mb-4">
+                Move to{" "}
+                <span className="font-semibold text-blue-600">
+                  {toOrdinal(totalPlayers - pendingMove.newPosition + 1)} place{" "}
+                  <span className="whitespace-nowrap">(KO #{pendingMove.newPosition})</span>
+                </span>
+                ?
+              </p>
+
+              {/* Ghost preview of new position */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden mb-6">
+                {/* Player above (knocked out later, higher KO#) */}
+                {neighbors.above ? (
+                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-gray-400 text-sm">
+                    <span className="font-medium mr-2">
+                      {toOrdinal(neighbors.abovePlacement!)} place (KO #{pendingMove.newPosition + 1})
+                    </span>
+                    <span>{neighbors.above.player_nickname || neighbors.above.player_name}</span>
+                  </div>
+                ) : (
+                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-gray-300 text-sm italic">
+                    (Latest knockout)
+                  </div>
+                )}
+
+                {/* Target player - highlighted */}
+                <div className="px-4 py-3 bg-blue-600 text-white font-medium">
+                  <span className="mr-2">
+                    {toOrdinal(totalPlayers - pendingMove.newPosition + 1)} place (KO #{pendingMove.newPosition})
+                  </span>
                   <span>{playerName}</span>
                 </div>
-                <p className="text-lg text-gray-700">
-                  Move to{" "}
-                  <span className="font-semibold text-blue-600">
-                    {toOrdinal(totalPlayers - pendingMove.newPosition + 1)} place{" "}
-                    <span className="whitespace-nowrap">(KO #{pendingMove.newPosition})</span>
-                  </span>
-                  ?
-                </p>
+
+                {/* Player below (knocked out earlier, lower KO#) */}
+                {neighbors.below ? (
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-gray-400 text-sm">
+                    <span className="font-medium mr-2">
+                      {toOrdinal(neighbors.belowPlacement!)} place (KO #{pendingMove.newPosition - 1})
+                    </span>
+                    <span>{neighbors.below.player_nickname || neighbors.below.player_name}</span>
+                  </div>
+                ) : (
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-gray-300 text-sm italic">
+                    (First knockout)
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">

@@ -9,7 +9,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Target, Users, Trophy, X, History } from "lucide-react";
+import { Target, Users, Trophy, X, History, ArrowRightLeft } from "lucide-react";
 import { ScreenTabs } from "../../components/ScreenTabs";
 import { ScreenNumber } from "../../hooks/useScreenRouter";
 import { useTDActionHistory } from "@/hooks/useTDActionHistory";
@@ -19,6 +19,7 @@ import {
   calculatePlacement as calculatePlacementFromKo,
 } from "../../utils/koPositionUtils";
 import { toOrdinal } from "@/lib/formatUtils";
+import MoveKnockoutModal from "../../components/MoveKnockoutModal";
 
 interface TournamentDraft {
   id: number;
@@ -81,6 +82,12 @@ export function PlayerControlScreen({
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "warning";
+  } | null>(null);
+
+  // Move knockout modal state
+  const [moveKnockoutModal, setMoveKnockoutModal] = useState<{
+    playerId: number;
+    playerName: string;
   } | null>(null);
 
   // Derive game_uid: use actual game_uid if set, otherwise use draft-{id} pattern
@@ -349,6 +356,46 @@ export function PlayerControlScreen({
       alert("Error undoing knockout. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle moving a knockout to a new position
+  const handleMoveKnockout = async (
+    playerId: number,
+    afterPlayerId: number | null,
+  ) => {
+    if (!currentDraft) return;
+
+    try {
+      const player = players.find((p) => p.id === playerId);
+      if (!player || !player.knockedout_at) {
+        console.error("Player not found or not knocked out:", playerId);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/tournament-drafts/${currentDraft.id}/players/${playerId}/move-knockout`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Screen": "PlayerControl",
+          },
+          body: JSON.stringify({ afterPlayerId }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to move knockout");
+      }
+
+      setMoveKnockoutModal(null);
+      onDataChange();
+    } catch (error) {
+      console.error("Error moving knockout:", error);
+      alert(
+        `Error moving knockout: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -736,7 +783,7 @@ export function PlayerControlScreen({
                         </div>
                       </div>
                       {player.hitman_name && (
-                        <div className="text-gray-400 ml-16">
+                        <div className="text-gray-400">
                           <Target
                             size={16}
                             className="inline mr-1"
@@ -748,14 +795,29 @@ export function PlayerControlScreen({
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleUndoKnockout(player)}
-                      disabled={isSubmitting}
-                      className="px-3 py-1 text-sm bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 rounded border border-yellow-500/50 transition-all"
-                      title="Undo knockout"
-                    >
-                      Undo
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setMoveKnockoutModal({
+                            playerId: player.id,
+                            playerName: player.player_name,
+                          })
+                        }
+                        disabled={isSubmitting}
+                        className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded border border-gray-600 transition-all"
+                        title={`Move ${player.player_name}'s knockout position`}
+                      >
+                        <ArrowRightLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleUndoKnockout(player)}
+                        disabled={isSubmitting}
+                        className="px-3 py-1 text-sm bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 rounded border border-yellow-500/50 transition-all"
+                        title="Undo knockout"
+                      >
+                        Undo
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -788,6 +850,18 @@ export function PlayerControlScreen({
         isUndoing={isUndoing}
         gameName={currentDraft.title || currentDraft.venue || "Tournament"}
       />
+
+      {/* Move Knockout Modal */}
+      {moveKnockoutModal && (
+        <MoveKnockoutModal
+          playerId={moveKnockoutModal.playerId}
+          playerName={moveKnockoutModal.playerName}
+          knockedOutPlayers={players.filter((p) => p.knockedout_at)}
+          totalPlayers={players.length}
+          onMove={handleMoveKnockout}
+          onClose={() => setMoveKnockoutModal(null)}
+        />
+      )}
     </div>
   );
 }
