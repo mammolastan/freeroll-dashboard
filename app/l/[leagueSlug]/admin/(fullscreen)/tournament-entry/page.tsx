@@ -388,19 +388,30 @@ export default function TournamentEntryPage() {
     };
   }, [currentDraft]);
 
-  // Polling fallback: refresh player data every 30 seconds
+  // Polling fallback: refresh player data and pending counts every 30 seconds
   // This ensures data stays in sync even if socket events are missed
   useEffect(() => {
     if (!currentDraft) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const playersResponse = await fetch(
-          `/api/tournament-drafts/${currentDraft.id}/players`,
-        );
+        const [playersResponse, claimsResponse, reportsResponse] = await Promise.all([
+          fetch(`/api/tournament-drafts/${currentDraft.id}/players`),
+          fetch(`/api/tournament-drafts/${currentDraft.id}/hitman-claims`),
+          fetch(`/api/tournament-drafts/${currentDraft.id}/knockout-reports`),
+        ]);
+
         if (playersResponse.ok) {
           const playersData: Player[] = await playersResponse.json();
           setPlayers(playersData);
+        }
+        if (claimsResponse.ok) {
+          const claimsData = await claimsResponse.json();
+          setPendingClaimsCount(claimsData.claims?.length || 0);
+        }
+        if (reportsResponse.ok) {
+          const reportsData = await reportsResponse.json();
+          setPendingReportsCount(reportsData.reports?.length || 0);
         }
       } catch (error) {
         console.error("Polling refresh failed:", error);
