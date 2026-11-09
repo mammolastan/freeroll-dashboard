@@ -69,9 +69,13 @@ export async function PUT(
         player_name,
         player_nickname,
         player_uid,
+        status,
+        knockedout_at,
+        ko_position,
         ko_report_status,
         ko_report_hitman_uid,
-        ko_reporter_uid
+        ko_reporter_uid,
+        ko_reported_at
       FROM tournament_draft_players
       WHERE id = ${victimPlayerId}
         AND tournament_draft_id = ${tournamentId}
@@ -123,23 +127,43 @@ export async function PUT(
     }
 
     if (action === "approve") {
-      // Approve: Eliminate the victim and assign the hitman
-      await prisma.$executeRaw`
-        UPDATE tournament_draft_players
-        SET
-          status = 'knockedout',
-          knockedout_at = NOW(),
-          hitman_uid = ko_report_hitman_uid,
-          hitman_name = ${hitmanName},
-          ko_report_status = 'approved',
-          ko_report_reviewed_at = NOW(),
-          ko_report_reviewed_by = ${reviewerName},
-          updated_at = NOW()
-        WHERE id = ${victimPlayerId}
-      `;
+      // Check if player is already knocked out
+      const alreadyKnockedOut = victim.knockedout_at !== null;
 
-      // Recalculate ko_positions for all knocked out players
-      await recalculateKoPositions(tournamentId, prisma);
+      if (alreadyKnockedOut) {
+        // Player was already knocked out - just update hitman info, preserve existing ko_position
+        await prisma.$executeRaw`
+          UPDATE tournament_draft_players
+          SET
+            hitman_uid = ko_report_hitman_uid,
+            hitman_name = ${hitmanName},
+            ko_report_status = 'approved',
+            ko_report_reviewed_at = NOW(),
+            ko_report_reviewed_by = ${reviewerName},
+            updated_at = NOW()
+          WHERE id = ${victimPlayerId}
+        `;
+        // No recalculation needed - position was already set
+      } else {
+        // Player still active - use ko_reported_at as the knockout timestamp
+        // This ensures position reflects when the KO was reported, not when approved
+        await prisma.$executeRaw`
+          UPDATE tournament_draft_players
+          SET
+            status = 'knockedout',
+            knockedout_at = ko_reported_at,
+            hitman_uid = ko_report_hitman_uid,
+            hitman_name = ${hitmanName},
+            ko_report_status = 'approved',
+            ko_report_reviewed_at = NOW(),
+            ko_report_reviewed_by = ${reviewerName},
+            updated_at = NOW()
+          WHERE id = ${victimPlayerId}
+        `;
+
+        // Recalculate ko_positions for all knocked out players
+        await recalculateKoPositions(tournamentId, prisma);
+      }
 
       // Get the updated player for broadcast
       const updatedPlayer = await prisma.$queryRaw<RawQueryResult[]>`
