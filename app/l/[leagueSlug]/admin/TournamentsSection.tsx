@@ -90,29 +90,49 @@ interface TournamentsSectionProps {
 export function TournamentsSection({ leagueSlug }: TournamentsSectionProps) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchDate, setSearchDate] = useState("");
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
 
   // Data for dropdowns
   const [venues, setVenues] = useState<Venue[]>([]);
   const [allPeriods, setAllPeriods] = useState<Period[]>([]);
 
   const fetchGames = useCallback(
-    async (date?: string) => {
-      setLoading(true);
+    async (date?: string, cursor?: number | null) => {
+      if (cursor) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       try {
-        const url = date
-          ? `/api/${leagueSlug}/admin/tournaments?date=${date}`
-          : `/api/${leagueSlug}/admin/tournaments`;
+        let url = `/api/${leagueSlug}/admin/tournaments`;
+        const params = new URLSearchParams();
+        if (date) params.set("date", date);
+        if (cursor) params.set("cursor", cursor.toString());
+        if (params.toString()) url += `?${params.toString()}`;
+
         const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch games");
         const data = await res.json();
-        setGames(data.games);
+
+        if (cursor) {
+          // Append to existing games
+          setGames((prev) => [...prev, ...data.games]);
+        } else {
+          // Replace games
+          setGames(data.games);
+        }
+        setHasMore(data.hasMore ?? false);
+        setNextCursor(data.nextCursor ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     },
     [leagueSlug]
@@ -166,13 +186,23 @@ export function TournamentsSection({ leagueSlug }: TournamentsSectionProps) {
 
   const handleDateSearch = () => {
     if (searchDate) {
+      setHasMore(false);
+      setNextCursor(null);
       fetchGames(searchDate);
     }
   };
 
   const handleClearSearch = () => {
     setSearchDate("");
+    setHasMore(false);
+    setNextCursor(null);
     fetchGames();
+  };
+
+  const handleLoadMore = () => {
+    if (nextCursor && !loadingMore) {
+      fetchGames(undefined, nextCursor);
+    }
   };
 
   const handleGameUpdated = (updatedGame: Game) => {
@@ -257,6 +287,26 @@ export function TournamentsSection({ leagueSlug }: TournamentsSectionProps) {
           ))
         )}
       </div>
+
+      {/* Load More Button */}
+      {hasMore && !searchDate && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-6 py-2 bg-white/10 hover:bg-white/20 disabled:bg-white/5 text-white disabled:text-white/40 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load More"
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -305,6 +355,23 @@ function GameRow({
               {game.venue.name}
             </div>
           </div>
+          {/* Competition Period Bubbles */}
+          {game.periods.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {game.periods.map((period) => (
+                <span
+                  key={period.id}
+                  className={`px-2 py-0.5 text-xs rounded-full ${
+                    period.periodType === "quarterly"
+                      ? "bg-amber-600/80 text-white"
+                      : "bg-cyan-600/80 text-white"
+                  }`}
+                >
+                  {period.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 text-white/60 text-sm">

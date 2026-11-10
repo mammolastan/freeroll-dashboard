@@ -29,11 +29,14 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   }
 
   const searchDate = req.nextUrl.searchParams.get("date");
+  const cursor = req.nextUrl.searchParams.get("cursor");
+  const limitParam = req.nextUrl.searchParams.get("limit");
+  const limit = Math.min(parseInt(limitParam || "20", 10), 50); // Max 50
 
   let games;
 
   if (searchDate) {
-    // Search for games within ±5 days of the given date
+    // Search for games within ±5 days of the given date (no pagination for date search)
     const centerDate = new Date(searchDate);
     const startDate = new Date(centerDate);
     startDate.setDate(startDate.getDate() - 5);
@@ -62,7 +65,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       orderBy: { date: "desc" },
     });
   } else {
-    // Get 20 most recent games
+    // Get games with cursor-based pagination
     games = await prisma.games.findMany({
       where: { league_id: leagueId },
       include: {
@@ -76,12 +79,20 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         },
         _count: { select: { appearances: true } },
       },
-      orderBy: { date: "desc" },
-      take: 20,
+      orderBy: [{ date: "desc" }, { id: "desc" }],
+      take: limit + 1, // Fetch one extra to check if there are more
+      ...(cursor && {
+        cursor: { id: parseInt(cursor, 10) },
+        skip: 1, // Skip the cursor itself
+      }),
     });
   }
 
-  const formattedGames = games.map((game) => ({
+  // Check if there are more results (for non-date-search queries)
+  const hasMore = !searchDate && games.length > limit;
+  const gamesToReturn = hasMore ? games.slice(0, -1) : games;
+
+  const formattedGames = gamesToReturn.map((game) => ({
     id: game.id,
     uid: game.uid,
     date: game.date.toISOString().split("T")[0],
@@ -100,5 +111,14 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     playerCount: game._count.appearances,
   }));
 
-  return NextResponse.json({ games: formattedGames });
+  // Next cursor is the ID of the last game returned
+  const nextCursor = hasMore && formattedGames.length > 0
+    ? formattedGames[formattedGames.length - 1].id
+    : null;
+
+  return NextResponse.json({
+    games: formattedGames,
+    hasMore,
+    nextCursor,
+  });
 }

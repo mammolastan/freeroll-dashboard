@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LeagueRole, canManageRoles } from "@/lib/league-auth";
@@ -35,7 +35,13 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const base = `/l/${leagueSlug}/admin`;
+
+  // Prevent hydration mismatch by waiting for mount before applying transforms
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const adminItems: {
     href: string;
@@ -115,8 +121,9 @@ export default function AdminSidebar({ leagueSlug, role }: AdminSidebarProps) {
       <aside
         className={`
           w-56 min-h-screen bg-black/90 md:bg-black/30 border-r border-white/10 flex flex-col
-          fixed md:static z-40 transition-transform duration-200 ease-in-out
-          ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          fixed md:static z-40 md:translate-x-0
+          ${mounted ? "transition-transform duration-200 ease-in-out" : ""}
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         <div className="p-4 border-b border-white/10 mt-14 md:mt-0">
