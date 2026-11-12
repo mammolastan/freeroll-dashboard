@@ -626,10 +626,13 @@ export function FullAdminScreen({
     setDisplayCount(8);
   };
 
-  // Format today's date for input field (YYYY-MM-DD)
+  // Format today's date for input field (YYYY-MM-DD) using local timezone
   const getTodayDateString = () => {
     const today = new Date();
-    return today.toISOString().split("T")[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Load venues from API (active venues only for create modal; league from session)

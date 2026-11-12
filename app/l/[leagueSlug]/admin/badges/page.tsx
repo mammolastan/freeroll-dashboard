@@ -27,6 +27,15 @@ interface PlayerSearchResult {
   TotalGames: number;
 }
 
+// Get today's date in YYYY-MM-DD format using local timezone (not UTC)
+function getTodayDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function BadgesAdminPage() {
   const { leagueSlug } = useParams();
   const [badges, setBadges] = useState<BadgeInfo[]>([]);
@@ -46,10 +55,7 @@ export default function BadgesAdminPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerSearchResult | null>(null);
   const [description, setDescription] = useState("");
-  const [earnedAt, setEarnedAt] = useState(() => {
-    const now = new Date();
-    return now.toISOString().split("T")[0];
-  });
+  const [earnedAt, setEarnedAt] = useState(getTodayDateString);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Toast state
@@ -168,7 +174,7 @@ export default function BadgesAdminPage() {
     setSearchResults([]);
     setSelectedPlayer(null);
     setDescription("");
-    setEarnedAt(new Date().toISOString().split("T")[0]);
+    setEarnedAt(getTodayDateString());
   };
 
   const handleAssignBadge = async () => {
