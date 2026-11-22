@@ -126,6 +126,9 @@ export default function ProfilePage({
           nickname: data.nickname,
           image: session?.user?.image,
         });
+
+        // Force re-render of page tree with fresh session data
+        router.refresh();
       } else {
         const error = await res.json();
         setMessage({
@@ -222,6 +225,9 @@ export default function ProfilePage({
         }).catch(() => {
           // Ignore session update errors - photo is already uploaded
         });
+
+        // Force re-render of page tree with fresh session data
+        router.refresh();
       } else {
         const body = await res.json().catch(() => ({}));
         logClientError({
@@ -279,6 +285,9 @@ export default function ProfilePage({
         }).catch(() => {
           // Ignore session update errors - photo is already uploaded
         });
+
+        // Force re-render of page tree with fresh session data
+        router.refresh();
       } else {
         const body = await res.json().catch(() => ({}));
         logClientError({
@@ -384,6 +393,9 @@ export default function ProfilePage({
           nickname: session?.user?.nickname,
           image: null,
         });
+
+        // Force re-render of page tree with fresh session data
+        router.refresh();
       } else {
         setMessage({ type: "error", text: "Failed to remove photo" });
       }
