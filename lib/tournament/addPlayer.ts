@@ -1,6 +1,8 @@
 // lib/tournament/addPlayer.ts
 import { NextRequest } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { revalidatePlayersCache } from "@/lib/players-cache";
 import { RawQueryResult } from "@/types";
 import { createCheckInFeedItem } from "@/lib/feed/feedService";
 import { RealtimeAPI, BroadcastManager } from "@/lib/realtime";
@@ -133,11 +135,46 @@ export async function addPlayerToTournament(
 
     const assignedTable = autoAssignTable(tableCounts, maxTable);
 
+    // If this is a new player without a player_uid, create a players_v2 entry first
+    // This allows the player to be found when checking into subsequent tournaments
+    // before the first tournament is finalized
+    let finalPlayerUid = player_uid;
+    if (is_new_player && !player_uid) {
+      // Get the league_id from the tournament draft
+      const draftInfo = await prisma.$queryRaw<{ league_id: number }[]>`
+        SELECT league_id FROM tournament_drafts WHERE id = ${tournamentDraftId}
+      `;
+
+      if (draftInfo.length > 0) {
+        const leagueId = draftInfo[0].league_id;
+        const newUID = "SYS-P-" + uuidv4();
+
+        // Parse name into first_name and last_name (same logic as integration)
+        const nameParts = player_name.trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        // Create the players_v2 entry
+        await prisma.players_v2.create({
+          data: {
+            uid: newUID,
+            league_id: leagueId,
+            first_name: firstName,
+            last_name: lastName,
+            nickname: player_nickname || undefined,
+          }
+        });
+
+        revalidatePlayersCache();
+        finalPlayerUid = newUID;
+      }
+    }
+
     // Insert the player with table assignment
     await prisma.$queryRaw`
       INSERT INTO tournament_draft_players
       (tournament_draft_id, player_name, player_nickname, player_uid, is_new_player, t_assign, added_by, checked_in_at)
-      VALUES (${tournamentDraftId}, ${player_name}, ${player_nickname}, ${player_uid}, ${is_new_player}, ${assignedTable}, ${added_by}, UTC_TIMESTAMP())
+      VALUES (${tournamentDraftId}, ${player_name}, ${player_nickname}, ${finalPlayerUid}, ${is_new_player}, ${assignedTable}, ${added_by}, UTC_TIMESTAMP())
     `;
 
     const newPlayer = await prisma.$queryRaw<RawQueryResult[]>`
@@ -160,7 +197,7 @@ export async function addPlayerToTournament(
       await createCheckInFeedItem(
         tournamentDraftId,
         player_name,
-        player_uid,
+        finalPlayerUid,
         player_nickname
       );
     } catch (error) {
@@ -199,7 +236,7 @@ export async function addPlayerToTournament(
         newValue: {
           playerId,
           playerName: player_name,
-          playerUid: player_uid,
+          playerUid: finalPlayerUid,
           playerNickname: player_nickname,
           isNewPlayer: is_new_player,
           checkedIn: true,
@@ -235,7 +272,7 @@ export async function addPlayerToTournament(
         const sequence_num = await getNextSequenceNum(game_uid);
         const payload = {
           tournament_draft_id: tournamentDraftId,
-          player_uid: player_uid || null,
+          player_uid: finalPlayerUid || null,
           player_name,
           player_nickname: player_nickname || null,
           is_new_player: is_new_player || false,
@@ -252,7 +289,7 @@ export async function addPlayerToTournament(
           sequence_num,
           action_type: 'PLAYER_ADDED',
           description: actionDescription,
-          actor_uid: added_by === 'admin' ? (actionLogActor.actorUid || 'unknown') : (player_uid || 'unknown'),
+          actor_uid: added_by === 'admin' ? (actionLogActor.actorUid || 'unknown') : (finalPlayerUid || 'unknown'),
           payload,
           reverse_payload,
         });
