@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDisplayName } from "@/lib/playerUtils";
+import { revalidatePlayersCache } from "@/lib/players-cache";
+import { revalidateRankingsCache } from "@/lib/rankings-cache";
 
 // GET - Fetch current user's profile
 export async function GET() {
@@ -140,6 +142,7 @@ export async function PATCH(request: NextRequest) {
         ...smsData,
       },
       select: {
+        id: true,
         uid: true,
         first_name: true,
         last_name: true,
@@ -151,9 +154,42 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
+    // Invalidate caches if nickname was updated
+    if (nickname !== undefined) {
+      // Invalidate the global players cache
+      await revalidatePlayersCache();
+
+      // Find all leagues this player has appearances in and invalidate their rankings caches
+      const playerLeagues = await prisma.appearances.findMany({
+        where: { player_id: updatedPlayer.id },
+        select: {
+          games: {
+            select: { league_id: true },
+          },
+        },
+        distinct: ["game_id"],
+      });
+
+      // Get unique league IDs
+      const leagueIds = [
+        ...new Set(playerLeagues.map((a) => a.games.league_id)),
+      ];
+
+      // Invalidate rankings cache for each league
+      for (const leagueId of leagueIds) {
+        await revalidateRankingsCache(leagueId);
+      }
+
+      console.log(
+        `🔄 Invalidated caches for ${leagueIds.length} league(s) after profile update`
+      );
+    }
+
     // Return with computed display name for backwards compatibility
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, ...playerWithoutId } = updatedPlayer;
     return NextResponse.json({
-      ...updatedPlayer,
+      ...playerWithoutId,
       name: getDisplayName(updatedPlayer),
     });
   } catch (error) {
