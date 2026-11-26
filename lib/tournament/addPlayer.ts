@@ -229,7 +229,7 @@ export async function addPlayerToTournament(
         actionType,
         actionCategory,
         actorId: isAdminAction ? null : playerId,
-        actorName: isAdminAction ? actor.actorName : player_name,
+        actorName: isAdminAction ? actor.actorName : "Kiosk",
         targetPlayerId: playerId,
         targetPlayerName: player_name,
         previousValue: null,

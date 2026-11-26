@@ -302,7 +302,12 @@ export default function AuditLogViewerPage() {
   };
 
   // Get action type display config
-  const getActionConfig = (actionType: string) => {
+  const getActionConfig = (log: AuditLogEntry) => {
+    const actionType = log.actionType;
+    // Kiosk check-in: show as "Check-in"
+    if (actionType === "PLAYER_ADDED" && log.actorName === "Kiosk") {
+      return ACTION_TYPE_CONFIG["PLAYER_CHECKED_IN"];
+    }
     return (
       ACTION_TYPE_CONFIG[actionType] || {
         label: actionType.replace(/_/g, " "),
@@ -331,6 +336,9 @@ export default function AuditLogViewerPage() {
       case "PLAYER_CREATED":
         return `${target || "A player"} was added to the global players table`;
       case "PLAYER_ADDED":
+        if (actor === "Kiosk") {
+          return `${target}: Self Check-in`;
+        }
         return `${actor} added ${target || "a player"} to the tournament`;
       case "PLAYER_REMOVED":
         return `${actor} removed ${target || "a player"} from the tournament`;
@@ -636,7 +644,7 @@ export default function AuditLogViewerPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {logs.map((log) => {
-                    const actionConfig = getActionConfig(log.actionType);
+                    const actionConfig = getActionConfig(log);
                     const categoryConfig = getCategoryConfig(
                       log.actionCategory,
                     );
